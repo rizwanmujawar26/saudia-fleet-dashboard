@@ -1,0 +1,1957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saudia Fleet Software Loading Progress Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 4px solid #ffc107;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .dashboard-grid-square {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 10px;
+            padding: 25px;
+            text-align: center;
+            border-left: 4px solid #1e3c72;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .metric-card.primary {
+            border-left-color: #28a745;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        }
+
+        .metric-card.warning {
+            border-left-color: #ffc107;
+            background: linear-gradient(135deg, #fff8e1 0%, #ffe082 100%);
+        }
+
+        .metric-card.info {
+            border-left-color: #17a2b8;
+            background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+        }
+
+        .metric-value {
+            font-size: 42px;
+            font-weight: bold;
+            color: #1e3c72;
+            margin: 10px 0;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-progress {
+            width: 100%;
+            height: 8px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .metric-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Navigation Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tab-button:hover {
+            color: #1e3c72;
+            background: rgba(30, 60, 114, 0.05);
+        }
+
+        .tab-button.active {
+            color: #1e3c72;
+            border-bottom-color: #ffc107;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Aircraft Table */
+        .aircraft-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .aircraft-table th {
+            background: #1e3c72;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sortable-table th {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s ease;
+        }
+
+        .sortable-table th:hover {
+            background: #2a5298;
+        }
+
+        .time-remaining {
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 12px;
+        }
+
+        .time-countdown {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .time-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .time-critical {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .aircraft-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+
+        .aircraft-table tbody tr {
+            transition: background 0.2s ease;
+        }
+
+        .aircraft-table tbody tr:hover {
+            background: rgba(30, 60, 114, 0.03);
+        }
+
+        .aircraft-table tbody tr.completed {
+            background: rgba(40, 167, 69, 0.08);
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-completed {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-in-progress {
+            background: #ff6b6b;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .status-missed {
+            background: #dc3545;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 0 8px rgba(220, 53, 69, 0.3);
+        }
+
+        .status-scheduled {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .status-not-started {
+            background: #6c757d;
+            color: white;
+        }
+
+        /* System Status Indicator */
+        .system-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        .system-completed {
+            background: #28a745;
+        }
+
+        .system-pending {
+            background: #ffc107;
+        }
+
+        .system-not-started {
+            background: #6c757d;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+            margin: 30px 0;
+        }
+
+        .timeline-section {
+            margin-bottom: 40px;
+            padding-left: 30px;
+            border-left: 3px solid #1e3c72;
+            position: relative;
+        }
+
+        .timeline-section::before {
+            content: '';
+            position: absolute;
+            left: -9px;
+            top: 0;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border: 3px solid #1e3c72;
+            border-radius: 50%;
+        }
+
+        .timeline-section.completed::before {
+            background: #28a745;
+            border-color: #28a745;
+        }
+
+        .timeline-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e3c72;
+            margin-bottom: 8px;
+        }
+
+        .timeline-items {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .timeline-items li {
+            padding: 8px 0;
+            font-size: 13px;
+            color: #666;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+
+        .timeline-items li:last-child {
+            border-bottom: none;
+        }
+
+        /* Station Section */
+        .station-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #1e3c72;
+        }
+
+        .station-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .station-badge {
+            display: inline-block;
+            background: #1e3c72;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Filters */
+        .filter-section {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            min-width: 150px;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 30px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .aircraft-table {
+                font-size: 12px;
+            }
+
+            .aircraft-table th, .aircraft-table td {
+                padding: 8px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .tabs {
+                overflow-x: auto;
+            }
+
+            .tab-button {
+                padding: 12px 15px;
+                font-size: 13px;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .footnote {
+            font-size: 12px;
+            color: #666;
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+        }
+
+        /* Download Button Styles */
+        .header-controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .download-btn {
+            background: #ffc107;
+            color: #1e3c72;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .download-btn:hover {
+            background: #ffb300;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+        }
+
+        .download-menu {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 200px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            border-radius: 6px;
+            padding: 10px 0;
+            z-index: 1;
+            top: 100%;
+            left: 0;
+            margin-top: 8px;
+        }
+
+        .download-menu:hover .dropdown-content {
+            display: block;
+        }
+
+        .dropdown-content a {
+            color: #1e3c72;
+            padding: 12px 20px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #f5f5f5;
+        }
+
+        .dropdown-content a:first-child {
+            border-radius: 6px 6px 0 0;
+        }
+
+        .dropdown-content a:last-child {
+            border-radius: 0 0 6px 6px;
+        }
+
+        .loading-indicator {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 9999;
+        }
+
+        .loading-indicator.show {
+            display: block;
+        }
+
+        /* Download Snapshot Buttons */
+        .download-snapshot-btn {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+
+        .download-snapshot-btn:hover {
+            border-color: #1e3c72;
+            box-shadow: 0 4px 12px rgba(30, 60, 114, 0.15);
+            transform: translateY(-3px);
+        }
+
+        .download-snapshot-btn.pdf-btn:hover {
+            background: #ffebee;
+            border-color: #d32f2f;
+        }
+
+        .download-snapshot-btn.png-btn:hover {
+            background: #fff8e1;
+            border-color: #ffc107;
+        }
+
+        .download-snapshot-btn.jpeg-btn:hover {
+            background: #e0f7fa;
+            border-color: #17a2b8;
+        }
+
+        /* WhatsApp Share Buttons */
+        .whatsapp-share-btn {
+            width: 100%;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .whatsapp-share-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        /* History Download Buttons */
+        .history-download-btn {
+            background: #f0f0f0;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .history-download-btn:hover {
+            background: #1e3c72;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        /* Tab Download Buttons */
+        .tab-download-btn {
+            background: white;
+            border: 2px solid #1e3c72;
+            color: #1e3c72;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .tab-download-btn:hover {
+            background: #1e3c72;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .tab-download-btn-small {
+            background: white;
+            border: 1px solid #1e3c72;
+            color: #1e3c72;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            flex: 1;
+            text-align: center;
+        }
+
+        .tab-download-btn-small:hover {
+            background: #1e3c72;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .tab-download-btn-small-white {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid white;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            flex: 1;
+            text-align: center;
+        }
+
+        .tab-download-btn-small-white:hover {
+            background: white;
+            color: #4CAF50;
+            transform: translateY(-2px);
+        }
+
+        .whatsapp-btn {
+            background: white;
+            color: #4CAF50;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .whatsapp-btn:hover {
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛩️ SAUDIA FLEET - SOFTWARE LOADING PROGRESS</h1>
+            <p>Middleware 2.1.0 & Modem Systems Commissioning Dashboard</p>
+        </div>
+
+        <div class="content">
+            <!-- Key Metrics -->
+            <div class="dashboard-grid">
+                <div class="metric-card primary">
+                    <div class="metric-label">Completed Aircraft</div>
+                    <div class="metric-value">9</div>
+                    <div class="metric-label" style="margin-top: 10px;">of 40 Total</div>
+                    <div class="metric-progress">
+                        <div class="metric-progress-bar" style="width: 22.5%;"></div>
+                    </div>
+                </div>
+
+                <div class="metric-card warning">
+                    <div class="metric-label">Completion Rate</div>
+                    <div class="metric-value">22.5%</div>
+                    <div class="metric-label" style="margin-top: 10px;">Progress</div>
+                    <div class="metric-progress">
+                        <div class="metric-progress-bar" style="width: 22.5%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
+                    </div>
+                </div>
+
+                <div class="metric-card info">
+                    <div class="metric-label">Remaining Aircraft</div>
+                    <div class="metric-value">31</div>
+                    <div class="metric-label" style="margin-top: 10px;">In Queue</div>
+                    <div class="metric-progress">
+                        <div class="metric-progress-bar" style="width: 77.5%; background: linear-gradient(90deg, #17a2b8, #20c997);"></div>
+                    </div>
+                </div>
+
+                <div class="metric-card warning" style="border-left-color: #dc3545;">
+                    <div class="metric-label">Missed/Deferred</div>
+                    <div class="metric-value" id="missedCountDisplay" style="color: #dc3545;">0</div>
+                    <div class="metric-label" style="margin-top: 10px;">Aircraft Behind Schedule</div>
+                    <div class="metric-progress">
+                        <div class="metric-progress-bar" id="missedProgressBar" style="width: 0%; background: linear-gradient(90deg, #dc3545, #c82333);"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="tabs">
+                <button class="tab-button active" onclick="switchTab('overview')">📊 Overview</button>
+                <button class="tab-button" onclick="switchTab('aircraft')">✈️ Aircraft Status</button>
+                <button class="tab-button" onclick="switchTab('schedule')">📅 Schedule</button>
+                <button class="tab-button" onclick="switchTab('systems')">⚙️ System Tracking</button>
+                <button class="tab-button" onclick="switchTab('stations')">🏢 By Station</button>
+                <button class="tab-button" onclick="switchTab('downloads')">📥 Downloads</button>
+            </div>
+
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-content active">
+                <h2 style="color: #1e3c72; margin-bottom: 20px;">Project Overview</h2>
+
+                <!-- Executive Summary Section -->
+                <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-left: 5px solid #1e3c72; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
+                    <h3 style="color: #1e3c72; margin-bottom: 20px; font-size: 18px;">📋 Session Summary</h3>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px;">
+                        <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #28a745;">
+                            <div style="font-size: 14px; color: #666; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">✅ Accomplished This Session</div>
+                            <div style="font-size: 28px; color: #28a745; font-weight: bold; margin: 10px 0;">9 Aircraft</div>
+                            <div style="font-size: 12px; color: #666;">ASQ, AS75, ASAH, ASF, AS61, AS58, ASE, ASV, AS60</div>
+                        </div>
+
+                        <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #dc3545;">
+                            <div style="font-size: 14px; color: #666; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">⏰ Missed/Behind</div>
+                            <div style="font-size: 28px; color: #dc3545; font-weight: bold; margin: 10px 0;" id="summaryMissedCount">0 Aircraft</div>
+                            <div style="font-size: 12px; color: #666;">Past scheduled time, not completed</div>
+                        </div>
+
+                        <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #17a2b8;">
+                            <div style="font-size: 14px; color: #666; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">📅 Pending/Scheduled</div>
+                            <div style="font-size: 28px; color: #17a2b8; font-weight: bold; margin: 10px 0;" id="summaryPendingCount">31 Aircraft</div>
+                            <div style="font-size: 12px; color: #666;">Upcoming deployments</div>
+                        </div>
+                    </div>
+
+                    <!-- Missed by Station -->
+                    <div id="missedByStationSection" style="display: none; background: white; padding: 15px; border-radius: 6px; border: 1px solid #ffcccc; margin-top: 15px;">
+                        <h4 style="color: #dc3545; margin-bottom: 12px; font-weight: 600;">⚠️ Missed Aircraft by Station:</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div>
+                                <div style="color: #666; font-weight: 600; margin-bottom: 8px;">🏢 Jeddah (JED)</div>
+                                <div id="missedJED" style="font-size: 13px; color: #333;"></div>
+                            </div>
+                            <div>
+                                <div style="color: #666; font-weight: 600; margin-bottom: 8px;">🏢 Riyadh (RUH)</div>
+                                <div id="missedRUH" style="font-size: 13px; color: #333;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline">
+                    <div class="timeline-section completed">
+                        <div class="timeline-title">✅ Completed Deliveries (9)</div>
+                        <ul class="timeline-items">
+                            <li><strong>ASQ</strong> - Completed: 29-July-2026 (Jeddah)</li>
+                            <li><strong>AS75</strong> - Completed: 04-Aug-2026 (Jeddah)</li>
+                            <li><strong>ASAH</strong> - Completed: 11-Aug-2026 (Jeddah)</li>
+                            <li><strong>ASF</strong> - Completed: 11-Aug-2026 (Jeddah)</li>
+                            <li><strong>AS61</strong> - Completed: 12-Aug-2026 (Jeddah)</li>
+                            <li><strong>AS58</strong> - Completed: 12-Aug-2026 (Riyadh)</li>
+                            <li><strong>ASE</strong> - Completed: 12-Aug-2026 (Riyadh)</li>
+                            <li><strong>ASV</strong> - Completed: 12-Aug-2026 (Jeddah) <span style="color: #ff6b6b; font-weight: 600;">⚠ Partial - Pending: 4G SIM Replacement & ISP Update</span></li>
+                            <li><strong>AS60</strong> - Completed: 12-Aug-2026 (Jeddah) <span style="color: #ff6b6b; font-weight: 600;">⚠ Due to KRFU issue - stays open</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="timeline-section">
+                        <div class="timeline-title">📋 Scheduled Deliveries</div>
+                        <p style="font-size: 13px; color: #666; margin: 10px 0;">12-Aug-2026 through 15-Aug-2026</p>
+                        <ul class="timeline-items">
+                            <li>Multiple aircraft scheduled at Jeddah (JED) and Riyadh (RUH) stations</li>
+                            <li>All times in UTC (Zulu) format as per schedule</li>
+                            <li>Refer to detailed schedule tab for complete timeline</li>
+                        </ul>
+                    </div>
+
+                    <div class="timeline-section">
+                        <div class="timeline-title">🎯 Project Objectives</div>
+                        <ul class="timeline-items">
+                            <li>Upgrade Middleware to version 2.1.0 for all A320 family aircraft</li>
+                            <li>Commission Taurus Modem systems across fleet</li>
+                            <li>Commission Hughes Modem systems across fleet</li>
+                            <li>Deploy IPHO Mode configuration</li>
+                            <li>Enable CS24 Commissioning</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="footnote">
+                    <strong>⚠️ Note:</strong> Two Airbus HBC+ aircraft (HZ-ASBA, HZ-ASBB) are excluded from software loading scope. Total aircraft in scope: 40 out of 42 fleet aircraft.
+                </div>
+            </div>
+
+            <!-- Aircraft Status Tab -->
+            <div id="aircraft" class="tab-content">
+                <h2 style="color: #1e3c72; margin-bottom: 20px;">Aircraft Status Summary</h2>
+
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label class="filter-label">Filter by Status:</label>
+                        <select onchange="filterAircraft(this.value)">
+                            <option value="">All Aircraft</option>
+                            <option value="completed">Completed</option>
+                            <option value="scheduled">Scheduled</option>
+                            <option value="excluded">Excluded</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #28a745;"></div>
+                        <span>Completed</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #17a2b8;"></div>
+                        <span>Scheduled</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #6c757d;"></div>
+                        <span>Excluded (HBC+)</span>
+                    </div>
+                </div>
+
+                <table class="aircraft-table" id="aircraftTable">
+                    <thead>
+                        <tr>
+                            <th>Aircraft</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Middleware 2.1.0</th>
+                            <th>Hughes Modem</th>
+                            <th>Taurus Modem</th>
+                            <th>IPHO Mode</th>
+                            <th>CS24</th>
+                            <th>Completion Date (UTC)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="aircraftTableBody">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Schedule Tab -->
+            <div id="schedule" class="tab-content">
+                <h2 style="color: #1e3c72; margin-bottom: 20px;">Software Loading Schedule</h2>
+
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label class="filter-label">Filter by Station:</label>
+                        <select onchange="filterStation(this.value)">
+                            <option value="">All Stations</option>
+                            <option value="JED">Jeddah (JED)</option>
+                            <option value="RUH">Riyadh (RUH)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="scheduleContent">
+                    <div class="station-section">
+                        <div class="station-title">
+                            ✈️ Jeddah Station (JED)
+                            <span class="station-badge">UTC/Zulu</span>
+                        </div>
+                        <table class="aircraft-table sortable-table">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable('jedTable', 0)">Aircraft ↕</th>
+                                    <th onclick="sortTable('jedTable', 1)">Planned Date ↕</th>
+                                    <th onclick="sortTable('jedTable', 2)">Planned Time (UTC) ↕</th>
+                                    <th onclick="sortTable('jedTable', 3)">Time Remaining ↕</th>
+                                    <th onclick="sortTable('jedTable', 4)">Workpackage ↕</th>
+                                    <th onclick="sortTable('jedTable', 5)">Status ↕</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jedTable">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="station-section">
+                        <div class="station-title">
+                            ✈️ Riyadh Station (RUH)
+                            <span class="station-badge">UTC/Zulu</span>
+                        </div>
+                        <table class="aircraft-table sortable-table">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable('ruhTable', 0)">Aircraft ↕</th>
+                                    <th onclick="sortTable('ruhTable', 1)">Planned Date ↕</th>
+                                    <th onclick="sortTable('ruhTable', 2)">Planned Time (UTC) ↕</th>
+                                    <th onclick="sortTable('ruhTable', 3)">Time Remaining ↕</th>
+                                    <th onclick="sortTable('ruhTable', 4)">Workpackage ↕</th>
+                                    <th onclick="sortTable('ruhTable', 5)">Status ↕</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ruhTable">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Tracking Tab -->
+            <div id="systems" class="tab-content">
+                <h2 style="color: #1e3c72; margin-bottom: 20px;">System Commissioning Status</h2>
+
+                <div class="dashboard-grid" style="margin-bottom: 40px;">
+                    <div class="metric-card primary">
+                        <div class="metric-label">Middleware 2.1.0</div>
+                        <div class="metric-value">9</div>
+                        <div class="metric-label" style="margin-top: 10px;">Aircraft Completed (22.5%)</div>
+                        <div class="metric-progress">
+                            <div class="metric-progress-bar" style="width: 22.5%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card warning">
+                        <div class="metric-label">Taurus Modem</div>
+                        <div class="metric-value">0</div>
+                        <div class="metric-label" style="margin-top: 10px;">Aircraft Completed</div>
+                        <div class="metric-progress">
+                            <div class="metric-progress-bar" style="width: 0%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card primary">
+                        <div class="metric-label">Hughes Modem Commissioning</div>
+                        <div class="metric-value">9</div>
+                        <div class="metric-label" style="margin-top: 10px;">Aircraft Commissioned (22.5%)</div>
+                        <div class="metric-progress">
+                            <div class="metric-progress-bar" style="width: 22.5%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card warning">
+                        <div class="metric-label">IPHO Mode</div>
+                        <div class="metric-value">0</div>
+                        <div class="metric-label" style="margin-top: 10px;">Aircraft Completed</div>
+                        <div class="metric-progress">
+                            <div class="metric-progress-bar" style="width: 0%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card warning">
+                        <div class="metric-label">CS24 Commissioning</div>
+                        <div class="metric-value">0</div>
+                        <div class="metric-label" style="margin-top: 10px;">Aircraft Completed</div>
+                        <div class="metric-progress">
+                            <div class="metric-progress-bar" style="width: 0%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="station-section">
+                    <div class="station-title">System Dependencies & Sequencing</div>
+                    <ul class="timeline-items" style="margin: 20px 0;">
+                        <li><strong>Phase 1 - Middleware 2.1.0:</strong> Core software update (IN PROGRESS - 8 of 40 complete)</li>
+                        <li><strong>Phase 2 - Modem Commissioning:</strong> Taurus & Hughes modem deployment (PENDING)</li>
+                        <li><strong>Phase 3 - IPHO Mode:</strong> IPHO mode configuration (PENDING)</li>
+                        <li><strong>Phase 4 - CS24:</strong> CS24 commissioning (PENDING)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- By Station Tab -->
+            <div id="stations" class="tab-content">
+                <h2 style="color: #1e3c72; margin-bottom: 20px;">Station-wise Deployment</h2>
+
+                <div class="station-section">
+                    <div class="station-title">
+                        🏢 Jeddah (JED)
+                        <span class="station-badge">Primary Hub</span>
+                    </div>
+                    <p style="color: #666; margin: 15px 0; font-size: 14px;">
+                        <strong>Location:</strong> King Abdulaziz International Airport<br>
+                        <strong>Time Zone:</strong> UTC+3 (Arabia Standard Time)<br>
+                        <strong>Schedule:</strong> 12-Aug-2026 onwards (UTC times in schedule)
+                    </p>
+                    <div style="margin-top: 15px;">
+                        <strong style="color: #1e3c72;">Scheduled Aircraft Count:</strong> <span id="jedCount">0</span> aircraft
+                    </div>
+                </div>
+
+                <div class="station-section" style="margin-top: 30px;">
+                    <div class="station-title">
+                        🏢 Riyadh (RUH)
+                        <span class="station-badge">Secondary Hub</span>
+                    </div>
+                    <p style="color: #666; margin: 15px 0; font-size: 14px;">
+                        <strong>Location:</strong> King Fahd International Airport<br>
+                        <strong>Time Zone:</strong> UTC+3 (Arabia Standard Time)<br>
+                        <strong>Schedule:</strong> 12-Aug-2026 onwards (UTC times in schedule)
+                    </p>
+                    <div style="margin-top: 15px;">
+                        <strong style="color: #1e3c72;">Scheduled Aircraft Count:</strong> <span id="ruhCount">0</span> aircraft
+                    </div>
+                </div>
+            </div>
+
+            <!-- Downloads Tab -->
+            <div id="downloads" class="tab-content">
+                <h2 style="color: #1e3c72; margin-bottom: 30px; font-size: 22px;">📥 Download Sections & Reports</h2>
+
+                <!-- Download Instructions -->
+                <div style="background: #e3f2fd; border-left: 4px solid #1976d2; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                    <h3 style="color: #1565c0; margin-bottom: 10px;">💡 Tab-wise Download Options</h3>
+                    <p style="color: #555; font-size: 14px; line-height: 1.6;">
+                        Download specific dashboard sections or the complete dashboard. Each download excludes the tab navigation bar for clean, professional reports.
+                        Available in PDF (multi-page), PNG (highest quality), and JPEG (web-friendly) formats.
+                    </p>
+                </div>
+
+                <!-- Metrics Only -->
+                <div style="margin-bottom: 30px;">
+                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                        <div style="font-size: 22px; margin-right: 12px;">📊</div>
+                        <h3 style="color: #1e3c72; margin: 0; font-size: 16px;">Dashboard Metrics Only</h3>
+                        <span style="background: #ffc107; color: #1e3c72; padding: 3px 8px; border-radius: 20px; font-size: 11px; margin-left: auto; font-weight: 600;">Square 2x2 Layout</span>
+                    </div>
+                    <p style="color: #666; font-size: 13px; margin-bottom: 12px;">The 4 key metrics in square format (1080x1080) with 2x2 grid layout - perfect for WhatsApp status, social media, and presentations</p>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="tab-download-btn" onclick="downloadMetricsOnlyPDF()" title="PDF">📄 PDF</button>
+                        <button class="tab-download-btn" onclick="downloadMetricsOnlyPNG()" title="PNG">🖼️ PNG</button>
+                        <button class="tab-download-btn" onclick="downloadMetricsOnlyJPEG()" title="JPEG">📸 JPEG</button>
+                    </div>
+                </div>
+
+                <!-- Tab Downloads -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <!-- Overview Tab -->
+                    <div style="background: #f9f9f9; border-radius: 12px; padding: 20px; border: 2px solid #1e3c72;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">📊</div>
+                        <h3 style="color: #1e3c72; margin: 0 0 8px 0; font-size: 15px;">Overview Tab</h3>
+                        <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Executive summary with all project details and phases</p>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="tab-download-btn-small" onclick="downloadOverviewPDF()" title="PDF">📄</button>
+                            <button class="tab-download-btn-small" onclick="downloadOverviewPNG()" title="PNG">🖼️</button>
+                            <button class="tab-download-btn-small" onclick="downloadOverviewJPEG()" title="JPEG">📸</button>
+                        </div>
+                    </div>
+
+                    <!-- Aircraft Status Tab -->
+                    <div style="background: #f9f9f9; border-radius: 12px; padding: 20px; border: 2px solid #17a2b8;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">✈️</div>
+                        <h3 style="color: #1e3c72; margin: 0 0 8px 0; font-size: 15px;">Aircraft Status Tab</h3>
+                        <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Complete list of all aircraft with status and commissioning details</p>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="tab-download-btn-small" onclick="downloadAircraftPDF()" title="PDF">📄</button>
+                            <button class="tab-download-btn-small" onclick="downloadAircraftPNG()" title="PNG">🖼️</button>
+                            <button class="tab-download-btn-small" onclick="downloadAircraftJPEG()" title="JPEG">📸</button>
+                        </div>
+                    </div>
+
+                    <!-- Schedule Tab -->
+                    <div style="background: #f9f9f9; border-radius: 12px; padding: 20px; border: 2px solid #ffc107;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">📅</div>
+                        <h3 style="color: #1e3c72; margin: 0 0 8px 0; font-size: 15px;">Schedule Tab</h3>
+                        <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Detailed deployment schedule with dates, times, and work packages</p>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="tab-download-btn-small" onclick="downloadSchedulePDF()" title="PDF">📄</button>
+                            <button class="tab-download-btn-small" onclick="downloadSchedulePNG()" title="PNG">🖼️</button>
+                            <button class="tab-download-btn-small" onclick="downloadScheduleJPEG()" title="JPEG">📸</button>
+                        </div>
+                    </div>
+
+                    <!-- System Tracking Tab -->
+                    <div style="background: #f9f9f9; border-radius: 12px; padding: 20px; border: 2px solid #6c63ff;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">⚙️</div>
+                        <h3 style="color: #1e3c72; margin: 0 0 8px 0; font-size: 15px;">System Tracking Tab</h3>
+                        <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Progress tracking for Middleware, Hughes Modem, IPHO, and CS24</p>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="tab-download-btn-small" onclick="downloadSystemsPDF()" title="PDF">📄</button>
+                            <button class="tab-download-btn-small" onclick="downloadSystemsPNG()" title="PNG">🖼️</button>
+                            <button class="tab-download-btn-small" onclick="downloadSystemsJPEG()" title="JPEG">📸</button>
+                        </div>
+                    </div>
+
+                    <!-- By Station Tab -->
+                    <div style="background: #f9f9f9; border-radius: 12px; padding: 20px; border: 2px solid #20c997;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">🏢</div>
+                        <h3 style="color: #1e3c72; margin: 0 0 8px 0; font-size: 15px;">By Station Tab</h3>
+                        <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Station-wise deployment breakdown (Jeddah &  Riyadh)</p>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="tab-download-btn-small" onclick="downloadStationsPDF()" title="PDF">📄</button>
+                            <button class="tab-download-btn-small" onclick="downloadStationsPNG()" title="PNG">🖼️</button>
+                            <button class="tab-download-btn-small" onclick="downloadStationsJPEG()" title="JPEG">📸</button>
+                        </div>
+                    </div>
+
+                    <!-- Full Dashboard -->
+                    <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); border-radius: 12px; padding: 20px; border: 2px solid #ffc107; color: white;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">📦</div>
+                        <h3 style="color: white; margin: 0 0 8px 0; font-size: 15px;">Complete Dashboard</h3>
+                        <p style="color: rgba(255,255,255,0.9); font-size: 13px; margin-bottom: 15px;">All metrics + Full overview section in one download</p>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="tab-download-btn-small-white" onclick="downloadDashboardPDF()" title="PDF">📄</button>
+                            <button class="tab-download-btn-small-white" onclick="downloadDashboardPNG()" title="PNG">🖼️</button>
+                            <button class="tab-download-btn-small-white" onclick="downloadDashboardJPEG()" title="JPEG">📸</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WhatsApp Ready -->
+                <div style="background: #4CAF50; color: white; border-radius: 12px; padding: 20px; margin-bottom: 30px;">
+                    <h3 style="color: white; margin-bottom: 12px;">💬 Quick WhatsApp Share</h3>
+                    <p style="margin-bottom: 15px; opacity: 0.95;">One-click downloads optimized for mobile sharing</p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="whatsapp-btn" onclick="downloadDashboardJPEG()">📱 Dashboard</button>
+                        <button class="whatsapp-btn" onclick="downloadOverviewJPEG()">📱 Overview</button>
+                        <button class="whatsapp-btn" onclick="downloadScheduleJPEG()">📱 Schedule</button>
+                        <button class="whatsapp-btn" onclick="downloadAircraftJPEG()">📱 Aircraft</button>
+                    </div>
+                </div>
+
+                <!-- Download Tips -->
+                <div style="background: #fff9e6; border-left: 4px solid #ffc107; border-radius: 8px; padding: 20px;">
+                    <h3 style="color: #f57f17; margin-bottom: 12px;">💡 Download Format Guide</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                        <div>
+                            <strong style="color: #1e3c72;">📄 PDF</strong>
+                            <p style="color: #555; font-size: 13px; margin-top: 5px;">Multi-page format, best for printing and archiving</p>
+                        </div>
+                        <div>
+                            <strong style="color: #1e3c72;">🖼️ PNG</strong>
+                            <p style="color: #555; font-size: 13px; margin-top: 5px;">Highest quality, perfect for presentations</p>
+                        </div>
+                        <div>
+                            <strong style="color: #1e3c72;">📸 JPEG</strong>
+                            <p style="color: #555; font-size: 13px; margin-top: 5px;">Smallest file size, ideal for WhatsApp & email</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Saudia Fleet Software Loading Dashboard | Last Updated: <span id="lastUpdated">August 13, 2026</span> | All times in UTC (Zulu) as per operational schedule</p>
+            <p>Excludes HBC+ aircraft (HZ-ASBA, HZ-ASBB) | Total fleet in scope: 40 aircraft</p>
+        </div>
+    </div>
+
+    <script>
+        // Download Functions
+        function showLoading(show = true) {
+            const loader = document.getElementById('loadingIndicator') || createLoadingIndicator();
+            if (show) {
+                loader.classList.add('show');
+            } else {
+                loader.classList.remove('show');
+            }
+        }
+
+        function createLoadingIndicator() {
+            const div = document.createElement('div');
+            div.id = 'loadingIndicator';
+            div.className = 'loading-indicator';
+            div.innerHTML = '<div style="font-size: 24px; margin-bottom: 15px;">⏳</div><div>Generating report...</div>';
+            document.body.appendChild(div);
+            return div;
+        }
+
+        async function captureSection(metricsOnly = false, tabId = 'overview') {
+            // Create a temporary container for capturing
+            const tempDiv = document.createElement('div');
+            tempDiv.style.position = 'fixed';
+            tempDiv.style.top = '-9999px';
+            tempDiv.style.left = '-9999px';
+            tempDiv.style.width = document.querySelector('.container').offsetWidth + 'px';
+            tempDiv.style.background = 'white';
+            tempDiv.style.zIndex = '-9999';
+
+            // Clone the container
+            const containerClone = document.querySelector('.container').cloneNode(true);
+
+            // Get header
+            const headerClone = containerClone.querySelector('.header').cloneNode(true);
+
+            // Create capture container
+            const captureContainer = document.createElement('div');
+            captureContainer.style.background = 'white';
+            captureContainer.style.padding = '20px';
+            captureContainer.appendChild(headerClone);
+
+            // Add metrics
+            const metricsClone = containerClone.querySelector('.dashboard-grid').cloneNode(true);
+            captureContainer.appendChild(metricsClone);
+
+            // If metrics only, don't add tab content
+            if (!metricsOnly && tabId) {
+                // Add the specific tab content
+                const tabContent = containerClone.querySelector('#' + tabId).cloneNode(true);
+                tabContent.classList.add('active');
+                captureContainer.appendChild(tabContent);
+            }
+
+            tempDiv.appendChild(captureContainer);
+            document.body.appendChild(tempDiv);
+
+            return { tempDiv, captureContainer };
+        }
+
+        async function captureMetricsSquare() {
+            // Create a temporary container with square dimensions
+            const tempDiv = document.createElement('div');
+            tempDiv.style.position = 'fixed';
+            tempDiv.style.top = '-9999px';
+            tempDiv.style.left = '-9999px';
+            tempDiv.style.width = '1080px';
+            tempDiv.style.background = 'white';
+            tempDiv.style.zIndex = '-9999';
+
+            // Clone the container
+            const containerClone = document.querySelector('.container').cloneNode(true);
+
+            // Get header (simplified for square)
+            const headerClone = containerClone.querySelector('.header').cloneNode(true);
+            headerClone.style.padding = '20px';
+
+            // Get metrics and force 2x2 layout
+            const metricsClone = containerClone.querySelector('.dashboard-grid').cloneNode(true);
+            metricsClone.classList.remove('dashboard-grid');
+            metricsClone.classList.add('dashboard-grid-square');
+            metricsClone.style.gridTemplateColumns = 'repeat(2, 1fr)';
+            metricsClone.style.gap = '15px';
+
+            // Create capture container (square)
+            const captureContainer = document.createElement('div');
+            captureContainer.style.background = 'white';
+            captureContainer.style.padding = '25px';
+            captureContainer.style.width = '1080px';
+            captureContainer.style.boxSizing = 'border-box';
+            captureContainer.appendChild(headerClone);
+            captureContainer.appendChild(metricsClone);
+
+            tempDiv.appendChild(captureContainer);
+            document.body.appendChild(tempDiv);
+
+            return { tempDiv, captureContainer };
+        }
+
+        // Generic download functions
+        async function downloadAsFormat(type, filename, metricsOnly = false, tabId = null) {
+            showLoading(true);
+            try {
+                const { tempDiv, captureContainer } = await captureSection(metricsOnly, tabId);
+
+                const canvas = await html2canvas(captureContainer, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    allowTaint: true,
+                    windowWidth: 1600
+                });
+
+                document.body.removeChild(tempDiv);
+                const date = new Date().toISOString().split('T')[0];
+
+                if (type === 'pdf') {
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                    const imgWidth = 210;
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    let heightLeft = imgHeight, position = 0;
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= 297;
+                    while (heightLeft >= 0) {
+                        position = heightLeft - imgHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                        heightLeft -= 297;
+                    }
+                    pdf.save(filename + '_' + date + '.pdf');
+                } else if (type === 'png') {
+                    const link = document.createElement('a');
+                    link.href = canvas.toDataURL('image/png');
+                    link.download = filename + '_' + date + '.png';
+                    link.click();
+                } else if (type === 'jpeg') {
+                    const link = document.createElement('a');
+                    link.href = canvas.toDataURL('image/jpeg', 0.95);
+                    link.download = filename + '_' + date + '.jpg';
+                    link.click();
+                }
+            } catch (error) {
+                console.error('Error generating file:', error);
+                alert('Error generating file. Please try again.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Metrics Only Downloads (Square Format - 2x2 Layout)
+        async function downloadMetricsOnlyPDF() {
+            showLoading(true);
+            try {
+                const { tempDiv, captureContainer } = await captureMetricsSquare();
+
+                const canvas = await html2canvas(captureContainer, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    allowTaint: true,
+                    width: 1080,
+                    height: 1080
+                });
+
+                document.body.removeChild(tempDiv);
+                const date = new Date().toISOString().split('T')[0];
+
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const imgWidth = 210;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                let heightLeft = imgHeight, position = 0;
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= 297;
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= 297;
+                }
+                pdf.save('Saudia_Metrics_Only_' + date + '.pdf');
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert('Error generating PDF. Please try again.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function downloadMetricsOnlyPNG() {
+            showLoading(true);
+            try {
+                const { tempDiv, captureContainer } = await captureMetricsSquare();
+
+                const canvas = await html2canvas(captureContainer, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    allowTaint: true,
+                    width: 1080,
+                    height: 1080
+                });
+
+                document.body.removeChild(tempDiv);
+                const date = new Date().toISOString().split('T')[0];
+
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = 'Saudia_Metrics_Only_' + date + '.png';
+                link.click();
+            } catch (error) {
+                console.error('Error generating PNG:', error);
+                alert('Error generating PNG. Please try again.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function downloadMetricsOnlyJPEG() {
+            showLoading(true);
+            try {
+                const { tempDiv, captureContainer } = await captureMetricsSquare();
+
+                const canvas = await html2canvas(captureContainer, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    allowTaint: true,
+                    width: 1080,
+                    height: 1080
+                });
+
+                document.body.removeChild(tempDiv);
+                const date = new Date().toISOString().split('T')[0];
+
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/jpeg', 0.95);
+                link.download = 'Saudia_Metrics_Only_' + date + '.jpg';
+                link.click();
+            } catch (error) {
+                console.error('Error generating JPEG:', error);
+                alert('Error generating JPEG. Please try again.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Complete Dashboard Downloads (Metrics + Overview)
+        async function downloadDashboardPDF() { await downloadAsFormat('pdf', 'Saudia_Complete_Dashboard', false, 'overview'); }
+        async function downloadDashboardPNG() { await downloadAsFormat('png', 'Saudia_Complete_Dashboard', false, 'overview'); }
+        async function downloadDashboardJPEG() { await downloadAsFormat('jpeg', 'Saudia_Complete_Dashboard', false, 'overview'); }
+
+        // Tab Downloads (Metrics + Tab Content)
+        async function downloadOverviewPDF() { await downloadAsFormat('pdf', 'Saudia_Overview', false, 'overview'); }
+        async function downloadOverviewPNG() { await downloadAsFormat('png', 'Saudia_Overview', false, 'overview'); }
+        async function downloadOverviewJPEG() { await downloadAsFormat('jpeg', 'Saudia_Overview', false, 'overview'); }
+
+        async function downloadAircraftPDF() { await downloadAsFormat('pdf', 'Saudia_Aircraft_Status', false, 'aircraft'); }
+        async function downloadAircraftPNG() { await downloadAsFormat('png', 'Saudia_Aircraft_Status', false, 'aircraft'); }
+        async function downloadAircraftJPEG() { await downloadAsFormat('jpeg', 'Saudia_Aircraft_Status', false, 'aircraft'); }
+
+        async function downloadSchedulePDF() { await downloadAsFormat('pdf', 'Saudia_Schedule', false, 'schedule'); }
+        async function downloadSchedulePNG() { await downloadAsFormat('png', 'Saudia_Schedule', false, 'schedule'); }
+        async function downloadScheduleJPEG() { await downloadAsFormat('jpeg', 'Saudia_Schedule', false, 'schedule'); }
+
+        async function downloadSystemsPDF() { await downloadAsFormat('pdf', 'Saudia_System_Tracking', false, 'systems'); }
+        async function downloadSystemsPNG() { await downloadAsFormat('png', 'Saudia_System_Tracking', false, 'systems'); }
+        async function downloadSystemsJPEG() { await downloadAsFormat('jpeg', 'Saudia_System_Tracking', false, 'systems'); }
+
+        async function downloadStationsPDF() { await downloadAsFormat('pdf', 'Saudia_By_Station', false, 'stations'); }
+        async function downloadStationsPNG() { await downloadAsFormat('png', 'Saudia_By_Station', false, 'stations'); }
+        async function downloadStationsJPEG() { await downloadAsFormat('jpeg', 'Saudia_By_Station', false, 'stations'); }
+
+        // Aircraft data with all fleet information
+        const aircraftData = [
+            // A320 214 (23 aircraft)
+            { id: 'AS51', type: 'A320-214', status: 'scheduled', station: 'JED' },
+            { id: 'AS54', type: 'A320-214', status: 'scheduled', station: 'JED' },
+            { id: 'AS56', type: 'A320-214', status: 'scheduled', station: 'RUH' },
+            { id: 'ASE', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '12-Aug-2026' },
+            { id: 'AS53', type: 'A320-214', status: 'scheduled', station: 'JED' },
+            { id: 'AS58', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '12-Aug-2026' },
+            { id: 'AS64', type: 'A320-214', status: 'scheduled', station: 'JED' },
+            { id: 'AS55', type: 'A320-214', status: 'scheduled', station: 'JED' },
+            { id: 'AS60', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '12-Aug-2026', note: 'Due to KRFU issue - stays open' },
+            { id: 'AS63', type: 'A320-214', status: 'scheduled', station: 'RUH' },
+            { id: 'AS57', type: 'A320-214', status: 'scheduled', station: 'JED' },
+            { id: 'AS59', type: 'A320-214', status: 'scheduled', station: 'JED' },
+            { id: 'AS67', type: 'A320-214', status: 'scheduled', station: 'RUH' },
+            { id: 'AS61', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '12-Aug-2026' },
+            { id: 'AS72', type: 'A320-214', status: 'scheduled', station: 'RUH' },
+            { id: 'AS65', type: 'A320-214', status: 'scheduled', station: 'JED' },
+            { id: 'AS62', type: 'A320-214', status: 'scheduled', station: 'JED' },
+            { id: 'ASC', type: 'A320-214', status: 'scheduled', station: 'RUH' },
+            { id: 'AS68', type: 'A320-214', status: 'scheduled', station: 'RUH' },
+            { id: 'AS76', type: 'A320-214', status: 'scheduled', station: 'JED' },
+            { id: 'AS66', type: 'A320-214', status: 'scheduled', station: 'JED' },
+            { id: 'AS74', type: 'A320-214', status: 'scheduled', station: 'RUH', hughesModem: { commissioned: '05-Jul-2026', tid: '101', clusterFile: '21-Jun-2026' } },
+            { id: 'AS75', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '04-Aug-2026', hughesModem: { commissioned: '04-Aug-2026', tid: '60' } },
+
+            // A321 211 (9 aircraft)
+            { id: 'ASV', type: 'A321-211', status: 'completed', station: 'JED', completionDate: '12-Aug-2026', note: 'Partial - Pending: 4G SIM Replacement & ISP Update' },
+            { id: 'ASJ', type: 'A321-211', status: 'scheduled', station: 'JED', hughesModem: { commissioned: '24-Jun-2026', tid: '54', commissionedBy: 'Rizwan' } },
+            { id: 'ASK', type: 'A321-211', status: 'scheduled', station: 'RUH' },
+            { id: 'ASQ', type: 'A321-211', status: 'completed', station: 'JED', completionDate: '29-Jul-2026', hughesModem: { commissioned: '26-Jul-2026', tid: '50', clusterFile: 'Jun-2026', telnetParams: ['4c', 'b0', '8c'] } },
+            { id: 'ASI', type: 'A321-211', status: 'scheduled', station: 'JED' },
+            { id: 'ASL', type: 'A321-211', status: 'scheduled', station: 'RUH' },
+            { id: 'ASR', type: 'A321-211', status: 'scheduled', station: 'JED' },
+            { id: 'ASF', type: 'A321-211', status: 'completed', station: 'RUH', completionDate: '11-Aug-2026', hughesModem: { commissioned: '10-Aug-2026', tid: '65', paramChanges: 'Latest applied' } },
+            { id: 'ASN', type: 'A321-211', status: 'scheduled', station: 'RUH' },
+
+            // A321 251NX (4 aircraft)
+            { id: 'ASAH', type: 'A321-251NX', status: 'completed', station: 'JED', completionDate: '11-Aug-2026', hughesModem: { commissioned: '08-Jun-2026', iphoMode: 'Activated (MG101)', paramChanges: 'Latest applied' } },
+            { id: 'ASAD', type: 'A321-251NX', status: 'scheduled', station: 'JED' },
+            { id: 'ASAC', type: 'A321-251NX', status: 'scheduled', station: 'RUH' },
+            { id: 'ASAB', type: 'A321-251NX', status: 'scheduled', station: 'RUH', hughesModem: { commissioned: '23-Jun-2026', tid: '42' } },
+
+            // A321 253NY XLR (2 aircraft) - EXCLUDED (HBC+)
+            { id: 'ASBA', type: 'A321-253NY XLR', status: 'excluded', station: 'N/A', note: 'HBC+ Aircraft' },
+            { id: 'ASBB', type: 'A321-253NY XLR', status: 'excluded', station: 'N/A', note: 'HBC+ Aircraft' },
+
+            // A330 343 (4 aircraft)
+            { id: 'AQJ', type: 'A330-343', status: 'scheduled', station: 'JED', hughesModem: { commissioned: '24-Jun-2026', tid: '54', commissionedBy: 'Rizwan' } },
+            { id: 'AQA', type: 'A330-343', status: 'scheduled', station: 'RUH' },
+            { id: 'AQL', type: 'A330-343', status: 'scheduled', station: 'JED', hughesModem: { commissioned: '18-Jun-2026' } },
+            { id: 'AQB', type: 'A330-343', status: 'scheduled', station: 'RUH' },
+        ];
+
+        // Schedule data - accurate from Saudia plan
+        const scheduleData = [
+            { aircraft: 'ASAH', date: '8/12/2026', time: '12:00', workpackage: 'ASAH/L-120826 ISC EXP', station: 'JED', woFlags: '33011336' },
+            { aircraft: 'ASV', date: '8/12/2026', time: '19:00', workpackage: 'ASV/L-120826 MEDIA', station: 'JED', woFlags: '33011318' },
+            { aircraft: 'AS60', date: '8/12/2026', time: '20:00', workpackage: 'AS60/L-130826 ISC+EOD', station: 'JED', woFlags: '33110430' },
+            { aircraft: 'AS58', date: '8/12/2026', time: '20:00', workpackage: 'AS58/L-120826 ISC', station: 'RUH', woFlags: '33110428' },
+            { aircraft: 'ASE', date: '8/12/2026', time: '20:00', workpackage: 'ASE/L-120826 MEL EXP+WASH NEF', station: 'RUH', woFlags: '33110444' },
+            { aircraft: 'ASAD', date: '8/12/2026', time: '20:30', workpackage: 'ASAD/L-120826 ISC', station: 'JED', woFlags: '33043530' },
+            { aircraft: 'AS61', date: '8/12/2026', time: '21:00', workpackage: 'AS61/L-140826 GALLEY + F/LUB', station: 'JED', woFlags: '33110431' },
+            { aircraft: 'AS51', date: '8/12/2026', time: '21:30', workpackage: 'AS51/L-120826 ISC', station: 'RUH', woFlags: '33110422' },
+            { aircraft: 'ASJ', date: '8/12/2026', time: '22:00', workpackage: 'ASJ/L-120826 ISC', station: 'RUH', woFlags: '33011315' },
+            { aircraft: 'AS53', date: '8/12/2026', time: '22:00', workpackage: 'AS53/L-130826 ISC', station: 'RUH', woFlags: '33110423' },
+            { aircraft: 'AS62', date: '8/12/2026', time: '22:00', workpackage: 'AS62/L-110826 ISC', station: 'RUH', woFlags: '33110432' },
+            { aircraft: 'AS63', date: '8/12/2026', time: '22:00', workpackage: 'AS63/L-130826 ISC+EOD', station: 'RUH', woFlags: '33110433' },
+            { aircraft: 'ASF', date: '8/12/2026', time: '22:00', workpackage: 'ASF/L-110826 SRT', station: 'RUH', woFlags: '33110445' },
+            { aircraft: 'AS56', date: '8/12/2026', time: '23:00', workpackage: 'AS56/L-130826 ISC+MEDIA', station: 'JED', woFlags: '33110426' },
+            { aircraft: 'AS68', date: '8/13/2026', time: '01:00', workpackage: 'AS68/L-120826 ISC', station: 'JED', woFlags: '33110438' },
+            { aircraft: 'AS57', date: '8/13/2026', time: '01:00', workpackage: 'AS57/L-130826 ISC+DD[06FC 12H]', station: 'RUH', woFlags: '33110427' },
+            { aircraft: 'AS76', date: '8/13/2026', time: '01:00', workpackage: 'AS76/L-130826 ISC', station: 'RUH', woFlags: '33110442' },
+            { aircraft: 'AQJ', date: '8/13/2026', time: '18:30', workpackage: 'AQJ/L-130826 ISC', station: 'JED', woFlags: '33110858' },
+            { aircraft: 'AS66', date: '8/13/2026', time: '20:00', workpackage: 'AS66/L-130826 ISC+(WSH NEF)+WK', station: 'RUH', woFlags: '33110436' },
+            { aircraft: 'AQA', date: '8/13/2026', time: '21:00', workpackage: 'AQA/L-130826 ISC', station: 'RUH', woFlags: '33110857' },
+            { aircraft: 'AS55', date: '8/13/2026', time: '22:00', workpackage: 'AS55/L-130826 ISC', station: 'JED', woFlags: '33110425' },
+            { aircraft: 'ASC', date: '8/13/2026', time: '22:00', workpackage: 'ASC/L-130826 ISC', station: 'JED', woFlags: '33110443' },
+            { aircraft: 'ASK', date: '8/13/2026', time: '23:30', workpackage: 'ASK/L-120826 ISC EXP', station: 'RUH', woFlags: '33011316' },
+            { aircraft: 'ASL', date: '8/13/2026', time: '23:30', workpackage: 'ASL/L-130826 ISC EXP', station: 'RUH', woFlags: '33110459' },
+            { aircraft: 'AS75', date: '8/13/2026', time: '23:55', workpackage: 'AS75/L-140826 ISC', station: 'RUH', woFlags: '33110441' },
+            { aircraft: 'AS54', date: '8/13/2026', time: '23:59', workpackage: 'AS54/L-130826 ISC', station: 'JED', woFlags: '33110424' },
+            { aircraft: 'AS65', date: '8/13/2026', time: '00:00', workpackage: 'AS65/L-130826 ISC', station: 'RUH', woFlags: '33110435' },
+            { aircraft: 'ASR', date: '8/14/2026', time: '04:20', workpackage: 'ASR/L-130826 ISC', station: 'RUH', woFlags: '33110461' },
+            { aircraft: 'AQL', date: '8/14/2026', time: '13:00', workpackage: 'AQL/L-170826 EOD MUST', station: 'JED', woFlags: '33110859' },
+            { aircraft: 'ASAC', date: '8/14/2026', time: '17:00', workpackage: 'ASAC/L-140826 ISC+WK', station: 'RUH', woFlags: '33011335' },
+            { aircraft: 'AS67', date: '8/14/2026', time: '20:30', workpackage: 'AS67/L-220826 ISC+W/D', station: 'JED', woFlags: '33110437' },
+            { aircraft: 'ASAB', date: '8/14/2026', time: '22:00', workpackage: 'ASAB/L-130826 ISC', station: 'RUH', woFlags: '33007525' },
+            { aircraft: 'ASI', date: '8/14/2026', time: '22:00', workpackage: 'ASI/L-140826 ISC', station: 'RUH', woFlags: '33011314' },
+            { aircraft: 'AS72', date: '8/14/2026', time: '22:00', workpackage: 'AS72/L-140826 ISC+WK', station: 'RUH', woFlags: '33110439' },
+            { aircraft: 'AS64', date: '8/14/2026', time: '23:00', workpackage: 'AS64/L-150826 ISC+WK', station: 'RUH', woFlags: '33110434' },
+            { aircraft: 'ASN', date: '8/14/2026', time: '23:00', workpackage: 'ASN/L-140826 ISC', station: 'RUH', woFlags: '33110460' },
+            { aircraft: 'AS74', date: '8/14/2026', time: '23:30', workpackage: 'AS74/L-130826 ISC EXP', station: 'JED', woFlags: '33110440' },
+            { aircraft: 'AS59', date: '8/15/2026', time: '13:30', workpackage: 'AS59/L-150826 ISC AFTER HGR', station: 'JED', woFlags: '33110429' },
+        ];
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+
+            // Add active class to clicked button
+            event.target.classList.add('active');
+
+            // Populate tables if needed
+            if (tabName === 'aircraft') {
+                populateAircraftTable();
+            } else if (tabName === 'schedule') {
+                populateScheduleTables();
+                populateStationCounts();
+            }
+        }
+
+        function populateAircraftTable() {
+            const tbody = document.getElementById('aircraftTableBody');
+            tbody.innerHTML = '';
+
+            aircraftData.forEach(aircraft => {
+                const row = document.createElement('tr');
+                if (aircraft.status === 'completed') row.classList.add('completed');
+
+                let statusBadge = '';
+                if (aircraft.status === 'completed') {
+                    statusBadge = '<span class="status-badge status-completed">✓ Completed</span>';
+                } else if (aircraft.status === 'excluded') {
+                    statusBadge = '<span class="status-badge status-not-started">Excluded</span>';
+                } else if (aircraft.status === 'in-progress') {
+                    statusBadge = '<span class="status-badge status-in-progress">⚠ In Progress</span>';
+                } else {
+                    statusBadge = '<span class="status-badge status-scheduled">Scheduled</span>';
+                }
+
+                const completionDate = aircraft.completionDate ? aircraft.completionDate : (aircraft.status === 'excluded' ? 'N/A' : 'TBD');
+                const noteDisplay = aircraft.note ? `<div style="font-size: 11px; color: #d9534f; margin-top: 3px; font-weight: 600;">⚠️ ${aircraft.note}</div>` : '';
+
+                // Hughes Modem Status
+                let hughesBadge = '<span class="system-indicator system-not-started"></span>Pending';
+                let hughesDetail = '';
+                if (aircraft.hughesModem) {
+                    hughesBadge = '<span class="system-indicator system-completed"></span>Done';
+                    const hm = aircraft.hughesModem;
+                    let details = hm.commissioned;
+                    if (hm.tid) details += ` (TID ${hm.tid})`;
+                    if (hm.clusterFile) details += ` - Cluster: ${hm.clusterFile}`;
+                    if (hm.paramChanges) details += ` - ${hm.paramChanges}`;
+                    if (hm.commissionedBy) details += ` - By: ${hm.commissionedBy}`;
+                    if (hm.telnetParams) details += ` - Telnet: ${hm.telnetParams.join(',')}`;
+                    if (hm.iphoMode) details += ` - IPHO: ${hm.iphoMode}`;
+                    hughesDetail = `<div style="font-size: 11px; color: #666; margin-top: 3px;">${details}</div>`;
+                }
+
+                row.innerHTML = `
+                    <td><strong>${aircraft.id}</strong>${noteDisplay}</td>
+                    <td>${aircraft.type}</td>
+                    <td>${statusBadge}</td>
+                    <td><span class="system-indicator system-${aircraft.status === 'completed' ? 'completed' : aircraft.status === 'in-progress' ? 'pending' : aircraft.status === 'excluded' ? 'not-started' : 'pending'}"></span>${aircraft.status === 'completed' ? 'Complete' : aircraft.status === 'excluded' ? 'N/A' : aircraft.status === 'in-progress' ? 'In Progress' : 'Pending'}</td>
+                    <td>${hughesBadge}${hughesDetail}</td>
+                    <td><span class="system-indicator system-not-started"></span>Pending</td>
+                    <td><span class="system-indicator system-not-started"></span>Pending</td>
+                    <td><span class="system-indicator system-not-started"></span>Pending</td>
+                    <td>${completionDate}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function calculateTimeRemaining(dateStr, timeStr) {
+            // Parse the date and time (MM/DD/YYYY and HH:MM format in UTC)
+            const [month, day, year] = dateStr.split('/').map(Number);
+            const [hours, minutes] = timeStr.split(':').map(Number);
+
+            const scheduledDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+            const now = new Date();
+
+            const diffMs = scheduledDate - now;
+
+            if (diffMs < 0) {
+                // Event has passed
+                const absDiffMs = Math.abs(diffMs);
+                const days = Math.floor(absDiffMs / (1000 * 60 * 60 * 24));
+                const hrs = Math.floor((absDiffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const mins = Math.floor((absDiffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+                if (days > 0) return `${days}d ${hrs}h ago`;
+                if (hrs > 0) return `${hrs}h ${mins}m ago`;
+                return `${mins}m ago`;
+            } else {
+                // Event is in the future
+                const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const hrs = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+                if (days > 0) return `${days}d ${hrs}h left`;
+                if (hrs > 0) return `${hrs}h ${mins}m left`;
+                return `${mins}m left`;
+            }
+        }
+
+        function getTimeRemainingClass(dateStr, timeStr) {
+            const [month, day, year] = dateStr.split('/').map(Number);
+            const [hours, minutes] = timeStr.split(':').map(Number);
+
+            const scheduledDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+            const now = new Date();
+
+            const diffMs = scheduledDate - now;
+
+            if (diffMs < 0) {
+                return 'time-completed';
+            }
+
+            const hoursLeft = diffMs / (1000 * 60 * 60);
+            if (hoursLeft < 4) {
+                return 'time-critical';
+            }
+
+            return 'time-countdown';
+        }
+
+        function isMissedSchedule(dateStr, timeStr) {
+            const [month, day, year] = dateStr.split('/').map(Number);
+            const [hours, minutes] = timeStr.split(':').map(Number);
+
+            const scheduledDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+            const now = new Date();
+
+            return now > scheduledDate; // Past scheduled time
+        }
+
+        function populateScheduleTables() {
+            const jedTableBody = document.getElementById('jedTable');
+            const ruhTableBody = document.getElementById('ruhTable');
+            jedTableBody.innerHTML = '';
+            ruhTableBody.innerHTML = '';
+
+            let missedCount = 0;
+
+            scheduleData.forEach(item => {
+                const row = document.createElement('tr');
+                const completedAircraft = ['ASQ', 'AS75', 'ASAH', 'ASF', 'AS61', 'AS58', 'ASE', 'ASV', 'AS60'];
+
+                let status = '';
+                if (completedAircraft.includes(item.aircraft)) {
+                    status = '<span class="status-badge status-completed">✓ Done</span>';
+                } else if (isMissedSchedule(item.date, item.time)) {
+                    status = '<span class="status-badge status-missed">⏰ Missed</span>';
+                    missedCount++;
+                    row.style.backgroundColor = '#fff5f5';
+                } else {
+                    status = '<span class="status-badge status-scheduled">Scheduled</span>';
+                }
+
+                const timeRemaining = calculateTimeRemaining(item.date, item.time);
+                const timeClass = getTimeRemainingClass(item.date, item.time);
+
+                row.innerHTML = `
+                    <td><strong>${item.aircraft}</strong></td>
+                    <td>${item.date}</td>
+                    <td>${item.time} Z</td>
+                    <td><span class="time-remaining ${timeClass}" data-date="${item.date}" data-time="${item.time}">${timeRemaining}</span></td>
+                    <td>${item.workpackage}</td>
+                    <td>${status}</td>
+                `;
+
+                if (item.station === 'JED') {
+                    jedTableBody.appendChild(row);
+                } else {
+                    ruhTableBody.appendChild(row);
+                }
+            });
+
+            // Update missed count display
+            const missedDisplay = document.getElementById('missedCountDisplay');
+            const missedBar = document.getElementById('missedProgressBar');
+            if (missedDisplay) {
+                missedDisplay.textContent = missedCount;
+                const missedPercent = (missedCount / 40) * 100;
+                if (missedBar) {
+                    missedBar.style.width = missedPercent + '%';
+                }
+            }
+
+            // Update summary section
+            updateSummary();
+        }
+
+        function populateStationCounts() {
+            const jedCount = scheduleData.filter(d => d.station === 'JED').length;
+            const ruhCount = scheduleData.filter(d => d.station === 'RUH').length;
+
+            document.getElementById('jedCount').textContent = jedCount;
+            document.getElementById('ruhCount').textContent = ruhCount;
+        }
+
+        function filterAircraft(status) {
+            const rows = document.querySelectorAll('#aircraftTableBody tr');
+            rows.forEach(row => {
+                if (status === '') {
+                    row.style.display = '';
+                } else if (status === 'completed' && row.classList.contains('completed')) {
+                    row.style.display = '';
+                } else if (status === 'scheduled' && !row.classList.contains('completed') && row.querySelector('.status-scheduled')) {
+                    row.style.display = '';
+                } else if (status === 'excluded' && row.querySelector('.status-not-started')) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function filterStation(station) {
+            const jedSection = document.querySelectorAll('.station-section')[0];
+            const ruhSection = document.querySelectorAll('.station-section')[1];
+
+            if (station === 'JED') {
+                jedSection.style.display = '';
+                ruhSection.style.display = 'none';
+            } else if (station === 'RUH') {
+                jedSection.style.display = 'none';
+                ruhSection.style.display = '';
+            } else {
+                jedSection.style.display = '';
+                ruhSection.style.display = '';
+            }
+        }
+
+        function sortTable(tableId, columnIndex) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            rows.sort((a, b) => {
+                let aValue = a.cells[columnIndex].textContent.trim();
+                let bValue = b.cells[columnIndex].textContent.trim();
+
+                // Try to parse as numbers if they're numeric
+                const aNum = parseFloat(aValue);
+                const bNum = parseFloat(bValue);
+
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return aNum - bNum;
+                }
+
+                // For time values (HH:MM format)
+                if (columnIndex === 2 && aValue.includes(':') && bValue.includes(':')) {
+                    const aTime = aValue.split(' ')[0];
+                    const bTime = bValue.split(' ')[0];
+                    const [aH, aM] = aTime.split(':').map(Number);
+                    const [bH, bM] = bTime.split(':').map(Number);
+                    return (aH * 60 + aM) - (bH * 60 + bM);
+                }
+
+                // Default string comparison
+                return aValue.localeCompare(bValue);
+            });
+
+            // Clear and re-append sorted rows
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        function updateTimeRemaining() {
+            // Update all time remaining cells
+            document.querySelectorAll('.time-remaining').forEach(cell => {
+                const date = cell.getAttribute('data-date');
+                const time = cell.getAttribute('data-time');
+                cell.textContent = calculateTimeRemaining(date, time);
+                cell.className = `time-remaining ${getTimeRemainingClass(date, time)}`;
+            });
+        }
+
+        function updateSummary() {
+            const completedAircraft = ['ASQ', 'AS75', 'ASAH', 'ASF', 'AS61', 'AS58', 'ASE', 'ASV', 'AS60'];
+            const totalAircraft = 40;
+            const completedCount = completedAircraft.length;
+            const pendingCount = totalAircraft - completedCount;
+
+            // Calculate missed aircraft
+            let missedAircraft = [];
+            let missedJED = [];
+            let missedRUH = [];
+
+            scheduleData.forEach(item => {
+                if (!completedAircraft.includes(item.aircraft) && isMissedSchedule(item.date, item.time)) {
+                    missedAircraft.push(item);
+                    if (item.station === 'JED') {
+                        missedJED.push(item.aircraft);
+                    } else {
+                        missedRUH.push(item.aircraft);
+                    }
+                }
+            });
+
+            const missedCount = missedAircraft.length;
+
+            // Update summary display
+            document.getElementById('summaryMissedCount').textContent = missedCount + ' Aircraft';
+            document.getElementById('summaryPendingCount').textContent = pendingCount + ' Aircraft';
+
+            // Show/hide missed section
+            const missedSection = document.getElementById('missedByStationSection');
+            if (missedCount > 0) {
+                missedSection.style.display = 'block';
+                const jedDisplay = document.getElementById('missedJED');
+                const ruhDisplay = document.getElementById('missedRUH');
+
+                jedDisplay.textContent = missedJED.length > 0 ? missedJED.join(', ') : 'None';
+                ruhDisplay.textContent = missedRUH.length > 0 ? missedRUH.join(', ') : 'None';
+            } else {
+                missedSection.style.display = 'none';
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            // Set last updated date
+            const today = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const dateStr = today.toLocaleDateString('en-US', options);
+            document.getElementById('lastUpdated').textContent = dateStr;
+
+            populateAircraftTable();
+            populateScheduleTables();
+            populateStationCounts();
+            updateSummary();
+
+            // Update timer every minute
+            updateTimeRemaining();
+            setInterval(updateTimeRemaining, 60000);
+        });
+    </script>
+</body>
+</html>
