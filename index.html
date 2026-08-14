@@ -322,6 +322,178 @@
             pointer-events: none;
         }
 
+        /* Calendar strip (Overview timeline) */
+        .cal-strip {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 4px 2px 16px;
+            margin-bottom: 6px;
+        }
+
+        .cal-tile {
+            flex: 0 0 auto;
+            width: 62px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            cursor: pointer;
+            text-align: center;
+            background: white;
+            border: 1px solid #e0e0e0;
+            transition: transform 0.15s;
+        }
+
+        .cal-tile:hover {
+            transform: translateY(-3px);
+        }
+
+        .cal-tile-header {
+            background: #dc3545;
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 3px 0;
+            letter-spacing: 0.5px;
+        }
+
+        .cal-tile-day {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1e3c72;
+            padding: 3px 0 0;
+            line-height: 1;
+        }
+
+        .cal-tile-month {
+            font-size: 10px;
+            color: #666;
+            text-transform: uppercase;
+            padding: 2px 0 5px;
+        }
+
+        .cal-tile-count {
+            background: #28a745;
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 0;
+        }
+
+        /* Timeline (grouped by date) */
+        .timeline-date-group {
+            margin-bottom: 16px;
+        }
+
+        .timeline-date-heading {
+            font-weight: 700;
+            color: #1e3c72;
+            font-size: 13px;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .timeline-date-items {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .timeline-aircraft-item {
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .timeline-item-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .timeline-seq {
+            color: #999;
+            font-size: 12px;
+            min-width: 22px;
+        }
+
+        .timeline-edit-btn {
+            margin-left: auto;
+            flex-shrink: 0;
+            border: none;
+            background: #f0f0f0;
+            border-radius: 4px;
+            padding: 2px 9px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .timeline-edit-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .timeline-comment {
+            font-size: 12px;
+            color: #856404;
+            background: #fff8e1;
+            border-left: 3px solid #ffc107;
+            padding: 4px 8px;
+            margin: 4px 0 4px 30px;
+            border-radius: 4px;
+        }
+
+        /* Quick filter pills */
+        .quick-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .qf-btn {
+            border: 1px solid #ccc;
+            background: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .qf-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .qf-btn.active {
+            background: #1e3c72;
+            color: white;
+            border-color: #1e3c72;
+        }
+
+        .sortable-th {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .sortable-th:hover {
+            background: rgba(255,255,255,0.12);
+        }
+
+        .provisioned-tag {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            color: #0c5460;
+            background: #d1ecf1;
+            border-radius: 4px;
+            padding: 1px 6px;
+            margin-top: 3px;
+        }
+
         /* Timeline */
         .timeline {
             position: relative;
@@ -859,7 +1031,8 @@
 
                 <div class="timeline">
                     <div class="timeline-section completed">
-                        <div class="timeline-title" id="completedDeliveriesTitle">✅ Completed Deliveries</div>
+                        <div class="timeline-title" id="completedDeliveriesTitle">📅 Timeline</div>
+                        <div class="cal-strip" id="timelineCalendarStrip"></div>
                         <ul class="timeline-items" id="completedDeliveriesList"></ul>
                     </div>
 
@@ -892,16 +1065,14 @@
             <div id="aircraft" class="tab-content">
                 <h2 style="color: #1e3c72; margin-bottom: 20px;">Aircraft Status Summary</h2>
 
-                <div class="filter-section">
-                    <div class="filter-group">
-                        <label class="filter-label">Filter by Status:</label>
-                        <select onchange="filterAircraft(this.value)">
-                            <option value="">All Aircraft</option>
-                            <option value="completed">Completed</option>
-                            <option value="scheduled">Scheduled</option>
-                            <option value="excluded">Excluded</option>
-                        </select>
-                    </div>
+                <div class="footnote" id="provisionedCallout" style="display:none;"></div>
+
+                <div class="quick-filters">
+                    <button class="qf-btn active" onclick="filterAircraft('', this)">All</button>
+                    <button class="qf-btn" onclick="filterAircraft('completed', this)">✅ Completed</button>
+                    <button class="qf-btn" onclick="filterAircraft('scheduled', this)">🕐 Pending</button>
+                    <button class="qf-btn" onclick="filterAircraft('in-progress', this)">⚠️ In Progress</button>
+                    <button class="qf-btn" onclick="filterAircraft('excluded', this)">🚫 Excluded</button>
                 </div>
 
                 <div class="legend">
@@ -922,13 +1093,14 @@
                 <table class="aircraft-table" id="aircraftTable">
                     <thead>
                         <tr>
-                            <th>Aircraft</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Middleware 2.1.0</th>
-                            <th>IPHO Mode</th>
-                            <th>SES Migration to MG 101</th>
-                            <th>Completion Date (UTC)</th>
+                            <th>#</th>
+                            <th class="sortable-th" onclick="sortTable('aircraftTable', 1)">Aircraft</th>
+                            <th class="sortable-th" onclick="sortTable('aircraftTable', 2)">Type</th>
+                            <th class="sortable-th" onclick="sortTable('aircraftTable', 3)">Status</th>
+                            <th class="sortable-th" onclick="sortTable('aircraftTable', 4)">Middleware 2.1.0</th>
+                            <th class="sortable-th" onclick="sortTable('aircraftTable', 5)">IPHO Mode</th>
+                            <th class="sortable-th" onclick="sortTable('aircraftTable', 6)">SES Migration to MG 101</th>
+                            <th class="sortable-th" onclick="sortTable('aircraftTable', 7)">Completion Date (UTC)</th>
                         </tr>
                     </thead>
                     <tbody id="aircraftTableBody">
@@ -1228,6 +1400,18 @@
             <div style="display:flex; gap:10px;">
                 <button id="pinModalCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="pinModalSubmit" style="flex:1; padding:10px; border:none; background:#1e3c72; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="commentModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:10px; padding:28px; width:90%; max-width:420px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+            <h3 style="color:#1e3c72; margin-bottom:8px;">Comment — <span id="commentModalAircraftId"></span></h3>
+            <p style="font-size:13px; color:#666; margin-bottom:16px;">E.g. migration status, SIM card replacement details, blockers.</p>
+            <textarea id="commentModalInput" rows="4" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ccc; border-radius:6px; font-size:14px; margin-bottom:16px; font-family:inherit; resize:vertical;"></textarea>
+            <div style="display:flex; gap:10px;">
+                <button id="commentModalCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button id="commentModalSave" style="flex:1; padding:10px; border:none; background:#1e3c72; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save</button>
             </div>
         </div>
     </div>
@@ -1761,17 +1945,11 @@
             return hash;
         }
 
-        async function handleAircraftEdit(el) {
-            const id = el.dataset.id;
-            const field = el.dataset.field;
-            let value = el.value;
-            if (field === 'completionDate') value = value ? fmtDate(value) : null;
-            if (field === 'iphoStatus') value = value || null;
-
+        async function saveAircraftField(id, field, value, el) {
             const pinHash = await getEditPinHash();
-            if (!pinHash) { renderAll(); return; }
+            if (!pinHash) { renderAll(); return false; }
 
-            el.classList.add('edit-saving');
+            if (el) el.classList.add('edit-saving');
             try {
                 const res = await fetch(`${FIREBASE_DB_URL}/aircraft/${id}.json`, {
                     method: 'PATCH',
@@ -1779,13 +1957,49 @@
                 });
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                return true;
             } catch (e) {
                 sessionStorage.removeItem('editPinHash');
                 setSyncStatus('🔴 Could not save — incorrect PIN or connection issue. Try again.', '#dc3545');
                 renderAll();
+                return false;
             } finally {
-                el.classList.remove('edit-saving');
+                if (el) el.classList.remove('edit-saving');
             }
+        }
+
+        async function handleAircraftEdit(el) {
+            const id = el.dataset.id;
+            const field = el.dataset.field;
+            let value = el.value;
+            if (field === 'completionDate') value = value ? fmtDate(value) : null;
+            if (field === 'iphoStatus') value = value || null;
+            await saveAircraftField(id, field, value, el);
+        }
+
+        // ===== Comment editor (Timeline + Aircraft Status table) =====
+        function openCommentEditor(id) {
+            const aircraft = aircraftData.find(a => a.id === id);
+            document.getElementById('commentModalAircraftId').textContent = id;
+            document.getElementById('commentModalInput').value = (aircraft && aircraft.note) || '';
+            const overlay = document.getElementById('commentModalOverlay');
+            overlay.dataset.aircraftId = id;
+            overlay.style.display = 'flex';
+            document.getElementById('commentModalInput').focus();
+        }
+
+        function initCommentModal() {
+            const overlay = document.getElementById('commentModalOverlay');
+            const input = document.getElementById('commentModalInput');
+            document.getElementById('commentModalCancel').addEventListener('click', () => {
+                overlay.style.display = 'none';
+            });
+            document.getElementById('commentModalSave').addEventListener('click', async () => {
+                const id = overlay.dataset.aircraftId;
+                const text = input.value.trim();
+                overlay.style.display = 'none';
+                await saveAircraftField(id, 'note', text || null);
+            });
         }
 
         function switchTab(tabName) {
@@ -1818,12 +2032,14 @@
             const tbody = document.getElementById('aircraftTableBody');
             tbody.innerHTML = '';
 
-            aircraftData.forEach(aircraft => {
+            aircraftData.forEach((aircraft, idx) => {
                 const row = document.createElement('tr');
                 if (aircraft.status === 'completed') row.classList.add('completed');
                 const editable = aircraft.status !== 'excluded';
+                row.dataset.status = aircraft.status || 'scheduled';
 
                 const noteDisplay = aircraft.note ? `<div style="font-size: 11px; color: #d9534f; margin-top: 3px; font-weight: 600;">⚠️ ${aircraft.note}</div>` : '';
+                const commentBtn = `<button class="timeline-edit-btn" style="margin-left:6px;" onclick="openCommentEditor('${aircraft.id}')" title="Add/edit comment">✏️</button>`;
 
                 // Status (editable)
                 let statusCell;
@@ -1836,6 +2052,7 @@
                         <option value="completed" ${aircraft.status === 'completed' ? 'selected' : ''}>Completed</option>
                     </select>`;
                 }
+                const statusSort = aircraft.status || 'scheduled';
 
                 // Middleware column mirrors Status
                 const middlewareCell = `<span class="system-indicator system-${aircraft.status === 'completed' ? 'completed' : aircraft.status === 'in-progress' ? 'pending' : aircraft.status === 'excluded' ? 'not-started' : 'pending'}"></span>${aircraft.status === 'completed' ? 'Complete' : aircraft.status === 'excluded' ? 'N/A' : aircraft.status === 'in-progress' ? 'In Progress' : 'Pending'}`;
@@ -1850,33 +2067,41 @@
                         <option value="completed" ${aircraft.iphoStatus === 'completed' ? 'selected' : ''}>Done</option>
                     </select>`;
                 }
+                const iphoSort = aircraft.iphoStatus === 'completed' ? 'completed' : 'pending';
 
                 // SES Migration to MG 101 (read-only, set via Claude)
                 let cs24Badge = '<span class="system-indicator system-not-started"></span>Pending';
                 let cs24Detail = '';
+                let cs24Sort = 0;
                 if (aircraft.cs24 && aircraft.cs24.status === 'completed') {
                     cs24Badge = '<span class="system-indicator system-completed"></span>Done';
+                    cs24Sort = 2;
                     let detailText = aircraft.cs24.migration || '';
                     if (aircraft.cs24.date) detailText += ` - ${aircraft.cs24.date}`;
                     if (aircraft.cs24.note) detailText += ` (${aircraft.cs24.note})`;
                     if (detailText) {
                         cs24Detail = `<div style="font-size: 11px; color: #666; margin-top: 3px;">${detailText}</div>`;
                     }
+                } else if (aircraft.mg101Provisioned) {
+                    cs24Sort = 1;
+                    cs24Detail = `<div class="provisioned-tag">📡 Terminal Provisioned</div>`;
                 }
 
                 // Completion Date (editable)
+                const dateSort = toISODate(aircraft.completionDate) || '9999-99-99';
                 const dateCell = editable
                     ? `<input type="date" class="edit-date" data-id="${aircraft.id}" data-field="completionDate" value="${toISODate(aircraft.completionDate)}" onchange="handleAircraftEdit(this)">`
                     : 'N/A';
 
                 row.innerHTML = `
-                    <td><strong>${aircraft.id}</strong>${noteDisplay}</td>
+                    <td>${idx + 1}</td>
+                    <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong>${commentBtn}${noteDisplay}</td>
                     <td>${aircraft.type}</td>
-                    <td>${statusCell}</td>
-                    <td>${middlewareCell}</td>
-                    <td>${iphoCell}</td>
-                    <td>${cs24Badge}${cs24Detail}</td>
-                    <td>${dateCell}</td>
+                    <td data-sort="${statusSort}">${statusCell}</td>
+                    <td data-sort="${statusSort}">${middlewareCell}</td>
+                    <td data-sort="${iphoSort}">${iphoCell}</td>
+                    <td data-sort="${cs24Sort}">${cs24Badge}${cs24Detail}</td>
+                    <td data-sort="${dateSort}">${dateCell}</td>
                 `;
                 tbody.appendChild(row);
             });
@@ -1994,21 +2219,14 @@
             document.getElementById('ruhCount').textContent = ruhCount;
         }
 
-        function filterAircraft(status) {
+        function filterAircraft(status, btnEl) {
             const rows = document.querySelectorAll('#aircraftTableBody tr');
             rows.forEach(row => {
-                if (status === '') {
-                    row.style.display = '';
-                } else if (status === 'completed' && row.classList.contains('completed')) {
-                    row.style.display = '';
-                } else if (status === 'scheduled' && !row.classList.contains('completed') && row.querySelector('.status-scheduled')) {
-                    row.style.display = '';
-                } else if (status === 'excluded' && row.querySelector('.status-not-started')) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+                const rowStatus = row.dataset.status || 'scheduled';
+                row.style.display = (status === '' || rowStatus === status) ? '' : 'none';
             });
+            document.querySelectorAll('.quick-filters .qf-btn').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
         }
 
         function filterStation(station) {
@@ -2027,34 +2245,41 @@
             }
         }
 
+        let lastSort = {};
         function sortTable(tableId, columnIndex) {
             const table = document.getElementById(tableId);
             const tbody = table.querySelector('tbody');
             const rows = Array.from(tbody.querySelectorAll('tr'));
 
+            const prev = lastSort[tableId];
+            const dir = (prev && prev.col === columnIndex) ? -prev.dir : 1;
+            lastSort[tableId] = { col: columnIndex, dir };
+
             rows.sort((a, b) => {
-                let aValue = a.cells[columnIndex].textContent.trim();
-                let bValue = b.cells[columnIndex].textContent.trim();
+                const aCell = a.cells[columnIndex];
+                const bCell = b.cells[columnIndex];
+                let aValue = aCell.dataset.sort !== undefined ? aCell.dataset.sort : aCell.textContent.trim();
+                let bValue = bCell.dataset.sort !== undefined ? bCell.dataset.sort : bCell.textContent.trim();
 
                 // Try to parse as numbers if they're numeric
                 const aNum = parseFloat(aValue);
                 const bNum = parseFloat(bValue);
 
-                if (!isNaN(aNum) && !isNaN(bNum)) {
-                    return aNum - bNum;
+                if (aValue !== '' && bValue !== '' && !isNaN(aNum) && !isNaN(bNum)) {
+                    return dir * (aNum - bNum);
                 }
 
-                // For time values (HH:MM format)
-                if (columnIndex === 2 && aValue.includes(':') && bValue.includes(':')) {
+                // For time values (HH:MM format) — only when no explicit sort value was set
+                if (aCell.dataset.sort === undefined && columnIndex === 2 && aValue.includes(':') && bValue.includes(':')) {
                     const aTime = aValue.split(' ')[0];
                     const bTime = bValue.split(' ')[0];
                     const [aH, aM] = aTime.split(':').map(Number);
                     const [bH, bM] = bTime.split(':').map(Number);
-                    return (aH * 60 + aM) - (bH * 60 + bM);
+                    return dir * ((aH * 60 + aM) - (bH * 60 + bM));
                 }
 
                 // Default string comparison
-                return aValue.localeCompare(bValue);
+                return dir * aValue.localeCompare(bValue);
             });
 
             // Clear and re-append sorted rows
@@ -2112,15 +2337,86 @@
             setText('summaryAccomplishedCount', completedCount + ' Aircraft');
             setText('summaryAccomplishedList', completed.map(a => a.id).join(', ') || 'None yet');
 
-            // Completed deliveries timeline
-            setText('completedDeliveriesTitle', `✅ Completed Deliveries (${completedCount})`);
+            // Timeline: sort completed aircraft chronologically and group by date
+            setText('completedDeliveriesTitle', `📅 Timeline (${completedCount})`);
+            const sortedCompleted = [...completed].sort((a, b) => {
+                const da = toISODate(a.completionDate) || '9999-99-99';
+                const db = toISODate(b.completionDate) || '9999-99-99';
+                return da.localeCompare(db) || a.id.localeCompare(b.id);
+            });
+            const groups = {};
+            sortedCompleted.forEach(a => {
+                const key = toISODate(a.completionDate) || 'unknown';
+                (groups[key] = groups[key] || []).push(a);
+            });
+            const dateKeys = Object.keys(groups).filter(k => k !== 'unknown').sort();
+
+            const stripEl = document.getElementById('timelineCalendarStrip');
+            if (stripEl) {
+                stripEl.innerHTML = dateKeys.map(key => {
+                    const d = new Date(key + 'T00:00:00Z');
+                    const weekday = d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+                    const day = d.getUTCDate();
+                    const month = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+                    return `<div class="cal-tile" onclick="document.getElementById('dategroup-${key}').scrollIntoView({behavior:'smooth', block:'center'})">
+                        <div class="cal-tile-header">${weekday}</div>
+                        <div class="cal-tile-day">${day}</div>
+                        <div class="cal-tile-month">${month}</div>
+                        <div class="cal-tile-count">${groups[key].length} done</div>
+                    </div>`;
+                }).join('');
+            }
+
             const deliveriesList = document.getElementById('completedDeliveriesList');
             if (deliveriesList) {
-                deliveriesList.innerHTML = completed.map(a => {
-                    const station = a.station === 'JED' ? 'Jeddah' : a.station === 'RUH' ? 'Riyadh' : a.station;
-                    const noteSpan = a.note ? ` <span style="color: #ff6b6b; font-weight: 600;">⚠ ${a.note}</span>` : '';
-                    return `<li><strong>${a.id}</strong> - Completed: ${fmtDate(a.completionDate) || 'TBD'} (${station})${noteSpan}</li>`;
+                let seq = 0;
+                let html = dateKeys.map(key => {
+                    const d = new Date(key + 'T00:00:00Z');
+                    const heading = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+                    const items = groups[key].map(a => {
+                        seq++;
+                        const station = a.station === 'JED' ? 'Jeddah' : a.station === 'RUH' ? 'Riyadh' : a.station;
+                        const commentHtml = a.note ? `<div class="timeline-comment">💬 ${a.note}</div>` : '';
+                        return `<li class="timeline-aircraft-item">
+                            <div class="timeline-item-row">
+                                <span class="timeline-seq">${seq}.</span>
+                                <strong>${a.id}</strong> — ${station}
+                                <button class="timeline-edit-btn" onclick="openCommentEditor('${a.id}')" title="Add/edit comment">✏️ Comment</button>
+                            </div>
+                            ${commentHtml}
+                        </li>`;
+                    }).join('');
+                    return `<li class="timeline-date-group" id="dategroup-${key}"><div class="timeline-date-heading">${heading}</div><ul class="timeline-date-items">${items}</ul></li>`;
                 }).join('');
+                if (groups.unknown) {
+                    const items = groups.unknown.map(a => {
+                        seq++;
+                        const station = a.station === 'JED' ? 'Jeddah' : a.station === 'RUH' ? 'Riyadh' : a.station;
+                        const commentHtml = a.note ? `<div class="timeline-comment">💬 ${a.note}</div>` : '';
+                        return `<li class="timeline-aircraft-item">
+                            <div class="timeline-item-row">
+                                <span class="timeline-seq">${seq}.</span>
+                                <strong>${a.id}</strong> — ${station}
+                                <button class="timeline-edit-btn" onclick="openCommentEditor('${a.id}')" title="Add/edit comment">✏️ Comment</button>
+                            </div>
+                            ${commentHtml}
+                        </li>`;
+                    }).join('');
+                    html += `<li class="timeline-date-group"><div class="timeline-date-heading">Date TBD</div><ul class="timeline-date-items">${items}</ul></li>`;
+                }
+                deliveriesList.innerHTML = html || '<li style="color:#999; font-size:13px;">No completions yet</li>';
+            }
+
+            // Pre-provisioned MG 101 terminals callout
+            const provisioned = active.filter(a => a.mg101Provisioned && (!a.cs24 || a.cs24.status !== 'completed')).map(a => a.id);
+            const calloutEl = document.getElementById('provisionedCallout');
+            if (calloutEl) {
+                if (provisioned.length) {
+                    calloutEl.style.display = 'block';
+                    calloutEl.innerHTML = `<strong>📡 Terminals Pre-Provisioned for MG 101 (${provisioned.length}):</strong> ${provisioned.sort().join(', ')} — terminal hardware ready, migration not yet executed.`;
+                } else {
+                    calloutEl.style.display = 'none';
+                }
             }
 
             // System Tracking cards
@@ -2170,6 +2466,7 @@
             const dateStr = today.toLocaleDateString('en-US', options);
             document.getElementById('lastUpdated').textContent = dateStr;
 
+            initCommentModal();
             connectLiveSync();
 
             // Update timer every minute
