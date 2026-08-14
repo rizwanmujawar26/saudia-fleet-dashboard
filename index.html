@@ -873,8 +873,6 @@
                         <div class="timeline-title">🎯 Project Objectives</div>
                         <ul class="timeline-items">
                             <li>Upgrade Middleware to version 2.1.0 for all A320 family aircraft</li>
-                            <li>Commission Taurus Modem systems across fleet</li>
-                            <li>Commission Hughes Modem systems across fleet</li>
                             <li>Deploy IPHO Mode configuration</li>
                             <li>Enable SES Migration to MG 101</li>
                         </ul>
@@ -924,8 +922,6 @@
                             <th>Type</th>
                             <th>Status</th>
                             <th>Middleware 2.1.0</th>
-                            <th>Hughes Modem</th>
-                            <th>Taurus Modem</th>
                             <th>IPHO Mode</th>
                             <th>SES Migration to MG 101</th>
                             <th>Completion Date (UTC)</th>
@@ -1014,24 +1010,6 @@
                     </div>
 
                     <div class="metric-card warning">
-                        <div class="metric-label">Taurus Modem</div>
-                        <div class="metric-value">14</div>
-                        <div class="metric-label" style="margin-top: 10px;">Aircraft Completed (35%)</div>
-                        <div class="metric-progress">
-                            <div class="metric-progress-bar" style="width: 35%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
-                        </div>
-                    </div>
-
-                    <div class="metric-card primary">
-                        <div class="metric-label">Hughes Modem Commissioning</div>
-                        <div class="metric-value">19</div>
-                        <div class="metric-label" style="margin-top: 10px;">Aircraft Commissioned (47.5%)</div>
-                        <div class="metric-progress">
-                            <div class="metric-progress-bar" style="width: 47.5%;"></div>
-                        </div>
-                    </div>
-
-                    <div class="metric-card warning">
                         <div class="metric-label">IPHO Mode</div>
                         <div class="metric-value">14</div>
                         <div class="metric-label" style="margin-top: 10px;">Aircraft Completed (35%)</div>
@@ -1054,9 +1032,8 @@
                     <div class="station-title">System Dependencies & Sequencing</div>
                     <ul class="timeline-items" style="margin: 20px 0;">
                         <li><strong>Phase 1 - Middleware 2.1.0:</strong> Core software update (IN PROGRESS - 14 of 40 complete)</li>
-                        <li><strong>Phase 2 - Modem Commissioning:</strong> Taurus & Hughes modem deployment (IN PROGRESS - 14 of 40 complete)</li>
-                        <li><strong>Phase 3 - IPHO Mode:</strong> IPHO mode configuration (IN PROGRESS - 14 of 40 complete)</li>
-                        <li><strong>Phase 4 - SES Migration to MG 101:</strong> SES migration to MG 101 (IN PROGRESS - 9 of 40 complete)</li>
+                        <li><strong>Phase 2 - IPHO Mode:</strong> IPHO mode configuration (IN PROGRESS - 14 of 40 complete)</li>
+                        <li><strong>Phase 3 - SES Migration to MG 101:</strong> SES migration to MG 101 (IN PROGRESS - 9 of 40 complete)</li>
                     </ul>
                 </div>
             </div>
@@ -1166,7 +1143,7 @@
                     <div style="background: #f9f9f9; border-radius: 12px; padding: 20px; border: 2px solid #6c63ff;">
                         <div style="font-size: 24px; margin-bottom: 10px;">⚙️</div>
                         <h3 style="color: #1e3c72; margin: 0 0 8px 0; font-size: 15px;">System Tracking Tab</h3>
-                        <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Progress tracking for Middleware, Hughes Modem, IPHO, and SES Migration to MG 101</p>
+                        <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Progress tracking for Middleware, IPHO Mode, and SES Migration to MG 101</p>
                         <div style="display: flex; gap: 8px;">
                             <button class="tab-download-btn-small" onclick="downloadSystemsPDF()" title="PDF">📄</button>
                             <button class="tab-download-btn-small" onclick="downloadSystemsPNG()" title="PNG">🖼️</button>
@@ -1520,54 +1497,54 @@
         const aircraftData = [
             // A320 214 (23 aircraft)
             { id: 'AS51', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'AS54', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '13-Aug-2026', hughesModem: { commissioned: '13-Aug-2026' }, taurusStatus: 'completed', iphoStatus: 'completed' },
+            { id: 'AS54', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '13-Aug-2026', iphoStatus: 'completed' },
             { id: 'AS56', type: 'A320-214', status: 'scheduled', station: 'RUH' },
-            { id: 'ASE', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '12-Aug-2026', hughesModem: { commissioned: '12-Aug-2026' }, taurusStatus: 'completed', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '12-Aug-2026', note: 'Pending confirmation' } },
+            { id: 'ASE', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '12-Aug-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '12-Aug-2026', note: 'Pending confirmation' } },
             { id: 'AS53', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'AS58', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '12-Aug-2026', hughesModem: { commissioned: '12-Aug-2026' }, taurusStatus: 'completed', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '13-Aug-2026' } },
+            { id: 'AS58', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '12-Aug-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '13-Aug-2026' } },
             { id: 'AS64', type: 'A320-214', status: 'scheduled', station: 'JED' },
             { id: 'AS55', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'AS60', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '12-Aug-2026', note: 'Due to KRFU issue - stays open', hughesModem: { commissioned: '12-Aug-2026' }, taurusStatus: 'completed', iphoStatus: 'completed' },
+            { id: 'AS60', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '12-Aug-2026', note: 'Due to KRFU issue - stays open', iphoStatus: 'completed' },
             { id: 'AS63', type: 'A320-214', status: 'scheduled', station: 'RUH' },
-            { id: 'AS57', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '13-Aug-2026', hughesModem: { commissioned: '13-Aug-2026' }, taurusStatus: 'completed', iphoStatus: 'completed' },
+            { id: 'AS57', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '13-Aug-2026', iphoStatus: 'completed' },
             { id: 'AS59', type: 'A320-214', status: 'scheduled', station: 'JED' },
             { id: 'AS67', type: 'A320-214', status: 'scheduled', station: 'RUH' },
-            { id: 'AS61', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '12-Aug-2026', hughesModem: { commissioned: '12-Aug-2026' }, taurusStatus: 'completed', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '12-Aug-2026' } },
+            { id: 'AS61', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '12-Aug-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '12-Aug-2026' } },
             { id: 'AS72', type: 'A320-214', status: 'scheduled', station: 'RUH' },
-            { id: 'AS65', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '13-Aug-2026', hughesModem: { commissioned: '13-Aug-2026' }, taurusStatus: 'completed', iphoStatus: 'completed' },
+            { id: 'AS65', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '13-Aug-2026', iphoStatus: 'completed' },
             { id: 'AS62', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'ASC', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '13-Aug-2026', hughesModem: { commissioned: '13-Aug-2026' }, taurusStatus: 'completed', iphoStatus: 'completed' },
+            { id: 'ASC', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '13-Aug-2026', iphoStatus: 'completed' },
             { id: 'AS68', type: 'A320-214', status: 'scheduled', station: 'RUH' },
             { id: 'AS76', type: 'A320-214', status: 'scheduled', station: 'JED' },
             { id: 'AS66', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'AS74', type: 'A320-214', status: 'scheduled', station: 'RUH', hughesModem: { commissioned: '05-Jul-2026', tid: '101', clusterFile: '21-Jun-2026' } },
-            { id: 'AS75', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '04-Aug-2026', hughesModem: { commissioned: '04-Aug-2026', tid: '60' }, taurusStatus: 'completed', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '04-Aug-2026' } },
+            { id: 'AS74', type: 'A320-214', status: 'scheduled', station: 'RUH' },
+            { id: 'AS75', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '04-Aug-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '04-Aug-2026' } },
 
             // A321 211 (9 aircraft)
-            { id: 'ASV', type: 'A321-211', status: 'completed', station: 'JED', completionDate: '12-Aug-2026', note: 'Partial - Pending: 4G SIM Replacement & ISP Update', hughesModem: { commissioned: '12-Aug-2026' }, taurusStatus: 'completed', iphoStatus: 'completed' },
-            { id: 'ASJ', type: 'A321-211', status: 'scheduled', station: 'JED', hughesModem: { commissioned: '24-Jun-2026', tid: '54', commissionedBy: 'Rizwan' } },
-            { id: 'ASK', type: 'A321-211', status: 'completed', station: 'RUH', completionDate: '13-Aug-2026', hughesModem: { commissioned: '13-Aug-2026' }, taurusStatus: 'completed', iphoStatus: 'completed' },
-            { id: 'ASQ', type: 'A321-211', status: 'completed', station: 'JED', completionDate: '29-Jul-2026', hughesModem: { commissioned: '26-Jul-2026', tid: '50', clusterFile: 'Jun-2026', telnetParams: ['4c', 'b0', '8c'] }, taurusStatus: 'completed', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '29-Jul-2026' } },
+            { id: 'ASV', type: 'A321-211', status: 'completed', station: 'JED', completionDate: '12-Aug-2026', note: 'Partial - Pending: 4G SIM Replacement & ISP Update', iphoStatus: 'completed' },
+            { id: 'ASJ', type: 'A321-211', status: 'scheduled', station: 'JED' },
+            { id: 'ASK', type: 'A321-211', status: 'completed', station: 'RUH', completionDate: '13-Aug-2026', iphoStatus: 'completed' },
+            { id: 'ASQ', type: 'A321-211', status: 'completed', station: 'JED', completionDate: '29-Jul-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '29-Jul-2026' } },
             { id: 'ASI', type: 'A321-211', status: 'scheduled', station: 'JED' },
             { id: 'ASL', type: 'A321-211', status: 'scheduled', station: 'RUH' },
             { id: 'ASR', type: 'A321-211', status: 'scheduled', station: 'JED' },
-            { id: 'ASF', type: 'A321-211', status: 'completed', station: 'RUH', completionDate: '11-Aug-2026', hughesModem: { commissioned: '10-Aug-2026', tid: '65', paramChanges: 'Latest applied' }, taurusStatus: 'completed', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '11-Aug-2026' } },
+            { id: 'ASF', type: 'A321-211', status: 'completed', station: 'RUH', completionDate: '11-Aug-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '11-Aug-2026' } },
             { id: 'ASN', type: 'A321-211', status: 'scheduled', station: 'RUH' },
 
             // A321 251NX (4 aircraft)
-            { id: 'ASAH', type: 'A321-251NX', status: 'completed', station: 'JED', completionDate: '11-Aug-2026', hughesModem: { commissioned: '08-Jun-2026', iphoMode: 'Activated (MG101)', paramChanges: 'Latest applied' }, taurusStatus: 'completed', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '11-Aug-2026' } },
+            { id: 'ASAH', type: 'A321-251NX', status: 'completed', station: 'JED', completionDate: '11-Aug-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '11-Aug-2026' } },
             { id: 'ASAD', type: 'A321-251NX', status: 'scheduled', station: 'JED', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '08-Aug-2026' } },
             { id: 'ASAC', type: 'A321-251NX', status: 'scheduled', station: 'RUH' },
-            { id: 'ASAB', type: 'A321-251NX', status: 'scheduled', station: 'RUH', hughesModem: { commissioned: '23-Jun-2026', tid: '42' } },
+            { id: 'ASAB', type: 'A321-251NX', status: 'scheduled', station: 'RUH' },
 
             // A321 253NY XLR (2 aircraft) - EXCLUDED (HBC+)
             { id: 'ASBA', type: 'A321-253NY XLR', status: 'excluded', station: 'N/A', note: 'HBC+ Aircraft' },
             { id: 'ASBB', type: 'A321-253NY XLR', status: 'excluded', station: 'N/A', note: 'HBC+ Aircraft' },
 
             // A330 343 (4 aircraft)
-            { id: 'AQJ', type: 'A330-343', status: 'scheduled', station: 'JED', hughesModem: { commissioned: '24-Jun-2026', tid: '54', commissionedBy: 'Rizwan' } },
+            { id: 'AQJ', type: 'A330-343', status: 'scheduled', station: 'JED' },
             { id: 'AQA', type: 'A330-343', status: 'scheduled', station: 'RUH' },
-            { id: 'AQL', type: 'A330-343', status: 'scheduled', station: 'JED', hughesModem: { commissioned: '18-Jun-2026' }, cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '11-Aug-2026' } },
+            { id: 'AQL', type: 'A330-343', status: 'scheduled', station: 'JED', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '11-Aug-2026' } },
             { id: 'AQB', type: 'A330-343', status: 'scheduled', station: 'RUH' },
         ];
 
@@ -1661,27 +1638,6 @@
                 const completionDate = aircraft.completionDate ? aircraft.completionDate : (aircraft.status === 'excluded' ? 'N/A' : 'TBD');
                 const noteDisplay = aircraft.note ? `<div style="font-size: 11px; color: #d9534f; margin-top: 3px; font-weight: 600;">⚠️ ${aircraft.note}</div>` : '';
 
-                // Hughes Modem Status
-                let hughesBadge = '<span class="system-indicator system-not-started"></span>Pending';
-                let hughesDetail = '';
-                if (aircraft.hughesModem) {
-                    hughesBadge = '<span class="system-indicator system-completed"></span>Done';
-                    const hm = aircraft.hughesModem;
-                    let details = hm.commissioned;
-                    if (hm.tid) details += ` (TID ${hm.tid})`;
-                    if (hm.clusterFile) details += ` - Cluster: ${hm.clusterFile}`;
-                    if (hm.paramChanges) details += ` - ${hm.paramChanges}`;
-                    if (hm.commissionedBy) details += ` - By: ${hm.commissionedBy}`;
-                    if (hm.telnetParams) details += ` - Telnet: ${hm.telnetParams.join(',')}`;
-                    if (hm.iphoMode) details += ` - IPHO: ${hm.iphoMode}`;
-                    hughesDetail = `<div style="font-size: 11px; color: #666; margin-top: 3px;">${details}</div>`;
-                }
-
-                // Taurus Modem Status
-                const taurusBadge = aircraft.taurusStatus === 'completed'
-                    ? '<span class="system-indicator system-completed"></span>Done'
-                    : '<span class="system-indicator system-not-started"></span>Pending';
-
                 // IPHO Mode Status
                 const iphoBadge = aircraft.iphoStatus === 'completed'
                     ? '<span class="system-indicator system-completed"></span>Done'
@@ -1705,8 +1661,6 @@
                     <td>${aircraft.type}</td>
                     <td>${statusBadge}</td>
                     <td><span class="system-indicator system-${aircraft.status === 'completed' ? 'completed' : aircraft.status === 'in-progress' ? 'pending' : aircraft.status === 'excluded' ? 'not-started' : 'pending'}"></span>${aircraft.status === 'completed' ? 'Complete' : aircraft.status === 'excluded' ? 'N/A' : aircraft.status === 'in-progress' ? 'In Progress' : 'Pending'}</td>
-                    <td>${hughesBadge}${hughesDetail}</td>
-                    <td>${taurusBadge}</td>
                     <td>${iphoBadge}</td>
                     <td>${cs24Badge}${cs24Detail}</td>
                     <td>${completionDate}</td>
