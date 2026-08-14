@@ -303,6 +303,25 @@
             background: #6c757d;
         }
 
+        .edit-select, .edit-date {
+            font-size: 12px;
+            padding: 4px 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .edit-date {
+            cursor: text;
+        }
+
+        .edit-saving {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
         /* Timeline */
         .timeline {
             position: relative;
@@ -749,28 +768,28 @@
             <div class="dashboard-grid">
                 <div class="metric-card primary">
                     <div class="metric-label">Completed Aircraft</div>
-                    <div class="metric-value">14</div>
+                    <div class="metric-value" id="metricCompletedValue">-</div>
                     <div class="metric-label" style="margin-top: 10px;">of 40 Total</div>
                     <div class="metric-progress">
-                        <div class="metric-progress-bar" style="width: 35%;"></div>
+                        <div class="metric-progress-bar" id="metricCompletedBar" style="width: 0%;"></div>
                     </div>
                 </div>
 
                 <div class="metric-card warning">
                     <div class="metric-label">Completion Rate</div>
-                    <div class="metric-value">35%</div>
+                    <div class="metric-value" id="metricRateValue">-</div>
                     <div class="metric-label" style="margin-top: 10px;">Progress</div>
                     <div class="metric-progress">
-                        <div class="metric-progress-bar" style="width: 35%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
+                        <div class="metric-progress-bar" id="metricRateBar" style="width: 0%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
                     </div>
                 </div>
 
                 <div class="metric-card info">
                     <div class="metric-label">Remaining Aircraft</div>
-                    <div class="metric-value">26</div>
+                    <div class="metric-value" id="metricRemainingValue">-</div>
                     <div class="metric-label" style="margin-top: 10px;">In Queue</div>
                     <div class="metric-progress">
-                        <div class="metric-progress-bar" style="width: 65%; background: linear-gradient(90deg, #17a2b8, #20c997);"></div>
+                        <div class="metric-progress-bar" id="metricRemainingBar" style="width: 0%; background: linear-gradient(90deg, #17a2b8, #20c997);"></div>
                     </div>
                 </div>
 
@@ -804,9 +823,9 @@
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px;">
                         <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #28a745;">
-                            <div style="font-size: 14px; color: #666; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">✅ Accomplished This Session</div>
-                            <div style="font-size: 28px; color: #28a745; font-weight: bold; margin: 10px 0;">14 Aircraft</div>
-                            <div style="font-size: 12px; color: #666;">ASQ, AS75, ASAH, ASF, AS61, AS58, ASE, ASV, AS60, AS57, ASC, AS54, ASK, AS65</div>
+                            <div style="font-size: 14px; color: #666; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">✅ Completed Aircraft</div>
+                            <div style="font-size: 28px; color: #28a745; font-weight: bold; margin: 10px 0;" id="summaryAccomplishedCount">-</div>
+                            <div style="font-size: 12px; color: #666;" id="summaryAccomplishedList"></div>
                         </div>
 
                         <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #dc3545;">
@@ -840,23 +859,8 @@
 
                 <div class="timeline">
                     <div class="timeline-section completed">
-                        <div class="timeline-title">✅ Completed Deliveries (14)</div>
-                        <ul class="timeline-items">
-                            <li><strong>ASQ</strong> - Completed: 29-July-2026 (Jeddah)</li>
-                            <li><strong>AS75</strong> - Completed: 04-Aug-2026 (Jeddah)</li>
-                            <li><strong>ASAH</strong> - Completed: 11-Aug-2026 (Jeddah)</li>
-                            <li><strong>ASF</strong> - Completed: 11-Aug-2026 (Jeddah)</li>
-                            <li><strong>AS61</strong> - Completed: 12-Aug-2026 (Jeddah)</li>
-                            <li><strong>AS58</strong> - Completed: 12-Aug-2026 (Riyadh)</li>
-                            <li><strong>ASE</strong> - Completed: 12-Aug-2026 (Riyadh)</li>
-                            <li><strong>ASV</strong> - Completed: 12-Aug-2026 (Jeddah) <span style="color: #ff6b6b; font-weight: 600;">⚠ Partial - Pending: 4G SIM Replacement & ISP Update</span></li>
-                            <li><strong>AS60</strong> - Completed: 12-Aug-2026 (Jeddah) <span style="color: #ff6b6b; font-weight: 600;">⚠ Due to KRFU issue - stays open</span></li>
-                            <li><strong>AS57</strong> - Completed: 13-Aug-2026 (Riyadh)</li>
-                            <li><strong>ASC</strong> - Completed: 13-Aug-2026 (Jeddah)</li>
-                            <li><strong>AS54</strong> - Completed: 13-Aug-2026 (Jeddah)</li>
-                            <li><strong>ASK</strong> - Completed: 13-Aug-2026 (Riyadh)</li>
-                            <li><strong>AS65</strong> - Completed: 13-Aug-2026 (Riyadh)</li>
-                        </ul>
+                        <div class="timeline-title" id="completedDeliveriesTitle">✅ Completed Deliveries</div>
+                        <ul class="timeline-items" id="completedDeliveriesList"></ul>
                     </div>
 
                     <div class="timeline-section">
@@ -1002,28 +1006,28 @@
                 <div class="dashboard-grid" style="margin-bottom: 40px;">
                     <div class="metric-card primary">
                         <div class="metric-label">Middleware 2.1.0</div>
-                        <div class="metric-value">14</div>
-                        <div class="metric-label" style="margin-top: 10px;">Aircraft Completed (35%)</div>
+                        <div class="metric-value" id="metricMiddlewareValue">-</div>
+                        <div class="metric-label" style="margin-top: 10px;" id="metricMiddlewareLabel">Aircraft Completed</div>
                         <div class="metric-progress">
-                            <div class="metric-progress-bar" style="width: 35%;"></div>
+                            <div class="metric-progress-bar" id="metricMiddlewareBar" style="width: 0%;"></div>
                         </div>
                     </div>
 
                     <div class="metric-card warning">
                         <div class="metric-label">IPHO Mode</div>
-                        <div class="metric-value">14</div>
-                        <div class="metric-label" style="margin-top: 10px;">Aircraft Completed (35%)</div>
+                        <div class="metric-value" id="metricIphoValue">-</div>
+                        <div class="metric-label" style="margin-top: 10px;" id="metricIphoLabel">Aircraft Completed</div>
                         <div class="metric-progress">
-                            <div class="metric-progress-bar" style="width: 35%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
+                            <div class="metric-progress-bar" id="metricIphoBar" style="width: 0%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
                         </div>
                     </div>
 
                     <div class="metric-card warning">
                         <div class="metric-label">SES Migration to MG 101</div>
-                        <div class="metric-value">9</div>
-                        <div class="metric-label" style="margin-top: 10px;">Aircraft Completed (22.5%)</div>
+                        <div class="metric-value" id="metricMg101Value">-</div>
+                        <div class="metric-label" style="margin-top: 10px;" id="metricMg101Label">Aircraft Completed</div>
                         <div class="metric-progress">
-                            <div class="metric-progress-bar" style="width: 22.5%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
+                            <div class="metric-progress-bar" id="metricMg101Bar" style="width: 0%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
                         </div>
                     </div>
                 </div>
@@ -1031,9 +1035,9 @@
                 <div class="station-section">
                     <div class="station-title">System Dependencies & Sequencing</div>
                     <ul class="timeline-items" style="margin: 20px 0;">
-                        <li><strong>Phase 1 - Middleware 2.1.0:</strong> Core software update (IN PROGRESS - 14 of 40 complete)</li>
-                        <li><strong>Phase 2 - IPHO Mode:</strong> IPHO mode configuration (IN PROGRESS - 14 of 40 complete)</li>
-                        <li><strong>Phase 3 - SES Migration to MG 101:</strong> SES migration to MG 101 (IN PROGRESS - 9 of 40 complete)</li>
+                        <li><strong>Phase 1 - Middleware 2.1.0:</strong> Core software update (<span id="phaseMiddlewareStatus">-</span>)</li>
+                        <li><strong>Phase 2 - IPHO Mode:</strong> IPHO mode configuration (<span id="phaseIphoStatus">-</span>)</li>
+                        <li><strong>Phase 3 - SES Migration to MG 101:</strong> SES migration to MG 101 (<span id="phaseMg101Status">-</span>)</li>
                     </ul>
                 </div>
             </div>
@@ -1212,6 +1216,19 @@
         <div class="footer">
             <p>Saudia Fleet Software Loading Dashboard | Last Updated: <span id="lastUpdated">August 13, 2026</span> | All times in UTC (Zulu) as per operational schedule</p>
             <p>Excludes HBC+ aircraft (HZ-ASBA, HZ-ASBB) | Total fleet in scope: 40 aircraft</p>
+            <p id="syncStatus" style="margin-top: 8px; font-weight: 600;">🟡 Connecting to live data...</p>
+        </div>
+    </div>
+
+    <div id="pinModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:10px; padding:28px; width:90%; max-width:320px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+            <h3 style="color:#1e3c72; margin-bottom:8px;">Enter Edit PIN</h3>
+            <p style="font-size:13px; color:#666; margin-bottom:16px;">Ask your team lead for the shared edit PIN to make changes.</p>
+            <input type="password" id="pinModalInput" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ccc; border-radius:6px; font-size:15px; margin-bottom:16px;" autocomplete="off">
+            <div style="display:flex; gap:10px;">
+                <button id="pinModalCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button id="pinModalSubmit" style="flex:1; padding:10px; border:none; background:#1e3c72; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Submit</button>
+            </div>
         </div>
     </div>
 
@@ -1494,58 +1511,58 @@
         async function downloadStationsJPEG() { await downloadAsFormat('jpeg', 'Saudia_By_Station', false, 'stations'); }
 
         // Aircraft data with all fleet information
-        const aircraftData = [
+        const aircraftStatic = [
             // A320 214 (23 aircraft)
-            { id: 'AS51', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'AS54', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '13-Aug-2026', iphoStatus: 'completed' },
-            { id: 'AS56', type: 'A320-214', status: 'scheduled', station: 'RUH' },
-            { id: 'ASE', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '12-Aug-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '12-Aug-2026', note: 'Pending confirmation' } },
-            { id: 'AS53', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'AS58', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '12-Aug-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '13-Aug-2026' } },
-            { id: 'AS64', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'AS55', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'AS60', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '12-Aug-2026', note: 'Due to KRFU issue - stays open', iphoStatus: 'completed' },
-            { id: 'AS63', type: 'A320-214', status: 'scheduled', station: 'RUH' },
-            { id: 'AS57', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '13-Aug-2026', iphoStatus: 'completed' },
-            { id: 'AS59', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'AS67', type: 'A320-214', status: 'scheduled', station: 'RUH' },
-            { id: 'AS61', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '12-Aug-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '12-Aug-2026' } },
-            { id: 'AS72', type: 'A320-214', status: 'scheduled', station: 'RUH' },
-            { id: 'AS65', type: 'A320-214', status: 'completed', station: 'RUH', completionDate: '13-Aug-2026', iphoStatus: 'completed' },
-            { id: 'AS62', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'ASC', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '13-Aug-2026', iphoStatus: 'completed' },
-            { id: 'AS68', type: 'A320-214', status: 'scheduled', station: 'RUH' },
-            { id: 'AS76', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'AS66', type: 'A320-214', status: 'scheduled', station: 'JED' },
-            { id: 'AS74', type: 'A320-214', status: 'scheduled', station: 'RUH' },
-            { id: 'AS75', type: 'A320-214', status: 'completed', station: 'JED', completionDate: '04-Aug-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '04-Aug-2026' } },
+            { id: 'AS51', type: 'A320-214', station: 'JED' },
+            { id: 'AS54', type: 'A320-214', station: 'JED' },
+            { id: 'AS56', type: 'A320-214', station: 'RUH' },
+            { id: 'ASE', type: 'A320-214', station: 'RUH' },
+            { id: 'AS53', type: 'A320-214', station: 'JED' },
+            { id: 'AS58', type: 'A320-214', station: 'RUH' },
+            { id: 'AS64', type: 'A320-214', station: 'JED' },
+            { id: 'AS55', type: 'A320-214', station: 'JED' },
+            { id: 'AS60', type: 'A320-214', station: 'JED' },
+            { id: 'AS63', type: 'A320-214', station: 'RUH' },
+            { id: 'AS57', type: 'A320-214', station: 'RUH' },
+            { id: 'AS59', type: 'A320-214', station: 'JED' },
+            { id: 'AS67', type: 'A320-214', station: 'RUH' },
+            { id: 'AS61', type: 'A320-214', station: 'JED' },
+            { id: 'AS72', type: 'A320-214', station: 'RUH' },
+            { id: 'AS65', type: 'A320-214', station: 'RUH' },
+            { id: 'AS62', type: 'A320-214', station: 'JED' },
+            { id: 'ASC', type: 'A320-214', station: 'JED' },
+            { id: 'AS68', type: 'A320-214', station: 'RUH' },
+            { id: 'AS76', type: 'A320-214', station: 'JED' },
+            { id: 'AS66', type: 'A320-214', station: 'JED' },
+            { id: 'AS74', type: 'A320-214', station: 'RUH' },
+            { id: 'AS75', type: 'A320-214', station: 'JED' },
 
             // A321 211 (9 aircraft)
-            { id: 'ASV', type: 'A321-211', status: 'completed', station: 'JED', completionDate: '12-Aug-2026', note: 'Partial - Pending: 4G SIM Replacement & ISP Update', iphoStatus: 'completed' },
-            { id: 'ASJ', type: 'A321-211', status: 'scheduled', station: 'JED' },
-            { id: 'ASK', type: 'A321-211', status: 'completed', station: 'RUH', completionDate: '13-Aug-2026', iphoStatus: 'completed' },
-            { id: 'ASQ', type: 'A321-211', status: 'completed', station: 'JED', completionDate: '29-Jul-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '29-Jul-2026' } },
-            { id: 'ASI', type: 'A321-211', status: 'scheduled', station: 'JED' },
-            { id: 'ASL', type: 'A321-211', status: 'scheduled', station: 'RUH' },
-            { id: 'ASR', type: 'A321-211', status: 'scheduled', station: 'JED' },
-            { id: 'ASF', type: 'A321-211', status: 'completed', station: 'RUH', completionDate: '11-Aug-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '11-Aug-2026' } },
-            { id: 'ASN', type: 'A321-211', status: 'scheduled', station: 'RUH' },
+            { id: 'ASV', type: 'A321-211', station: 'JED' },
+            { id: 'ASJ', type: 'A321-211', station: 'JED' },
+            { id: 'ASK', type: 'A321-211', station: 'RUH' },
+            { id: 'ASQ', type: 'A321-211', station: 'JED' },
+            { id: 'ASI', type: 'A321-211', station: 'JED' },
+            { id: 'ASL', type: 'A321-211', station: 'RUH' },
+            { id: 'ASR', type: 'A321-211', station: 'JED' },
+            { id: 'ASF', type: 'A321-211', station: 'RUH' },
+            { id: 'ASN', type: 'A321-211', station: 'RUH' },
 
             // A321 251NX (4 aircraft)
-            { id: 'ASAH', type: 'A321-251NX', status: 'completed', station: 'JED', completionDate: '11-Aug-2026', iphoStatus: 'completed', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '11-Aug-2026' } },
-            { id: 'ASAD', type: 'A321-251NX', status: 'scheduled', station: 'JED', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '08-Aug-2026' } },
-            { id: 'ASAC', type: 'A321-251NX', status: 'scheduled', station: 'RUH' },
-            { id: 'ASAB', type: 'A321-251NX', status: 'scheduled', station: 'RUH' },
+            { id: 'ASAH', type: 'A321-251NX', station: 'JED' },
+            { id: 'ASAD', type: 'A321-251NX', station: 'JED' },
+            { id: 'ASAC', type: 'A321-251NX', station: 'RUH' },
+            { id: 'ASAB', type: 'A321-251NX', station: 'RUH' },
 
             // A321 253NY XLR (2 aircraft) - EXCLUDED (HBC+)
-            { id: 'ASBA', type: 'A321-253NY XLR', status: 'excluded', station: 'N/A', note: 'HBC+ Aircraft' },
-            { id: 'ASBB', type: 'A321-253NY XLR', status: 'excluded', station: 'N/A', note: 'HBC+ Aircraft' },
+            { id: 'ASBA', type: 'A321-253NY XLR', station: 'N/A' },
+            { id: 'ASBB', type: 'A321-253NY XLR', station: 'N/A' },
 
             // A330 343 (4 aircraft)
-            { id: 'AQJ', type: 'A330-343', status: 'scheduled', station: 'JED' },
-            { id: 'AQA', type: 'A330-343', status: 'scheduled', station: 'RUH' },
-            { id: 'AQL', type: 'A330-343', status: 'scheduled', station: 'JED', cs24: { status: 'completed', migration: 'SES Migration to MG 101', date: '11-Aug-2026' } },
-            { id: 'AQB', type: 'A330-343', status: 'scheduled', station: 'RUH' },
+            { id: 'AQJ', type: 'A330-343', station: 'JED' },
+            { id: 'AQA', type: 'A330-343', station: 'RUH' },
+            { id: 'AQL', type: 'A330-343', station: 'JED' },
+            { id: 'AQB', type: 'A330-343', station: 'RUH' },
         ];
 
         // Schedule data - accurate from Saudia plan
@@ -1590,6 +1607,187 @@
             { aircraft: 'AS59', date: '8/15/2026', time: '13:30', workpackage: 'AS59/L-150826 ISC AFTER HGR', station: 'JED', woFlags: '33110429' },
         ];
 
+        // ===== Live data sync (Firebase Realtime Database) =====
+        // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
+        // fields anyone can edit live on the site (status, iphoStatus, completionDate, cs24, note).
+        // aircraftData is the merged view everything else in this file renders from.
+        const FIREBASE_DB_URL = 'https://saudia-fleet-dashboard-default-rtdb.firebaseio.com';
+        let aircraftLive = {};
+        let aircraftData = aircraftStatic.map(a => ({ ...a }));
+
+        function rebuildAircraftData() {
+            aircraftData = aircraftStatic.map(s => {
+                const live = aircraftLive[s.id] || {};
+                return { ...s, ...live };
+            });
+        }
+
+        function renderAll() {
+            rebuildAircraftData();
+            populateAircraftTable();
+            populateScheduleTables();
+            populateStationCounts();
+            updateMetrics();
+        }
+
+        function applyLivePathUpdate(path, data) {
+            const parts = path.split('/').filter(Boolean);
+            if (parts.length === 0) {
+                aircraftLive = data || {};
+            } else {
+                const id = parts[0];
+                if (parts.length === 1) {
+                    if (data === null) {
+                        delete aircraftLive[id];
+                    } else {
+                        aircraftLive[id] = { ...(aircraftLive[id] || {}), ...data };
+                    }
+                } else {
+                    aircraftLive[id] = aircraftLive[id] || {};
+                    let obj = aircraftLive[id];
+                    for (let i = 1; i < parts.length - 1; i++) {
+                        obj[parts[i]] = obj[parts[i]] || {};
+                        obj = obj[parts[i]];
+                    }
+                    if (data === null) {
+                        delete obj[parts[parts.length - 1]];
+                    } else {
+                        obj[parts[parts.length - 1]] = data;
+                    }
+                }
+            }
+            renderAll();
+        }
+
+        function setSyncStatus(text, color) {
+            const el = document.getElementById('syncStatus');
+            if (el) { el.textContent = text; el.style.color = color; }
+        }
+
+        function connectLiveSync() {
+            fetch(`${FIREBASE_DB_URL}/aircraft.json`)
+                .then(r => r.json())
+                .then(data => {
+                    aircraftLive = data || {};
+                    renderAll();
+                    startLiveStream();
+                })
+                .catch(() => {
+                    renderAll();
+                    setSyncStatus('🔴 Offline — showing last known data. Edits are disabled.', '#dc3545');
+                });
+        }
+
+        function startLiveStream() {
+            const es = new EventSource(`${FIREBASE_DB_URL}/aircraft.json`);
+            es.addEventListener('put', e => {
+                const msg = JSON.parse(e.data);
+                applyLivePathUpdate(msg.path, msg.data);
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            });
+            es.addEventListener('patch', e => {
+                const msg = JSON.parse(e.data);
+                applyLivePathUpdate(msg.path, msg.data);
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            });
+            es.onopen = () => setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            es.onerror = () => setSyncStatus('🟡 Reconnecting to live data...', '#e0a800');
+        }
+
+        // ===== Date formatting helpers (display: "13-Aug-2026", input[type=date]: "2026-08-13") =====
+        const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        function fmtDate(isoOrDisplay) {
+            if (!isoOrDisplay) return null;
+            const m = isoOrDisplay.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (m) {
+                const [, y, mo, d] = m;
+                return `${d}-${MONTH_NAMES[parseInt(mo, 10) - 1]}-${y}`;
+            }
+            return isoOrDisplay;
+        }
+
+        function toISODate(displayOrIso) {
+            if (!displayOrIso) return '';
+            if (/^\d{4}-\d{2}-\d{2}$/.test(displayOrIso)) return displayOrIso;
+            const m = displayOrIso.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
+            if (m) {
+                const [, d, mon, y] = m;
+                const idx = MONTH_NAMES.indexOf(mon) + 1;
+                if (idx > 0) return `${y}-${String(idx).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            }
+            return '';
+        }
+
+        // ===== Live editing (PIN-gated writes to Firebase) =====
+        function promptForPin() {
+            return new Promise(resolve => {
+                const overlay = document.getElementById('pinModalOverlay');
+                const input = document.getElementById('pinModalInput');
+                const submitBtn = document.getElementById('pinModalSubmit');
+                const cancelBtn = document.getElementById('pinModalCancel');
+
+                input.value = '';
+                overlay.style.display = 'flex';
+                input.focus();
+
+                function cleanup(result) {
+                    overlay.style.display = 'none';
+                    submitBtn.removeEventListener('click', onSubmit);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    input.removeEventListener('keydown', onKeydown);
+                    resolve(result);
+                }
+                function onSubmit() { cleanup(input.value || null); }
+                function onCancel() { cleanup(null); }
+                function onKeydown(e) {
+                    if (e.key === 'Enter') onSubmit();
+                    if (e.key === 'Escape') onCancel();
+                }
+                submitBtn.addEventListener('click', onSubmit);
+                cancelBtn.addEventListener('click', onCancel);
+                input.addEventListener('keydown', onKeydown);
+            });
+        }
+
+        async function getEditPinHash() {
+            let hash = sessionStorage.getItem('editPinHash');
+            if (hash) return hash;
+            const pin = await promptForPin();
+            if (!pin) return null;
+            const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+            hash = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+            sessionStorage.setItem('editPinHash', hash);
+            return hash;
+        }
+
+        async function handleAircraftEdit(el) {
+            const id = el.dataset.id;
+            const field = el.dataset.field;
+            let value = el.value;
+            if (field === 'completionDate') value = value ? fmtDate(value) : null;
+            if (field === 'iphoStatus') value = value || null;
+
+            const pinHash = await getEditPinHash();
+            if (!pinHash) { renderAll(); return; }
+
+            el.classList.add('edit-saving');
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/aircraft/${id}.json`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ [field]: value, pinHash }),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+            } catch (e) {
+                sessionStorage.removeItem('editPinHash');
+                setSyncStatus('🔴 Could not save — incorrect PIN or connection issue. Try again.', '#dc3545');
+                renderAll();
+            } finally {
+                el.classList.remove('edit-saving');
+            }
+        }
+
         function switchTab(tabName) {
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -1623,27 +1821,37 @@
             aircraftData.forEach(aircraft => {
                 const row = document.createElement('tr');
                 if (aircraft.status === 'completed') row.classList.add('completed');
+                const editable = aircraft.status !== 'excluded';
 
-                let statusBadge = '';
-                if (aircraft.status === 'completed') {
-                    statusBadge = '<span class="status-badge status-completed">✓ Completed</span>';
-                } else if (aircraft.status === 'excluded') {
-                    statusBadge = '<span class="status-badge status-not-started">Excluded</span>';
-                } else if (aircraft.status === 'in-progress') {
-                    statusBadge = '<span class="status-badge status-in-progress">⚠ In Progress</span>';
-                } else {
-                    statusBadge = '<span class="status-badge status-scheduled">Scheduled</span>';
-                }
-
-                const completionDate = aircraft.completionDate ? aircraft.completionDate : (aircraft.status === 'excluded' ? 'N/A' : 'TBD');
                 const noteDisplay = aircraft.note ? `<div style="font-size: 11px; color: #d9534f; margin-top: 3px; font-weight: 600;">⚠️ ${aircraft.note}</div>` : '';
 
-                // IPHO Mode Status
-                const iphoBadge = aircraft.iphoStatus === 'completed'
-                    ? '<span class="system-indicator system-completed"></span>Done'
-                    : '<span class="system-indicator system-not-started"></span>Pending';
+                // Status (editable)
+                let statusCell;
+                if (!editable) {
+                    statusCell = '<span class="status-badge status-not-started">Excluded</span>';
+                } else {
+                    statusCell = `<select class="edit-select" data-id="${aircraft.id}" data-field="status" onchange="handleAircraftEdit(this)">
+                        <option value="scheduled" ${aircraft.status === 'scheduled' || !aircraft.status ? 'selected' : ''}>Scheduled</option>
+                        <option value="in-progress" ${aircraft.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="completed" ${aircraft.status === 'completed' ? 'selected' : ''}>Completed</option>
+                    </select>`;
+                }
 
-                // SES Migration to MG 101 Status
+                // Middleware column mirrors Status
+                const middlewareCell = `<span class="system-indicator system-${aircraft.status === 'completed' ? 'completed' : aircraft.status === 'in-progress' ? 'pending' : aircraft.status === 'excluded' ? 'not-started' : 'pending'}"></span>${aircraft.status === 'completed' ? 'Complete' : aircraft.status === 'excluded' ? 'N/A' : aircraft.status === 'in-progress' ? 'In Progress' : 'Pending'}`;
+
+                // IPHO Mode (editable)
+                let iphoCell;
+                if (!editable) {
+                    iphoCell = '<span class="system-indicator system-not-started"></span>N/A';
+                } else {
+                    iphoCell = `<select class="edit-select" data-id="${aircraft.id}" data-field="iphoStatus" onchange="handleAircraftEdit(this)">
+                        <option value="" ${aircraft.iphoStatus !== 'completed' ? 'selected' : ''}>Pending</option>
+                        <option value="completed" ${aircraft.iphoStatus === 'completed' ? 'selected' : ''}>Done</option>
+                    </select>`;
+                }
+
+                // SES Migration to MG 101 (read-only, set via Claude)
                 let cs24Badge = '<span class="system-indicator system-not-started"></span>Pending';
                 let cs24Detail = '';
                 if (aircraft.cs24 && aircraft.cs24.status === 'completed') {
@@ -1656,14 +1864,19 @@
                     }
                 }
 
+                // Completion Date (editable)
+                const dateCell = editable
+                    ? `<input type="date" class="edit-date" data-id="${aircraft.id}" data-field="completionDate" value="${toISODate(aircraft.completionDate)}" onchange="handleAircraftEdit(this)">`
+                    : 'N/A';
+
                 row.innerHTML = `
                     <td><strong>${aircraft.id}</strong>${noteDisplay}</td>
                     <td>${aircraft.type}</td>
-                    <td>${statusBadge}</td>
-                    <td><span class="system-indicator system-${aircraft.status === 'completed' ? 'completed' : aircraft.status === 'in-progress' ? 'pending' : aircraft.status === 'excluded' ? 'not-started' : 'pending'}"></span>${aircraft.status === 'completed' ? 'Complete' : aircraft.status === 'excluded' ? 'N/A' : aircraft.status === 'in-progress' ? 'In Progress' : 'Pending'}</td>
-                    <td>${iphoBadge}</td>
+                    <td>${statusCell}</td>
+                    <td>${middlewareCell}</td>
+                    <td>${iphoCell}</td>
                     <td>${cs24Badge}${cs24Detail}</td>
-                    <td>${completionDate}</td>
+                    <td>${dateCell}</td>
                 `;
                 tbody.appendChild(row);
             });
@@ -1738,18 +1951,16 @@
             jedTableBody.innerHTML = '';
             ruhTableBody.innerHTML = '';
 
-            let missedCount = 0;
+            const completedAircraft = aircraftData.filter(a => a.status === 'completed').map(a => a.id);
 
             scheduleData.forEach(item => {
                 const row = document.createElement('tr');
-                const completedAircraft = ['ASQ', 'AS75', 'ASAH', 'ASF', 'AS61', 'AS58', 'ASE', 'ASV', 'AS60', 'AS57', 'ASC', 'AS54', 'ASK', 'AS65'];
 
                 let status = '';
                 if (completedAircraft.includes(item.aircraft)) {
                     status = '<span class="status-badge status-completed">✓ Done</span>';
                 } else if (isMissedSchedule(item.date, item.time)) {
                     status = '<span class="status-badge status-missed">⏰ Missed</span>';
-                    missedCount++;
                     row.style.backgroundColor = '#fff5f5';
                 } else {
                     status = '<span class="status-badge status-scheduled">Scheduled</span>';
@@ -1773,20 +1984,6 @@
                     ruhTableBody.appendChild(row);
                 }
             });
-
-            // Update missed count display
-            const missedDisplay = document.getElementById('missedCountDisplay');
-            const missedBar = document.getElementById('missedProgressBar');
-            if (missedDisplay) {
-                missedDisplay.textContent = missedCount;
-                const missedPercent = (missedCount / 40) * 100;
-                if (missedBar) {
-                    missedBar.style.width = missedPercent + '%';
-                }
-            }
-
-            // Update summary section
-            updateSummary();
         }
 
         function populateStationCounts() {
@@ -1875,45 +2072,93 @@
             });
         }
 
-        function updateSummary() {
-            const completedAircraft = ['ASQ', 'AS75', 'ASAH', 'ASF', 'AS61', 'AS58', 'ASE', 'ASV', 'AS60', 'AS57', 'ASC', 'AS54', 'ASK', 'AS65'];
-            const totalAircraft = 40;
-            const completedCount = completedAircraft.length;
-            const pendingCount = totalAircraft - completedCount;
+        function setText(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        }
 
-            // Calculate missed aircraft
-            let missedAircraft = [];
-            let missedJED = [];
-            let missedRUH = [];
+        function setWidth(id, width) {
+            const el = document.getElementById(id);
+            if (el) el.style.width = width;
+        }
 
+        function setMetricCard(prefix, count, total) {
+            const pct = total ? Math.round((count / total) * 1000) / 10 : 0;
+            setText('metric' + prefix + 'Value', count);
+            setText('metric' + prefix + 'Label', `Aircraft Completed (${pct}%)`);
+            setWidth('metric' + prefix + 'Bar', pct + '%');
+            return pct;
+        }
+
+        // Single source of truth for every number/list on the page — derived from
+        // aircraftData + scheduleData, called after every load and every live update.
+        function updateMetrics() {
+            const total = 40; // excludes 2 HBC+ aircraft, permanently out of scope
+            const active = aircraftData.filter(a => a.status !== 'excluded');
+            const completed = active.filter(a => a.status === 'completed');
+            const completedCount = completed.length;
+            const pendingCount = total - completedCount;
+            const rate = total ? Math.round((completedCount / total) * 1000) / 10 : 0;
+
+            // Header cards
+            setText('metricCompletedValue', completedCount);
+            setText('metricRateValue', rate + '%');
+            setText('metricRemainingValue', pendingCount);
+            setWidth('metricCompletedBar', rate + '%');
+            setWidth('metricRateBar', rate + '%');
+            setWidth('metricRemainingBar', (100 - rate) + '%');
+
+            // Session summary card
+            setText('summaryAccomplishedCount', completedCount + ' Aircraft');
+            setText('summaryAccomplishedList', completed.map(a => a.id).join(', ') || 'None yet');
+
+            // Completed deliveries timeline
+            setText('completedDeliveriesTitle', `✅ Completed Deliveries (${completedCount})`);
+            const deliveriesList = document.getElementById('completedDeliveriesList');
+            if (deliveriesList) {
+                deliveriesList.innerHTML = completed.map(a => {
+                    const station = a.station === 'JED' ? 'Jeddah' : a.station === 'RUH' ? 'Riyadh' : a.station;
+                    const noteSpan = a.note ? ` <span style="color: #ff6b6b; font-weight: 600;">⚠ ${a.note}</span>` : '';
+                    return `<li><strong>${a.id}</strong> - Completed: ${fmtDate(a.completionDate) || 'TBD'} (${station})${noteSpan}</li>`;
+                }).join('');
+            }
+
+            // System Tracking cards
+            const iphoCount = active.filter(a => a.iphoStatus === 'completed').length;
+            const mg101Count = active.filter(a => a.cs24 && a.cs24.status === 'completed').length;
+            setMetricCard('Middleware', completedCount, total);
+            const iphoPct = setMetricCard('Ipho', iphoCount, total);
+            const mg101Pct = setMetricCard('Mg101', mg101Count, total);
+
+            setText('phaseMiddlewareStatus', `IN PROGRESS - ${completedCount} of ${total} complete`);
+            setText('phaseIphoStatus', `IN PROGRESS - ${iphoCount} of ${total} complete`);
+            setText('phaseMg101Status', `IN PROGRESS - ${mg101Count} of ${total} complete`);
+
+            // Missed/deferred (by station), derived from schedule + live completion status
+            let missedJED = [], missedRUH = [];
             scheduleData.forEach(item => {
-                if (!completedAircraft.includes(item.aircraft) && isMissedSchedule(item.date, item.time)) {
-                    missedAircraft.push(item);
-                    if (item.station === 'JED') {
-                        missedJED.push(item.aircraft);
-                    } else {
-                        missedRUH.push(item.aircraft);
-                    }
+                const aircraft = aircraftData.find(a => a.id === item.aircraft);
+                const isDone = aircraft && aircraft.status === 'completed';
+                if (!isDone && isMissedSchedule(item.date, item.time)) {
+                    (item.station === 'JED' ? missedJED : missedRUH).push(item.aircraft);
                 }
             });
+            const missedCount = missedJED.length + missedRUH.length;
 
-            const missedCount = missedAircraft.length;
+            setText('summaryMissedCount', missedCount + ' Aircraft');
+            setText('summaryPendingCount', pendingCount + ' Aircraft');
+            setText('missedCountDisplay', missedCount);
+            setWidth('missedProgressBar', (total ? (missedCount / total * 100) : 0) + '%');
 
-            // Update summary display
-            document.getElementById('summaryMissedCount').textContent = missedCount + ' Aircraft';
-            document.getElementById('summaryPendingCount').textContent = pendingCount + ' Aircraft';
-
-            // Show/hide missed section
             const missedSection = document.getElementById('missedByStationSection');
-            if (missedCount > 0) {
-                missedSection.style.display = 'block';
-                const jedDisplay = document.getElementById('missedJED');
-                const ruhDisplay = document.getElementById('missedRUH');
-
-                jedDisplay.textContent = missedJED.length > 0 ? missedJED.join(', ') : 'None';
-                ruhDisplay.textContent = missedRUH.length > 0 ? missedRUH.join(', ') : 'None';
-            } else {
-                missedSection.style.display = 'none';
+            if (missedSection) {
+                if (missedCount > 0) {
+                    missedSection.style.display = 'block';
+                    setText('missedJED', missedJED.length ? missedJED.join(', ') : 'None');
+                    setText('missedRUH', missedRUH.length ? missedRUH.join(', ') : 'None');
+                } else {
+                    missedSection.style.display = 'none';
+                }
             }
         }
 
@@ -1925,10 +2170,7 @@
             const dateStr = today.toLocaleDateString('en-US', options);
             document.getElementById('lastUpdated').textContent = dateStr;
 
-            populateAircraftTable();
-            populateScheduleTables();
-            populateStationCounts();
-            updateSummary();
+            connectLiveSync();
 
             // Update timer every minute
             updateTimeRemaining();
