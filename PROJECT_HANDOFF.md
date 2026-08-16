@@ -179,7 +179,13 @@ mid-session on 2026-08-16 while this doc was being written.
 The user considers this done and stable — expect small, targeted asks going
 forward (data tweaks, minor UI polish) rather than large rebuilds.
 
-Open todo: confirm at least one uid is allowlisted under `/editors` and that a
-real sign-in can save. Everything else in the auth path is verified — rules
-enforce correctly against anonymous callers, and Email/Password sign-in is
-provisioned on the project.
+Verified as of 2026-08-16: rules reject anonymous writes and anonymous reads of
+`/editors` and root while keeping `/aircraft` public; Email/Password sign-in is
+provisioned; one uid is allowlisted under `/editors`.
+
+Open todo: nobody has yet signed in and saved an edit end to end. That last hop
+can't be checked from here — it needs either a real password or the RTDB
+emulator, and the emulator needs Java, which isn't installed on this Mac
+(`emulators:start` fails with "Unable to locate a Java Runtime"). Installing a
+JDK would let a future session test rules properly with
+`auth_variable_override`, which is worth doing before the rules change again.
