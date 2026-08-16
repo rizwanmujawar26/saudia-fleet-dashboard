@@ -338,23 +338,25 @@
         .cal-tile {
             flex: 0 0 auto;
             width: 62px;
-            border-radius: 12px;
+            border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             cursor: pointer;
             text-align: center;
             background: white;
-            border: 1px solid #e0e0e0;
-            transition: transform 0.15s;
+            border: 1px solid #e5e9ec;
+            transition: transform 0.15s, border-color 0.15s;
         }
 
         .cal-tile:hover {
             transform: translateY(-3px);
+            border-color: #c9d6cd;
         }
 
+        /* These tiles mark completed days, so nothing here should read as an alert. */
         .cal-tile-header {
-            background: #dc3545;
-            color: white;
+            background: #f6f8f7;
+            color: #0a5c34;
+            border-bottom: 1px solid #e5e9ec;
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
@@ -378,37 +380,55 @@
         }
 
         .cal-tile-count {
-            background: #28a745;
-            color: white;
+            background: #e9f3ec;
+            color: #33684a;
+            border-top: 1px solid #d5e8dc;
             font-size: 11px;
             font-weight: 700;
             padding: 3px 0;
         }
 
-        /* Timeline (grouped by date) — one divider per day, nothing between aircraft */
+        /* Timeline — each day is its own card; no rules between aircraft */
         .timeline-date-group {
-            padding-bottom: 12px;
+            background: #ffffff;
+            border: 1px solid #e5e9ec;
+            border-radius: 10px;
             margin-bottom: 12px;
-            border-bottom: 1px solid #e0e0e0;
+            overflow: hidden;
         }
 
         .timeline-date-group:last-child {
-            padding-bottom: 0;
             margin-bottom: 0;
-            border-bottom: none;
         }
 
         .timeline-date-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
             font-weight: 700;
             color: #0a5c34;
             font-size: 13px;
-            margin-bottom: 6px;
+            background: #f6f8f7;
+            border-bottom: 1px solid #e5e9ec;
+            padding: 9px 14px;
+        }
+
+        .timeline-day-count {
+            font-size: 11px;
+            font-weight: 700;
+            color: #4a6b52;
+            background: #e9f3ec;
+            border: 1px solid #d5e8dc;
+            border-radius: 10px;
+            padding: 1px 9px;
+            white-space: nowrap;
         }
 
         .timeline-date-items {
             list-style: none;
             margin: 0;
-            padding: 0;
+            padding: 5px 14px 9px;
         }
 
         /* Quick filter pills */
@@ -449,12 +469,43 @@
             background: rgba(255,255,255,0.12);
         }
 
+        /* Project Overview panel — one grey field behind both blocks inside it */
+        .overview-panel {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 5px solid #0a5c34;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .overview-block + .overview-block {
+            margin-top: 28px;
+        }
+
+        /* Both overview headings share this, so they can't drift apart again.
+           Deliberately NOT .section-heading — that name is already taken by the
+           HBC+ heading on the Aircraft Status tab. */
+        .overview-heading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #0a5c34;
+            font-size: 17px;
+            font-weight: 700;
+            margin: 0 0 16px 0;
+        }
+
+        .station-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
         /* Fleet Completion Overview (Overview tab) */
         .fleet-overview-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 16px;
-            margin-bottom: 25px;
         }
 
         .simple-stat-card {
@@ -560,27 +611,28 @@
             flex-wrap: wrap;
         }
 
+        /* The registration is the subject of the row, so it outsizes its own labels. */
         .tl-reg {
             font-weight: 700;
-            color: #222;
-            min-width: 48px;
+            color: #1f2937;
+            font-size: 14.5px;
+            letter-spacing: 0.2px;
+            min-width: 54px;
         }
 
-        .tl-pill {
-            font-size: 10.5px;
+        /* One rule for both pills. The fixed height is what keeps the location pill
+           from growing taller than the type pill: its 📍 glyph has a taller natural
+           line box than plain text does. */
+        .tl-pill, .tl-loc-pill {
+            display: inline-flex;
+            align-items: center;
+            height: 20px;
+            padding: 0 9px;
+            font-size: 11px;
             font-weight: 700;
-            padding: 2px 8px;
+            line-height: 1;
             border-radius: 10px;
-            color: white;
-            white-space: nowrap;
-        }
-
-        .tl-loc-pill {
-            font-size: 10.5px;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 10px;
-            color: white;
+            border: 1px solid transparent;
             white-space: nowrap;
         }
 
@@ -840,26 +892,7 @@
 
         .timeline-section {
             margin-bottom: 40px;
-            padding-left: 30px;
-            border-left: 3px solid #0a5c34;
             position: relative;
-        }
-
-        .timeline-section::before {
-            content: '';
-            position: absolute;
-            left: -9px;
-            top: 0;
-            width: 18px;
-            height: 18px;
-            background: white;
-            border: 3px solid #0a5c34;
-            border-radius: 50%;
-        }
-
-        .timeline-section.completed::before {
-            background: #28a745;
-            border-color: #28a745;
         }
 
         .timeline-title {
@@ -1298,16 +1331,16 @@
             <div id="overview" class="tab-content active">
                 <h2 style="color: #0a5c34; margin-bottom: 20px;">Project Overview</h2>
 
-                <!-- Fleet Completion Overview -->
-                <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-left: 5px solid #0a5c34; border-radius: 8px; padding: 25px; margin-bottom: 25px;">
-                    <h3 style="color: #0a5c34; margin-bottom: 20px; font-size: 18px;">📋 Fleet Completion Overview</h3>
-                    <div class="fleet-overview-grid" id="fleetOverviewGrid"></div>
-                </div>
+                <div class="overview-panel">
+                    <section class="overview-block">
+                        <h3 class="overview-heading">📋 Fleet Completion Overview</h3>
+                        <div class="fleet-overview-grid" id="fleetOverviewGrid"></div>
+                    </section>
 
-                <!-- Completed Aircraft by Station -->
-                <div style="margin-bottom: 25px;">
-                    <h3 style="color: #0a5c34; margin-bottom: 14px; font-size: 16px;">🏢 Completed Aircraft by Station</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;" id="stationCompletionGrid"></div>
+                    <section class="overview-block">
+                        <h3 class="overview-heading">🏢 Completed Aircraft by Station</h3>
+                        <div class="station-grid" id="stationCompletionGrid"></div>
+                    </section>
                 </div>
 
                 <div class="timeline">
@@ -2853,9 +2886,24 @@
             { key: 'A321-251NX', label: 'A321neo' },
             { key: 'A330-343', label: 'A330' },
         ];
-        const TYPE_PILL_COLORS = { 'A320-214': '#1f8fe0', 'A321-211': '#2fa84f', 'A321-251NX': '#7c4dff', 'A330-343': '#fd7e14', 'A321-253NY XLR': '#6c757d' };
+        // Soft tint + darker ink rather than saturated fills: these pills are labels, not
+        // alerts, so none of them should read as a warning the way solid amber did. Keeping
+        // them all at the same lightness is what stops any one type drawing the eye.
+        const TYPE_PILL_COLORS = {
+            'A320-214':       { bg: '#eaf0f6', fg: '#3d5a75', bd: '#d3e0ec' },
+            'A321-211':       { bg: '#eaf2ec', fg: '#3f6b4f', bd: '#d2e4d8' },
+            'A321-251NX':     { bg: '#efedf5', fg: '#55507a', bd: '#dedaea' },
+            'A330-343':       { bg: '#f2efe9', fg: '#6d604a', bd: '#e3ddd2' },
+            'A321-253NY XLR': { bg: '#f0f1f2', fg: '#5a6066', bd: '#e0e2e4' },
+        };
+        const NEUTRAL_PILL = { bg: '#f0f1f2', fg: '#5a6066', bd: '#e0e2e4' };
         const TYPE_SHORT_LABEL = { 'A320-214': 'A320', 'A321-211': 'A321', 'A321-251NX': 'A321neo', 'A330-343': 'A330', 'A321-253NY XLR': 'A321 XLR' };
-        const LOCATION_PILL_COLORS = { 'Jeddah': '#1f8fe0', 'Riyadh': '#0a5c34' };
+        // Light enough that the 📍 glyph reads clearly — the old Riyadh green was so dark
+        // it swallowed the pin entirely.
+        const LOCATION_PILL_COLORS = {
+            'Jeddah': { bg: '#e8f1f8', fg: '#2f6284', bd: '#d3e4f0' },
+            'Riyadh': { bg: '#e9f3ec', fg: '#33684a', bd: '#d5e8dc' },
+        };
 
         function renderFleetOverview(active, completedStrict) {
             const grid = document.getElementById('fleetOverviewGrid');
@@ -3029,34 +3077,43 @@
                 }).join('');
             }
 
+            const pillStyle = c => `background:${c.bg}; color:${c.fg}; border-color:${c.bd}`;
+
             const renderRow = a => {
                 const loc = a.completionLocation || '';
-                const locColor = LOCATION_PILL_COLORS[loc] || '#999';
-                const typeColor = TYPE_PILL_COLORS[a.type] || '#999';
+                const locColor = LOCATION_PILL_COLORS[loc] || NEUTRAL_PILL;
+                const typeColor = TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL;
                 const typeLabel = TYPE_SHORT_LABEL[a.type] || a.type;
                 const commentHtml = a.note
                     ? `<span class="tl-comment" onclick="this.classList.toggle('expanded')" title="Click to expand">💬 ${a.note}</span>`
                     : '';
                 return `<li>
                     <div class="tl-row">
-                        <span>✈️</span>
                         <span class="tl-reg">${a.id}</span>
-                        <span class="tl-pill" style="background:${typeColor}">${typeLabel}</span>
-                        ${loc ? `<span class="tl-loc-pill" style="background:${locColor}">📍 ${loc}</span>` : ''}
+                        <span class="tl-pill" style="${pillStyle(typeColor)}">${typeLabel}</span>
+                        ${loc ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}">📍 ${loc}</span>` : ''}
                         ${commentHtml}
                     </div>
                 </li>`;
             };
+
+            const dayCard = (id, heading, rows) => `<li class="timeline-date-group"${id ? ` id="${id}"` : ''}>
+                <div class="timeline-date-heading">
+                    <span>${heading}</span>
+                    <span class="timeline-day-count">${rows.length} aircraft</span>
+                </div>
+                <ul class="timeline-date-items">${rows.map(renderRow).join('')}</ul>
+            </li>`;
 
             const deliveriesList = document.getElementById('completedDeliveriesList');
             if (deliveriesList) {
                 let html = dateKeys.map(key => {
                     const d = new Date(key + 'T00:00:00Z');
                     const heading = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
-                    return `<li class="timeline-date-group" id="dategroup-${key}"><div class="timeline-date-heading">${heading}</div><ul class="timeline-date-items">${groups[key].map(renderRow).join('')}</ul></li>`;
+                    return dayCard(`dategroup-${key}`, heading, groups[key]);
                 }).join('');
                 if (groups.unknown) {
-                    html += `<li class="timeline-date-group"><div class="timeline-date-heading">Date TBD</div><ul class="timeline-date-items">${groups.unknown.map(renderRow).join('')}</ul></li>`;
+                    html += dayCard('', 'Date TBD', groups.unknown);
                 }
                 deliveriesList.innerHTML = html || '<li style="color:#999; font-size:13px;">No completions yet</li>';
             }
