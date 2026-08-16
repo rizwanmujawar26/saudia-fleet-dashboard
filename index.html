@@ -754,6 +754,11 @@
             }
         }
 
+        /* DD-Mon-YYYY is longer than the old numeric form and wrapped mid-date. */
+        .sched-date {
+            white-space: nowrap;
+        }
+
         .loc-warning {
             font-size: 10px;
             color: #dc3545;
@@ -1988,12 +1993,18 @@
         // historical record. Add new entries here as they're scheduled; entries
         // past their date are dropped automatically at render time (see
         // populateScheduleTables), so this list never needs manual pruning.
+        //
+        // DATE FORMAT: always DD-Mon-YYYY (e.g. 16-Aug-2026), matching completionDate
+        // everywhere else. Never M/D/YYYY — month-first numeric dates are not used in
+        // the region this dashboard serves and read as the wrong day.
         const scheduleData = [
-            { aircraft: 'ASBB', date: '8/17/2026', time: '20:00', workpackage: 'ModMan Replacement', station: 'JED' },
-            { aircraft: 'AQJ', date: '8/18/2026', time: '20:00', workpackage: 'Coax Cable Replacement', station: 'JED' },
-            { aircraft: 'ASV', date: '8/19/2026', time: '20:00', workpackage: 'ECLIPSE Structural Inspection + Antenna Coaxial Cable Installation', station: 'JED' },
-            { aircraft: 'AQA', date: '8/20/2026', time: '20:00', workpackage: 'WOW Discrete Troubleshooting', station: 'JED' },
-            { aircraft: 'AQL', date: '8/22/2026', time: '20:00', workpackage: 'Coax Cable Replacement', station: 'JED' },
+            { aircraft: 'AS55', date: '16-Aug-2026', time: '21:00', workpackage: 'Middleware 2.1.0 Update', station: 'RUH' },
+            { aircraft: 'AS76', date: '16-Aug-2026', time: '22:00', workpackage: 'Middleware 2.1.0 Update', station: 'RUH' },
+            { aircraft: 'ASBB', date: '17-Aug-2026', time: '20:00', workpackage: 'ModMan Replacement', station: 'JED' },
+            { aircraft: 'AQJ', date: '18-Aug-2026', time: '20:00', workpackage: 'Coax Cable Replacement', station: 'JED' },
+            { aircraft: 'ASV', date: '19-Aug-2026', time: '20:00', workpackage: 'ECLIPSE Structural Inspection + Antenna Coaxial Cable Installation', station: 'JED' },
+            { aircraft: 'AQA', date: '20-Aug-2026', time: '20:00', workpackage: 'WOW Discrete Troubleshooting', station: 'JED' },
+            { aircraft: 'AQL', date: '22-Aug-2026', time: '20:00', workpackage: 'Coax Cable Replacement', station: 'JED' },
         ];
 
         // ===== Live data sync (Firebase Realtime Database) =====
@@ -2679,13 +2690,19 @@
             });
         }
 
-        function calculateTimeRemaining(dateStr, timeStr) {
-            if (!dateStr) return 'Date TBD';
-            // Parse the date and time (MM/DD/YYYY and HH:MM format in UTC)
-            const [month, day, year] = dateStr.split('/').map(Number);
-            const [hours, minutes] = timeStr.split(':').map(Number);
+        // Single parser for every schedule date, so the format is defined in exactly
+        // one place. Accepts DD-Mon-YYYY (via toISODate) plus HH:MM, both UTC.
+        function parseScheduleUTC(dateStr, timeStr) {
+            const iso = toISODate(dateStr);
+            if (!iso) return null;
+            const [year, month, day] = iso.split('-').map(Number);
+            const [hours, minutes] = (timeStr || '00:00').split(':').map(Number);
+            return new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+        }
 
-            const scheduledDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+        function calculateTimeRemaining(dateStr, timeStr) {
+            const scheduledDate = parseScheduleUTC(dateStr, timeStr);
+            if (!scheduledDate) return 'Date TBD';
             const now = new Date();
 
             const diffMs = scheduledDate - now;
@@ -2713,11 +2730,8 @@
         }
 
         function getTimeRemainingClass(dateStr, timeStr) {
-            if (!dateStr) return 'time-tbd';
-            const [month, day, year] = dateStr.split('/').map(Number);
-            const [hours, minutes] = timeStr.split(':').map(Number);
-
-            const scheduledDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+            const scheduledDate = parseScheduleUTC(dateStr, timeStr);
+            if (!scheduledDate) return 'time-tbd';
             const now = new Date();
 
             const diffMs = scheduledDate - now;
@@ -2735,14 +2749,9 @@
         }
 
         function isMissedSchedule(dateStr, timeStr) {
-            if (!dateStr) return false;
-            const [month, day, year] = dateStr.split('/').map(Number);
-            const [hours, minutes] = timeStr.split(':').map(Number);
-
-            const scheduledDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
-            const now = new Date();
-
-            return now > scheduledDate; // Past scheduled time
+            const scheduledDate = parseScheduleUTC(dateStr, timeStr);
+            if (!scheduledDate) return false;
+            return new Date() > scheduledDate; // Past scheduled time
         }
 
         function populateScheduleTables() {
@@ -2771,8 +2780,8 @@
 
                 row.innerHTML = `
                     <td><strong>${item.aircraft}</strong></td>
-                    <td>${item.date || 'TBD'}</td>
-                    <td>${item.time} Z</td>
+                    <td class="sched-date">${item.date || 'TBD'}</td>
+                    <td class="sched-date">${item.time} Z</td>
                     <td><span class="time-remaining ${timeClass}" data-date="${item.date || ''}" data-time="${item.time}">${timeRemaining}</span></td>
                     <td>${item.workpackage}</td>
                     <td>${status}</td>
