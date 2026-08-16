@@ -294,13 +294,6 @@
             50% { opacity: 0.7; }
         }
 
-        .status-missed {
-            background: #dc3545;
-            color: white;
-            font-weight: 600;
-            box-shadow: 0 0 8px rgba(220, 53, 69, 0.3);
-        }
-
         .status-scheduled {
             background: #17a2b8;
             color: white;
@@ -1981,48 +1974,11 @@
         ];
 
         // Schedule data - accurate from Saudia plan
+        // Upcoming work packages only — a standalone forward-looking plan, not a
+        // historical record. Add new entries here as they're scheduled; entries
+        // past their date are dropped automatically at render time (see
+        // populateScheduleTables), so this list never needs manual pruning.
         const scheduleData = [
-            { aircraft: 'ASAH', date: '8/12/2026', time: '12:00', workpackage: 'ASAH/L-120826 ISC EXP', station: 'JED', woFlags: '33011336' },
-            { aircraft: 'ASV', date: '8/12/2026', time: '19:00', workpackage: 'ASV/L-120826 MEDIA', station: 'JED', woFlags: '33011318' },
-            { aircraft: 'AS60', date: '8/12/2026', time: '20:00', workpackage: 'AS60/L-130826 ISC+EOD', station: 'JED', woFlags: '33110430' },
-            { aircraft: 'AS58', date: '8/12/2026', time: '20:00', workpackage: 'AS58/L-120826 ISC', station: 'RUH', woFlags: '33110428' },
-            { aircraft: 'ASE', date: '8/12/2026', time: '20:00', workpackage: 'ASE/L-120826 MEL EXP+WASH NEF', station: 'RUH', woFlags: '33110444' },
-            { aircraft: 'ASAD', date: '8/12/2026', time: '20:30', workpackage: 'ASAD/L-120826 ISC', station: 'JED', woFlags: '33043530' },
-            { aircraft: 'AS61', date: '8/12/2026', time: '21:00', workpackage: 'AS61/L-140826 GALLEY + F/LUB', station: 'JED', woFlags: '33110431' },
-            { aircraft: 'AS51', date: '8/12/2026', time: '21:30', workpackage: 'AS51/L-120826 ISC', station: 'RUH', woFlags: '33110422' },
-            { aircraft: 'ASJ', date: '8/12/2026', time: '22:00', workpackage: 'ASJ/L-120826 ISC', station: 'RUH', woFlags: '33011315' },
-            { aircraft: 'AS53', date: '8/12/2026', time: '22:00', workpackage: 'AS53/L-130826 ISC', station: 'RUH', woFlags: '33110423' },
-            { aircraft: 'AS62', date: '8/12/2026', time: '22:00', workpackage: 'AS62/L-110826 ISC', station: 'RUH', woFlags: '33110432' },
-            { aircraft: 'AS63', date: '8/12/2026', time: '22:00', workpackage: 'AS63/L-130826 ISC+EOD', station: 'RUH', woFlags: '33110433' },
-            { aircraft: 'ASF', date: '8/12/2026', time: '22:00', workpackage: 'ASF/L-110826 SRT', station: 'RUH', woFlags: '33110445' },
-            { aircraft: 'AS56', date: '8/12/2026', time: '23:00', workpackage: 'AS56/L-130826 ISC+MEDIA', station: 'JED', woFlags: '33110426' },
-            { aircraft: 'AS68', date: '8/13/2026', time: '01:00', workpackage: 'AS68/L-120826 ISC', station: 'JED', woFlags: '33110438' },
-            { aircraft: 'AS57', date: '8/13/2026', time: '01:00', workpackage: 'AS57/L-130826 ISC+DD[06FC 12H]', station: 'RUH', woFlags: '33110427' },
-            { aircraft: 'AS76', date: '8/13/2026', time: '01:00', workpackage: 'AS76/L-130826 ISC', station: 'RUH', woFlags: '33110442' },
-            { aircraft: 'AQJ', date: '8/13/2026', time: '18:30', workpackage: 'AQJ/L-130826 ISC', station: 'JED', woFlags: '33110858' },
-            { aircraft: 'AS66', date: '8/13/2026', time: '20:00', workpackage: 'AS66/L-130826 ISC+(WSH NEF)+WK', station: 'RUH', woFlags: '33110436' },
-            { aircraft: 'AQA', date: '8/13/2026', time: '21:00', workpackage: 'AQA/L-130826 ISC', station: 'RUH', woFlags: '33110857' },
-            { aircraft: 'AS55', date: '8/13/2026', time: '22:00', workpackage: 'AS55/L-130826 ISC', station: 'JED', woFlags: '33110425' },
-            { aircraft: 'ASC', date: '8/13/2026', time: '22:00', workpackage: 'ASC/L-130826 ISC', station: 'JED', woFlags: '33110443' },
-            { aircraft: 'ASK', date: '8/13/2026', time: '23:30', workpackage: 'ASK/L-120826 ISC EXP', station: 'RUH', woFlags: '33011316' },
-            { aircraft: 'ASL', date: '8/13/2026', time: '23:30', workpackage: 'ASL/L-130826 ISC EXP', station: 'RUH', woFlags: '33110459' },
-            { aircraft: 'AS75', date: '8/13/2026', time: '23:55', workpackage: 'AS75/L-140826 ISC', station: 'RUH', woFlags: '33110441' },
-            { aircraft: 'AS54', date: '8/13/2026', time: '23:59', workpackage: 'AS54/L-130826 ISC', station: 'JED', woFlags: '33110424' },
-            { aircraft: 'AS65', date: '8/13/2026', time: '00:00', workpackage: 'AS65/L-130826 ISC', station: 'RUH', woFlags: '33110435' },
-            { aircraft: 'ASR', date: '8/14/2026', time: '04:20', workpackage: 'ASR/L-130826 ISC', station: 'RUH', woFlags: '33110461' },
-            { aircraft: 'AQL', date: '8/14/2026', time: '13:00', workpackage: 'AQL/L-170826 EOD MUST', station: 'JED', woFlags: '33110859' },
-            { aircraft: 'ASAC', date: '8/14/2026', time: '17:00', workpackage: 'ASAC/L-140826 ISC+WK', station: 'RUH', woFlags: '33011335' },
-            { aircraft: 'AS67', date: '8/14/2026', time: '20:30', workpackage: 'AS67/L-220826 ISC+W/D', station: 'JED', woFlags: '33110437' },
-            { aircraft: 'ASAB', date: '8/14/2026', time: '22:00', workpackage: 'ASAB/L-130826 ISC', station: 'RUH', woFlags: '33007525' },
-            { aircraft: 'ASI', date: '8/14/2026', time: '22:00', workpackage: 'ASI/L-140826 ISC', station: 'RUH', woFlags: '33011314' },
-            { aircraft: 'AS72', date: '8/14/2026', time: '22:00', workpackage: 'AS72/L-140826 ISC+WK', station: 'RUH', woFlags: '33110439' },
-            { aircraft: 'AS64', date: '8/14/2026', time: '23:00', workpackage: 'AS64/L-150826 ISC+WK', station: 'RUH', woFlags: '33110434' },
-            { aircraft: 'ASN', date: '8/14/2026', time: '23:00', workpackage: 'ASN/L-140826 ISC', station: 'RUH', woFlags: '33110460' },
-            { aircraft: 'AS74', date: '8/14/2026', time: '23:30', workpackage: 'AS74/L-130826 ISC EXP', station: 'JED', woFlags: '33110440' },
-            { aircraft: 'AS59', date: '8/15/2026', time: '13:30', workpackage: 'AS59/L-150826 ISC AFTER HGR', station: 'JED', woFlags: '33110429' },
-
-            // Upcoming work packages (standalone plan, not linked to Middleware completion status)
-            { aircraft: 'ASE', date: '8/13/2026', time: '20:00', workpackage: 'HNS Modem Commission', station: 'JED' },
             { aircraft: 'ASBB', date: '8/17/2026', time: '20:00', workpackage: 'ModMan Replacement', station: 'JED' },
             { aircraft: 'AQJ', date: '8/18/2026', time: '20:00', workpackage: 'Coax Cable Replacement', station: 'JED' },
             { aircraft: 'ASV', date: '8/19/2026', time: '20:00', workpackage: 'ECLIPSE Structural Inspection + Antenna Coaxial Cable Installation', station: 'JED' },
@@ -2642,22 +2598,20 @@
             jedTableBody.innerHTML = '';
             ruhTableBody.innerHTML = '';
 
-            // Schedule is a standalone plan/timeline: status is purely date-driven
-            // (Scheduled vs Missed) — deliberately not cross-referenced against
-            // aircraftData, since a schedule entry tracks its own workpackage,
-            // not overall aircraft completion.
-            scheduleData.forEach(item => {
+            // Schedule is a standalone, forward-looking plan — not a historical record.
+            // Entries whose date has already passed are dropped automatically here,
+            // so the page always shows only what's still upcoming with no manual
+            // pruning needed. It's also deliberately not cross-referenced against
+            // aircraftData, since a schedule entry tracks its own workpackage, not
+            // overall aircraft completion.
+            const upcoming = scheduleData.filter(item => !item.date || !isMissedSchedule(item.date, item.time));
+
+            upcoming.forEach(item => {
                 const row = document.createElement('tr');
 
-                let status = '';
-                if (!item.date) {
-                    status = '<span class="status-badge status-not-started">Date TBD</span>';
-                } else if (isMissedSchedule(item.date, item.time)) {
-                    status = '<span class="status-badge status-missed">⏰ Missed</span>';
-                    row.style.backgroundColor = '#fff5f5';
-                } else {
-                    status = '<span class="status-badge status-scheduled">Scheduled</span>';
-                }
+                const status = !item.date
+                    ? '<span class="status-badge status-not-started">Date TBD</span>'
+                    : '<span class="status-badge status-scheduled">Scheduled</span>';
 
                 const timeRemaining = calculateTimeRemaining(item.date, item.time);
                 const timeClass = getTimeRemainingClass(item.date, item.time);
@@ -2677,6 +2631,10 @@
                     ruhTableBody.appendChild(row);
                 }
             });
+
+            const emptyRow = () => '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">No upcoming work packages</td></tr>';
+            if (!jedTableBody.children.length) jedTableBody.innerHTML = emptyRow();
+            if (!ruhTableBody.children.length) ruhTableBody.innerHTML = emptyRow();
         }
 
         function filterStation(station) {
