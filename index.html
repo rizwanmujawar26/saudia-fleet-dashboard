@@ -424,10 +424,12 @@
             white-space: nowrap;
         }
 
+        /* No side padding here — .tl-row carries it instead, so its divider and hover
+           band run the full width of the card, the way the schedule table rows do. */
         .timeline-date-items {
             list-style: none;
             margin: 0;
-            padding: 5px 14px 9px;
+            padding: 0;
         }
 
         /* Quick filter pills */
@@ -524,6 +526,12 @@
             letter-spacing: 0.5px;
         }
 
+        .simple-stat-card .stat-code {
+            font-weight: 600;
+            color: #9aa2a8;
+            letter-spacing: 0.3px;
+        }
+
         .simple-stat-card .stat-value {
             font-size: 26px;
             color: #0a5c34;
@@ -531,10 +539,27 @@
             margin: 8px 0;
         }
 
+        /* Clamped to two lines and given that height as a floor, so every card is the
+           same size no matter how many tails it lists — otherwise the boxes stagger
+           badly once the grid drops to a single column on mobile. Click to expand. */
         .simple-stat-card .stat-list {
-            font-size: 12px;
+            font-size: 11.5px;
             color: #666;
-            line-height: 1.5;
+            line-height: 1.55;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 36px;
+        }
+
+        .simple-stat-card .stat-list.clickable {
+            cursor: pointer;
+        }
+
+        .simple-stat-card .stat-list.expanded {
+            -webkit-line-clamp: unset;
+            overflow: visible;
         }
 
         .type-stat-card .stat-pct {
@@ -549,16 +574,6 @@
             margin-bottom: 6px;
         }
 
-        /* Same anatomy as the per-type cards, weighted slightly heavier so the
-           whole-fleet rollup still reads as the parent of the row. */
-        .total-stat-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f4f8f5 100%);
-            border-left-width: 6px;
-        }
-
-        .total-stat-card .stat-pct {
-            font-size: 26px;
-        }
 
         .type-progress-bar-track {
             background: #e9ecef;
@@ -613,12 +628,23 @@
         }
 
         /* Timeline tag pills */
+        /* Divider and hover lifted from .aircraft-table rows so both read the same. */
         .tl-row {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 7px 0;
+            padding: 9px 14px;
             flex-wrap: wrap;
+            border-bottom: 1px solid #e0e0e0;
+            transition: background 0.2s ease;
+        }
+
+        .tl-row:hover {
+            background: rgba(10, 92, 52, 0.03);
+        }
+
+        .timeline-date-items > li:last-child .tl-row {
+            border-bottom: none;
         }
 
         /* The registration is the subject of the row, so it outsizes its own labels. */
@@ -3261,6 +3287,14 @@
             'Riyadh': { bg: '#e9f3ec', fg: '#33684a', bd: '#d5e8dc' },
         };
 
+        // The list is clamped to two lines by CSS so the cards stay the same height.
+        // Nothing is lost — click expands, and the full list is in the tooltip.
+        function statList(ids) {
+            if (!ids.length) return '<div class="stat-list">None yet</div>';
+            const text = ids.join(', ');
+            return `<div class="stat-list clickable" title="${escAttr(text)}" onclick="this.classList.toggle('expanded')">${text}</div>`;
+        }
+
         function renderFleetOverview(active, completedStrict) {
             const grid = document.getElementById('fleetOverviewGrid');
             if (!grid) return;
@@ -3282,10 +3316,10 @@
                 const pct = s.total ? Math.round((s.completed / s.total) * 1000) / 10 : 0;
                 return `<div class="simple-stat-card type-stat-card">
                     <div class="stat-label">${g.label}</div>
-                    <div class="stat-frac">${s.completed}/${s.total} aircraft</div>
+                    <div class="stat-frac">${s.completed}/${s.total}</div>
                     <div class="stat-pct">${pct}%</div>
                     <div class="type-progress-bar-track"><div class="type-progress-bar-fill" style="width:${pct}%"></div></div>
-                    <div class="stat-list">${s.ids.join(', ') || 'None yet'}</div>
+                    ${statList(s.ids)}
                 </div>`;
             };
 
@@ -3296,20 +3330,21 @@
             const hbcPct = Math.round((hbcCount / HBC_SCOPE) * 1000) / 10;
             const xlrCard = `<div class="simple-stat-card type-stat-card">
                 <div class="stat-label">A321XLR <span class="scope-chip">SBC CONFIG</span></div>
-                <div class="stat-frac">${hbcCount}/${HBC_SCOPE} aircraft</div>
+                <div class="stat-frac">${hbcCount}/${HBC_SCOPE}</div>
                 <div class="stat-pct">${hbcPct}%</div>
                 <div class="type-progress-bar-track"><div class="type-progress-bar-fill" style="width:${hbcPct}%"></div></div>
-                <div class="stat-list">${hbcDone.map(a => 'HZ-' + a.id).join(', ') || 'None yet'}</div>
+                ${statList(hbcDone.map(a => 'HZ-' + a.id))}
             </div>`;
 
-            // Parent card: whole-fleet rollup only. The registrations live in the per-type
-            // cards beside it, so repeating all 23 here just made this the noisiest tile.
+            // Whole-fleet rollup. Same anatomy as the per-type cards, including the
+            // empty list slot, so it sits level with them instead of running short.
             const totalPct = Math.round((completedStrict.length / PROJECT_SCOPE) * 1000) / 10;
-            let html = `<div class="simple-stat-card type-stat-card total-stat-card">
-                <div class="stat-label">✅ Total Completed</div>
-                <div class="stat-frac">${completedStrict.length}/${PROJECT_SCOPE} aircraft</div>
+            let html = `<div class="simple-stat-card type-stat-card">
+                <div class="stat-label">TOTAL</div>
+                <div class="stat-frac">${completedStrict.length}/${PROJECT_SCOPE}</div>
                 <div class="stat-pct">${totalPct}%</div>
                 <div class="type-progress-bar-track"><div class="type-progress-bar-fill" style="width:${totalPct}%"></div></div>
+                <div class="stat-list"></div>
             </div>`;
             html += typeCard(TYPE_GROUPS[0]); // A320
             html += typeCard(TYPE_GROUPS[1]); // A321
@@ -3325,16 +3360,18 @@
             if (!grid) return;
             const jed = completedStrict.filter(a => a.completionLocation === 'Jeddah');
             const ruh = completedStrict.filter(a => a.completionLocation === 'Riyadh');
+            // The section heading already says these are completed aircraft by station,
+            // so the cards only need to name the station.
             grid.innerHTML = `
                 <div class="simple-stat-card">
-                    <div class="stat-label">Completed Aircraft — Jeddah (OEJN / JED)</div>
+                    <div class="stat-label">Jeddah <span class="stat-code">OEJN / JED</span></div>
                     <div class="stat-value">${jed.length}</div>
-                    <div class="stat-list">${jed.map(a => a.id).join(', ') || 'None yet'}</div>
+                    ${statList(jed.map(a => a.id))}
                 </div>
                 <div class="simple-stat-card">
-                    <div class="stat-label">Completed Aircraft — Riyadh (OERK / RUH)</div>
+                    <div class="stat-label">Riyadh <span class="stat-code">OERK / RUH</span></div>
                     <div class="stat-value">${ruh.length}</div>
-                    <div class="stat-list">${ruh.map(a => a.id).join(', ') || 'None yet'}</div>
+                    ${statList(ruh.map(a => a.id))}
                 </div>
             `;
         }
