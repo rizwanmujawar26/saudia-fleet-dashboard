@@ -555,55 +555,28 @@
             vertical-align: middle;
         }
 
-        /* HBC+ / XLR mini widget */
-        .xlr-widget {
-            background: #fdf6ec;
-            border: 1px solid #f0ddb8;
-            border-radius: 8px;
-            padding: 16px 18px;
-            margin-bottom: 25px;
-        }
-
-        .xlr-widget h4 {
-            color: #a15c00;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .xlr-row {
+        /* Timeline header + sort toggle */
+        .timeline-title-row {
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
             gap: 10px;
-            font-size: 13px;
-            padding: 6px 0;
-            border-bottom: 1px solid #f0ddb8;
+            margin-bottom: 8px;
         }
 
-        .xlr-row:last-of-type {
-            border-bottom: none;
+        .timeline-title-row .timeline-title {
+            margin-bottom: 0;
         }
 
-        .xlr-status-pill {
-            font-size: 11px;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 10px;
+        .timeline-sort-toggle {
+            display: flex;
+            gap: 6px;
         }
 
-        .xlr-status-pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .xlr-status-done {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .xlr-note {
-            font-size: 11.5px;
-            color: #a15c00;
-            margin-top: 8px;
+        .timeline-sort-toggle .qf-btn {
+            padding: 5px 12px;
+            font-size: 12px;
         }
 
         /* Timeline tag pills */
@@ -1346,16 +1319,15 @@
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;" id="stationCompletionGrid"></div>
                 </div>
 
-                <!-- A321 XLR (HBC+) BEAMCFG mini-widget -->
-                <div class="xlr-widget">
-                    <h4>✈️ A321 XLR (HBC+) — BEAMCFG Tracking</h4>
-                    <div id="xlrWidgetBody"></div>
-                    <div class="xlr-note">Note: Separate HBC+ system — minor SBC config update only, not part of main fleet software rollout.</div>
-                </div>
-
                 <div class="timeline">
                     <div class="timeline-section completed">
-                        <div class="timeline-title" id="completedDeliveriesTitle">📅 Timeline</div>
+                        <div class="timeline-title-row">
+                            <div class="timeline-title" id="completedDeliveriesTitle">📅 Timeline</div>
+                            <div class="timeline-sort-toggle">
+                                <button id="sortOldestBtn" class="qf-btn active" onclick="setTimelineSort('asc')">↑ Oldest First</button>
+                                <button id="sortLatestBtn" class="qf-btn" onclick="setTimelineSort('desc')">↓ Latest First</button>
+                            </div>
+                        </div>
                         <div class="cal-strip" id="timelineCalendarStrip"></div>
                         <ul class="timeline-items" id="completedDeliveriesList"></ul>
                     </div>
@@ -2819,21 +2791,6 @@
             `;
         }
 
-        function renderXlrWidget() {
-            const body = document.getElementById('xlrWidgetBody');
-            if (!body) return;
-            const tails = aircraftData.filter(a => a.id === 'ASBA' || a.id === 'ASBB');
-            body.innerHTML = tails.map(a => {
-                const done = a.beamcfgStatus === 'done';
-                return `<div class="xlr-row">
-                    <strong>HZ-${a.id}</strong>
-                    <span class="xlr-status-pill ${done ? 'xlr-status-done' : 'xlr-status-pending'}">${done ? '✓ Done' : 'Pending'}</span>
-                    <span style="color:#856404;">BEAMCFG_MOD3_NSG_A.13</span>
-                    <span style="margin-left:auto; color:#666;">${done ? (fmtDate(a.completionDate) || 'Date TBD') : ''}</span>
-                </div>`;
-            }).join('');
-        }
-
         function renderObjectives() {
             const list = document.getElementById('objectivesList');
             if (!list) return;
@@ -2888,6 +2845,17 @@
             `).join('');
         }
 
+        let timelineSortDir = 'asc'; // 'asc' = oldest first, 'desc' = latest first
+
+        function setTimelineSort(dir) {
+            timelineSortDir = dir;
+            const oldestBtn = document.getElementById('sortOldestBtn');
+            const latestBtn = document.getElementById('sortLatestBtn');
+            if (oldestBtn) oldestBtn.classList.toggle('active', dir === 'asc');
+            if (latestBtn) latestBtn.classList.toggle('active', dir === 'desc');
+            updateMetrics();
+        }
+
         function renderTimeline(completedStrict) {
             setText('completedDeliveriesTitle', `📅 Timeline (${completedStrict.length})`);
             const sorted = [...completedStrict].sort((a, b) => {
@@ -2901,6 +2869,7 @@
                 (groups[key] = groups[key] || []).push(a);
             });
             const dateKeys = Object.keys(groups).filter(k => k !== 'unknown').sort();
+            if (timelineSortDir === 'desc') dateKeys.reverse();
 
             const stripEl = document.getElementById('timelineCalendarStrip');
             if (stripEl) {
@@ -2986,7 +2955,6 @@
 
             renderFleetOverview(active, completedStrict);
             renderStationCompletion(completedStrict);
-            renderXlrWidget();
             renderTimeline(completedStrict);
         }
 
