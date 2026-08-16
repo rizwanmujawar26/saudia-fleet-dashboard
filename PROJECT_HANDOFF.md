@@ -20,48 +20,49 @@ the same data instantly.
 `gh` CLI and `firebase` CLI (via `npx firebase-tools`) are already authenticated
 on this Mac — no login needed to keep working.
 
-## ⚠️ Read this first: this is a read-only dashboard
+## ⚠️ Read this first: how editing is secured
 
-On 2026-08-16 the Realtime Database security rules were changed to
-**block all writes**:
+**Public read, authenticated write.** Anyone can view the dashboard; only a
+signed-in account that is explicitly allowlisted can change data. The check
+lives in the database rules, so bypassing the UI with a raw REST call gains
+nothing.
 
-```json
-{
-  "rules": {
-    ".read": false,
-    ".write": false,
-    "aircraft": {
-      ".read": true,
-      ".write": false
-    }
-  }
-}
-```
+Short history: the original edit gate was a shared PIN checked in JavaScript —
+not a database rule — so anyone could bypass it with one REST call. Commit
+`d055b5f` locked the database to read-only on 2026-08-16; `4587c27` stripped
+the resulting dead UI; `460f6e3` rebuilt editing properly on Firebase Auth.
 
-Commit `d055b5f` (`git log`) explains why: the PIN-gated editing UI was
-**client-side only** — a JS conditional, not a real database rule — so anyone
-could bypass it entirely with a raw REST call. That commit locked the database
-to read-only and states editing is intentionally moving to a separate,
-properly-authenticated project called the **NSG IFEC Fleet Portal** (a
-different, more serious Firebase/Firestore app — not this repo).
+**Rules** (`database.rules.json`, deployed via `firebase deploy --only database`):
+- `/aircraft` — world-readable; writable only when
+  `auth != null && root.child('editors').child(auth.uid).val() === true`.
+- Every field is `.validate`d by type and allowed value; `$other` is `false`,
+  so unknown keys (like the old `pinHash`) can no longer be written at all.
+- `/editors/$uid` — readable only by that uid, never client-writable. Manage
+  the allowlist from the CLI:
+  ```bash
+  firebase database:update /editors --project saudia-fleet-dashboard --data '{"<uid>": true}'
+  ```
+  Get a uid from Firebase Console → Authentication → Users.
 
-**The dead editing UI was then stripped out** (see `git log`), so the page is
-now consistently read-only end to end. Removed: the Aircraft Status Edit/Save
-button, the PIN modal and 30-minute PIN session, `saveAircraftField` /
-`commitEditChanges` and the staged-changes machinery, every `editMode` branch
-in the two table renderers, the comment modal, and the ✏️ comment buttons on
-both the Timeline and the Aircraft Status table. Notes still **display**
-(the ⚠️ line under a registration, and 💬 pills in the Timeline) — only the
-authoring path is gone.
+**Auth is REST, not the SDK** — `identitytoolkit.googleapis.com` for sign-in and
+`securetoken.googleapis.com` for refresh, keeping the page a single file with no
+Firebase SDK. Tokens live in `sessionStorage` (so closing the tab signs you out)
+and refresh a minute before expiry. Writes carry `?auth=<idToken>`.
+`FIREBASE_API_KEY` is embedded in the page on purpose: Firebase web API keys are
+public client config that identify the project, not secrets — the rules are what
+grant access.
 
-**Practical effect right now:**
-- The dashboard displays live data fine (reads work) and nothing in the UI
-  promises an edit it can't perform.
-- To change data, use `firebase database:update` from the CLI (admin-
-  authenticated, bypasses the rules) or the NSG IFEC Fleet Portal.
-- If write access ever needs to come back here, it needs real auth — the old
-  PIN gate was a client-side JS conditional, bypassable with a raw REST call,
-  which is exactly why the lockdown happened.
+**Where editing appears:** Aircraft Status tab only. The actions row shows
+`🔒 Sign in to edit` until a signed-in editor is present, then `✏️ Edit` /
+`💾 Save` plus the account email and Sign out. The ✏️ comment button renders
+only for signed-in editors. **The Overview timeline only ever displays
+comments** — this is deliberate, don't add editing there.
+
+`canEdit()` shapes the UI only. The rules decide; tampering with it client-side
+still earns `Permission denied`.
+
+Admin changes that skip auth entirely still work from the CLI
+(`firebase database:update`), since the CLI is admin-authenticated.
 
 A pre-lockdown data snapshot is saved at `aircraft-backup-2026-08-16.json` in
 the repo root, in case anything needs restoring.
@@ -72,8 +73,11 @@ the repo root, in case anything needs restoring.
 
 1. **Static/structural** — `aircraftStatic` JS array embedded directly in
    `index.html` (id, type, station). Rarely changes; edit via code + git push.
-2. **Live fields** — Firebase `/aircraft/{tailId}`, currently read-only:
-   - `status`: `'scheduled' | 'in-progress' | 'completed'`
+2. **Live fields** — Firebase `/aircraft/{tailId}`. Each one is constrained by
+   a `.validate` rule, so the allowed values below are enforced, not just
+   conventions:
+   - `status`: `'scheduled' | 'in-progress' | 'completed' | 'excluded'`
+     (`'excluded'` marks the two HBC+ aircraft; `populateHbcTable` filters on it)
    - `completionDate`: string, format `'DD-Mon-YYYY'` (e.g. `'13-Aug-2026'`)
    - `completionLocation`: `'Jeddah' | 'Riyadh' | null`
    - `iphoStatus`: `'completed' | null`
@@ -107,11 +111,19 @@ always self-heals it.
    with type/location tag-pill rows and inline comments), 5 Project
    Objectives (Consolas for technical values, scope chips, nothing
    collapsed).
+   The Timeline draws **one divider per day and nothing between aircraft** —
+   `.timeline-date-group` owns that border (suppressed on the last group).
+   Beware `.timeline-items li`: it must stay `.timeline-items > li`, or the
+   descendant match hits the nested per-aircraft `<li>`s and the double rules
+   come back.
+   Each Fleet Completion Overview card lists **only completed** aircraft, or
+   "None yet" — never its full scope.
 2. **Aircraft Status** — Main Fleet table (40 aircraft, all columns) + HBC+
    table (2 aircraft, simplified BEAMCFG-only columns). Quick-filter pill
    groups: Aircraft Type / Location / Status. Default sort alphabetical by
-   registration with a Reset button; sortable columns show ↑/↓. Read-only —
-   the Edit Mode toggle was removed (see warning above).
+   registration with a Reset button; sortable columns show ↑/↓. **This is the
+   only tab where data can be edited**, and only by a signed-in allowlisted
+   editor (see the security section above).
 3. **Schedule** — standalone forward-looking plan, deliberately **not**
    linked to `aircraftData` completion status (an aircraft can be
    "Completed" for Middleware but still have a separate, unrelated
@@ -147,15 +159,27 @@ Before every deploy:
 3. `git add/commit/push` — GitHub Pages auto-deploys, takes ~1-3 min to
    reflect (poll with `curl` for new content before declaring it live).
 
-For **data-only** changes (not code): skip git entirely, write straight to
-Firebase — the database is read-only to the browser, so admin writes go
-through `firebase database:update` (bypasses rules since it's
-CLI-admin-authenticated). Always read
-current state first and patch only the deltas — never blind-overwrite a
-record, since teammates or other flows may have touched other fields.
+Rules changes deploy separately from the page:
+```bash
+firebase deploy --only database --project saudia-fleet-dashboard
+```
+After changing rules, re-check enforcement with plain `curl` — an anonymous
+read of `/aircraft.json` should be `200`, and an anonymous write, a read of
+`/editors.json`, and a read of root should all be `401 Permission denied`.
+
+For **data-only** changes (not code): skip git entirely and write straight to
+Firebase via `firebase database:update` (admin-authenticated, so it bypasses
+the rules). Always read current state first and patch only the deltas — never
+blind-overwrite a record, since teammates or other flows may have touched other
+fields. This is not hypothetical: a record was edited by another admin path
+mid-session on 2026-08-16 while this doc was being written.
 
 ## Status: v1.0, feature-complete
 
 The user considers this done and stable — expect small, targeted asks going
-forward (data tweaks, minor UI polish) rather than large rebuilds. No open
-todos.
+forward (data tweaks, minor UI polish) rather than large rebuilds.
+
+Open todo: confirm at least one uid is allowlisted under `/editors` and that a
+real sign-in can save. Everything else in the auth path is verified — rules
+enforce correctly against anonymous callers, and Email/Password sign-in is
+provisioned on the project.
