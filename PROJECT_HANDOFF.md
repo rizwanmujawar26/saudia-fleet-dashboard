@@ -20,10 +20,10 @@ the same data instantly.
 `gh` CLI and `firebase` CLI (via `npx firebase-tools`) are already authenticated
 on this Mac — no login needed to keep working.
 
-## ⚠️ Read this first: editing is currently locked down
+## ⚠️ Read this first: this is a read-only dashboard
 
-On 2026-08-16, in a session I (this conversation) don't have visibility into,
-the Realtime Database security rules were changed to **block all writes**:
+On 2026-08-16 the Realtime Database security rules were changed to
+**block all writes**:
 
 ```json
 {
@@ -45,22 +45,23 @@ to read-only and states editing is intentionally moving to a separate,
 properly-authenticated project called the **NSG IFEC Fleet Portal** (a
 different, more serious Firebase/Firestore app — not this repo).
 
-**Practical effect right now:**
-- The dashboard displays live data fine (reads work).
-- The Aircraft Status page's Edit button, PIN modal, Save flow, and the
-  Timeline's comment-edit (✏️) buttons are all still present in the code and
-  UI, but **every save attempt will fail** with a permission error, surfacing
-  as "🔴 Could not save — incorrect PIN or connection issue" — which is
-  misleading now, since the real cause is the database rule, not the PIN.
-- `editPinHash` at DB root and the whole PIN-session mechanism are vestigial.
+**The dead editing UI was then stripped out** (see `git log`), so the page is
+now consistently read-only end to end. Removed: the Aircraft Status Edit/Save
+button, the PIN modal and 30-minute PIN session, `saveAircraftField` /
+`commitEditChanges` and the staged-changes machinery, every `editMode` branch
+in the two table renderers, the comment modal, and the ✏️ comment buttons on
+both the Timeline and the Aircraft Status table. Notes still **display**
+(the ⚠️ line under a registration, and 💬 pills in the Timeline) — only the
+authoring path is gone.
 
-**This has not been cleaned up in the UI.** Whoever picks this up next should
-decide and act on one of:
-1. Leave as-is (dashboard = pure live-viewing tool now).
-2. Strip the now-dead Edit/PIN/comment-editing UI for a cleaner read-only
-   experience (avoids showing users a broken "Edit" button).
-3. Reinstate scoped write access if there's a real need to edit data via this
-   dashboard rather than the Fleet Portal.
+**Practical effect right now:**
+- The dashboard displays live data fine (reads work) and nothing in the UI
+  promises an edit it can't perform.
+- To change data, use `firebase database:update` from the CLI (admin-
+  authenticated, bypasses the rules) or the NSG IFEC Fleet Portal.
+- If write access ever needs to come back here, it needs real auth — the old
+  PIN gate was a client-side JS conditional, bypassable with a raw REST call,
+  which is exactly why the lockdown happened.
 
 A pre-lockdown data snapshot is saved at `aircraft-backup-2026-08-16.json` in
 the repo root, in case anything needs restoring.
@@ -78,9 +79,8 @@ the repo root, in case anything needs restoring.
    - `iphoStatus`: `'completed' | null`
    - `mg101Status`: `'' | 'provisioned' | 'done'` (SES Migration to MG 101)
    - `note`: free-text comment string
-   - `beamcfgStatus` (ASBA/ASBB only): `'' | 'done'`
-   - Records also carry stray `pinHash` fields left over from pre-lockdown
-     writes — harmless (a SHA-256 hash, not the real PIN), cosmetic clutter.
+   - `beamcfgStatus` (ASBA/ASBB only): anything other than `'done'` renders as
+     Pending (ASBA/ASBB currently hold `'pending'`).
 
 **"Completed" is defined consistently everywhere on the page as:**
 `status === 'completed' AND completionLocation is set`. Don't compute it any
@@ -110,8 +110,8 @@ always self-heals it.
 2. **Aircraft Status** — Main Fleet table (40 aircraft, all columns) + HBC+
    table (2 aircraft, simplified BEAMCFG-only columns). Quick-filter pill
    groups: Aircraft Type / Location / Status. Default sort alphabetical by
-   registration with a Reset button; sortable columns show ↑/↓. View/Edit
-   Mode toggle exists but **saving is currently broken** (see warning above).
+   registration with a Reset button; sortable columns show ↑/↓. Read-only —
+   the Edit Mode toggle was removed (see warning above).
 3. **Schedule** — standalone forward-looking plan, deliberately **not**
    linked to `aircraftData` completion status (an aircraft can be
    "Completed" for Middleware but still have a separate, unrelated
@@ -148,9 +148,9 @@ Before every deploy:
    reflect (poll with `curl` for new content before declaring it live).
 
 For **data-only** changes (not code): skip git entirely, write straight to
-Firebase — but note the database is currently read-only, so admin writes now
-need to go through `firebase database:update` (bypasses rules since it's
-CLI-admin-authenticated) rather than the site's own edit UI. Always read
+Firebase — the database is read-only to the browser, so admin writes go
+through `firebase database:update` (bypasses rules since it's
+CLI-admin-authenticated). Always read
 current state first and patch only the deltas — never blind-overwrite a
 record, since teammates or other flows may have touched other fields.
 
@@ -158,4 +158,4 @@ record, since teammates or other flows may have touched other fields.
 
 The user considers this done and stable — expect small, targeted asks going
 forward (data tweaks, minor UI polish) rather than large rebuilds. No open
-todos except the Edit-Mode decision flagged above.
+todos.

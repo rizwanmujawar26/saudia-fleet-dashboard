@@ -326,25 +326,6 @@
             background: #6c757d;
         }
 
-        .edit-select, .edit-date {
-            font-size: 12px;
-            padding: 4px 6px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            background: white;
-            font-family: inherit;
-            cursor: pointer;
-        }
-
-        .edit-date {
-            cursor: text;
-        }
-
-        .edit-saving {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-
         /* Calendar strip (Overview timeline) */
         .cal-strip {
             display: flex;
@@ -422,21 +403,6 @@
             list-style: none;
             margin: 0;
             padding: 0;
-        }
-
-        .timeline-edit-btn {
-            margin-left: auto;
-            flex-shrink: 0;
-            border: none;
-            background: #f0f0f0;
-            border-radius: 4px;
-            padding: 2px 9px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .timeline-edit-btn:hover {
-            background: #e0e0e0;
         }
 
         /* Quick filter pills */
@@ -631,21 +597,6 @@
             max-width: none;
         }
 
-        .tl-edit-icon {
-            margin-left: auto;
-            border: none;
-            background: #f0f0f0;
-            border-radius: 4px;
-            padding: 2px 8px;
-            cursor: pointer;
-            font-size: 12px;
-            flex-shrink: 0;
-        }
-
-        .tl-edit-icon:hover {
-            background: #e0e0e0;
-        }
-
         /* Project Objectives */
         .objective-item {
             display: flex;
@@ -736,28 +687,6 @@
             }
         }
 
-        .date-cell-group {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex-wrap: wrap;
-        }
-
-        .date-quick-btn {
-            font-size: 10px;
-            font-weight: 600;
-            padding: 3px 6px;
-            border: 1px solid #ccc;
-            background: white;
-            border-radius: 4px;
-            cursor: pointer;
-            color: #555;
-        }
-
-        .date-quick-btn:hover {
-            background: #f0f0f0;
-        }
-
         .loc-warning {
             font-size: 10px;
             color: #dc3545;
@@ -793,27 +722,6 @@
             justify-content: flex-end;
             gap: 8px;
             margin-bottom: 16px;
-        }
-
-        .edit-btn {
-            background: #0a5c34;
-            color: white;
-            border-color: #0a5c34;
-        }
-
-        .edit-btn:hover {
-            background: #084a2a;
-        }
-
-        .edit-btn.save-active {
-            background: #ffc107;
-            color: #1a1a1a;
-            border-color: #ffc107;
-            font-weight: 700;
-        }
-
-        .edit-btn.save-active:hover {
-            background: #e0a800;
         }
 
         .view-text {
@@ -1371,7 +1279,6 @@
                 </div>
 
                 <div class="table-actions-row">
-                    <button id="editModeBtn" class="qf-btn edit-btn" onclick="toggleEditMode()">✏️ Edit</button>
                     <button id="aircraftResetBtn" class="qf-btn" onclick="resetAircraftTable()">↺ Reset</button>
                 </div>
 
@@ -1593,30 +1500,6 @@
             <p>Saudia Fleet Software Loading Dashboard | Last Updated: <span id="lastUpdated">August 13, 2026</span> | All times in UTC (Zulu) as per operational schedule</p>
             <p>Excludes HBC+ aircraft (HZ-ASBA, HZ-ASBB) from MSP loading scope — tracked separately for BEAMCFG update | Total fleet in scope: 40 aircraft (42 total)</p>
             <p id="syncStatus" style="margin-top: 8px; font-weight: 600;">🟡 Connecting to live data...</p>
-        </div>
-    </div>
-
-    <div id="pinModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-        <div style="background:white; border-radius:10px; padding:28px; width:90%; max-width:320px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-            <h3 style="color:#0a5c34; margin-bottom:8px;">Enter Edit PIN</h3>
-            <p style="font-size:13px; color:#666; margin-bottom:16px;">Ask your team lead for the shared edit PIN to make changes.</p>
-            <input type="password" id="pinModalInput" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ccc; border-radius:6px; font-size:15px; margin-bottom:16px;" autocomplete="off">
-            <div style="display:flex; gap:10px;">
-                <button id="pinModalCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
-                <button id="pinModalSubmit" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Submit</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="commentModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-        <div style="background:white; border-radius:10px; padding:28px; width:90%; max-width:420px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-            <h3 style="color:#0a5c34; margin-bottom:8px;">Comment — <span id="commentModalAircraftId"></span></h3>
-            <p style="font-size:13px; color:#666; margin-bottom:16px;">E.g. migration status, SIM card replacement details, blockers.</p>
-            <textarea id="commentModalInput" rows="4" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ccc; border-radius:6px; font-size:14px; margin-bottom:16px; font-family:inherit; resize:vertical;"></textarea>
-            <div style="display:flex; gap:10px;">
-                <button id="commentModalCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
-                <button id="commentModalSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save</button>
-            </div>
         </div>
     </div>
 
@@ -1960,8 +1843,10 @@
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
-        // fields anyone can edit live on the site (status, iphoStatus, completionDate, cs24, note).
+        // fields kept up to date in Firebase (status, iphoStatus, completionDate, note, ...).
         // aircraftData is the merged view everything else in this file renders from.
+        // This dashboard is read-only: the database blocks all writes, and editing lives
+        // in the separately authenticated NSG IFEC Fleet Portal.
         const FIREBASE_DB_URL = 'https://saudia-fleet-dashboard-default-rtdb.firebaseio.com';
         let aircraftLive = {};
         let aircraftData = aircraftStatic.map(a => ({ ...a }));
@@ -1974,14 +1859,6 @@
         }
 
         function renderAll() {
-            if (editMode) {
-                // Freeze the Aircraft Status table while an admin is mid-edit so incoming
-                // live updates from other users can't overwrite their staged changes.
-                // Everything else (Overview, Schedule) keeps updating normally.
-                populateScheduleTables();
-                updateMetrics();
-                return;
-            }
             rebuildAircraftData();
             populateAircraftTable();
             populateScheduleTables();
@@ -2077,114 +1954,6 @@
             return '';
         }
 
-        // ===== Live editing (PIN-gated writes to Firebase) =====
-        function promptForPin() {
-            return new Promise(resolve => {
-                const overlay = document.getElementById('pinModalOverlay');
-                const input = document.getElementById('pinModalInput');
-                const submitBtn = document.getElementById('pinModalSubmit');
-                const cancelBtn = document.getElementById('pinModalCancel');
-
-                input.value = '';
-                overlay.style.display = 'flex';
-                input.focus();
-
-                function cleanup(result) {
-                    overlay.style.display = 'none';
-                    submitBtn.removeEventListener('click', onSubmit);
-                    cancelBtn.removeEventListener('click', onCancel);
-                    input.removeEventListener('keydown', onKeydown);
-                    resolve(result);
-                }
-                function onSubmit() { cleanup(input.value || null); }
-                function onCancel() { cleanup(null); }
-                function onKeydown(e) {
-                    if (e.key === 'Enter') onSubmit();
-                    if (e.key === 'Escape') onCancel();
-                }
-                submitBtn.addEventListener('click', onSubmit);
-                cancelBtn.addEventListener('click', onCancel);
-                input.addEventListener('keydown', onKeydown);
-            });
-        }
-
-        const PIN_SESSION_MS = 30 * 60 * 1000; // stay unlocked for 30 minutes after a correct PIN
-
-        async function getEditPinHash() {
-            const stored = sessionStorage.getItem('editPinSession');
-            if (stored) {
-                try {
-                    const { hash, expiresAt } = JSON.parse(stored);
-                    if (hash && expiresAt && Date.now() < expiresAt) return hash;
-                } catch (e) { /* fall through to re-prompt */ }
-            }
-            const pin = await promptForPin();
-            if (!pin) return null;
-            const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
-            const hash = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
-            sessionStorage.setItem('editPinSession', JSON.stringify({ hash, expiresAt: Date.now() + PIN_SESSION_MS }));
-            return hash;
-        }
-
-        async function saveAircraftField(id, field, value, el) {
-            const pinHash = await getEditPinHash();
-            if (!pinHash) { renderAll(); return false; }
-
-            if (el) el.classList.add('edit-saving');
-            try {
-                const res = await fetch(`${FIREBASE_DB_URL}/aircraft/${id}.json`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({ [field]: value, pinHash }),
-                });
-                const data = await res.json();
-                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                return true;
-            } catch (e) {
-                sessionStorage.removeItem('editPinSession');
-                setSyncStatus('🔴 Could not save — incorrect PIN or connection issue. Try again.', '#dc3545');
-                renderAll();
-                return false;
-            } finally {
-                if (el) el.classList.remove('edit-saving');
-            }
-        }
-
-        function handleAircraftEdit(el) {
-            const id = el.dataset.id;
-            const field = el.dataset.field;
-            let value = el.value;
-            if (field === 'completionDate') value = value ? fmtDate(value) : null;
-            if (['iphoStatus', 'mg101Status', 'completionLocation', 'beamcfgStatus'].includes(field)) value = value || null;
-            // Edit Mode stages changes locally; nothing hits Firebase until Save is clicked.
-            stageChange(id, field, value);
-            populateAircraftTable();
-        }
-
-        // ===== Comment editor (Timeline + Aircraft Status table) =====
-        function openCommentEditor(id) {
-            const aircraft = aircraftData.find(a => a.id === id);
-            document.getElementById('commentModalAircraftId').textContent = id;
-            document.getElementById('commentModalInput').value = (aircraft && aircraft.note) || '';
-            const overlay = document.getElementById('commentModalOverlay');
-            overlay.dataset.aircraftId = id;
-            overlay.style.display = 'flex';
-            document.getElementById('commentModalInput').focus();
-        }
-
-        function initCommentModal() {
-            const overlay = document.getElementById('commentModalOverlay');
-            const input = document.getElementById('commentModalInput');
-            document.getElementById('commentModalCancel').addEventListener('click', () => {
-                overlay.style.display = 'none';
-            });
-            document.getElementById('commentModalSave').addEventListener('click', async () => {
-                const id = overlay.dataset.aircraftId;
-                const text = input.value.trim();
-                overlay.style.display = 'none';
-                await saveAircraftField(id, 'note', text || null);
-            });
-        }
-
         function switchTab(tabName) {
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -2213,8 +1982,6 @@
         let currentStatusFilter = '';
         let currentTypeFilter = '';
         let currentLocationFilter = '';
-        let editMode = false;
-        let pendingChanges = {}; // { aircraftId: { field: value, ... } } staged during Edit Mode
 
         function populateTypeFilterOptions() {
             const container = document.getElementById('typeFilterPills');
@@ -2279,85 +2046,6 @@
             populateAircraftTable();
         }
 
-        function setQuickDate(btn, offsetDays) {
-            const input = btn.closest('.date-cell-group').querySelector('input[type="date"]');
-            const d = new Date();
-            d.setUTCDate(d.getUTCDate() + offsetDays);
-            input.value = d.toISOString().slice(0, 10);
-            handleAircraftEdit(input);
-        }
-
-        // ===== Edit Mode: single PIN unlock, stage changes locally, commit all on Save =====
-        async function toggleEditMode() {
-            if (editMode) {
-                await commitEditChanges();
-            } else {
-                const pinHash = await getEditPinHash();
-                if (!pinHash) return;
-                editMode = true;
-                pendingChanges = {};
-                updateEditModeUI();
-                populateAircraftTable();
-            }
-        }
-
-        function updateEditModeUI() {
-            const btn = document.getElementById('editModeBtn');
-            if (!btn) return;
-            btn.textContent = editMode ? '💾 Save' : '✏️ Edit';
-            btn.classList.toggle('save-active', editMode);
-        }
-
-        function stageChange(id, field, value) {
-            pendingChanges[id] = pendingChanges[id] || {};
-            pendingChanges[id][field] = value;
-            const aircraft = aircraftData.find(a => a.id === id);
-            if (aircraft) aircraft[field] = value;
-        }
-
-        async function commitEditChanges() {
-            const ids = Object.keys(pendingChanges);
-            if (ids.length === 0) {
-                editMode = false;
-                updateEditModeUI();
-                renderAll();
-                return;
-            }
-            const pinHash = await getEditPinHash();
-            if (!pinHash) return;
-
-            const btn = document.getElementById('editModeBtn');
-            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
-            setSyncStatus('🟡 Saving changes...', '#e0a800');
-
-            const multiUpdate = {};
-            ids.forEach(id => {
-                Object.entries(pendingChanges[id]).forEach(([field, value]) => {
-                    multiUpdate[`${id}/${field}`] = value;
-                });
-                multiUpdate[`${id}/pinHash`] = pinHash;
-            });
-
-            try {
-                const res = await fetch(`${FIREBASE_DB_URL}/aircraft.json`, {
-                    method: 'PATCH',
-                    body: JSON.stringify(multiUpdate),
-                });
-                const data = await res.json();
-                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                setSyncStatus('🟢 Live — synced with your team', '#28a745');
-                pendingChanges = {};
-                editMode = false;
-                renderAll();
-            } catch (e) {
-                sessionStorage.removeItem('editPinSession');
-                setSyncStatus('🔴 Could not save — incorrect PIN or connection issue. Try again.', '#dc3545');
-            } finally {
-                if (btn) btn.disabled = false;
-                updateEditModeUI();
-            }
-        }
-
         function populateAircraftTable() {
             const tbody = document.getElementById('aircraftTableBody');
             tbody.innerHTML = '';
@@ -2374,77 +2062,32 @@
                 row.dataset.location = aircraft.completionLocation || '';
 
                 const noteDisplay = aircraft.note ? `<div style="font-size: 11px; color: #d9534f; margin-top: 3px; font-weight: 600;">⚠️ ${aircraft.note}</div>` : '';
-                const commentBtn = `<button class="timeline-edit-btn" style="margin-left:6px;" onclick="openCommentEditor('${aircraft.id}')" title="Add/edit comment">✏️</button>`;
 
                 const statusLabel = aircraft.status === 'completed' ? 'Completed' : aircraft.status === 'in-progress' ? 'In Progress' : 'Scheduled';
                 const statusSort = aircraft.status || 'scheduled';
-                let statusCell;
-                if (editMode) {
-                    statusCell = `<select class="edit-select" data-id="${aircraft.id}" data-field="status" onchange="handleAircraftEdit(this)">
-                        <option value="scheduled" ${aircraft.status === 'scheduled' || !aircraft.status ? 'selected' : ''}>Scheduled</option>
-                        <option value="in-progress" ${aircraft.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
-                        <option value="completed" ${aircraft.status === 'completed' ? 'selected' : ''}>Completed</option>
-                    </select>`;
-                } else {
-                    statusCell = `<span class="status-badge status-${statusSort}">${statusLabel}</span>`;
-                }
+                const statusCell = `<span class="status-badge status-${statusSort}">${statusLabel}</span>`;
 
                 // Middleware column always mirrors Status as read-only text
                 const middlewareCell = `<span class="system-indicator system-${aircraft.status === 'completed' ? 'completed' : 'pending'}"></span>${aircraft.status === 'completed' ? 'Complete' : aircraft.status === 'in-progress' ? 'In Progress' : 'Pending'}`;
 
                 const iphoDone = aircraft.iphoStatus === 'completed';
-                let iphoCell;
-                if (editMode) {
-                    iphoCell = `<select class="edit-select" data-id="${aircraft.id}" data-field="iphoStatus" onchange="handleAircraftEdit(this)">
-                        <option value="" ${!iphoDone ? 'selected' : ''}>Pending</option>
-                        <option value="completed" ${iphoDone ? 'selected' : ''}>Done</option>
-                    </select>`;
-                } else {
-                    iphoCell = `<span class="system-indicator system-${iphoDone ? 'completed' : 'pending'}"></span>${iphoDone ? 'Done' : 'Pending'}`;
-                }
+                const iphoCell = `<span class="system-indicator system-${iphoDone ? 'completed' : 'pending'}"></span>${iphoDone ? 'Done' : 'Pending'}`;
                 const iphoSort = iphoDone ? 'completed' : 'pending';
 
                 const mg101Label = aircraft.mg101Status === 'done' ? 'Done' : aircraft.mg101Status === 'provisioned' ? 'Provisioned' : 'Pending';
-                let mg101Cell;
-                if (editMode) {
-                    mg101Cell = `<select class="edit-select" data-id="${aircraft.id}" data-field="mg101Status" onchange="handleAircraftEdit(this)">
-                        <option value="" ${!aircraft.mg101Status ? 'selected' : ''}>Pending</option>
-                        <option value="provisioned" ${aircraft.mg101Status === 'provisioned' ? 'selected' : ''}>Provisioned</option>
-                        <option value="done" ${aircraft.mg101Status === 'done' ? 'selected' : ''}>Done</option>
-                    </select>`;
-                } else {
-                    mg101Cell = `<span class="system-indicator system-${aircraft.mg101Status === 'done' ? 'completed' : 'pending'}"></span>${mg101Label}`;
-                }
+                const mg101Cell = `<span class="system-indicator system-${aircraft.mg101Status === 'done' ? 'completed' : 'pending'}"></span>${mg101Label}`;
                 const mg101Sort = aircraft.mg101Status === 'done' ? 2 : aircraft.mg101Status === 'provisioned' ? 1 : 0;
 
                 const dateSort = toISODate(aircraft.completionDate) || '9999-99-99';
-                let dateCell;
-                if (editMode) {
-                    dateCell = `<div class="date-cell-group">
-                        <input type="date" class="edit-date" data-id="${aircraft.id}" data-field="completionDate" value="${toISODate(aircraft.completionDate)}" onchange="handleAircraftEdit(this)">
-                        <button type="button" class="date-quick-btn" onclick="setQuickDate(this, 0)">Today</button>
-                        <button type="button" class="date-quick-btn" onclick="setQuickDate(this, -1)">Yest.</button>
-                    </div>`;
-                } else {
-                    dateCell = `<span class="view-text">${fmtDate(aircraft.completionDate) || '—'}</span>`;
-                }
+                const dateCell = `<span class="view-text">${fmtDate(aircraft.completionDate) || '—'}</span>`;
 
                 const loc = aircraft.completionLocation || '';
                 const locWarning = (aircraft.status === 'completed' && !loc) ? `<div class="loc-warning">⚠ needed to count as done</div>` : '';
-                let locCell;
-                if (editMode) {
-                    locCell = `<select class="edit-select" data-id="${aircraft.id}" data-field="completionLocation" onchange="handleAircraftEdit(this)">
-                        <option value="" ${!loc ? 'selected' : ''}>—</option>
-                        <option value="Jeddah" ${loc === 'Jeddah' ? 'selected' : ''}>Jeddah</option>
-                        <option value="Riyadh" ${loc === 'Riyadh' ? 'selected' : ''}>Riyadh</option>
-                    </select>${locWarning}`;
-                } else {
-                    locCell = `<span class="view-text">${loc || '—'}</span>${locWarning}`;
-                }
+                const locCell = `<span class="view-text">${loc || '—'}</span>${locWarning}`;
 
                 row.innerHTML = `
                     <td>${idx + 1}</td>
-                    <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong>${commentBtn}${noteDisplay}</td>
+                    <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong>${noteDisplay}</td>
                     <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
                     <td data-sort="${statusSort}">${statusCell}</td>
                     <td data-sort="${statusSort}">${middlewareCell}</td>
@@ -2469,25 +2112,8 @@
             hbc.forEach((aircraft, idx) => {
                 const row = document.createElement('tr');
                 const done = aircraft.beamcfgStatus === 'done';
-                let beamCell;
-                if (editMode) {
-                    beamCell = `<select class="edit-select" data-id="${aircraft.id}" data-field="beamcfgStatus" onchange="handleAircraftEdit(this)">
-                        <option value="" ${!done ? 'selected' : ''}>Pending</option>
-                        <option value="done" ${done ? 'selected' : ''}>Done</option>
-                    </select>`;
-                } else {
-                    beamCell = `<span class="system-indicator system-${done ? 'completed' : 'pending'}"></span>${done ? 'Done' : 'Pending'}`;
-                }
-                let dateCell;
-                if (editMode) {
-                    dateCell = `<div class="date-cell-group">
-                        <input type="date" class="edit-date" data-id="${aircraft.id}" data-field="completionDate" value="${toISODate(aircraft.completionDate)}" onchange="handleAircraftEdit(this)">
-                        <button type="button" class="date-quick-btn" onclick="setQuickDate(this, 0)">Today</button>
-                        <button type="button" class="date-quick-btn" onclick="setQuickDate(this, -1)">Yest.</button>
-                    </div>`;
-                } else {
-                    dateCell = `<span class="view-text">${fmtDate(aircraft.completionDate) || '—'}</span>`;
-                }
+                const beamCell = `<span class="system-indicator system-${done ? 'completed' : 'pending'}"></span>${done ? 'Done' : 'Pending'}`;
+                const dateCell = `<span class="view-text">${fmtDate(aircraft.completionDate) || '—'}</span>`;
                 row.innerHTML = `
                     <td>${idx + 1}</td>
                     <td><strong>HZ-${aircraft.id}</strong></td>
@@ -2904,7 +2530,6 @@
                         <span class="tl-pill" style="background:${typeColor}">${typeLabel}</span>
                         ${loc ? `<span class="tl-loc-pill" style="background:${locColor}">📍 ${loc}</span>` : ''}
                         ${commentHtml}
-                        <button class="tl-edit-icon" onclick="openCommentEditor('${a.id}')" title="Add/edit comment">✏️</button>
                     </div>
                 </li>`;
             };
@@ -2966,7 +2591,6 @@
             const dateStr = today.toLocaleDateString('en-US', options);
             document.getElementById('lastUpdated').textContent = dateStr;
 
-            initCommentModal();
             renderObjectives();
             connectLiveSync();
 
