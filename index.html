@@ -338,25 +338,25 @@
         .cal-tile {
             flex: 0 0 auto;
             width: 62px;
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             cursor: pointer;
             text-align: center;
             background: white;
-            border: 1px solid #e5e9ec;
-            transition: transform 0.15s, border-color 0.15s;
+            border: 1px solid #e0e0e0;
+            transition: transform 0.15s;
         }
 
         .cal-tile:hover {
             transform: translateY(-3px);
-            border-color: #c9d6cd;
         }
 
-        /* These tiles mark completed days, so nothing here should read as an alert. */
+        /* Deliberately kept as a torn-off calendar page — the red/green here reads as
+           the desk-calendar metaphor, not as a status signal. */
         .cal-tile-header {
-            background: #f6f8f7;
-            color: #0a5c34;
-            border-bottom: 1px solid #e5e9ec;
+            background: #dc3545;
+            color: white;
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
@@ -380,9 +380,8 @@
         }
 
         .cal-tile-count {
-            background: #e9f3ec;
-            color: #33684a;
-            border-top: 1px solid #d5e8dc;
+            background: #28a745;
+            color: white;
             font-size: 11px;
             font-weight: 700;
             padding: 3px 0;
@@ -548,6 +547,17 @@
             font-size: 12px;
             color: #666;
             margin-bottom: 6px;
+        }
+
+        /* Same anatomy as the per-type cards, weighted slightly heavier so the
+           whole-fleet rollup still reads as the parent of the row. */
+        .total-stat-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f4f8f5 100%);
+            border-left-width: 6px;
+        }
+
+        .total-stat-card .stat-pct {
+            font-size: 26px;
         }
 
         .type-progress-bar-track {
@@ -1349,7 +1359,7 @@
                             <div class="timeline-title" id="completedDeliveriesTitle">📅 Timeline</div>
                             <div class="timeline-sort-toggle">
                                 <button id="sortOldestBtn" class="qf-btn active" onclick="setTimelineSort('asc')">↑ Oldest First</button>
-                                <button id="sortLatestBtn" class="qf-btn" onclick="setTimelineSort('desc')">↓ Latest First</button>
+                                <button id="sortLatestBtn" class="qf-btn" onclick="setTimelineSort('desc')">↓ Newest First</button>
                             </div>
                         </div>
                         <div class="cal-strip" id="timelineCalendarStrip"></div>
@@ -2946,10 +2956,14 @@
                 <div class="stat-list">${hbcDone.map(a => 'HZ-' + a.id).join(', ') || 'None yet'}</div>
             </div>`;
 
-            let html = `<div class="simple-stat-card">
+            // Parent card: whole-fleet rollup only. The registrations live in the per-type
+            // cards beside it, so repeating all 23 here just made this the noisiest tile.
+            const totalPct = Math.round((completedStrict.length / PROJECT_SCOPE) * 1000) / 10;
+            let html = `<div class="simple-stat-card type-stat-card total-stat-card">
                 <div class="stat-label">✅ Total Completed</div>
-                <div class="stat-value">${completedStrict.length}</div>
-                <div class="stat-list">${completedStrict.map(a => a.id).join(', ') || 'None yet'}</div>
+                <div class="stat-frac">${completedStrict.length}/${PROJECT_SCOPE} aircraft</div>
+                <div class="stat-pct">${totalPct}%</div>
+                <div class="type-progress-bar-track"><div class="type-progress-bar-fill" style="width:${totalPct}%"></div></div>
             </div>`;
             html += typeCard(TYPE_GROUPS[0]); // A320
             html += typeCard(TYPE_GROUPS[1]); // A321
