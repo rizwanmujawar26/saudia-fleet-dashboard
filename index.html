@@ -759,6 +759,66 @@
             white-space: nowrap;
         }
 
+        .edit-text {
+            font-size: 12px;
+            padding: 4px 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .sched-ac { min-width: 70px; }
+        .sched-wp { min-width: 180px; }
+
+        .sched-status-cell {
+            white-space: nowrap;
+        }
+
+        .sched-del-btn {
+            border: 1px solid #f0c8cc;
+            background: #fdf0f1;
+            border-radius: 4px;
+            padding: 2px 7px;
+            margin-left: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .sched-del-btn:hover { background: #f8dfe1; }
+
+        /* Overdue but still inside the 24h grace window */
+        .sched-overdue-row {
+            background: #fffaf0;
+        }
+
+        .status-overdue {
+            background: #fde2c8;
+            color: #8a4b1a;
+        }
+
+        .add-sched-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .add-sched-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 9px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            margin-bottom: 12px;
+        }
+
         .loc-warning {
             font-size: 10px;
             color: #dc3545;
@@ -1470,12 +1530,19 @@
                     </div>
                 </div>
 
+                <div class="table-actions-row">
+                    <span id="scheduleSignedInAs" class="signed-in-as" style="display:none;"></span>
+                    <button id="scheduleAddBtn" class="qf-btn" style="display:none;" onclick="openScheduleAdd()">➕ Add Entry</button>
+                    <button id="scheduleEditBtn" class="qf-btn edit-btn" onclick="toggleScheduleEdit()">🔒 Sign in to edit</button>
+                </div>
+
                 <div id="scheduleContent">
                     <div class="station-section">
                         <div class="station-title">
                             ✈️ Jeddah Station (JED)
                             <span class="station-badge">UTC/Zulu</span>
                         </div>
+                        <div class="table-scroll-wrapper">
                         <table class="aircraft-table sortable-table">
                             <thead>
                                 <tr>
@@ -1491,6 +1558,7 @@
                                 <!-- Populated by JavaScript -->
                             </tbody>
                         </table>
+                        </div>
                     </div>
 
                     <div class="station-section">
@@ -1498,6 +1566,7 @@
                             ✈️ Riyadh Station (RUH)
                             <span class="station-badge">UTC/Zulu</span>
                         </div>
+                        <div class="table-scroll-wrapper">
                         <table class="aircraft-table sortable-table">
                             <thead>
                                 <tr>
@@ -1513,6 +1582,7 @@
                                 <!-- Populated by JavaScript -->
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1647,6 +1717,49 @@
             <div style="display:flex; gap:10px;">
                 <button id="signInCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="signInSubmit" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Sign in</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addSchedOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:10px; padding:28px; width:90%; max-width:420px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+            <h3 style="color:#0a5c34; margin-bottom:16px;">Add Schedule Entry</h3>
+            <label class="add-sched-label">Aircraft</label>
+            <input id="addSchedAircraft" class="add-sched-input" placeholder="e.g. AS55" autocomplete="off">
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label class="add-sched-label">Planned Date</label>
+                    <input type="date" id="addSchedDate" class="add-sched-input">
+                </div>
+                <div style="flex:1;">
+                    <label class="add-sched-label">Time (UTC)</label>
+                    <input type="time" id="addSchedTime" class="add-sched-input">
+                </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label class="add-sched-label">Station</label>
+                    <select id="addSchedStation" class="add-sched-input">
+                        <option value="JED">Jeddah (JED)</option>
+                        <option value="RUH">Riyadh (RUH)</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label class="add-sched-label">Status</label>
+                    <select id="addSchedStatus" class="add-sched-input">
+                        <option value="scheduled">Scheduled</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="postponed">Postponed</option>
+                    </select>
+                </div>
+            </div>
+            <label class="add-sched-label">Workpackage</label>
+            <input id="addSchedWorkpackage" class="add-sched-input" placeholder="e.g. Middleware 2.1.0 Update" autocomplete="off">
+            <div id="addSchedError" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
+            <div style="display:flex; gap:10px; margin-top:6px;">
+                <button id="addSchedCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button id="addSchedSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Add Entry</button>
             </div>
         </div>
     </div>
@@ -1988,24 +2101,33 @@
             { id: 'AQB', type: 'A330-343', station: 'RUH' },
         ];
 
-        // Schedule data - accurate from Saudia plan
-        // Upcoming work packages only — a standalone forward-looking plan, not a
-        // historical record. Add new entries here as they're scheduled; entries
-        // past their date are dropped automatically at render time (see
-        // populateScheduleTables), so this list never needs manual pruning.
+        // Schedule — a standalone forward-looking plan, not a historical record.
+        // Entries live in Firebase at /schedule/{id} and are added and edited from the
+        // Schedule tab itself (signed-in editors only); nothing here is hardcoded.
+        // Entries are dropped automatically once they are more than SCHEDULE_GRACE_MS
+        // past their slot — see isMissedSchedule.
         //
         // DATE FORMAT: always DD-Mon-YYYY (e.g. 16-Aug-2026), matching completionDate
         // everywhere else. Never M/D/YYYY — month-first numeric dates are not used in
         // the region this dashboard serves and read as the wrong day.
-        const scheduleData = [
-            { aircraft: 'AS55', date: '16-Aug-2026', time: '21:00', workpackage: 'Middleware 2.1.0 Update', station: 'RUH' },
-            { aircraft: 'AS76', date: '16-Aug-2026', time: '22:00', workpackage: 'Middleware 2.1.0 Update', station: 'RUH' },
-            { aircraft: 'ASBB', date: '17-Aug-2026', time: '20:00', workpackage: 'ModMan Replacement', station: 'JED' },
-            { aircraft: 'AQJ', date: '18-Aug-2026', time: '20:00', workpackage: 'Coax Cable Replacement', station: 'JED' },
-            { aircraft: 'ASV', date: '19-Aug-2026', time: '20:00', workpackage: 'ECLIPSE Structural Inspection + Antenna Coaxial Cable Installation', station: 'JED' },
-            { aircraft: 'AQA', date: '20-Aug-2026', time: '20:00', workpackage: 'WOW Discrete Troubleshooting', station: 'JED' },
-            { aircraft: 'AQL', date: '22-Aug-2026', time: '20:00', workpackage: 'Coax Cable Replacement', station: 'JED' },
+        let scheduleLive = {};
+
+        // An overdue slot stays on the board for a day rather than vanishing the moment
+        // it slips, so it can actually be noticed and rescheduled.
+        const SCHEDULE_GRACE_MS = 24 * 60 * 60 * 1000;
+
+        const SCHEDULE_STATUSES = [
+            { value: 'scheduled', label: 'Scheduled' },
+            { value: 'in-progress', label: 'In Progress' },
+            { value: 'completed', label: 'Completed' },
+            { value: 'postponed', label: 'Postponed' },
         ];
+
+        function scheduleEntries() {
+            return Object.entries(scheduleLive)
+                .map(([id, e]) => ({ id, ...e }))
+                .sort((a, b) => (toISODate(a.date) + ' ' + (a.time || '')).localeCompare(toISODate(b.date) + ' ' + (b.time || '')));
+        }
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -2089,6 +2211,41 @@
                     renderAll();
                     setSyncStatus('🔴 Offline — showing last known data. Edits are disabled.', '#dc3545');
                 });
+
+            fetch(`${FIREBASE_DB_URL}/schedule.json`)
+                .then(r => r.json())
+                .then(data => {
+                    scheduleLive = data || {};
+                    populateScheduleTables();
+                    startScheduleStream();
+                })
+                .catch(() => populateScheduleTables());
+        }
+
+        function applySchedulePathUpdate(path, data) {
+            const parts = path.split('/').filter(Boolean);
+            if (parts.length === 0) {
+                scheduleLive = data || {};
+            } else {
+                const id = parts[0];
+                if (parts.length === 1) {
+                    if (data === null) delete scheduleLive[id];
+                    else scheduleLive[id] = { ...(scheduleLive[id] || {}), ...data };
+                } else {
+                    scheduleLive[id] = scheduleLive[id] || {};
+                    if (data === null) delete scheduleLive[id][parts[1]];
+                    else scheduleLive[id][parts[1]] = data;
+                }
+            }
+            // Don't yank the inputs out from under someone mid-edit.
+            if (!scheduleEditMode) populateScheduleTables();
+        }
+
+        function startScheduleStream() {
+            const es = new EventSource(`${FIREBASE_DB_URL}/schedule.json`);
+            const onMsg = e => applySchedulePathUpdate(JSON.parse(e.data).path, JSON.parse(e.data).data);
+            es.addEventListener('put', onMsg);
+            es.addEventListener('patch', onMsg);
         }
 
         function startLiveStream() {
@@ -2152,6 +2309,7 @@
         function signOut() {
             authUser = null;
             editMode = false;
+            scheduleEditMode = false;
             pendingChanges = {};
             try { sessionStorage.removeItem(AUTH_SESSION_KEY); } catch (e) { /* non-fatal */ }
             updateAuthUI();
@@ -2299,6 +2457,7 @@
         }
 
         function updateAuthUI() {
+            updateScheduleEditUI();
             const editBtn = document.getElementById('editModeBtn');
             const signOutBtn = document.getElementById('signOutBtn');
             const whoami = document.getElementById('signedInAs');
@@ -2748,10 +2907,19 @@
             return 'time-countdown';
         }
 
+        // Past its slot, but still inside the grace window — show it, flagged.
+        function isOverdueSchedule(dateStr, timeStr) {
+            const scheduledDate = parseScheduleUTC(dateStr, timeStr);
+            if (!scheduledDate) return false;
+            return Date.now() > scheduledDate.getTime();
+        }
+
+        // Only drop an entry once it's a full day past its slot, so an overdue job
+        // stays visible long enough to be rescheduled rather than silently vanishing.
         function isMissedSchedule(dateStr, timeStr) {
             const scheduledDate = parseScheduleUTC(dateStr, timeStr);
             if (!scheduledDate) return false;
-            return new Date() > scheduledDate; // Past scheduled time
+            return Date.now() > scheduledDate.getTime() + SCHEDULE_GRACE_MS;
         }
 
         function populateScheduleTables() {
@@ -2766,37 +2934,206 @@
             // pruning needed. It's also deliberately not cross-referenced against
             // aircraftData, since a schedule entry tracks its own workpackage, not
             // overall aircraft completion.
-            const upcoming = scheduleData.filter(item => !item.date || !isMissedSchedule(item.date, item.time));
+            const upcoming = scheduleEntries().filter(item => !item.date || !isMissedSchedule(item.date, item.time));
+            const editing = scheduleEditMode && canEdit();
 
             upcoming.forEach(item => {
                 const row = document.createElement('tr');
-
-                const status = !item.date
-                    ? '<span class="status-badge status-not-started">Date TBD</span>'
-                    : '<span class="status-badge status-scheduled">Scheduled</span>';
+                const overdue = item.date && isOverdueSchedule(item.date, item.time);
+                if (overdue) row.classList.add('sched-overdue-row');
 
                 const timeRemaining = calculateTimeRemaining(item.date, item.time);
                 const timeClass = getTimeRemainingClass(item.date, item.time);
 
-                row.innerHTML = `
-                    <td><strong>${item.aircraft}</strong></td>
-                    <td class="sched-date">${item.date || 'TBD'}</td>
-                    <td class="sched-date">${item.time} Z</td>
-                    <td><span class="time-remaining ${timeClass}" data-date="${item.date || ''}" data-time="${item.time}">${timeRemaining}</span></td>
-                    <td>${item.workpackage}</td>
-                    <td>${status}</td>
-                `;
-
-                if (item.station === 'JED') {
-                    jedTableBody.appendChild(row);
+                if (editing) {
+                    const statusOpts = SCHEDULE_STATUSES
+                        .map(s => `<option value="${s.value}" ${item.status === s.value ? 'selected' : ''}>${s.label}</option>`).join('');
+                    const stationOpts = ['JED', 'RUH']
+                        .map(s => `<option value="${s}" ${item.station === s ? 'selected' : ''}>${s}</option>`).join('');
+                    row.innerHTML = `
+                        <td><input class="edit-text sched-ac" value="${escAttr(item.aircraft)}" data-id="${item.id}" data-field="aircraft" onchange="handleScheduleEdit(this)"></td>
+                        <td class="sched-date"><input type="date" class="edit-date" value="${toISODate(item.date)}" data-id="${item.id}" data-field="date" onchange="handleScheduleEdit(this)"></td>
+                        <td class="sched-date"><input type="time" class="edit-date" value="${escAttr(item.time || '')}" data-id="${item.id}" data-field="time" onchange="handleScheduleEdit(this)"></td>
+                        <td><select class="edit-select" data-id="${item.id}" data-field="station" onchange="handleScheduleEdit(this)">${stationOpts}</select></td>
+                        <td><input class="edit-text sched-wp" value="${escAttr(item.workpackage)}" data-id="${item.id}" data-field="workpackage" onchange="handleScheduleEdit(this)"></td>
+                        <td class="sched-status-cell">
+                            <select class="edit-select" data-id="${item.id}" data-field="status" onchange="handleScheduleEdit(this)">${statusOpts}</select>
+                            <button class="sched-del-btn" title="Delete this entry" onclick="deleteScheduleEntry('${item.id}')">🗑</button>
+                        </td>
+                    `;
                 } else {
-                    ruhTableBody.appendChild(row);
+                    row.innerHTML = `
+                        <td><strong>${item.aircraft || '—'}</strong></td>
+                        <td class="sched-date">${item.date || 'TBD'}</td>
+                        <td class="sched-date">${item.time ? item.time + ' Z' : '—'}</td>
+                        <td><span class="time-remaining ${timeClass}" data-date="${item.date || ''}" data-time="${item.time || ''}">${timeRemaining}</span></td>
+                        <td>${item.workpackage || '—'}</td>
+                        <td>${scheduleStatusBadge(item, overdue)}</td>
+                    `;
                 }
+
+                if (item.station === 'JED') jedTableBody.appendChild(row);
+                else ruhTableBody.appendChild(row);
             });
 
             const emptyRow = () => '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">No upcoming work packages</td></tr>';
             if (!jedTableBody.children.length) jedTableBody.innerHTML = emptyRow();
             if (!ruhTableBody.children.length) ruhTableBody.innerHTML = emptyRow();
+
+            updateScheduleEditUI();
+        }
+
+        function scheduleStatusBadge(item, overdue) {
+            if (!item.date) return '<span class="status-badge status-not-started">Date TBD</span>';
+            // An entry still marked "scheduled" after its slot is the thing worth
+            // surfacing — that's what the 24h grace window exists for.
+            if (overdue && (!item.status || item.status === 'scheduled')) {
+                return '<span class="status-badge status-overdue">⚠ Overdue</span>';
+            }
+            const s = SCHEDULE_STATUSES.find(x => x.value === item.status) || SCHEDULE_STATUSES[0];
+            const cls = { 'scheduled': 'status-scheduled', 'in-progress': 'status-in-progress', 'completed': 'status-completed', 'postponed': 'status-not-started' }[s.value];
+            return `<span class="status-badge ${cls}">${s.label}</span>`;
+        }
+
+        // ===== Schedule editing (same auth + rules as the Aircraft Status table) =====
+        let scheduleEditMode = false;
+
+        function escAttr(v) {
+            return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        async function toggleScheduleEdit() {
+            if (scheduleEditMode) {
+                scheduleEditMode = false;
+                populateScheduleTables();
+                return;
+            }
+            if (!canEdit() && !(await promptSignIn())) return;
+            if (!canEdit()) return;
+            scheduleEditMode = true;
+            populateScheduleTables();
+        }
+
+        function updateScheduleEditUI() {
+            const btn = document.getElementById('scheduleEditBtn');
+            const addBtn = document.getElementById('scheduleAddBtn');
+            const who = document.getElementById('scheduleSignedInAs');
+            if (!btn) return;
+
+            const editing = scheduleEditMode && canEdit();
+            btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '✓ Done' : '✏️ Edit Schedule');
+            btn.classList.toggle('save-active', editing);
+            if (addBtn) addBtn.style.display = editing ? '' : 'none';
+            if (who) {
+                who.textContent = canEdit() ? authUser.email : '';
+                who.style.display = canEdit() ? '' : 'none';
+            }
+
+            // Edit mode swaps the read-only countdown column for the station picker.
+            document.querySelectorAll('#scheduleContent thead tr').forEach(tr => {
+                const th = tr.cells[3];
+                if (th) th.textContent = editing ? 'Station' : 'Time Remaining ↕';
+            });
+        }
+
+        async function saveScheduleField(id, patch) {
+            const token = await getIdToken();
+            if (!token) return false;
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/schedule/${id}.json?auth=${token}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify(patch),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                return true;
+            } catch (e) {
+                setSyncStatus(`🔴 Could not save schedule — ${e.message}`, '#dc3545');
+                return false;
+            }
+        }
+
+        function handleScheduleEdit(el) {
+            const id = el.dataset.id;
+            const field = el.dataset.field;
+            let value = el.value;
+            // The date input speaks ISO; the database and the page speak DD-Mon-YYYY.
+            if (field === 'date') value = value ? fmtDate(value) : '';
+            if (!value && (field === 'date' || field === 'time')) return; // rules reject empty
+            scheduleLive[id] = { ...(scheduleLive[id] || {}), [field]: value };
+            saveScheduleField(id, { [field]: value });
+        }
+
+        async function deleteScheduleEntry(id) {
+            const entry = scheduleLive[id] || {};
+            const label = `${entry.aircraft || 'this entry'} on ${entry.date || 'TBD'}`;
+            if (!confirm(`Delete the scheduled work package for ${label}?`)) return;
+            const token = await getIdToken();
+            if (!token) return;
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/schedule/${id}.json?auth=${token}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('delete failed');
+                delete scheduleLive[id];
+                populateScheduleTables();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not delete — ${e.message}`, '#dc3545');
+            }
+        }
+
+        function openScheduleAdd() {
+            const today = new Date();
+            document.getElementById('addSchedAircraft').value = '';
+            document.getElementById('addSchedDate').value = today.toISOString().slice(0, 10);
+            document.getElementById('addSchedTime').value = '20:00';
+            document.getElementById('addSchedStation').value = 'JED';
+            document.getElementById('addSchedWorkpackage').value = '';
+            document.getElementById('addSchedStatus').value = 'scheduled';
+            const err = document.getElementById('addSchedError');
+            err.textContent = '';
+            err.style.display = 'none';
+            document.getElementById('addSchedOverlay').style.display = 'flex';
+            document.getElementById('addSchedAircraft').focus();
+        }
+
+        function initScheduleAddModal() {
+            const overlay = document.getElementById('addSchedOverlay');
+            const err = document.getElementById('addSchedError');
+            document.getElementById('addSchedCancel').addEventListener('click', () => { overlay.style.display = 'none'; });
+            document.getElementById('addSchedSave').addEventListener('click', async () => {
+                const entry = {
+                    aircraft: document.getElementById('addSchedAircraft').value.trim().toUpperCase(),
+                    date: fmtDate(document.getElementById('addSchedDate').value),
+                    time: document.getElementById('addSchedTime').value,
+                    station: document.getElementById('addSchedStation').value,
+                    workpackage: document.getElementById('addSchedWorkpackage').value.trim(),
+                    status: document.getElementById('addSchedStatus').value,
+                };
+                if (!entry.aircraft || !entry.workpackage || !entry.date || !entry.time) {
+                    err.textContent = 'Aircraft, date, time and workpackage are all required.';
+                    err.style.display = 'block';
+                    return;
+                }
+                const token = await getIdToken();
+                if (!token) return;
+                const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                try {
+                    const res = await fetch(`${FIREBASE_DB_URL}/schedule/${id}.json?auth=${token}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(entry),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                    scheduleLive[id] = entry;
+                    overlay.style.display = 'none';
+                    populateScheduleTables();
+                    setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                } catch (e) {
+                    err.textContent = `Could not add entry — ${e.message}`;
+                    err.style.display = 'block';
+                }
+            });
         }
 
         function filterStation(station) {
@@ -2892,7 +3229,7 @@
         }
 
         // Single source of truth for every number/list on the page — derived from
-        // aircraftData + scheduleData, called after every load and every live update.
+        // aircraftData + scheduleLive, called after every load and every live update.
         // "Completed" for all counting/reporting purposes: status=completed AND a completion
         // location has been recorded (single consistent definition, used everywhere on the page).
         function isCompletedStrict(a) {
@@ -3187,7 +3524,9 @@
 
             loadAuthSession();
             initCommentModal();
+            initScheduleAddModal();
             updateAuthUI();
+            updateScheduleEditUI();
             renderObjectives();
             connectLiveSync();
 
