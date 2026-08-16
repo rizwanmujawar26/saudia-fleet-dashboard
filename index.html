@@ -385,9 +385,17 @@
             padding: 3px 0;
         }
 
-        /* Timeline (grouped by date) */
+        /* Timeline (grouped by date) — one divider per day, nothing between aircraft */
         .timeline-date-group {
-            margin-bottom: 16px;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .timeline-date-group:last-child {
+            padding-bottom: 0;
+            margin-bottom: 0;
+            border-bottom: none;
         }
 
         .timeline-date-heading {
@@ -395,8 +403,6 @@
             color: #0a5c34;
             font-size: 13px;
             margin-bottom: 6px;
-            padding-bottom: 4px;
-            border-bottom: 2px solid #cdeada;
         }
 
         .timeline-date-items {
@@ -551,7 +557,6 @@
             align-items: center;
             gap: 8px;
             padding: 7px 0;
-            border-bottom: 1px solid #f0f0f0;
             flex-wrap: wrap;
         }
 
@@ -785,16 +790,10 @@
             margin-top: 10px;
         }
 
-        .timeline-items li {
-            padding: 8px 0;
+        /* Direct child only — the nested per-aircraft <li>s must stay borderless */
+        .timeline-items > li {
             font-size: 13px;
             color: #666;
-            border-bottom: 1px solid #e0e0e0;
-            padding-bottom: 8px;
-        }
-
-        .timeline-items li:last-child {
-            border-bottom: none;
         }
 
         /* Station Section */
@@ -2374,14 +2373,16 @@
             };
 
             const hbcAircraft = aircraftData.filter(a => a.id === 'ASBA' || a.id === 'ASBB');
-            const hbcCount = hbcAircraft.filter(a => a.beamcfgStatus === 'done').length;
+            // Like every other card here, list only what's actually done — not the scope.
+            const hbcDone = hbcAircraft.filter(a => a.beamcfgStatus === 'done');
+            const hbcCount = hbcDone.length;
             const hbcPct = Math.round((hbcCount / HBC_SCOPE) * 1000) / 10;
             const xlrCard = `<div class="simple-stat-card type-stat-card">
                 <div class="stat-label">A321XLR <span class="scope-chip">SBC CONFIG</span></div>
                 <div class="stat-frac">${hbcCount}/${HBC_SCOPE} aircraft</div>
                 <div class="stat-pct">${hbcPct}%</div>
                 <div class="type-progress-bar-track"><div class="type-progress-bar-fill" style="width:${hbcPct}%"></div></div>
-                <div class="stat-list">${hbcAircraft.map(a => 'HZ-' + a.id).join(', ')}</div>
+                <div class="stat-list">${hbcDone.map(a => 'HZ-' + a.id).join(', ') || 'None yet'}</div>
             </div>`;
 
             let html = `<div class="simple-stat-card">
