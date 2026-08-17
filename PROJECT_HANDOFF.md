@@ -1,225 +1,214 @@
-# Saudia Fleet Dashboard — Project Handoff (v1.0)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.0, 2026-08-17)
 
 Paste this whole document into a new chat to resume work with full context.
 
 ## What this is
 
-A single-file HTML dashboard tracking Saudia Airlines' Middleware 2.1.0 software
-rollout + HBC+ SBC config update across a 42-aircraft fleet. Hosted free on
-GitHub Pages, live-synced via Firebase Realtime Database so the whole team sees
-the same data instantly.
+A single-file HTML dashboard for Saudia's wireless IFEC fleet: software
+(middleware) loading, monthly media loading, the maintenance schedule, and the
+fleet roster itself. Hosted free on GitHub Pages, live-synced via Firebase
+Realtime Database so the whole team sees the same data instantly.
 
 - **Live site:** https://rizwanmujawar26.github.io/saudia-fleet-dashboard/
 - **GitHub repo:** https://github.com/rizwanmujawar26/saudia-fleet-dashboard (public)
 - **Local path:** `/Users/rizwanmujawar/Downloads/saudia-fleet-dashboard/index.html`
 - **Firebase project:** `saudia-fleet-dashboard` (Realtime Database, us-central1)
   DB URL: `https://saudia-fleet-dashboard-default-rtdb.firebaseio.com`
-- Single file, ~4000 lines, vanilla HTML/CSS/JS. No build step, no framework,
-  and **no external scripts at all** — the html2canvas/jsPDF CDN libs went with
-  the Downloads tab, so the page has no third-party runtime dependency.
+- Single file, ~4100 lines, vanilla HTML/CSS/JS. No build step, no framework,
+  and **no external scripts at all** — nothing to fetch from a CDN.
 
 `gh` CLI and `firebase` CLI (via `npx firebase-tools`) are already authenticated
 on this Mac — no login needed to keep working.
 
-## ⚠️ Read this first: how editing is secured
+Current data (2026-08-17): 42 aircraft (40 retrofit + 2 linefit), 24 on
+Middleware 2.1.0, 38 with media loaded, 22 schedule entries, 1 allowlisted
+editor.
 
-**Public read, authenticated write.** Anyone can view the dashboard; only a
-signed-in account that is explicitly allowlisted can change data. The check
-lives in the database rules, so bypassing the UI with a raw REST call gains
-nothing.
+---
 
-Short history: the original edit gate was a shared PIN checked in JavaScript —
-not a database rule — so anyone could bypass it with one REST call. Commit
-`d055b5f` locked the database to read-only on 2026-08-16; `4587c27` stripped
-the resulting dead UI; `460f6e3` rebuilt editing properly on Firebase Auth.
+## Security model
 
-**Rules** (`database.rules.json`, deployed via `firebase deploy --only database`):
-- `/aircraft` — world-readable; writable only when
-  `auth != null && root.child('editors').child(auth.uid).val() === true`.
-- Every field is `.validate`d by type and allowed value; `$other` is `false`,
-  so unknown keys (like the old `pinHash`) can no longer be written at all.
-- `/editors/$uid` — readable only by that uid, never client-writable. Manage
-  the allowlist from the CLI:
-  ```bash
-  firebase database:update /editors --project saudia-fleet-dashboard --data '{"<uid>": true}'
-  ```
-  Get a uid from Firebase Console → Authentication → Users.
+**Public read, authenticated write.** Anyone can view; only a signed-in account
+listed under `/editors/{uid}` can change data. The check lives in the database
+rules, so bypassing the UI with a raw REST call gains nothing. (The original
+gate was a shared PIN checked in JavaScript — bypassable with one REST call —
+which is why it was replaced.)
 
-**Auth is REST, not the SDK** — `identitytoolkit.googleapis.com` for sign-in and
-`securetoken.googleapis.com` for refresh, keeping the page a single file with no
-Firebase SDK. Tokens live in `sessionStorage` (so closing the tab signs you out)
-and refresh a minute before expiry. Writes carry `?auth=<idToken>`.
-`FIREBASE_API_KEY` is embedded in the page on purpose: Firebase web API keys are
-public client config that identify the project, not secrets — the rules are what
+Auth is **REST, not the SDK**: `identitytoolkit.googleapis.com` for sign-in,
+`securetoken.googleapis.com` for refresh, keeping the page a single file.
+Tokens live in `sessionStorage` (closing the tab signs you out) and refresh a
+minute before expiry. Writes carry `?auth=<idToken>`.
+
+`FIREBASE_API_KEY` is embedded in the page on purpose — Firebase web API keys
+are public client config that identify the project, not secrets. The rules
 grant access.
 
-**Where editing appears:** the Software, Media and Schedule tabs. The actions row shows
-`🔒 Sign in to edit` until a signed-in editor is present, then `✏️ Edit` /
-`💾 Save` plus the account email and Sign out. The ✏️ comment button renders
-only for signed-in editors. **The Overview timeline only ever displays
-comments** — this is deliberate, don't add editing there.
-
 `canEdit()` shapes the UI only. The rules decide; tampering with it client-side
-still earns `Permission denied`.
+still earns `Permission denied` (verified).
 
-Admin changes that skip auth entirely still work from the CLI
-(`firebase database:update`), since the CLI is admin-authenticated.
+Manage the editor allowlist from the CLI (uid from Firebase Console →
+Authentication → Users):
 
-A pre-lockdown data snapshot is saved at `aircraft-backup-2026-08-16.json` in
-the repo root, in case anything needs restoring.
+```bash
+firebase database:update /editors --project saudia-fleet-dashboard --data '{"<uid>": true}'
+```
 
-## Architecture
+Admin changes that skip auth entirely still work via `firebase database:update`,
+since the CLI is admin-authenticated.
 
-**Data has two layers, merged at runtime into a single `aircraftData` array:**
+---
 
-1. **Fleet roster** — Firebase `/fleet/{tail}` =
-   `{ type, station, fit, fleetStatus, comments }`, the single source of truth
-   for which aircraft exist. Managed entirely from the **Fleet** tab
-   (signed-in editors only): add, edit and remove and every table, filter pill and
-   metric picks it up — scope numbers are counted from the roster by
-   `projectScope()` / `hbcScope()` / `middlewareScope()` / `mediaScope()`, not
-   hardcoded. The `aircraftStatic` array in `index.html` is now only a fallback
-   for when `/fleet` is empty or unreachable.
-2. **Live fields** — Firebase `/aircraft/{tailId}`. Each one is constrained by
-   a `.validate` rule, so the allowed values below are enforced, not just
-   conventions:
-   - *(`status` was removed — it duplicated facts now held by `swVersion` and
-     `fit`. See "Single sources" below.)*
-   - `completionDate`: string, format `'DD-Mon-YYYY'` (e.g. `'13-Aug-2026'`)
-   - `completionLocation`: `'Jeddah' | 'Riyadh' | null`
-   - `iphoStatus`: `'completed' | null`
-   - `mg101Status`: `'' | 'provisioned' | 'done'` (SES Migration to MG 101)
-   - `note`: free-text comment string (Software page comments)
-   - `swVersion`: the aircraft's middleware level, e.g. `'2.0.0'` / `'2.1.0'`.
-     Drives the Middleware column, the version widgets and the top metric card.
-     `SW_VERSIONS` in `index.html` is ordered oldest-first; the last entry is
-     "latest". Add a version there and it gains a widget and an edit option.
-   - `media`: `{ mediaCycle, mediaDisplay, mediaSource, loadedDateUTC, comments }`
-     — see the Media tab below; `media.comments` is separate from `note`
-   - `beamcfgStatus` (ASBA/ASBB only): anything other than `'done'` renders as
-     Pending (ASBA/ASBB currently hold `'pending'`).
+## Data model
 
-## Widget vocabulary
+Everything is validated in `database.rules.json`; `$other` is `false` at every
+level, so **an unknown field is rejected outright** — adding a field means
+adding it to the rules first.
 
-- **Global widgets** — a fixed 2 x 2 grid above the tab bar, `.global-widgets`,
-  showing fleet-wide programme health on every tab. Top row is the two software
-  streams (Retrofit / Middleware, Linefit / SBC Configuration A.13), bottom row
-  is Media Loading and Maintenance. Figures follow the local-widget reading
-  order: count at the left edge of the progress bar, percentage at the right.
-- **Local widgets** — the `.media-widget-strip` rows inside a tab, showing that
-  tab's own breakdown (version progress, media months, fleet composition...).
+### `/fleet/{tail}` — the roster, single source of truth for which aircraft exist
 
-## Maintenance widget (placeholder wiring)
+| field | values |
+|---|---|
+| `type` | e.g. `A320-214`, `A321-253NY XLR` |
+| `station` | `JED` / `RUH` / `N/A` |
+| `fit` | `retrofit` (the 40) \| `linefit` (ASBA, ASBB) |
+| `fleetStatus` | `active` \| `stored` \| `retired` |
+| `comments` | free text |
 
-`maintenanceOpen(a)` reads `a.maintenance && a.maintenance.open`. Nothing writes
-that yet — the Maintenance tab will — so the widget shows 0 today and lights up
-on its own once flags exist, with no further wiring. Its denominator is the
-**active** fleet (`fleetStatus === 'active'`), so stored/retired aircraft drop
-out. The card is grey while the count is zero (`.alert-clear`) and turns light
-red once anything is open; verified both states, and that storing an aircraft
-moves the denominator 42 -> 41.
+### `/aircraft/{tail}` — per-aircraft state
 
-Note `/aircraft` rules do **not** yet allow a `maintenance` field — `$other` is
-`false`, so building the tab means adding its schema there first. Deliberately
-not guessed in advance.
+| field | values |
+|---|---|
+| `swVersion` | semver, e.g. `2.0.0` / `2.1.0` |
+| `completionLocation` | `Jeddah` \| `Riyadh` |
+| `completionDate` | `DD-Mon-YYYY` |
+| `iphoStatus` | `completed` |
+| `mg101Status` | `provisioned` \| `done` |
+| `beamcfgStatus` | `pending` \| `done` (linefit pair only) |
+| `note` | Software-page comment |
+| `media` | `{ mediaCycle, mediaDisplay, mediaSource, loadedDateUTC, comments }` |
+
+`media.comments` is deliberately separate from `note` so editing one cannot
+clobber the other.
+
+### `/schedule/{id}` — forward-looking work packages
+
+`aircraft`, `date` (DD-Mon-YYYY), `time` (HH:MM), `workpackage`, `wo_flags`,
+`station` (JED/RUH), `status` (`scheduled|in-progress|completed|postponed`).
+
+### `/editors/{uid}` — allowlist, readable only by that uid, never client-writable
+
+---
 
 ## Single sources — do not reintroduce duplicates
 
-Two facts were each stored twice, which meant an editor could change one and
-leave the dashboard self-contradictory. Both are now derived from exactly one
-field:
+Two facts were each stored twice, which let an editor change one and leave the
+dashboard contradicting itself. Both are now derived from exactly one field.
+**If you add a page, read these helpers — don't re-derive.**
 
-- **Linefit / HBC+ scope** — `fit === 'linefit'` on `/fleet` is the only marker.
-  Use `isLinefit(a)`. The old `/aircraft` `status === 'excluded'` is gone.
-- **Completion** — `isCompletedStrict(a)` is
-  `swVersionOf(a) === latestSwVersion() && completionLocation`. The Status
-  column is a *view* of this via `aircraftStatusOf(a)`, not an editable field;
-  the old stored `status` is gone and the rules now reject it.
+- **Linefit / HBC+ scope** → `isLinefit(a)` reads `fit === 'linefit'` only.
+  The old `/aircraft` `status === 'excluded'` is deleted and rejected by rules.
+- **Completion** → `isCompletedStrict(a)` is
+  `swVersionOf(a) === latestSwVersion() && completionLocation`.
+  The Status column is a *view* via `aircraftStatusOf(a)`, not a stored field.
+  The old stored `status` is deleted and rejected by rules.
 
 So an editor sets **Middleware version** and **Completion Location**, and the
-Status column, row highlight, type cards, station cards, Timeline and the top
-metric cards all follow. Verified: upgrading one aircraft moved completed rows,
-the metric, the total card, the station count, the version widget and the
-Timeline together, 24 -> 25.
+Status badge, row highlight, type cards, station cards, Timeline and global
+widgets all follow. (Verified: one upgrade moves all of them 24 → 25.)
 
-Note the metric card counts aircraft *on the latest middleware* (software
-level), while completion additionally requires a location — so they can
-legitimately differ by the aircraft still showing "⚠ needed to count as done".
+Scope numbers are **counted, never hardcoded**: `projectScope()` (roster size),
+`hbcScope()` (linefit count), `middlewareScope()`, `mediaScope()`.
+Adding an aircraft moves every table, filter and percentage at once.
 
-**Project scope math (also used everywhere):**
-`42 total = 40 Middleware-scope aircraft + 2 HBC+ SBC-config aircraft (ASBA, ASBB)`
+Note the software widget counts aircraft *on the latest middleware*, while
+completion additionally requires a location — they can legitimately differ by
+an aircraft showing "⚠ needed to count as done".
 
-**Live sync:** plain `fetch()` for the initial load + a native `EventSource`
-(SSE) subscription to Firebase's REST streaming endpoint — deliberately no
-Firebase JS SDK, to keep the page a single lean file. Known quirk: the local
-`aircraftLive` mirror can occasionally desync if many rapid writes happen
-back-to-back (only observed during heavy scripted testing); a page reload
-always self-heals it.
+---
 
-## Tabs (5 total — System Tracking and By Station were removed earlier)
+## Widget vocabulary
 
-1. **Overview** — starts with the Timeline. The Fleet Completion Overview and
-   Completed Aircraft by Station blocks moved to the Software tab. Timeline (calendar-strip of completion dates with hover
-   tooltips + Oldest First/Latest First sort toggle, grouped-by-date list
-   with type/location tag-pill rows and inline comments), 5 Project
-   Objectives (Consolas for technical values, scope chips, nothing
-   collapsed).
-   The Timeline draws **one divider per day and nothing between aircraft** —
-   `.timeline-date-group` owns that border (suppressed on the last group).
-   Beware `.timeline-items li`: it must stay `.timeline-items > li`, or the
-   descendant match hits the nested per-aircraft `<li>`s and the double rules
-   come back.
-   Each Fleet Completion Overview card lists **only completed** aircraft, or
-   "None yet" — never its full scope.
+- **Global widgets** — fixed 2×2 grid above the tab bar (`.global-widgets`),
+  fleet-wide, on every tab. Top row: Software Loading Progress ×2, pilled
+  `Retrofit` (Middleware, the 40) and `Linefit` (SBC Configuration A.13, the
+  HBC+ pair). Bottom row: Media Loading Progress, Maintenance.
+- **Local widgets** — `.media-widget-strip` rows inside a tab, showing that
+  tab's own breakdown. All strips scroll sideways in one row; they never wrap.
 
-2. **Software** (tab id is still `aircraft`) — Main Fleet table (40 aircraft, all columns) + HBC+
-   table (2 aircraft, simplified BEAMCFG-only columns). Quick-filter pill
-   groups: Aircraft Type / Location / Status. Default sort alphabetical by
-   registration with a Reset button; sortable columns show ↑/↓. **This is the
-   only tab where data can be edited**, and only by a signed-in allowlisted
-   editor (see the security section above).
-3. **Media** — monthly media-loading status for the main fleet only
-   (`status !== 'excluded'`, so the HBC+ pair is out of media scope). Columns:
-   `# | Aircraft | Type | Status | Media Loaded | Date UTC | Comments`.
-   Everything on this page derives from one stored object per aircraft at
-   `/aircraft/{tail}/media`:
-   ```
-   mediaCycle    "0826"                  MMYY
-   mediaDisplay  "August 2026"
-   mediaSource   "ME-SVA-UGO-0826"
-   loadedDateUTC "2026-08-16T04:22:00Z"
-   comments      free text (separate from the Software page's `note`)
-   ```
-   Editors type one string — `2026-08-16 04:22:00 (ME-SVA-UGO-0826)` — and
-   `parseMediaEntry()` derives all four fields. Seconds are optional.
-   **mediaStatus is never stored.** It is relative to the newest cycle in the
-   fleet, so it is computed on every render by `mediaStatusType()`: equal to the
-   newest cycle = `latest` (green), one calendar month behind = `previous`
-   (blue), anything older = `older` (amber), absent = `no_media` (grey).
-   Storing it would go stale the moment a newer cycle lands.
-   Cycles are compared via `cycleSortKey()` (MMYY → YYYYMM) so January sorts
-   above the previous December; `previousCycle()` rolls the year likewise.
-   The month widgets and the Media Month filter pills are both built from the
-   cycles actually present, newest first — a new cycle creates its own widget
-   and pill with no code change, and months with no aircraft never appear.
+Figure convention everywhere: **count at the left edge of the progress bar,
+percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
-4. **Schedule** — standalone forward-looking plan, deliberately **not**
-   linked to `aircraftData` completion status (an aircraft can be
-   "Completed" for Middleware but still have a separate, unrelated
-   upcoming workpackage here). Entries whose date has passed are filtered
-   out automatically at render time — the list self-prunes, no manual
-   cleanup needed. Currently holds 5 upcoming entries, all Jeddah.
+---
 
-## Branding
+## Tabs (5)
 
-Actual Saudia SVG logo (`/Users/rizwanmujawar/Downloads/saudia-vector-logo-seeklogo/saudia-seeklogo.svg`)
-embedded as a base64 data URI in the header, recolored white via
-`filter: brightness(0) invert(1)` (the source SVG is solid green with no
-white variant, so this CSS trick was needed for contrast against the green
-header). Palette: `#0a5c34` primary / `#137a49` gradient partner, plus a thin
-multi-color geometric accent stripe under the header. Kept deliberately
-restrained — green used for headers/buttons/active-states only, not
-saturating every element.
+1. **Overview** — starts with the Timeline (calendar strip + grouped-by-date
+   list). One divider per day, nothing between aircraft. Beware
+   `.timeline-items li`: it must stay `.timeline-items > li`, or the descendant
+   match hits nested per-aircraft `<li>`s and double rules return.
+2. **Software** (tab id is still `aircraft`) — local widgets: Middleware
+   Version Progress, Completion by Aircraft Type, Completed by Station.
+   Main table (40) + HBC+ table (2). `SW_VERSIONS` is ordered oldest-first and
+   the **last entry is "latest"** — add a version there and it gains a widget,
+   an edit option, retitles the global card and demotes the previous one. No
+   other change needed.
+3. **Media** — monthly media loading for the main fleet only (linefit excluded).
+   Columns: `# | Aircraft | Type | Status | Media Loaded | Date UTC | Comments`.
+4. **Schedule** — standalone forward-looking plan, deliberately **not** linked
+   to completion status. Entries drop off automatically 24h past their slot
+   (`SCHEDULE_GRACE_MS`); in that window they show `⚠ Overdue` so they can be
+   rescheduled rather than vanishing.
+5. **Fleet** — owns the roster: add / edit / remove, incl. linefit. Removing
+   deletes only the `/fleet` entry; `/aircraft` history survives, so re-adding
+   the registration restores it.
+
+---
+
+## Media module specifics
+
+Editors type **one string** — `2026-08-16 04:22:00 (ME-SVA-UGO-0826)` — and
+`parseMediaEntry()` derives all four stored fields. Seconds optional; source
+parses with or without parentheses; bad input is flagged inline and never
+staged.
+
+- A cycle is **MMYY** (`0826`). `cycleSortKey()` maps it to YYYYMM so January
+  correctly outranks the previous December; `previousCycle()` rolls the year.
+  **Never compare cycle strings directly.**
+- `mediaStatus` is **never stored** — it is relative to the newest cycle in the
+  fleet, so a stored value goes stale the moment a newer cycle lands.
+  `mediaStatusType()` derives it: latest (green), one month back (blue), older
+  (amber), none (grey).
+- Widgets and month filter pills are built from cycles actually present, newest
+  first. A new cycle creates its own widget and pill with no code change
+  (verified with a simulated September).
+
+---
+
+## Maintenance (wired ahead of its tab)
+
+`maintenanceOpen(a)` reads `a.maintenance && a.maintenance.open`. Nothing writes
+that yet, so the global card reads 0 today and lights up on its own once flags
+exist. Denominator is the **active** fleet (`fleetStatus === 'active'`), so
+stored/retired aircraft drop out. The card is neutral grey at zero
+(`.alert-clear`) and turns light red when anything is open.
+
+**`/aircraft` rules do NOT yet allow a `maintenance` field** — `$other` is
+`false`, so building the tab means defining its schema there first. The field
+shape was deliberately not guessed in advance.
+
+Reserved: 🛠️ emoji is held for the Maintenance tab.
+
+---
+
+## Conventions
+
+- **Dates are always `DD-Mon-YYYY`** (e.g. `17-Aug-2026`). Never `M/D/YYYY` —
+  month-first numeric dates are not used in this region and read as the wrong
+  day. `parseScheduleUTC()` / `toISODate()` / `fmtDate()` are the only parsers.
+- All times UTC/Zulu.
+- No external scripts. Keep it that way.
+
+---
 
 ## Local dev workflow
 
@@ -227,51 +216,65 @@ saturating every element.
 cd "/Users/rizwanmujawar/Downloads/saudia-fleet-dashboard"
 python3 -m http.server 8765
 ```
-Then use the Browser tool's `preview_start` (not direct `navigate` —
-`localhost` gets blocked by policy that way) to open `http://localhost:8765/index.html`.
+
+Use the Browser tool's `preview_start` (not direct `navigate` — `localhost`
+gets blocked by policy that way).
 
 Before every deploy:
 1. Extract the `<script>` block and run `node --check` on it.
-2. Test the actual change in the local browser preview.
-3. `git add/commit/push` — GitHub Pages auto-deploys, takes ~1-3 min to
-   reflect (poll with `curl` for new content before declaring it live).
+2. Test the change in the local browser preview.
+3. `git add/commit/push` — GitHub Pages auto-deploys.
 
-Rules changes deploy separately from the page:
+Rules deploy separately:
+
 ```bash
 firebase deploy --only database --project saudia-fleet-dashboard
 ```
-After changing rules, re-check enforcement with plain `curl` — an anonymous
-read of `/aircraft.json` should be `200`, and an anonymous write, a read of
-`/editors.json`, and a read of root should all be `401 Permission denied`.
 
-For **data-only** changes (not code): skip git entirely and write straight to
-Firebase via `firebase database:update` (admin-authenticated, so it bypasses
-the rules). Always read current state first and patch only the deltas — never
-blind-overwrite a record, since teammates or other flows may have touched other
-fields. This is not hypothetical: a record was edited by another admin path
-mid-session on 2026-08-16 while this doc was being written.
+After changing rules, re-check enforcement with plain `curl`: anonymous read of
+`/aircraft.json` should be `200`; anonymous write, and reads of `/editors.json`
+and root, should all be `401`.
 
-## Status: v1.0, feature-complete
+For **data-only** changes use `firebase database:update` (admin, bypasses
+rules). Always read current state first and patch only deltas — teammates edit
+live.
 
-The user considers this done and stable — expect small, targeted asks going
-forward (data tweaks, minor UI polish) rather than large rebuilds.
+### Deploy gotchas (learned the hard way)
 
-Verified as of 2026-08-16: rules reject anonymous writes and anonymous reads of
-`/editors` and root while keeping `/aircraft` public; Email/Password sign-in is
-provisioned; one uid is allowlisted under `/editors`.
+- **Verify by hash, not by eye:** `curl` the live `index.html` and `diff` it
+  against local. `shasum -a 256` on both is the fastest proof.
+- **Pages builds can wedge.** A build stuck in `building`, or `errored` with
+  "Page build failed", is usually GitHub-side. `gh api -X POST .../pages/builds`
+  often returns 503 during incidents. The reliable nudge is an empty commit:
+  `git commit --allow-empty -m "Retrigger Pages build" && git push`.
+- `.nojekyll` is in the repo root — this is one static file and Jekyll only
+  added a build step that could fail. Don't remove it.
+- **The in-app browser cannot reach Firebase.** Pages load but tables render
+  empty. That is a tooling limitation, not a site fault — verify by injecting
+  data client-side, or check the served file's markup and hash instead.
+- **Back up before bulk edits.** `cp index.html` to a scratch path before any
+  scripted multi-block deletion; a section-comment-based removal once cut 3,256
+  lines instead of ~600 and the backup was the only thing that made it a
+  non-event.
 
-Open todo: nobody has yet signed in and saved an edit end to end. That last hop
-can't be checked from here — it needs either a real password or the RTDB
-emulator, and the emulator needs Java, which isn't installed on this Mac
-(`emulators:start` fails with "Unable to locate a Java Runtime"). Installing a
-JDK would let a future session test rules properly with
-`auth_variable_override`, which is worth doing before the rules change again.
+---
 
-5. **Fleet** — owns the roster. Columns `# | Aircraft | Type | Fit | Status |
-   Comments`, plus a remove button in edit mode. `fit` is `retrofit` (the 40)
-   or `linefit` (ASBA/ASBB); `fleetStatus` is `active | stored | retired`.
-   Removing an aircraft deletes only its `/fleet` entry — its `/aircraft`
-   software and media history survives, so re-adding the registration restores
-   it. NOTE: HBC+ separation elsewhere still keys off `/aircraft` `status ===
-   'excluded'`, not `fit`; the two are seeded consistently but are not yet a
-   single source. Worth unifying.
+## Open items
+
+- **Maintenance tab** — the module the global widget is waiting for. Needs a
+  `maintenance` schema in the rules first.
+- **`AQL` carries a vestigial `pinHash`** from the old PIN system. Nothing
+  reads it; rules now reject writing it. Safe to clear whenever.
+- **"In Progress" no longer exists on the Software page.** The old stored enum
+  had it, nothing used it, and neither version nor location expresses it. If
+  it's wanted back it needs its own field.
+- **`ASBA`/`ASBB` notes read "HBC+ Aircraft"** — redundant against the table
+  title, now visible in the HBC+ Comments column. Clear whenever.
+
+## Status
+
+The user considers this a working portal under active extension. Expect
+targeted asks — new modules (Maintenance, SIM tracking), data updates, and UI
+polish — rather than rebuilds. **Do not rebuild from scratch; reuse the
+existing table framework, filter pills, widget strips, status badges and
+auth-gated edit flow.**
