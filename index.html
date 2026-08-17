@@ -207,13 +207,12 @@
            Only the cells get nowrap: headers must be free to wrap, or long labels
            like "SES Migration to MG 101" set the column width instead of the data
            ("Done"), and the table overflows before Comments gets any room. */
+        /* nowrap keeps the values on one line, but no width:1% — pinning these to
+           their content sent every spare pixel to Comments, which hit 57% of the
+           table on a wide screen. Unset, auto layout shares the surplus and Comments
+           holds its declared share. */
         #aircraftTable td:not(.col-comment) {
             white-space: nowrap;
-            width: 1%;
-        }
-
-        #aircraftTable th:not(.col-comment) {
-            width: 1%;
         }
 
         #aircraftTable th,
@@ -234,18 +233,33 @@
             vertical-align: middle;
         }
 
+        /* A share of the table rather than "all the surplus". At 100% it swallowed
+           whatever the other columns didn't use, which on the 5-column HBC+ table
+           meant half the width for two short notes. The percentage is identical in
+           both tables, so the column lines up between them. */
         #aircraftTable .col-comment,
         #hbcTable .col-comment {
-            width: 100%;
-            white-space: normal;
+            width: 32%;
             min-width: 180px;
+            white-space: normal;
             text-align: left;
         }
 
-        #hbcTable td:not(.col-comment),
-        #hbcTable th:not(.col-comment) {
+        /* Headers wrap to at most two lines: every label is one or two words and the
+           arrow is glued to the last one, so there is no third line to fall to. */
+        #aircraftTable th,
+        #hbcTable th {
+            hyphens: none;
+            word-break: normal;
+            overflow-wrap: normal;
+        }
+
+        /* Deliberately no width:1% here. With only five columns, pinning the other
+           four to their content dumped every spare pixel on Comments — 550 of 851px
+           for two short notes. Leaving them unset lets auto layout share the surplus
+           so the row reads evenly. */
+        #hbcTable td:not(.col-comment) {
             white-space: nowrap;
-            width: 1%;
         }
 
         .comment-text {
@@ -1630,13 +1644,13 @@
                         <table class="aircraft-table sortable-table">
                             <thead>
                                 <tr>
-                                    <th onclick="sortTable('jedTable', 0)">Aircraft ↕</th>
-                                    <th onclick="sortTable('jedTable', 1)">Planned Date ↕</th>
-                                    <th onclick="sortTable('jedTable', 2)">Planned Time (UTC) ↕</th>
-                                    <th onclick="sortTable('jedTable', 3)">Time Remaining ↕</th>
-                                    <th onclick="sortTable('jedTable', 4)">Workpackage ↕</th>
-                                    <th onclick="sortTable('jedTable', 5)">WO / Flags ↕</th>
-                                    <th onclick="sortTable('jedTable', 6)">Status ↕</th>
+                                    <th onclick="sortTable('jedTable', 0)">Aircraft&nbsp;↕</th>
+                                    <th onclick="sortTable('jedTable', 1)">Planned Date&nbsp;↕</th>
+                                    <th onclick="sortTable('jedTable', 2)">Planned Time (UTC)&nbsp;↕</th>
+                                    <th onclick="sortTable('jedTable', 3)">Time Remaining&nbsp;↕</th>
+                                    <th onclick="sortTable('jedTable', 4)">Workpackage&nbsp;↕</th>
+                                    <th onclick="sortTable('jedTable', 5)">WO / Flags&nbsp;↕</th>
+                                    <th onclick="sortTable('jedTable', 6)">Status&nbsp;↕</th>
                                 </tr>
                             </thead>
                             <tbody id="jedTable">
@@ -1655,13 +1669,13 @@
                         <table class="aircraft-table sortable-table">
                             <thead>
                                 <tr>
-                                    <th onclick="sortTable('ruhTable', 0)">Aircraft ↕</th>
-                                    <th onclick="sortTable('ruhTable', 1)">Planned Date ↕</th>
-                                    <th onclick="sortTable('ruhTable', 2)">Planned Time (UTC) ↕</th>
-                                    <th onclick="sortTable('ruhTable', 3)">Time Remaining ↕</th>
-                                    <th onclick="sortTable('ruhTable', 4)">Workpackage ↕</th>
-                                    <th onclick="sortTable('ruhTable', 5)">WO / Flags ↕</th>
-                                    <th onclick="sortTable('ruhTable', 6)">Status ↕</th>
+                                    <th onclick="sortTable('ruhTable', 0)">Aircraft&nbsp;↕</th>
+                                    <th onclick="sortTable('ruhTable', 1)">Planned Date&nbsp;↕</th>
+                                    <th onclick="sortTable('ruhTable', 2)">Planned Time (UTC)&nbsp;↕</th>
+                                    <th onclick="sortTable('ruhTable', 3)">Time Remaining&nbsp;↕</th>
+                                    <th onclick="sortTable('ruhTable', 4)">Workpackage&nbsp;↕</th>
+                                    <th onclick="sortTable('ruhTable', 5)">WO / Flags&nbsp;↕</th>
+                                    <th onclick="sortTable('ruhTable', 6)">Status&nbsp;↕</th>
                                 </tr>
                             </thead>
                             <tbody id="ruhTable">
@@ -3269,8 +3283,9 @@
                 const label = th.dataset.label || th.textContent.trim();
                 const isSorted = sort && sort.col === col;
                 // Unsorted columns still show ↕, otherwise there's nothing to say
-                // the header is clickable at all.
-                th.textContent = label + (isSorted ? (sort.dir === 1 ? ' ↑' : ' ↓') : ' ↕');
+                // the header is clickable at all. The separator is a non-breaking
+                // space so the arrow can never wrap onto a line of its own.
+                th.textContent = label + ' ' + (isSorted ? (sort.dir === 1 ? '↑' : '↓') : '↕');
             });
         }
 
