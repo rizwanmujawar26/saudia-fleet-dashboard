@@ -1394,254 +1394,35 @@
             border-radius: 4px;
         }
 
-        /* Download Button Styles */
-        .header-controls {
-            margin-top: 20px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
 
-        .download-btn {
-            background: #ffc107;
-            color: #0a5c34;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
 
-        .download-btn:hover {
-            background: #ffb300;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
-        }
 
-        .download-menu {
-            position: relative;
-            display: inline-block;
-        }
 
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: white;
-            min-width: 200px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-            border-radius: 6px;
-            padding: 10px 0;
-            z-index: 1;
-            top: 100%;
-            left: 0;
-            margin-top: 8px;
-        }
 
-        .download-menu:hover .dropdown-content {
-            display: block;
-        }
 
-        .dropdown-content a {
-            color: #0a5c34;
-            padding: 12px 20px;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            transition: background 0.2s ease;
-        }
 
-        .dropdown-content a:hover {
-            background-color: #f5f5f5;
-        }
 
-        .dropdown-content a:first-child {
-            border-radius: 6px 6px 0 0;
-        }
 
-        .dropdown-content a:last-child {
-            border-radius: 0 0 6px 6px;
-        }
 
-        .loading-indicator {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-            z-index: 9999;
-        }
 
-        .loading-indicator.show {
-            display: block;
-        }
 
-        /* Download Snapshot Buttons */
-        .download-snapshot-btn {
-            background: white;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 600;
-            color: #0a5c34;
-        }
 
-        .download-snapshot-btn:hover {
-            border-color: #0a5c34;
-            box-shadow: 0 4px 12px rgba(10, 92, 52, 0.15);
-            transform: translateY(-3px);
-        }
 
-        .download-snapshot-btn.pdf-btn:hover {
-            background: #ffebee;
-            border-color: #d32f2f;
-        }
 
-        .download-snapshot-btn.png-btn:hover {
-            background: #fff8e1;
-            border-color: #ffc107;
-        }
 
-        .download-snapshot-btn.jpeg-btn:hover {
-            background: #e0f7fa;
-            border-color: #17a2b8;
-        }
 
-        /* WhatsApp Share Buttons */
-        .whatsapp-share-btn {
-            width: 100%;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
 
-        .whatsapp-share-btn:hover {
-            background: #45a049;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-        }
 
-        /* History Download Buttons */
-        .history-download-btn {
-            background: #f0f0f0;
-            border: none;
-            width: 36px;
-            height: 36px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 18px;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
 
-        .history-download-btn:hover {
-            background: #0a5c34;
-            color: white;
-            transform: scale(1.1);
-        }
 
-        /* Tab Download Buttons */
-        .tab-download-btn {
-            background: white;
-            border: 2px solid #0a5c34;
-            color: #0a5c34;
-            padding: 10px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            transition: all 0.2s ease;
-        }
 
-        .tab-download-btn:hover {
-            background: #0a5c34;
-            color: white;
-            transform: translateY(-2px);
-        }
 
-        .tab-download-btn-small {
-            background: white;
-            border: 1px solid #0a5c34;
-            color: #0a5c34;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            flex: 1;
-            text-align: center;
-        }
 
-        .tab-download-btn-small:hover {
-            background: #0a5c34;
-            color: white;
-            transform: translateY(-2px);
-        }
 
-        .tab-download-btn-small-white {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid white;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            flex: 1;
-            text-align: center;
-        }
 
-        .tab-download-btn-small-white:hover {
-            background: white;
-            color: #4CAF50;
-            transform: translateY(-2px);
-        }
 
-        .whatsapp-btn {
-            background: white;
-            color: #4CAF50;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
 
-        .whatsapp-btn:hover {
-            background: rgba(255, 255, 255, 0.8);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -1698,11 +1479,10 @@
             <!-- Tabs Navigation -->
             <div class="tabs">
                 <button class="tab-button active" onclick="switchTab('overview')">📊 Overview</button>
-                <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
                 <button class="tab-button" onclick="switchTab('aircraft')">🛠️ Software</button>
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
                 <button class="tab-button" onclick="switchTab('schedule')">📅 Schedule</button>
-                <button class="tab-button" onclick="switchTab('downloads')">📥 Downloads</button>
+                <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
             </div>
 
             <!-- Overview Tab -->
@@ -1820,65 +1600,6 @@
                 </div>
             </div>
 
-            <!-- Fleet Tab -->
-            <div id="fleet" class="tab-content">
-                <div class="media-widget-section">
-                    <span class="filter-group-label">Fleet Composition</span>
-                    <div class="media-widget-strip" id="fleetWidgets"></div>
-                </div>
-
-                <div class="filter-groups">
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Aircraft Type</span>
-                        <div class="quick-filters" id="fleetTypeFilterPills">
-                            <button class="qf-btn active" onclick="setFleetTypeFilter('', this)">All</button>
-                        </div>
-                    </div>
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Fit</span>
-                        <div class="quick-filters">
-                            <button class="qf-btn active" onclick="setFleetFitFilter('', this)">All Fit</button>
-                            <button class="qf-btn" onclick="setFleetFitFilter('retrofit', this)">Retrofit</button>
-                            <button class="qf-btn" onclick="setFleetFitFilter('linefit', this)">Linefit</button>
-                        </div>
-                    </div>
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Status</span>
-                        <div class="quick-filters">
-                            <button class="qf-btn active" onclick="setFleetStatusFilter('', this)">All Status</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('active', this)">Active</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('stored', this)">Stored</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('retired', this)">Retired</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="table-actions-row">
-                    <span id="fleetSignedInAs" class="signed-in-as" style="display:none;"></span>
-                    <button id="fleetAddBtn" class="qf-btn" style="display:none;" onclick="openAddAircraft()">➕ Add Aircraft</button>
-                    <button id="fleetEditBtn" class="qf-btn edit-btn" onclick="toggleFleetEdit()">🔒 Sign in to edit</button>
-                    <button id="fleetResetBtn" class="qf-btn" onclick="resetFleetTable()">↺ Reset</button>
-                </div>
-
-                <div class="table-scroll-wrapper">
-                    <table class="aircraft-table" id="fleetTable">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortTable('fleetTable', 1)">Aircraft</th>
-                                <th class="sortable-th" data-col="2" data-label="Type" onclick="sortTable('fleetTable', 2)">Type</th>
-                                <th class="sortable-th" data-col="3" data-label="Fit" onclick="sortTable('fleetTable', 3)">Fit</th>
-                                <th class="sortable-th" data-col="4" data-label="Status" onclick="sortTable('fleetTable', 4)">Status</th>
-                                <th class="sortable-th col-comment" data-col="5" data-label="Comments" onclick="sortTable('fleetTable', 5)">Comments</th>
-                                <th id="fleetActionsHead" style="display:none;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="fleetTableBody">
-                            <!-- Populated by JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
             <!-- Media Tab -->
             <div id="media" class="tab-content">
@@ -2011,117 +1732,67 @@
                 </div>
             </div>
 
-
-            <!-- Downloads Tab -->
-            <div id="downloads" class="tab-content">
-                <h2 style="color: #0a5c34; margin-bottom: 30px; font-size: 22px;">📥 Download Sections & Reports</h2>
-
-                <!-- Download Instructions -->
-                <div style="background: #e3f2fd; border-left: 4px solid #1976d2; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
-                    <h3 style="color: #1565c0; margin-bottom: 10px;">💡 Tab-wise Download Options</h3>
-                    <p style="color: #555; font-size: 14px; line-height: 1.6;">
-                        Download specific dashboard sections or the complete dashboard. Each download excludes the tab navigation bar for clean, professional reports.
-                        Available in PDF (multi-page), PNG (highest quality), and JPEG (web-friendly) formats.
-                    </p>
+            <!-- Fleet Tab -->
+            <div id="fleet" class="tab-content">
+                <div class="media-widget-section">
+                    <span class="filter-group-label">Fleet Composition</span>
+                    <div class="media-widget-strip" id="fleetWidgets"></div>
                 </div>
 
-                <!-- Metrics Only -->
-                <div style="margin-bottom: 30px;">
-                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                        <div style="font-size: 22px; margin-right: 12px;">📊</div>
-                        <h3 style="color: #0a5c34; margin: 0; font-size: 16px;">Dashboard Metrics Only</h3>
-                        <span style="background: #ffc107; color: #0a5c34; padding: 3px 8px; border-radius: 20px; font-size: 11px; margin-left: auto; font-weight: 600;">Square 2x2 Layout</span>
-                    </div>
-                    <p style="color: #666; font-size: 13px; margin-bottom: 12px;">The 4 key metrics in square format (1080x1080) with 2x2 grid layout - perfect for WhatsApp status, social media, and presentations</p>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="tab-download-btn" onclick="downloadMetricsOnlyPDF()" title="PDF">📄 PDF</button>
-                        <button class="tab-download-btn" onclick="downloadMetricsOnlyPNG()" title="PNG">🖼️ PNG</button>
-                        <button class="tab-download-btn" onclick="downloadMetricsOnlyJPEG()" title="JPEG">📸 JPEG</button>
-                    </div>
-                </div>
-
-                <!-- Tab Downloads -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
-                    <!-- Overview Tab -->
-                    <div style="background: #f9f9f9; border-radius: 12px; padding: 20px; border: 2px solid #0a5c34;">
-                        <div style="font-size: 24px; margin-bottom: 10px;">📊</div>
-                        <h3 style="color: #0a5c34; margin: 0 0 8px 0; font-size: 15px;">Overview Tab</h3>
-                        <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Executive summary with all project details and phases</p>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="tab-download-btn-small" onclick="downloadOverviewPDF()" title="PDF">📄</button>
-                            <button class="tab-download-btn-small" onclick="downloadOverviewPNG()" title="PNG">🖼️</button>
-                            <button class="tab-download-btn-small" onclick="downloadOverviewJPEG()" title="JPEG">📸</button>
+                <div class="filter-groups">
+                    <div class="filter-group-block">
+                        <span class="filter-group-label">Aircraft Type</span>
+                        <div class="quick-filters" id="fleetTypeFilterPills">
+                            <button class="qf-btn active" onclick="setFleetTypeFilter('', this)">All</button>
                         </div>
                     </div>
-
-                    <!-- Aircraft Status Tab -->
-                    <div style="background: #f9f9f9; border-radius: 12px; padding: 20px; border: 2px solid #17a2b8;">
-                        <div style="font-size: 24px; margin-bottom: 10px;">✈️</div>
-                        <h3 style="color: #0a5c34; margin: 0 0 8px 0; font-size: 15px;">Aircraft Status Tab</h3>
-                        <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Complete list of all aircraft with status and commissioning details</p>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="tab-download-btn-small" onclick="downloadAircraftPDF()" title="PDF">📄</button>
-                            <button class="tab-download-btn-small" onclick="downloadAircraftPNG()" title="PNG">🖼️</button>
-                            <button class="tab-download-btn-small" onclick="downloadAircraftJPEG()" title="JPEG">📸</button>
+                    <div class="filter-group-block">
+                        <span class="filter-group-label">Fit</span>
+                        <div class="quick-filters">
+                            <button class="qf-btn active" onclick="setFleetFitFilter('', this)">All Fit</button>
+                            <button class="qf-btn" onclick="setFleetFitFilter('retrofit', this)">Retrofit</button>
+                            <button class="qf-btn" onclick="setFleetFitFilter('linefit', this)">Linefit</button>
                         </div>
                     </div>
-
-                    <!-- Schedule Tab -->
-                    <div style="background: #f9f9f9; border-radius: 12px; padding: 20px; border: 2px solid #ffc107;">
-                        <div style="font-size: 24px; margin-bottom: 10px;">📅</div>
-                        <h3 style="color: #0a5c34; margin: 0 0 8px 0; font-size: 15px;">Schedule Tab</h3>
-                        <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Detailed deployment schedule with dates, times, and work packages</p>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="tab-download-btn-small" onclick="downloadSchedulePDF()" title="PDF">📄</button>
-                            <button class="tab-download-btn-small" onclick="downloadSchedulePNG()" title="PNG">🖼️</button>
-                            <button class="tab-download-btn-small" onclick="downloadScheduleJPEG()" title="JPEG">📸</button>
-                        </div>
-                    </div>
-
-                    <!-- Full Dashboard -->
-                    <div style="background: linear-gradient(135deg, #0a5c34 0%, #137a49 100%); border-radius: 12px; padding: 20px; border: 2px solid #ffc107; color: white;">
-                        <div style="font-size: 24px; margin-bottom: 10px;">📦</div>
-                        <h3 style="color: white; margin: 0 0 8px 0; font-size: 15px;">Complete Dashboard</h3>
-                        <p style="color: rgba(255,255,255,0.9); font-size: 13px; margin-bottom: 15px;">All metrics + Full overview section in one download</p>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="tab-download-btn-small-white" onclick="downloadDashboardPDF()" title="PDF">📄</button>
-                            <button class="tab-download-btn-small-white" onclick="downloadDashboardPNG()" title="PNG">🖼️</button>
-                            <button class="tab-download-btn-small-white" onclick="downloadDashboardJPEG()" title="JPEG">📸</button>
+                    <div class="filter-group-block">
+                        <span class="filter-group-label">Status</span>
+                        <div class="quick-filters">
+                            <button class="qf-btn active" onclick="setFleetStatusFilter('', this)">All Status</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('active', this)">Active</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('stored', this)">Stored</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('retired', this)">Retired</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- WhatsApp Ready -->
-                <div style="background: #4CAF50; color: white; border-radius: 12px; padding: 20px; margin-bottom: 30px;">
-                    <h3 style="color: white; margin-bottom: 12px;">💬 Quick WhatsApp Share</h3>
-                    <p style="margin-bottom: 15px; opacity: 0.95;">One-click downloads optimized for mobile sharing</p>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="whatsapp-btn" onclick="downloadDashboardJPEG()">📱 Dashboard</button>
-                        <button class="whatsapp-btn" onclick="downloadOverviewJPEG()">📱 Overview</button>
-                        <button class="whatsapp-btn" onclick="downloadScheduleJPEG()">📱 Schedule</button>
-                        <button class="whatsapp-btn" onclick="downloadAircraftJPEG()">📱 Aircraft</button>
-                    </div>
+                <div class="table-actions-row">
+                    <span id="fleetSignedInAs" class="signed-in-as" style="display:none;"></span>
+                    <button id="fleetAddBtn" class="qf-btn" style="display:none;" onclick="openAddAircraft()">➕ Add Aircraft</button>
+                    <button id="fleetEditBtn" class="qf-btn edit-btn" onclick="toggleFleetEdit()">🔒 Sign in to edit</button>
+                    <button id="fleetResetBtn" class="qf-btn" onclick="resetFleetTable()">↺ Reset</button>
                 </div>
 
-                <!-- Download Tips -->
-                <div style="background: #fff9e6; border-left: 4px solid #ffc107; border-radius: 8px; padding: 20px;">
-                    <h3 style="color: #f57f17; margin-bottom: 12px;">💡 Download Format Guide</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
-                        <div>
-                            <strong style="color: #0a5c34;">📄 PDF</strong>
-                            <p style="color: #555; font-size: 13px; margin-top: 5px;">Multi-page format, best for printing and archiving</p>
-                        </div>
-                        <div>
-                            <strong style="color: #0a5c34;">🖼️ PNG</strong>
-                            <p style="color: #555; font-size: 13px; margin-top: 5px;">Highest quality, perfect for presentations</p>
-                        </div>
-                        <div>
-                            <strong style="color: #0a5c34;">📸 JPEG</strong>
-                            <p style="color: #555; font-size: 13px; margin-top: 5px;">Smallest file size, ideal for WhatsApp & email</p>
-                        </div>
-                    </div>
+                <div class="table-scroll-wrapper">
+                    <table class="aircraft-table" id="fleetTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortTable('fleetTable', 1)">Aircraft</th>
+                                <th class="sortable-th" data-col="2" data-label="Type" onclick="sortTable('fleetTable', 2)">Type</th>
+                                <th class="sortable-th" data-col="3" data-label="Fit" onclick="sortTable('fleetTable', 3)">Fit</th>
+                                <th class="sortable-th" data-col="4" data-label="Status" onclick="sortTable('fleetTable', 4)">Status</th>
+                                <th class="sortable-th col-comment" data-col="5" data-label="Comments" onclick="sortTable('fleetTable', 5)">Comments</th>
+                                <th id="fleetActionsHead" style="display:none;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fleetTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
+
+
         </div>
 
         <div class="footer">
@@ -2224,274 +1895,6 @@
     </div>
 
     <script>
-        // Download Functions
-        function showLoading(show = true) {
-            const loader = document.getElementById('loadingIndicator') || createLoadingIndicator();
-            if (show) {
-                loader.classList.add('show');
-            } else {
-                loader.classList.remove('show');
-            }
-        }
-
-        function createLoadingIndicator() {
-            const div = document.createElement('div');
-            div.id = 'loadingIndicator';
-            div.className = 'loading-indicator';
-            div.innerHTML = '<div style="font-size: 24px; margin-bottom: 15px;">⏳</div><div>Generating report...</div>';
-            document.body.appendChild(div);
-            return div;
-        }
-
-        async function captureSection(metricsOnly = false, tabId = 'overview') {
-            // Create a temporary container for capturing
-            const tempDiv = document.createElement('div');
-            tempDiv.style.position = 'fixed';
-            tempDiv.style.top = '-9999px';
-            tempDiv.style.left = '-9999px';
-            tempDiv.style.width = document.querySelector('.container').offsetWidth + 'px';
-            tempDiv.style.background = 'white';
-            tempDiv.style.zIndex = '-9999';
-
-            // Clone the container
-            const containerClone = document.querySelector('.container').cloneNode(true);
-
-            // Get header
-            const headerClone = containerClone.querySelector('.header').cloneNode(true);
-
-            // Create capture container
-            const captureContainer = document.createElement('div');
-            captureContainer.style.background = 'white';
-            captureContainer.style.padding = '20px';
-            captureContainer.appendChild(headerClone);
-
-            // Add metrics
-            const metricsClone = containerClone.querySelector('.dashboard-grid').cloneNode(true);
-            captureContainer.appendChild(metricsClone);
-
-            // If metrics only, don't add tab content
-            if (!metricsOnly && tabId) {
-                // Add the specific tab content
-                const tabContent = containerClone.querySelector('#' + tabId).cloneNode(true);
-                tabContent.classList.add('active');
-                captureContainer.appendChild(tabContent);
-            }
-
-            tempDiv.appendChild(captureContainer);
-            document.body.appendChild(tempDiv);
-
-            return { tempDiv, captureContainer };
-        }
-
-        async function captureMetricsSquare() {
-            // Create a temporary container with square dimensions
-            const tempDiv = document.createElement('div');
-            tempDiv.style.position = 'fixed';
-            tempDiv.style.top = '-9999px';
-            tempDiv.style.left = '-9999px';
-            tempDiv.style.width = '1080px';
-            tempDiv.style.background = 'white';
-            tempDiv.style.zIndex = '-9999';
-
-            // Clone the container
-            const containerClone = document.querySelector('.container').cloneNode(true);
-
-            // Get header (simplified for square)
-            const headerClone = containerClone.querySelector('.header').cloneNode(true);
-            headerClone.style.padding = '20px';
-
-            // Get metrics and force 2x2 layout
-            const metricsClone = containerClone.querySelector('.dashboard-grid').cloneNode(true);
-            metricsClone.classList.remove('dashboard-grid');
-            metricsClone.classList.add('dashboard-grid-square');
-            metricsClone.style.gridTemplateColumns = 'repeat(2, 1fr)';
-            metricsClone.style.gap = '15px';
-
-            // Create capture container (square)
-            const captureContainer = document.createElement('div');
-            captureContainer.style.background = 'white';
-            captureContainer.style.padding = '25px';
-            captureContainer.style.width = '1080px';
-            captureContainer.style.boxSizing = 'border-box';
-            captureContainer.appendChild(headerClone);
-            captureContainer.appendChild(metricsClone);
-
-            tempDiv.appendChild(captureContainer);
-            document.body.appendChild(tempDiv);
-
-            return { tempDiv, captureContainer };
-        }
-
-        // Generic download functions
-        async function downloadAsFormat(type, filename, metricsOnly = false, tabId = null) {
-            showLoading(true);
-            try {
-                const { tempDiv, captureContainer } = await captureSection(metricsOnly, tabId);
-
-                const canvas = await html2canvas(captureContainer, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    allowTaint: true,
-                    windowWidth: 1600
-                });
-
-                document.body.removeChild(tempDiv);
-                const date = new Date().toISOString().split('T')[0];
-
-                if (type === 'pdf') {
-                    const imgData = canvas.toDataURL('image/png');
-                    const pdf = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                    const imgWidth = 210;
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                    let heightLeft = imgHeight, position = 0;
-                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                    heightLeft -= 297;
-                    while (heightLeft >= 0) {
-                        position = heightLeft - imgHeight;
-                        pdf.addPage();
-                        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                        heightLeft -= 297;
-                    }
-                    pdf.save(filename + '_' + date + '.pdf');
-                } else if (type === 'png') {
-                    const link = document.createElement('a');
-                    link.href = canvas.toDataURL('image/png');
-                    link.download = filename + '_' + date + '.png';
-                    link.click();
-                } else if (type === 'jpeg') {
-                    const link = document.createElement('a');
-                    link.href = canvas.toDataURL('image/jpeg', 0.95);
-                    link.download = filename + '_' + date + '.jpg';
-                    link.click();
-                }
-            } catch (error) {
-                console.error('Error generating file:', error);
-                alert('Error generating file. Please try again.');
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        // Metrics Only Downloads (Square Format - 2x2 Layout)
-        async function downloadMetricsOnlyPDF() {
-            showLoading(true);
-            try {
-                const { tempDiv, captureContainer } = await captureMetricsSquare();
-
-                const canvas = await html2canvas(captureContainer, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    allowTaint: true,
-                    width: 1080,
-                    height: 1080
-                });
-
-                document.body.removeChild(tempDiv);
-                const date = new Date().toISOString().split('T')[0];
-
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                const imgWidth = 210;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                let heightLeft = imgHeight, position = 0;
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= 297;
-                while (heightLeft >= 0) {
-                    position = heightLeft - imgHeight;
-                    pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                    heightLeft -= 297;
-                }
-                pdf.save('Saudia_Metrics_Only_' + date + '.pdf');
-            } catch (error) {
-                console.error('Error generating PDF:', error);
-                alert('Error generating PDF. Please try again.');
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        async function downloadMetricsOnlyPNG() {
-            showLoading(true);
-            try {
-                const { tempDiv, captureContainer } = await captureMetricsSquare();
-
-                const canvas = await html2canvas(captureContainer, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    allowTaint: true,
-                    width: 1080,
-                    height: 1080
-                });
-
-                document.body.removeChild(tempDiv);
-                const date = new Date().toISOString().split('T')[0];
-
-                const link = document.createElement('a');
-                link.href = canvas.toDataURL('image/png');
-                link.download = 'Saudia_Metrics_Only_' + date + '.png';
-                link.click();
-            } catch (error) {
-                console.error('Error generating PNG:', error);
-                alert('Error generating PNG. Please try again.');
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        async function downloadMetricsOnlyJPEG() {
-            showLoading(true);
-            try {
-                const { tempDiv, captureContainer } = await captureMetricsSquare();
-
-                const canvas = await html2canvas(captureContainer, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    allowTaint: true,
-                    width: 1080,
-                    height: 1080
-                });
-
-                document.body.removeChild(tempDiv);
-                const date = new Date().toISOString().split('T')[0];
-
-                const link = document.createElement('a');
-                link.href = canvas.toDataURL('image/jpeg', 0.95);
-                link.download = 'Saudia_Metrics_Only_' + date + '.jpg';
-                link.click();
-            } catch (error) {
-                console.error('Error generating JPEG:', error);
-                alert('Error generating JPEG. Please try again.');
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        // Complete Dashboard Downloads (Metrics + Overview)
-        async function downloadDashboardPDF() { await downloadAsFormat('pdf', 'Saudia_Complete_Dashboard', false, 'overview'); }
-        async function downloadDashboardPNG() { await downloadAsFormat('png', 'Saudia_Complete_Dashboard', false, 'overview'); }
-        async function downloadDashboardJPEG() { await downloadAsFormat('jpeg', 'Saudia_Complete_Dashboard', false, 'overview'); }
-
-        // Tab Downloads (Metrics + Tab Content)
-        async function downloadOverviewPDF() { await downloadAsFormat('pdf', 'Saudia_Overview', false, 'overview'); }
-        async function downloadOverviewPNG() { await downloadAsFormat('png', 'Saudia_Overview', false, 'overview'); }
-        async function downloadOverviewJPEG() { await downloadAsFormat('jpeg', 'Saudia_Overview', false, 'overview'); }
-
-        async function downloadAircraftPDF() { await downloadAsFormat('pdf', 'Saudia_Aircraft_Status', false, 'aircraft'); }
-        async function downloadAircraftPNG() { await downloadAsFormat('png', 'Saudia_Aircraft_Status', false, 'aircraft'); }
-        async function downloadAircraftJPEG() { await downloadAsFormat('jpeg', 'Saudia_Aircraft_Status', false, 'aircraft'); }
-
-        async function downloadSchedulePDF() { await downloadAsFormat('pdf', 'Saudia_Schedule', false, 'schedule'); }
-        async function downloadSchedulePNG() { await downloadAsFormat('png', 'Saudia_Schedule', false, 'schedule'); }
-        async function downloadScheduleJPEG() { await downloadAsFormat('jpeg', 'Saudia_Schedule', false, 'schedule'); }
 
         // Aircraft data with all fleet information
         const aircraftStatic = [

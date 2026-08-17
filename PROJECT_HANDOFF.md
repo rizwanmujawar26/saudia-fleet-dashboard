@@ -14,8 +14,9 @@ the same data instantly.
 - **Local path:** `/Users/rizwanmujawar/Downloads/saudia-fleet-dashboard/index.html`
 - **Firebase project:** `saudia-fleet-dashboard` (Realtime Database, us-central1)
   DB URL: `https://saudia-fleet-dashboard-default-rtdb.firebaseio.com`
-- Single file, ~3000 lines, vanilla HTML/CSS/JS. No build step, no framework.
-  CDN libs: html2canvas + jsPDF (for the Downloads tab exports only).
+- Single file, ~4000 lines, vanilla HTML/CSS/JS. No build step, no framework,
+  and **no external scripts at all** — the html2canvas/jsPDF CDN libs went with
+  the Downloads tab, so the page has no third-party runtime dependency.
 
 `gh` CLI and `firebase` CLI (via `npx firebase-tools`) are already authenticated
 on this Mac — no login needed to keep working.
@@ -108,7 +109,7 @@ Firebase JS SDK, to keep the page a single lean file. Known quirk: the local
 back-to-back (only observed during heavy scripted testing); a page reload
 always self-heals it.
 
-## Tabs (6 total — System Tracking and By Station were removed earlier)
+## Tabs (5 total — System Tracking and By Station were removed earlier)
 
 1. **Overview** — top 4 metric cards (Middleware 23/40, HBC+ SBC 0/2, Project
    Completion %, Remaining), Fleet Completion Overview (6 cards: Total
@@ -126,21 +127,14 @@ always self-heals it.
    come back.
    Each Fleet Completion Overview card lists **only completed** aircraft, or
    "None yet" — never its full scope.
-2. **Fleet** — owns the roster. Columns `# | Aircraft | Type | Fit | Status |
-   Comments`, plus a remove button in edit mode. `fit` is `retrofit` (the 40)
-   or `linefit` (ASBA/ASBB); `fleetStatus` is `active | stored | retired`.
-   Removing an aircraft deletes only its `/fleet` entry — its `/aircraft`
-   software and media history survives, so re-adding the registration restores
-   it. NOTE: HBC+ separation elsewhere still keys off `/aircraft` `status ===
-   'excluded'`, not `fit`; the two are seeded consistently but are not yet a
-   single source. Worth unifying.
-3. **Software** (tab id is still `aircraft`) — Main Fleet table (40 aircraft, all columns) + HBC+
+
+2. **Software** (tab id is still `aircraft`) — Main Fleet table (40 aircraft, all columns) + HBC+
    table (2 aircraft, simplified BEAMCFG-only columns). Quick-filter pill
    groups: Aircraft Type / Location / Status. Default sort alphabetical by
    registration with a Reset button; sortable columns show ↑/↓. **This is the
    only tab where data can be edited**, and only by a signed-in allowlisted
    editor (see the security section above).
-4. **Media** — monthly media-loading status for the main fleet only
+3. **Media** — monthly media-loading status for the main fleet only
    (`status !== 'excluded'`, so the HBC+ pair is out of media scope). Columns:
    `# | Aircraft | Type | Status | Media Loaded | Date UTC | Comments`.
    Everything on this page derives from one stored object per aircraft at
@@ -165,14 +159,12 @@ always self-heals it.
    cycles actually present, newest first — a new cycle creates its own widget
    and pill with no code change, and months with no aircraft never appear.
 
-5. **Schedule** — standalone forward-looking plan, deliberately **not**
+4. **Schedule** — standalone forward-looking plan, deliberately **not**
    linked to `aircraftData` completion status (an aircraft can be
    "Completed" for Middleware but still have a separate, unrelated
    upcoming workpackage here). Entries whose date has passed are filtered
    out automatically at render time — the list self-prunes, no manual
    cleanup needed. Currently holds 5 upcoming entries, all Jeddah.
-6. **Downloads** — PDF/PNG/JPEG export per tab + full dashboard + square
-   metrics format, via html2canvas + jsPDF.
 
 ## Branding
 
@@ -230,3 +222,12 @@ emulator, and the emulator needs Java, which isn't installed on this Mac
 (`emulators:start` fails with "Unable to locate a Java Runtime"). Installing a
 JDK would let a future session test rules properly with
 `auth_variable_override`, which is worth doing before the rules change again.
+
+5. **Fleet** — owns the roster. Columns `# | Aircraft | Type | Fit | Status |
+   Comments`, plus a remove button in edit mode. `fit` is `retrofit` (the 40)
+   or `linefit` (ASBA/ASBB); `fleetStatus` is `active | stored | retired`.
+   Removing an aircraft deletes only its `/fleet` entry — its `/aircraft`
+   software and media history survives, so re-adding the registration restores
+   it. NOTE: HBC+ separation elsewhere still keys off `/aircraft` `status ===
+   'excluded'`, not `fit`; the two are seeded consistently but are not yet a
+   single source. Worth unifying.
