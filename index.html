@@ -130,12 +130,74 @@
             background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
         }
 
+        /* Three cards, not the four this grid was sized for — auto-fit at 280px left
+           them wrapping 2 + 1. */
+        .global-widgets {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        @media (max-width: 820px) {
+            .global-widgets { grid-template-columns: 1fr; }
+        }
+
+        /* Maintenance: same lightness as the other cards so it sits in the row rather
+           than shouting, but unmistakably red when something is open. */
+        .metric-card.alert {
+            border-left-color: #dc3545;
+            background: linear-gradient(135deg, #fdf0f1 0%, #f7d9dc 100%);
+        }
+
+        /* Nothing wrong = nothing to alarm about; falls back to a neutral slate. */
+        .metric-card.alert.alert-clear {
+            border-left-color: #9aa4ae;
+            background: linear-gradient(135deg, #f6f8f9 0%, #e4e9ed 100%);
+        }
+
+        .metric-card.alert.alert-clear .metric-value,
+        .metric-card.alert.alert-clear .metric-pct { color: #5a6169; }
+
+        .metric-card.alert .metric-value,
+        .metric-card.alert .metric-pct { color: #a52834; }
+
+        .metric-sublabel {
+            font-size: 12px;
+            font-weight: 700;
+            color: #4a5560;
+            letter-spacing: 0.3px;
+            margin-top: 4px;
+            opacity: 0.85;
+        }
+
+        /* Count, scope and percentage on one line — the row used to spend a whole card
+           on each of those. */
+        .metric-figures {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 6px;
+            margin: 10px 0 4px;
+        }
+
+        .metric-of {
+            font-size: 13px;
+            color: #6b757e;
+        }
+
+        .metric-pct {
+            font-size: 17px;
+            font-weight: 700;
+            color: #0a5c34;
+            margin-left: 6px;
+        }
+
         .metric-value {
             font-size: 42px;
             font-weight: bold;
             color: #0a5c34;
             margin: 10px 0;
         }
+
+        .metric-figures .metric-value { margin: 0; line-height: 1; }
 
         .metric-label {
             font-size: 14px;
@@ -1453,40 +1515,45 @@
 
         <div class="content">
             <!-- Key Metrics -->
-            <div class="dashboard-grid">
+            <!-- Global widgets: fleet-wide programme health, shown above every tab.
+                 Per-tab breakdowns are the local widgets inside each tab. -->
+            <div class="dashboard-grid global-widgets">
                 <div class="metric-card primary">
-                    <div class="metric-label">Middleware <span id="metricSwVersionLabel">2.1.0</span> Software Update</div>
-                    <div class="metric-value" id="metricCompletedValue">-</div>
-                    <div class="metric-label" style="margin-top: 10px;">of 40 Aircraft</div>
+                    <div class="metric-label">Software Loading Progress</div>
+                    <div class="metric-sublabel" id="metricSwSubLabel">Middleware 2.1.0</div>
+                    <div class="metric-figures">
+                        <span class="metric-value" id="metricSwValue">-</span>
+                        <span class="metric-of" id="metricSwOf">of 40</span>
+                        <span class="metric-pct" id="metricSwPct">-</span>
+                    </div>
                     <div class="metric-progress">
-                        <div class="metric-progress-bar" id="metricCompletedBar" style="width: 0%;"></div>
+                        <div class="metric-progress-bar" id="metricSwBar" style="width: 0%;"></div>
                     </div>
                 </div>
 
                 <div class="metric-card info">
-                    <div class="metric-label">HBC+ SBC Config Update</div>
-                    <div class="metric-value" id="metricHbcTopValue">-</div>
-                    <div class="metric-label" style="margin-top: 10px;">of 2 Aircraft</div>
+                    <div class="metric-label">Media Loading Progress</div>
+                    <div class="metric-sublabel" id="metricMediaSubLabel">—</div>
+                    <div class="metric-figures">
+                        <span class="metric-value" id="metricMediaValue">-</span>
+                        <span class="metric-of" id="metricMediaOf">of 40</span>
+                        <span class="metric-pct" id="metricMediaPct">-</span>
+                    </div>
                     <div class="metric-progress">
-                        <div class="metric-progress-bar" id="metricHbcTopBar" style="width: 0%; background: linear-gradient(90deg, #17a2b8, #20c997);"></div>
+                        <div class="metric-progress-bar" id="metricMediaBar" style="width: 0%; background: linear-gradient(90deg, #17a2b8, #20c997);"></div>
                     </div>
                 </div>
 
-                <div class="metric-card warning">
-                    <div class="metric-label">Project Completion</div>
-                    <div class="metric-value" id="metricRateValue">-</div>
-                    <div class="metric-label" style="margin-top: 10px;" id="metricRateSubLabel">of 42 Total</div>
-                    <div class="metric-progress">
-                        <div class="metric-progress-bar" id="metricRateBar" style="width: 0%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
+                <div class="metric-card alert">
+                    <div class="metric-label">Maintenance</div>
+                    <div class="metric-sublabel" id="metricMaintSubLabel">Open issues</div>
+                    <div class="metric-figures">
+                        <span class="metric-value" id="metricMaintValue">-</span>
+                        <span class="metric-of" id="metricMaintOf">of 42 active</span>
+                        <span class="metric-pct" id="metricMaintPct">-</span>
                     </div>
-                </div>
-
-                <div class="metric-card">
-                    <div class="metric-label">Remaining Aircraft</div>
-                    <div class="metric-value" id="metricRemainingValue">-</div>
-                    <div class="metric-label" style="margin-top: 10px;">of 42 Total</div>
                     <div class="metric-progress">
-                        <div class="metric-progress-bar" id="metricRemainingBar" style="width: 0%; background: linear-gradient(90deg, #6c757d, #adb5bd);"></div>
+                        <div class="metric-progress-bar" id="metricMaintBar" style="width: 0%; background: linear-gradient(90deg, #e4606d, #dc3545);"></div>
                     </div>
                 </div>
             </div>
@@ -4081,33 +4148,55 @@
         // Kept as thin aliases so existing call sites read the same; the numbers now
         // come from the live roster (see projectScope/hbcScope/middlewareScope).
 
+        // An aircraft counts as "in maintenance" when it carries an open maintenance
+        // flag. Nothing writes that yet — the Maintenance tab will — so this reads 0
+        // today and lights up on its own once flags exist, with no further wiring.
+        function maintenanceOpen(a) {
+            return !!(a.maintenance && a.maintenance.open);
+        }
+
+        function activeFleet() {
+            return aircraftData.filter(a => (a.fleetStatus || 'active') === 'active');
+        }
+
         function updateMetrics() {
             const active = aircraftData.filter(a => !isLinefit(a));
             const completedStrict = active.filter(isCompletedStrict);
-            // Counts aircraft actually on the latest middleware, which is now a stored
-            // version rather than a by-product of the completion status.
-            const middlewareCount = active.filter(a => swVersionOf(a) === latestSwVersion()).length;
-            const middlewareRate = Math.round((middlewareCount / middlewareScope()) * 1000) / 10;
 
-            const hbcAircraft = aircraftData.filter(a => a.id === 'ASBA' || a.id === 'ASBB');
-            const hbcCount = hbcAircraft.filter(a => a.beamcfgStatus === 'done').length;
-            const hbcRate = Math.round((hbcCount / hbcScope()) * 1000) / 10;
+            // --- Global widget 1: software loading ---
+            const swCount = active.filter(a => swVersionOf(a) === latestSwVersion()).length;
+            const swScope = middlewareScope() || 1;
+            const swRate = Math.round((swCount / swScope) * 1000) / 10;
+            setText('metricSwSubLabel', `Middleware ${latestSwVersion()}`);
+            setText('metricSwValue', swCount);
+            setText('metricSwOf', `of ${middlewareScope()}`);
+            setText('metricSwPct', swRate + '%');
+            setWidth('metricSwBar', swRate + '%');
 
-            const projectCompleted = middlewareCount + hbcCount;
-            const projectRate = Math.round((projectCompleted / projectScope()) * 1000) / 10;
-            const remaining = projectScope() - projectCompleted;
+            // --- Global widget 2: media loading, measured against the newest cycle ---
+            const latestCycle = latestMediaCycle();
+            const mediaOn = latestCycle
+                ? mediaFleet().filter(a => a.media && a.media.mediaCycle === latestCycle).length : 0;
+            const medScope = mediaScope() || 1;
+            const mediaRate = Math.round((mediaOn / medScope) * 1000) / 10;
+            setText('metricMediaSubLabel', latestCycle ? cycleToDisplay(latestCycle) : 'No media loaded');
+            setText('metricMediaValue', mediaOn);
+            setText('metricMediaOf', `of ${mediaScope()}`);
+            setText('metricMediaPct', mediaRate + '%');
+            setWidth('metricMediaBar', mediaRate + '%');
 
-            // Header cards
-            setText('metricSwVersionLabel', latestSwVersion());
-            setText('metricCompletedValue', middlewareCount);
-            setWidth('metricCompletedBar', middlewareRate + '%');
-            setText('metricHbcTopValue', hbcCount);
-            setWidth('metricHbcTopBar', hbcRate + '%');
-            setText('metricRateValue', projectRate + '%');
-            setText('metricRateSubLabel', `${projectCompleted} / ${projectScope()} Total`);
-            setWidth('metricRateBar', projectRate + '%');
-            setText('metricRemainingValue', remaining);
-            setWidth('metricRemainingBar', (100 - projectRate) + '%');
+            // --- Global widget 3: maintenance ---
+            const activeCount = activeFleet().length;
+            const maintCount = activeFleet().filter(maintenanceOpen).length;
+            const maintRate = activeCount ? Math.round((maintCount / activeCount) * 1000) / 10 : 0;
+            setText('metricMaintValue', maintCount);
+            setText('metricMaintOf', `of ${activeCount} active`);
+            setText('metricMaintPct', maintRate + '%');
+            setText('metricMaintSubLabel', maintCount ? 'Open issues' : 'No open issues');
+            setWidth('metricMaintBar', maintRate + '%');
+            // Stay quiet when there is nothing wrong; only colour up when there is.
+            const maintCard = document.getElementById('metricMaintValue');
+            if (maintCard) maintCard.closest('.metric-card').classList.toggle('alert-clear', maintCount === 0);
 
             renderFleetOverview(active, completedStrict);
             renderStationCompletion(completedStrict);

@@ -99,6 +99,28 @@ the repo root, in case anything needs restoring.
    - `beamcfgStatus` (ASBA/ASBB only): anything other than `'done'` renders as
      Pending (ASBA/ASBB currently hold `'pending'`).
 
+## Widget vocabulary
+
+- **Global widgets** — the row above the tab bar, `.global-widgets`, showing
+  fleet-wide programme health on every tab: Software Loading Progress, Media
+  Loading Progress, Maintenance.
+- **Local widgets** — the `.media-widget-strip` rows inside a tab, showing that
+  tab's own breakdown (version progress, media months, fleet composition...).
+
+## Maintenance widget (placeholder wiring)
+
+`maintenanceOpen(a)` reads `a.maintenance && a.maintenance.open`. Nothing writes
+that yet — the Maintenance tab will — so the widget shows 0 today and lights up
+on its own once flags exist, with no further wiring. Its denominator is the
+**active** fleet (`fleetStatus === 'active'`), so stored/retired aircraft drop
+out. The card is grey while the count is zero (`.alert-clear`) and turns light
+red once anything is open; verified both states, and that storing an aircraft
+moves the denominator 42 -> 41.
+
+Note `/aircraft` rules do **not** yet allow a `maintenance` field — `$other` is
+`false`, so building the tab means adding its schema there first. Deliberately
+not guessed in advance.
+
 ## Single sources — do not reintroduce duplicates
 
 Two facts were each stored twice, which meant an editor could change one and
