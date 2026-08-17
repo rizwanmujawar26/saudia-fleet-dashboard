@@ -71,9 +71,10 @@ the repo root, in case anything needs restoring.
 
 **Data has two layers, merged at runtime into a single `aircraftData` array:**
 
-1. **Fleet roster** — Firebase `/fleet/{tail}` = `{ type, station }`, the single
-   source of truth for which aircraft exist. Add one via **➕ Add Aircraft** on
-   the Software tab (signed-in editors only) and every table, filter pill and
+1. **Fleet roster** — Firebase `/fleet/{tail}` =
+   `{ type, station, fit, fleetStatus, comments }`, the single source of truth
+   for which aircraft exist. Managed entirely from the **Fleet** tab
+   (signed-in editors only): add, edit and remove and every table, filter pill and
    metric picks it up — scope numbers are counted from the roster by
    `projectScope()` / `hbcScope()` / `middlewareScope()` / `mediaScope()`, not
    hardcoded. The `aircraftStatic` array in `index.html` is now only a fallback
@@ -107,7 +108,7 @@ Firebase JS SDK, to keep the page a single lean file. Known quirk: the local
 back-to-back (only observed during heavy scripted testing); a page reload
 always self-heals it.
 
-## Tabs (5 total — System Tracking and By Station were removed earlier)
+## Tabs (6 total — System Tracking and By Station were removed earlier)
 
 1. **Overview** — top 4 metric cards (Middleware 23/40, HBC+ SBC 0/2, Project
    Completion %, Remaining), Fleet Completion Overview (6 cards: Total
@@ -125,13 +126,21 @@ always self-heals it.
    come back.
    Each Fleet Completion Overview card lists **only completed** aircraft, or
    "None yet" — never its full scope.
-2. **Software** (tab id is still `aircraft`) — Main Fleet table (40 aircraft, all columns) + HBC+
+2. **Fleet** — owns the roster. Columns `# | Aircraft | Type | Fit | Status |
+   Comments`, plus a remove button in edit mode. `fit` is `retrofit` (the 40)
+   or `linefit` (ASBA/ASBB); `fleetStatus` is `active | stored | retired`.
+   Removing an aircraft deletes only its `/fleet` entry — its `/aircraft`
+   software and media history survives, so re-adding the registration restores
+   it. NOTE: HBC+ separation elsewhere still keys off `/aircraft` `status ===
+   'excluded'`, not `fit`; the two are seeded consistently but are not yet a
+   single source. Worth unifying.
+3. **Software** (tab id is still `aircraft`) — Main Fleet table (40 aircraft, all columns) + HBC+
    table (2 aircraft, simplified BEAMCFG-only columns). Quick-filter pill
    groups: Aircraft Type / Location / Status. Default sort alphabetical by
    registration with a Reset button; sortable columns show ↑/↓. **This is the
    only tab where data can be edited**, and only by a signed-in allowlisted
    editor (see the security section above).
-3. **Media** — monthly media-loading status for the main fleet only
+4. **Media** — monthly media-loading status for the main fleet only
    (`status !== 'excluded'`, so the HBC+ pair is out of media scope). Columns:
    `# | Aircraft | Type | Status | Media Loaded | Date UTC | Comments`.
    Everything on this page derives from one stored object per aircraft at
@@ -156,13 +165,13 @@ always self-heals it.
    cycles actually present, newest first — a new cycle creates its own widget
    and pill with no code change, and months with no aircraft never appear.
 
-4. **Schedule** — standalone forward-looking plan, deliberately **not**
+5. **Schedule** — standalone forward-looking plan, deliberately **not**
    linked to `aircraftData` completion status (an aircraft can be
    "Completed" for Middleware but still have a separate, unrelated
    upcoming workpackage here). Entries whose date has passed are filtered
    out automatically at render time — the list self-prunes, no manual
    cleanup needed. Currently holds 5 upcoming entries, all Jeddah.
-5. **Downloads** — PDF/PNG/JPEG export per tab + full dashboard + square
+6. **Downloads** — PDF/PNG/JPEG export per tab + full dashboard + square
    metrics format, via html2canvas + jsPDF.
 
 ## Branding

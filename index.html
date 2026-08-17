@@ -1020,6 +1020,17 @@
         .media-widget-no_media .media-widget-pct  { color: #5a6169; }
         .media-widget-no_media .media-widget-fill { background: #adb5bd; }
 
+        /* ===== Fleet page ===== */
+        .status-badge.fit-retrofit { background: #e3ecf5; color: #2f5f8a; }
+        .status-badge.fit-linefit  { background: #efe9f7; color: #59468a; }
+        .status-badge.fleet-active  { background: #28a745; color: #fff; }
+        .status-badge.fleet-stored  { background: #f0ad4e; color: #4a3208; }
+        .status-badge.fleet-retired { background: #adb5bd; color: #fff; }
+
+        #fleetTable td:not(.col-comment) {
+            white-space: nowrap;
+        }
+
         .sched-status-cell {
             white-space: nowrap;
         }
@@ -1687,7 +1698,8 @@
             <!-- Tabs Navigation -->
             <div class="tabs">
                 <button class="tab-button active" onclick="switchTab('overview')">📊 Overview</button>
-                <button class="tab-button" onclick="switchTab('aircraft')">✈️ Software</button>
+                <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
+                <button class="tab-button" onclick="switchTab('aircraft')">🛠️ Software</button>
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
                 <button class="tab-button" onclick="switchTab('schedule')">📅 Schedule</button>
                 <button class="tab-button" onclick="switchTab('downloads')">📥 Downloads</button>
@@ -1762,7 +1774,6 @@
 
                 <div class="table-actions-row">
                     <span id="signedInAs" class="signed-in-as" style="display:none;"></span>
-                    <button id="addAircraftBtn" class="qf-btn" style="display:none;" onclick="openAddAircraft()">➕ Add Aircraft</button>
                     <button id="signOutBtn" class="qf-btn" style="display:none;" onclick="signOut()">Sign out</button>
                     <button id="editModeBtn" class="qf-btn edit-btn" onclick="toggleEditMode()">🔒 Sign in to edit</button>
                     <button id="aircraftResetBtn" class="qf-btn" onclick="resetAircraftTable()">↺ Reset</button>
@@ -1803,6 +1814,66 @@
                             </tr>
                         </thead>
                         <tbody id="hbcTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Fleet Tab -->
+            <div id="fleet" class="tab-content">
+                <div class="media-widget-section">
+                    <span class="filter-group-label">Fleet Composition</span>
+                    <div class="media-widget-strip" id="fleetWidgets"></div>
+                </div>
+
+                <div class="filter-groups">
+                    <div class="filter-group-block">
+                        <span class="filter-group-label">Aircraft Type</span>
+                        <div class="quick-filters" id="fleetTypeFilterPills">
+                            <button class="qf-btn active" onclick="setFleetTypeFilter('', this)">All</button>
+                        </div>
+                    </div>
+                    <div class="filter-group-block">
+                        <span class="filter-group-label">Fit</span>
+                        <div class="quick-filters">
+                            <button class="qf-btn active" onclick="setFleetFitFilter('', this)">All Fit</button>
+                            <button class="qf-btn" onclick="setFleetFitFilter('retrofit', this)">Retrofit</button>
+                            <button class="qf-btn" onclick="setFleetFitFilter('linefit', this)">Linefit</button>
+                        </div>
+                    </div>
+                    <div class="filter-group-block">
+                        <span class="filter-group-label">Status</span>
+                        <div class="quick-filters">
+                            <button class="qf-btn active" onclick="setFleetStatusFilter('', this)">All Status</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('active', this)">Active</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('stored', this)">Stored</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('retired', this)">Retired</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-actions-row">
+                    <span id="fleetSignedInAs" class="signed-in-as" style="display:none;"></span>
+                    <button id="fleetAddBtn" class="qf-btn" style="display:none;" onclick="openAddAircraft()">➕ Add Aircraft</button>
+                    <button id="fleetEditBtn" class="qf-btn edit-btn" onclick="toggleFleetEdit()">🔒 Sign in to edit</button>
+                    <button id="fleetResetBtn" class="qf-btn" onclick="resetFleetTable()">↺ Reset</button>
+                </div>
+
+                <div class="table-scroll-wrapper">
+                    <table class="aircraft-table" id="fleetTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortTable('fleetTable', 1)">Aircraft</th>
+                                <th class="sortable-th" data-col="2" data-label="Type" onclick="sortTable('fleetTable', 2)">Type</th>
+                                <th class="sortable-th" data-col="3" data-label="Fit" onclick="sortTable('fleetTable', 3)">Fit</th>
+                                <th class="sortable-th" data-col="4" data-label="Status" onclick="sortTable('fleetTable', 4)">Status</th>
+                                <th class="sortable-th col-comment" data-col="5" data-label="Comments" onclick="sortTable('fleetTable', 5)">Comments</th>
+                                <th id="fleetActionsHead" style="display:none;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fleetTableBody">
                             <!-- Populated by JavaScript -->
                         </tbody>
                     </table>
@@ -2082,12 +2153,23 @@
             <input id="addAcId" class="add-sched-input" placeholder="e.g. AS77" autocomplete="off">
             <label class="add-sched-label">Aircraft Type</label>
             <select id="addAcType" class="add-sched-input"></select>
-            <label class="add-sched-label">Base Station</label>
-            <select id="addAcStation" class="add-sched-input">
-                <option value="JED">Jeddah (JED)</option>
-                <option value="RUH">Riyadh (RUH)</option>
-                <option value="N/A">N/A</option>
-            </select>
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label class="add-sched-label">Base Station</label>
+                    <select id="addAcStation" class="add-sched-input">
+                        <option value="JED">Jeddah (JED)</option>
+                        <option value="RUH">Riyadh (RUH)</option>
+                        <option value="N/A">N/A</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label class="add-sched-label">Fit</label>
+                    <select id="addAcFit" class="add-sched-input">
+                        <option value="retrofit">Retrofit</option>
+                        <option value="linefit">Linefit</option>
+                    </select>
+                </div>
+            </div>
             <div id="addAcError" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
             <div style="display:flex; gap:10px; margin-top:6px;">
                 <button id="addAcCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
@@ -2514,7 +2596,10 @@
         let fleetRoster = aircraftStatic.slice();
 
         function setFleetRoster(data) {
-            const rows = Object.entries(data || {}).map(([id, v]) => ({ id, type: v.type, station: v.station }));
+            const rows = Object.entries(data || {}).map(([id, v]) => ({
+                id, type: v.type, station: v.station,
+                fit: v.fit || 'retrofit', fleetStatus: v.fleetStatus || 'active', comments: v.comments || '',
+            }));
             if (rows.length) fleetRoster = rows.sort((a, b) => a.id.localeCompare(b.id));
         }
 
@@ -2542,6 +2627,7 @@
                 return;
             }
             rebuildAircraftData();
+            if (!fleetEditMode) populateFleetTable();
             populateAircraftTable();
             if (!mediaEditMode) populateMediaTable();
             populateScheduleTables();
@@ -2822,8 +2908,10 @@
             editMode = false;
             scheduleEditMode = false;
             mediaEditMode = false;
+            fleetEditMode = false;
             pendingChanges = {};
             pendingMedia = {};
+            pendingFleet = {};
             try { sessionStorage.removeItem(AUTH_SESSION_KEY); } catch (e) { /* non-fatal */ }
             updateAuthUI();
             renderAll();
@@ -2972,13 +3060,11 @@
         function updateAuthUI() {
             updateScheduleEditUI();
             updateMediaEditUI();
+            updateFleetEditUI();
             const editBtn = document.getElementById('editModeBtn');
             const signOutBtn = document.getElementById('signOutBtn');
             const whoami = document.getElementById('signedInAs');
             if (!editBtn) return;
-
-            const addBtn = document.getElementById('addAircraftBtn');
-            if (addBtn) addBtn.style.display = canEdit() ? '' : 'none';
 
             if (!canEdit()) {
                 editBtn.textContent = '🔒 Sign in to edit';
@@ -3057,7 +3143,9 @@
             }
 
             // Populate tables if needed
-            if (tabName === 'aircraft') {
+            if (tabName === 'fleet') {
+                populateFleetTable();
+            } else if (tabName === 'aircraft') {
                 populateAircraftTable();
             } else if (tabName === 'media') {
                 populateMediaTable();
@@ -3340,6 +3428,7 @@
                 const id = document.getElementById('addAcId').value.trim().toUpperCase();
                 const type = document.getElementById('addAcType').value;
                 const station = document.getElementById('addAcStation').value;
+                const fit = document.getElementById('addAcFit').value;
                 const fail = m => { err.textContent = m; err.style.display = 'block'; };
 
                 if (!/^[A-Z0-9]{2,10}$/.test(id)) return fail('Registration should be letters and digits only, e.g. AS77.');
@@ -3350,11 +3439,11 @@
                 if (!token) return;
                 try {
                     const res = await fetch(`${FIREBASE_DB_URL}/fleet/${id}.json?auth=${token}`, {
-                        method: 'PUT', body: JSON.stringify({ type, station }),
+                        method: 'PUT', body: JSON.stringify({ type, station, fit, fleetStatus: 'active' }),
                     });
                     const data = await res.json();
                     if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                    fleetRoster = fleetRoster.concat([{ id, type, station }]).sort((a, b) => a.id.localeCompare(b.id));
+                    fleetRoster = fleetRoster.concat([{ id, type, station, fit, fleetStatus: 'active', comments: '' }]).sort((a, b) => a.id.localeCompare(b.id));
                     overlay.style.display = 'none';
                     renderAll();
                     setSyncStatus(`🟢 ${id} added to the fleet — now ${projectScope()} aircraft`, '#28a745');
@@ -3362,6 +3451,232 @@
                     fail(`Could not add — ${e.message}`);
                 }
             });
+        }
+
+        // ===== Fleet page =====
+        // The roster is the source of truth for which aircraft exist, so this page owns
+        // add / edit / remove. Everything else on the dashboard reads what it produces.
+        const FLEET_FITS = [{ value: 'retrofit', label: 'Retrofit' }, { value: 'linefit', label: 'Linefit' }];
+        const FLEET_STATUSES = [
+            { value: 'active', label: 'Active' },
+            { value: 'stored', label: 'Stored' },
+            { value: 'retired', label: 'Retired' },
+        ];
+
+        let fleetEditMode = false;
+        let pendingFleet = {};
+        let fleetTypeFilter = '', fleetFitFilter = '', fleetStatusFilter = '';
+
+        function fleetRowOf(id) {
+            return fleetRoster.find(a => a.id === id) || {};
+        }
+
+        function populateFleetTable() {
+            const tbody = document.getElementById('fleetTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const editing = fleetEditMode && canEdit();
+            const head = document.getElementById('fleetActionsHead');
+            if (head) head.style.display = editing ? '' : 'none';
+
+            fleetRoster.forEach((a, idx) => {
+                const staged = pendingFleet[a.id] || {};
+                const fit = staged.fit || a.fit || 'retrofit';
+                const st = staged.fleetStatus || a.fleetStatus || 'active';
+                const comments = staged.comments !== undefined ? staged.comments : (a.comments || '');
+
+                const row = document.createElement('tr');
+                row.dataset.type = a.type;
+                row.dataset.fit = fit;
+                row.dataset.fstatus = st;
+
+                const typeCell = editing
+                    ? `<select class="edit-select" data-id="${a.id}" data-field="type" onchange="handleFleetEdit(this)">${
+                        [...new Set(fleetRoster.map(x => x.type))].sort().map(t =>
+                          `<option value="${escAttr(t)}" ${t === (staged.type || a.type) ? 'selected' : ''}>${TYPE_SHORT_LABEL[t] || t}</option>`).join('')
+                      }</select>`
+                    : (TYPE_SHORT_LABEL[a.type] || a.type);
+
+                const fitCell = editing
+                    ? `<select class="edit-select" data-id="${a.id}" data-field="fit" onchange="handleFleetEdit(this)">${
+                        FLEET_FITS.map(f => `<option value="${f.value}" ${f.value === fit ? 'selected' : ''}>${f.label}</option>`).join('')
+                      }</select>`
+                    : `<span class="status-badge fit-${fit}">${fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>`;
+
+                const statusCell = editing
+                    ? `<select class="edit-select" data-id="${a.id}" data-field="fleetStatus" onchange="handleFleetEdit(this)">${
+                        FLEET_STATUSES.map(s => `<option value="${s.value}" ${s.value === st ? 'selected' : ''}>${s.label}</option>`).join('')
+                      }</select>`
+                    : `<span class="status-badge fleet-${st}">${(FLEET_STATUSES.find(s => s.value === st) || FLEET_STATUSES[0]).label}</span>`;
+
+                const commentCell = editing
+                    ? `<input class="edit-text comment-input" value="${escAttr(comments)}" placeholder="Add a comment" data-id="${a.id}" data-field="comments" onchange="handleFleetEdit(this)">`
+                    : `<span class="comment-text">${comments ? escAttr(comments) : '—'}</span>`;
+
+                const actionCell = editing
+                    ? `<td><button class="sched-del-btn" title="Remove from fleet" onclick="removeAircraft('${a.id}')">🗑</button></td>`
+                    : '';
+
+                row.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td data-sort="${a.id}"><strong>${a.id}</strong></td>
+                    <td data-sort="${escAttr(a.type)}">${typeCell}</td>
+                    <td data-sort="${fit}">${fitCell}</td>
+                    <td data-sort="${st}">${statusCell}</td>
+                    <td class="col-comment" data-sort="${escAttr(comments)}">${commentCell}</td>
+                    ${actionCell}
+                `;
+                tbody.appendChild(row);
+            });
+
+            renderFleetWidgets();
+            populateFleetTypeFilter();
+            applyFleetFilters();
+            updateSortIndicators('fleetTable');
+            updateFleetEditUI();
+        }
+
+        function renderFleetWidgets() {
+            const grid = document.getElementById('fleetWidgets');
+            if (!grid) return;
+            const total = fleetRoster.length || 1;
+            const byType = {};
+            let linefit = 0, retrofit = 0;
+            fleetRoster.forEach(a => {
+                byType[a.type] = (byType[a.type] || 0) + 1;
+                if ((a.fit || 'retrofit') === 'linefit') linefit++; else retrofit++;
+            });
+            const card = (label, count, type) => {
+                const pct = Math.round((count / total) * 1000) / 10;
+                return `<div class="media-widget media-widget-${type}">
+                    <div class="media-widget-label">${label}</div>
+                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${total}</span><span class="media-widget-pct">${pct}%</span></div>
+                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
+                </div>`;
+            };
+            let html = card('Total Fleet', fleetRoster.length, 'latest');
+            html += card('Retrofit', retrofit, 'previous');
+            html += card('Linefit', linefit, 'older');
+            html += Object.keys(byType).sort().map(t => card(TYPE_SHORT_LABEL[t] || t, byType[t], 'no_media')).join('');
+            grid.innerHTML = html;
+        }
+
+        function populateFleetTypeFilter() {
+            const box = document.getElementById('fleetTypeFilterPills');
+            if (!box) return;
+            const types = [...new Set(fleetRoster.map(a => a.type))].sort();
+            if (box.dataset.types === types.join('|')) return;   // rebuild only when the set changes
+            box.innerHTML = `<button class="qf-btn ${fleetTypeFilter === '' ? 'active' : ''}" onclick="setFleetTypeFilter('', this)">All</button>` +
+                types.map(t => `<button class="qf-btn ${fleetTypeFilter === t ? 'active' : ''}" onclick="setFleetTypeFilter('${escAttr(t)}', this)">${TYPE_SHORT_LABEL[t] || t}</button>`).join('');
+            box.dataset.types = types.join('|');
+        }
+
+        function setFleetTypeFilter(t, btn) { fleetTypeFilter = t; setActiveInGroup(btn); applyFleetFilters(); }
+        function setFleetFitFilter(f, btn) { fleetFitFilter = f; setActiveInGroup(btn); applyFleetFilters(); }
+        function setFleetStatusFilter(s, btn) { fleetStatusFilter = s; setActiveInGroup(btn); applyFleetFilters(); }
+
+        function applyFleetFilters() {
+            document.querySelectorAll('#fleetTableBody tr').forEach(row => {
+                const ok = (fleetTypeFilter === '' || row.dataset.type === fleetTypeFilter)
+                    && (fleetFitFilter === '' || row.dataset.fit === fleetFitFilter)
+                    && (fleetStatusFilter === '' || row.dataset.fstatus === fleetStatusFilter);
+                row.style.display = ok ? '' : 'none';
+            });
+        }
+
+        function resetFleetTable() {
+            fleetTypeFilter = ''; fleetFitFilter = ''; fleetStatusFilter = '';
+            document.querySelectorAll('#fleet .filter-groups .quick-filters').forEach(group => {
+                group.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
+                const first = group.querySelector('.qf-btn');
+                if (first) first.classList.add('active');
+            });
+            delete lastSort['fleetTable'];
+            updateSortIndicators('fleetTable');
+            populateFleetTable();
+        }
+
+        async function toggleFleetEdit() {
+            if (fleetEditMode) { await commitFleetChanges(); return; }
+            if (!canEdit() && !(await promptSignIn())) return;
+            if (!canEdit()) return;
+            fleetEditMode = true;
+            pendingFleet = {};
+            populateFleetTable();
+        }
+
+        function updateFleetEditUI() {
+            const btn = document.getElementById('fleetEditBtn');
+            const addBtn = document.getElementById('fleetAddBtn');
+            const who = document.getElementById('fleetSignedInAs');
+            if (!btn) return;
+            const editing = fleetEditMode && canEdit();
+            btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '💾 Save' : '✏️ Edit');
+            btn.classList.toggle('save-active', editing);
+            if (addBtn) addBtn.style.display = canEdit() ? '' : 'none';
+            if (who) {
+                who.textContent = canEdit() ? authUser.email : '';
+                who.style.display = canEdit() ? '' : 'none';
+            }
+        }
+
+        function handleFleetEdit(el) {
+            const id = el.dataset.id, field = el.dataset.field;
+            pendingFleet[id] = pendingFleet[id] || {};
+            pendingFleet[id][field] = field === 'comments' ? el.value.trim() : el.value;
+            const row = fleetRowOf(id);
+            if (row) row[field] = pendingFleet[id][field];
+            setSyncStatus(`🟡 ${id} staged — press Save`, '#e0a800');
+        }
+
+        async function commitFleetChanges() {
+            const ids = Object.keys(pendingFleet);
+            if (!ids.length) { fleetEditMode = false; populateFleetTable(); return; }
+            const token = await getIdToken();
+            if (!token) return;
+            const btn = document.getElementById('fleetEditBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+            setSyncStatus('🟡 Saving fleet...', '#e0a800');
+
+            const multi = {};
+            ids.forEach(id => Object.entries(pendingFleet[id]).forEach(([f, v]) => {
+                multi[`${id}/${f}`] = (f === 'comments' && !v) ? null : v;
+            }));
+
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/fleet.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify(multi),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                pendingFleet = {};
+                fleetEditMode = false;
+                renderAll();
+            } catch (e) {
+                setSyncStatus(`🔴 Could not save fleet — ${e.message}`, '#dc3545');
+            } finally {
+                if (btn) btn.disabled = false;
+                updateFleetEditUI();
+            }
+        }
+
+        // Removes the aircraft from the roster only. Its software/media history under
+        // /aircraft is left intact, so re-adding the registration restores it.
+        async function removeAircraft(id) {
+            if (!confirm(`Remove ${id} from the fleet?\n\nIt disappears from every page and all counts.\nIts software and media history is kept, so re-adding ${id} restores it.`)) return;
+            const token = await getIdToken();
+            if (!token) return;
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/fleet/${id}.json?auth=${token}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('delete failed');
+                fleetRoster = fleetRoster.filter(a => a.id !== id);
+                delete pendingFleet[id];
+                renderAll();
+                setSyncStatus(`🟢 ${id} removed — fleet now ${projectScope()} aircraft`, '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not remove ${id} — ${e.message}`, '#dc3545');
+            }
         }
 
         // ===== Media page =====
