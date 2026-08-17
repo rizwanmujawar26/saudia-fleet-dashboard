@@ -157,10 +157,19 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
    Columns: `# | Aircraft | Type | Status | Media Loaded | Date UTC | Comments`.
 4. **Maintenance** — the **active** fleet only (`fleetStatus === 'active'`), the same
    set the global Maintenance card counts against, so the two cannot disagree.
-   Columns: `# | Aircraft | Type | Station | Maintenance | Flagged | Reason`.
-   Every row has a drawer (▸) for per-aircraft detail — that is where **SSID status
-   and the remaining system checks go**. Sorting collapses the drawers first
-   (`sortMaintTable()`), because `sortTable` treats a one-cell detail row as a peer.
+   Columns: `# | ▸ | Aircraft | Type | Station | Maintenance | Flagged | Reason`.
+   Clicking anywhere on a row opens a drawer of per-aircraft detail — that is where
+   **SSID status and the remaining system checks go**. The caret has a hair-width
+   column to itself (col 1, `.maint-expand-col`) so the Aircraft cell stays plain
+   `<strong>` and lines up with the Software, Media and Fleet tables; inline before
+   the registration it read as a stray dot. It rotates rather than swapping glyph.
+   `maintRowClick()` exempts selects and inputs, or opening a dropdown in Edit mode
+   would collapse the row. **Sortable columns start at 2** — sorting also collapses
+   the drawers first (`sortMaintTable()`), because `sortTable` treats a one-cell
+   detail row as a peer.
+   `N/A` is not a station: it is what the roster stores for the linefit pair, which
+   is based nowhere, so it gets no pill and no widget card and its Station cell
+   reads `—`. The station cards therefore need not sum to Open Issues.
 5. **Schedule** — standalone forward-looking plan, deliberately **not** linked
    to completion status. Entries drop off automatically 24h past their slot
    (`SCHEDULE_GRACE_MS`); in that window they show `⚠ Overdue` so they can be

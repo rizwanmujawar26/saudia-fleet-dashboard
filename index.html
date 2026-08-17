@@ -1162,19 +1162,35 @@
             background: rgba(220, 53, 69, 0.06);
         }
 
-        /* The disclosure arrow sits with the registration rather than in a column of
-           its own — an extra column would shift every sortTable index by one. */
-        .maint-expand-btn {
-            border: none;
-            background: none;
-            cursor: pointer;
-            font-size: 11px;
-            color: #7a838c;
-            padding: 0 6px 0 0;
-            line-height: 1;
+        /* The caret gets a hair-width column of its own. Inline before the registration
+           it read as a stray dot — ". AQA" — and threw the Aircraft column out of line
+           with every other table. Here the registration cell is plain <strong>, exactly
+           as on the Software, Media and Fleet pages. */
+        .maint-expand-col {
+            width: 1%;
+            padding-right: 0 !important;
         }
 
-        .maint-expand-btn:hover { color: #0a5c34; }
+        #maintenanceTable tbody tr:not(.maint-detail-row) {
+            cursor: pointer;
+        }
+
+        /* One shape that turns, rather than two glyphs that swap: closed points right,
+           open points down. */
+        .maint-caret {
+            display: inline-block;
+            font-size: 9px;
+            line-height: 1;
+            color: #b3bac0;
+            transition: transform 0.15s ease, color 0.15s ease;
+        }
+
+        #maintenanceTable tbody tr:hover .maint-caret { color: #0a5c34; }
+
+        .maint-caret.open {
+            transform: rotate(90deg);
+            color: #0a5c34;
+        }
 
         .maint-detail-row > td {
             background: #f7f9fa;
@@ -1660,7 +1676,7 @@
                     <div class="metric-label">Maintenance</div>
                     <div class="metric-sublabel" id="metricMaintSubLabel">Open issues</div>
                     <div class="metric-figures">
-                        <span class="metric-value" id="metricMaintValue">-</span><span class="metric-of" id="metricMaintOf">/42 active</span>
+                        <span class="metric-value" id="metricMaintValue">-</span><span class="metric-of" id="metricMaintOf">/42</span>
                         <span class="metric-pct" id="metricMaintPct">-</span>
                     </div>
                     <div class="metric-progress">
@@ -1895,12 +1911,13 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortMaintTable(1)">Aircraft</th>
-                                <th class="sortable-th" data-col="2" data-label="Type" onclick="sortMaintTable(2)">Type</th>
-                                <th class="sortable-th" data-col="3" data-label="Station" onclick="sortMaintTable(3)">Station</th>
-                                <th class="sortable-th" data-col="4" data-label="Maintenance" onclick="sortMaintTable(4)">Maintenance</th>
-                                <th class="sortable-th" data-col="5" data-label="Flagged" onclick="sortMaintTable(5)">Flagged</th>
-                                <th class="sortable-th col-comment" data-col="6" data-label="Reason" onclick="sortMaintTable(6)">Reason</th>
+                                <th class="maint-expand-col"></th>
+                                <th class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortMaintTable(2)">Aircraft</th>
+                                <th class="sortable-th" data-col="3" data-label="Type" onclick="sortMaintTable(3)">Type</th>
+                                <th class="sortable-th" data-col="4" data-label="Station" onclick="sortMaintTable(4)">Station</th>
+                                <th class="sortable-th" data-col="5" data-label="Maintenance" onclick="sortMaintTable(5)">Maintenance</th>
+                                <th class="sortable-th" data-col="6" data-label="Flagged" onclick="sortMaintTable(6)">Flagged</th>
+                                <th class="sortable-th col-comment" data-col="7" data-label="Reason" onclick="sortMaintTable(7)">Reason</th>
                             </tr>
                         </thead>
                         <tbody id="maintenanceTableBody">
@@ -3651,6 +3668,14 @@
             return activeFleet().sort((a, b) => a.id.localeCompare(b.id));
         }
 
+        // The real bases only. `N/A` is what the roster stores for the linefit pair,
+        // which is based nowhere — it is the absence of a station, not one more of them,
+        // so it gets no filter pill and no widget card. Those aircraft still list under
+        // "All", their Station cell just reads as empty.
+        function maintStations(fleet) {
+            return [...new Set(fleet.map(a => a.station).filter(s => s && s !== 'N/A'))].sort();
+        }
+
         // The stored record with anything staged-but-unsaved laid over it. flaggedAt is
         // stamped on Save, so it is never staged.
         function maintRecordOf(a) {
@@ -3673,12 +3698,14 @@
                 const rec = maintRecordOf(aircraft);
                 const flag = rec.open ? 'open' : 'clear';
                 const station = aircraft.station || 'N/A';
+                const expanded = maintExpanded.has(aircraft.id);
 
                 const row = document.createElement('tr');
                 if (rec.open) row.classList.add('maint-row-open');
                 row.dataset.type = aircraft.type;
                 row.dataset.station = station;
                 row.dataset.mflag = flag;
+                row.onclick = e => maintRowClick(e, aircraft.id);
 
                 const flagCell = editing
                     ? `<select class="edit-select" data-id="${aircraft.id}" data-field="open" onchange="handleMaintEdit(this)">
@@ -3691,19 +3718,22 @@
                     ? `<input class="edit-text comment-input" value="${escAttr(rec.reason)}" placeholder="What is open?" data-id="${aircraft.id}" data-field="reason" onchange="handleMaintEdit(this)">`
                     : `<span class="comment-text">${rec.reason ? escAttr(rec.reason) : '—'}</span>`;
 
-                // Flagged rows sort to the top: 0 before 1, read as numbers by sortTable.
+                // The caret owns a column of its own so the registration cell reads
+                // exactly as it does on every other page. Flagged rows sort to the top:
+                // 0 before 1, read as numbers by sortTable.
                 row.innerHTML = `
                     <td>${idx + 1}</td>
-                    <td data-sort="${aircraft.id}"><button class="maint-expand-btn" title="Show details" onclick="toggleMaintExpand('${aircraft.id}')">${maintExpanded.has(aircraft.id) ? '▾' : '▸'}</button><strong>${aircraft.id}</strong></td>
+                    <td class="maint-expand-col"><span class="maint-caret ${expanded ? 'open' : ''}" role="button" aria-expanded="${expanded}" aria-label="Details for ${aircraft.id}">▶</span></td>
+                    <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong></td>
                     <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
-                    <td>${station}</td>
+                    <td>${station === 'N/A' ? '—' : station}</td>
                     <td data-sort="${rec.open ? 0 : 1}">${flagCell}</td>
                     <td data-sort="${escAttr(rec.flaggedAt)}">${rec.flaggedAt ? fmtMediaDate(rec.flaggedAt) : '—'}</td>
                     <td class="col-comment" data-sort="${escAttr(rec.reason)}">${reasonCell}</td>
                 `;
                 tbody.appendChild(row);
 
-                if (maintExpanded.has(aircraft.id)) tbody.appendChild(maintDetailRow(aircraft, rec));
+                if (expanded) tbody.appendChild(maintDetailRow(aircraft, rec));
             });
 
             renderMaintenanceWidgets();
@@ -3723,10 +3753,10 @@
             const media = a.media || {};
             const linefit = isLinefit(a);
 
-            tr.innerHTML = `<td colspan="7">
+            tr.innerHTML = `<td colspan="8">
                 <dl class="maint-detail-grid">
                     ${item('Aircraft Type', escAttr(a.type))}
-                    ${item('Base Station', a.station || 'N/A')}
+                    ${item('Base Station', a.station && a.station !== 'N/A' ? a.station : '')}
                     ${item('Fit', linefit ? 'Linefit' : 'Retrofit')}
                     ${linefit
                         ? item('SBC Config A.13', a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
@@ -3751,6 +3781,14 @@
         function toggleMaintExpand(id) {
             if (maintExpanded.has(id)) maintExpanded.delete(id); else maintExpanded.add(id);
             populateMaintenanceTable();
+        }
+
+        // The whole row is the target, so there is no small hit area to find. The caret
+        // has no handler of its own — the click bubbles up to here. Edit controls are
+        // exempt, or opening a dropdown would collapse the row out from under it.
+        function maintRowClick(e, id) {
+            if (e.target.closest('select, input, textarea, button, a')) return;
+            toggleMaintExpand(id);
         }
 
         // sortTable treats every row in the tbody as a peer and reads cells[col]; a
@@ -3779,10 +3817,12 @@
 
             let html = card('Open Issues', open.length, fleet.length, open.length ? 'alert' : 'no_media');
             html += card('Clear', fleet.length - open.length, fleet.length, 'latest');
-            // One card per station actually present, measured against that station's own
-            // active count — so a station with two of its four aircraft open reads 50%.
-            [...new Set(fleet.map(a => a.station || 'N/A'))].sort().forEach(s => {
-                const atStation = fleet.filter(a => (a.station || 'N/A') === s);
+            // One card per real station, measured against that station's own active
+            // count — so a station with two of its four aircraft open reads 50%.
+            // N/A is not a station: the linefit pair is based nowhere, and a card for
+            // it was reading as a third base.
+            maintStations(fleet).forEach(s => {
+                const atStation = fleet.filter(a => a.station === s);
                 const openHere = atStation.filter(maintenanceOpen).length;
                 html += card(s, openHere, atStation.length, openHere ? 'alert' : 'no_media');
             });
@@ -3804,7 +3844,7 @@
 
             const stBox = document.getElementById('maintStationFilterPills');
             if (stBox) {
-                const stations = [...new Set(fleet.map(a => a.station || 'N/A'))].sort();
+                const stations = maintStations(fleet);
                 if (stBox.dataset.stations !== stations.join('|')) {
                     stBox.innerHTML = `<button class="qf-btn ${maintStationFilter === '' ? 'active' : ''}" onclick="setMaintStationFilter('', this)">All</button>` +
                         stations.map(s => `<button class="qf-btn ${maintStationFilter === s ? 'active' : ''}" onclick="setMaintStationFilter('${escAttr(s)}', this)">${s}</button>`).join('');
@@ -4668,7 +4708,7 @@
             const maintCount = activeFleet().filter(maintenanceOpen).length;
             const maintRate = activeCount ? Math.round((maintCount / activeCount) * 1000) / 10 : 0;
             setText('metricMaintValue', maintCount);
-            setText('metricMaintOf', `/${activeCount} active`);
+            setText('metricMaintOf', `/${activeCount}`);
             setText('metricMaintPct', maintRate + '%');
             setText('metricMaintSubLabel', maintCount ? 'Open issues' : 'No open issues');
             setWidth('metricMaintBar', maintRate + '%');
