@@ -797,6 +797,16 @@
 
         .sched-ac { min-width: 70px; }
         .sched-wp { min-width: 180px; }
+        .sched-wo { min-width: 90px; }
+
+        /* Work-order numbers are reference codes, not prose — tabular figures read
+           better and stop them wrapping mid-number. */
+        .sched-wo-cell {
+            font-family: Consolas, 'SF Mono', Menlo, monospace;
+            font-size: 12.5px;
+            color: #555;
+            white-space: nowrap;
+        }
 
         .sched-status-cell {
             white-space: nowrap;
@@ -1577,7 +1587,8 @@
                                     <th onclick="sortTable('jedTable', 2)">Planned Time (UTC) ↕</th>
                                     <th onclick="sortTable('jedTable', 3)">Time Remaining ↕</th>
                                     <th onclick="sortTable('jedTable', 4)">Workpackage ↕</th>
-                                    <th onclick="sortTable('jedTable', 5)">Status ↕</th>
+                                    <th onclick="sortTable('jedTable', 5)">WO / Flags ↕</th>
+                                    <th onclick="sortTable('jedTable', 6)">Status ↕</th>
                                 </tr>
                             </thead>
                             <tbody id="jedTable">
@@ -1601,7 +1612,8 @@
                                     <th onclick="sortTable('ruhTable', 2)">Planned Time (UTC) ↕</th>
                                     <th onclick="sortTable('ruhTable', 3)">Time Remaining ↕</th>
                                     <th onclick="sortTable('ruhTable', 4)">Workpackage ↕</th>
-                                    <th onclick="sortTable('ruhTable', 5)">Status ↕</th>
+                                    <th onclick="sortTable('ruhTable', 5)">WO / Flags ↕</th>
+                                    <th onclick="sortTable('ruhTable', 6)">Status ↕</th>
                                 </tr>
                             </thead>
                             <tbody id="ruhTable">
@@ -1782,6 +1794,8 @@
             </div>
             <label class="add-sched-label">Workpackage</label>
             <input id="addSchedWorkpackage" class="add-sched-input" placeholder="e.g. Middleware 2.1.0 Update" autocomplete="off">
+            <label class="add-sched-label">WO / Flags <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+            <input id="addSchedWoFlags" class="add-sched-input" placeholder="e.g. 33110433" autocomplete="off">
             <div id="addSchedError" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
             <div style="display:flex; gap:10px; margin-top:6px;">
                 <button id="addSchedCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
@@ -2982,6 +2996,7 @@
                         <td class="sched-date"><input type="time" class="edit-date" value="${escAttr(item.time || '')}" data-id="${item.id}" data-field="time" onchange="handleScheduleEdit(this)"></td>
                         <td><select class="edit-select" data-id="${item.id}" data-field="station" onchange="handleScheduleEdit(this)">${stationOpts}</select></td>
                         <td><input class="edit-text sched-wp" value="${escAttr(item.workpackage)}" data-id="${item.id}" data-field="workpackage" onchange="handleScheduleEdit(this)"></td>
+                        <td><input class="edit-text sched-wo" value="${escAttr(item.wo_flags || '')}" data-id="${item.id}" data-field="wo_flags" onchange="handleScheduleEdit(this)"></td>
                         <td class="sched-status-cell">
                             <select class="edit-select" data-id="${item.id}" data-field="status" onchange="handleScheduleEdit(this)">${statusOpts}</select>
                             <button class="sched-del-btn" title="Delete this entry" onclick="deleteScheduleEntry('${item.id}')">🗑</button>
@@ -2994,6 +3009,7 @@
                         <td class="sched-date">${item.time ? item.time + ' Z' : '—'}</td>
                         <td><span class="time-remaining ${timeClass}" data-date="${item.date || ''}" data-time="${item.time || ''}">${timeRemaining}</span></td>
                         <td>${item.workpackage || '—'}</td>
+                        <td class="sched-wo-cell">${item.wo_flags || '—'}</td>
                         <td>${scheduleStatusBadge(item, overdue)}</td>
                     `;
                 }
@@ -3002,7 +3018,7 @@
                 else ruhTableBody.appendChild(row);
             });
 
-            const emptyRow = () => '<tr><td colspan="6" style="text-align:center; color:#999; padding:20px;">No upcoming work packages</td></tr>';
+            const emptyRow = () => '<tr><td colspan="7" style="text-align:center; color:#999; padding:20px;">No upcoming work packages</td></tr>';
             if (!jedTableBody.children.length) jedTableBody.innerHTML = emptyRow();
             if (!ruhTableBody.children.length) ruhTableBody.innerHTML = emptyRow();
 
@@ -3115,6 +3131,7 @@
             document.getElementById('addSchedTime').value = '20:00';
             document.getElementById('addSchedStation').value = 'JED';
             document.getElementById('addSchedWorkpackage').value = '';
+            document.getElementById('addSchedWoFlags').value = '';
             document.getElementById('addSchedStatus').value = 'scheduled';
             const err = document.getElementById('addSchedError');
             err.textContent = '';
@@ -3134,6 +3151,7 @@
                     time: document.getElementById('addSchedTime').value,
                     station: document.getElementById('addSchedStation').value,
                     workpackage: document.getElementById('addSchedWorkpackage').value.trim(),
+                    wo_flags: document.getElementById('addSchedWoFlags').value.trim(),
                     status: document.getElementById('addSchedStatus').value,
                 };
                 if (!entry.aircraft || !entry.workpackage || !entry.date || !entry.time) {
