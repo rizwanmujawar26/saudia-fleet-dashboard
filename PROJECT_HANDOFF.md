@@ -86,6 +86,7 @@ adding it to the rules first.
 | `beamcfgStatus` | `pending` \| `done` (linefit pair only) |
 | `note` | Software-page comment |
 | `media` | `{ mediaCycle, mediaDisplay, mediaSource, loadedDateUTC, comments }` |
+| `maintenance` | `{ open, reason, flaggedAt }` — see the Maintenance tab |
 
 `media.comments` is deliberately separate from `note` so editing one cannot
 clobber the other.
@@ -140,7 +141,7 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
 ---
 
-## Tabs (5)
+## Tabs (6)
 
 1. **Overview** — starts with the Timeline (calendar strip + grouped-by-date
    list). One divider per day, nothing between aircraft. Beware
@@ -154,11 +155,17 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
    other change needed.
 3. **Media** — monthly media loading for the main fleet only (linefit excluded).
    Columns: `# | Aircraft | Type | Status | Media Loaded | Date UTC | Comments`.
-4. **Schedule** — standalone forward-looking plan, deliberately **not** linked
+4. **Maintenance** — the **active** fleet only (`fleetStatus === 'active'`), the same
+   set the global Maintenance card counts against, so the two cannot disagree.
+   Columns: `# | Aircraft | Type | Station | Maintenance | Flagged | Reason`.
+   Every row has a drawer (▸) for per-aircraft detail — that is where **SSID status
+   and the remaining system checks go**. Sorting collapses the drawers first
+   (`sortMaintTable()`), because `sortTable` treats a one-cell detail row as a peer.
+5. **Schedule** — standalone forward-looking plan, deliberately **not** linked
    to completion status. Entries drop off automatically 24h past their slot
    (`SCHEDULE_GRACE_MS`); in that window they show `⚠ Overdue` so they can be
    rescheduled rather than vanishing.
-5. **Fleet** — owns the roster: add / edit / remove, incl. linefit. Removing
+6. **Fleet** — owns the roster: add / edit / remove, incl. linefit. Removing
    deletes only the `/fleet` entry; `/aircraft` history survives, so re-adding
    the registration restores it.
 
@@ -184,19 +191,39 @@ staged.
 
 ---
 
-## Maintenance (wired ahead of its tab)
+## Maintenance
 
-`maintenanceOpen(a)` reads `a.maintenance && a.maintenance.open`. Nothing writes
-that yet, so the global card reads 0 today and lights up on its own once flags
-exist. Denominator is the **active** fleet (`fleetStatus === 'active'`), so
-stored/retired aircraft drop out. The card is neutral grey at zero
-(`.alert-clear`) and turns light red when anything is open.
+`maintenanceOpen(a)` reads `a.maintenance && a.maintenance.open` — the one place
+"is this aircraft flagged?" is answered, for both the tab and the global card.
+Denominator is the **active** fleet (`fleetStatus === 'active'`), so
+stored/retired aircraft drop out — including their flags, if any survive from
+before they were stored. The card is neutral grey at zero (`.alert-clear`) and
+turns light red when anything is open.
 
-**`/aircraft` rules do NOT yet allow a `maintenance` field** — `$other` is
-`false`, so building the tab means defining its schema there first. The field
-shape was deliberately not guessed in advance.
+The stored shape is deliberately small — only what the flag needs:
 
-Reserved: 🛠️ emoji is held for the Maintenance tab.
+| field | values |
+|---|---|
+| `open` | boolean; **the** flag. Anything true here counts on the global card |
+| `reason` | free text, ≤ 500 |
+| `flaggedAt` | `YYYY-MM-DDTHH:MM:SSZ`, stamped on Save |
+
+Clearing an aircraft writes `maintenance: null` rather than `open: false`, so a
+clear aircraft carries no stale reason or timestamp. Re-saving a row that is
+already open leaves `flaggedAt` alone — the clock does not restart on an old
+issue. Never put `maintenance` and `maintenance/<field>` in the same PATCH:
+Firebase rejects a multi-path update where one path contains another.
+
+**Adding SSID status (or anything else) means editing `database.rules.json`
+first** — `$other` is `false` under `maintenance`, so an undeclared field is
+rejected outright. Then render it in `maintDetailRow()`, which is the drawer
+under each row and the intended home for the per-aircraft checks.
+
+`flaggedBy` was deliberately left out: `/aircraft` is world-readable, so storing
+the editor's email would publish the team's addresses. Add it only if that is
+acceptable.
+
+Reserved: 🛠️ emoji is the Maintenance tab's.
 
 ---
 
@@ -218,7 +245,8 @@ python3 -m http.server 8765
 ```
 
 Use the Browser tool's `preview_start` (not direct `navigate` — `localhost`
-gets blocked by policy that way).
+gets blocked by policy that way). `.claude/launch.json` defines that server as
+`dashboard`, so `preview_start {name: "dashboard"}` starts and opens it.
 
 Before every deploy:
 1. Extract the `<script>` block and run `node --check` on it.
@@ -261,8 +289,13 @@ live.
 
 ## Open items
 
-- **Maintenance tab** — the module the global widget is waiting for. Needs a
-  `maintenance` schema in the rules first.
+- **SSID status on the Maintenance tab** — the drawer (`maintDetailRow()`) is
+  built and waiting for it; add the field to the rules first. Whether the flag
+  should then be *derived* from SSID and the other checks, instead of set by
+  hand, is still open — today it is a manual editor toggle.
+- **Sorting the Maintenance table is lost on re-render** — expanding a drawer,
+  staging an edit or a live update repopulates the table in registration order.
+  Every other table behaves the same way; fix it for all of them or none.
 - **`AQL` carries a vestigial `pinHash`** from the old PIN system. Nothing
   reads it; rules now reject writing it. Safe to clear whenever.
 - **"In Progress" no longer exists on the Software page.** The old stored enum

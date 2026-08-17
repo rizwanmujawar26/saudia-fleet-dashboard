@@ -1144,6 +1144,72 @@
             white-space: nowrap;
         }
 
+        /* ===== Maintenance page ===== */
+        /* Red is reserved for a real open flag; a clear fleet stays green and a widget
+           that is counting nothing stays grey, same as the global Maintenance card. */
+        .media-widget-alert { background: #fdeff0; border-color: #f6ced3; border-left-color: #dc3545; }
+        .media-widget-alert .media-widget-pct  { color: #a52834; }
+        .media-widget-alert .media-widget-fill { background: #dc3545; }
+
+        .status-badge.maint-open  { background: #dc3545; color: #fff; }
+        .status-badge.maint-clear { background: #e8eaec; color: #5a6169; }
+
+        #maintenanceTable td:not(.col-comment) {
+            white-space: nowrap;
+        }
+
+        .maint-row-open {
+            background: rgba(220, 53, 69, 0.06);
+        }
+
+        /* The disclosure arrow sits with the registration rather than in a column of
+           its own — an extra column would shift every sortTable index by one. */
+        .maint-expand-btn {
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 11px;
+            color: #7a838c;
+            padding: 0 6px 0 0;
+            line-height: 1;
+        }
+
+        .maint-expand-btn:hover { color: #0a5c34; }
+
+        .maint-detail-row > td {
+            background: #f7f9fa;
+            padding: 14px 18px 16px 40px;
+        }
+
+        .maint-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px 24px;
+        }
+
+        .maint-detail-item {
+            font-size: 12.5px;
+            color: #333;
+        }
+
+        .maint-detail-item dt {
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #7a838c;
+            margin-bottom: 2px;
+        }
+
+        /* Says out loud that the drawer is unfinished, so an empty-looking panel does
+           not read as missing data. Delete this line when SSID lands. */
+        .maint-detail-pending {
+            margin-top: 12px;
+            font-size: 12px;
+            font-style: italic;
+            color: #8a939b;
+        }
+
         .sched-status-cell {
             white-space: nowrap;
         }
@@ -1608,6 +1674,7 @@
                 <button class="tab-button active" onclick="switchTab('overview')">📊 Overview</button>
                 <button class="tab-button" onclick="switchTab('aircraft')">💿 Software</button>
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
+                <button class="tab-button" onclick="switchTab('maintenance')">🛠️ Maintenance</button>
                 <button class="tab-button" onclick="switchTab('schedule')">📅 Schedule</button>
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
             </div>
@@ -1780,6 +1847,63 @@
                             </tr>
                         </thead>
                         <tbody id="mediaTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Maintenance Tab -->
+            <!-- Lists the active fleet only: a stored or retired aircraft cannot carry an
+                 open maintenance issue, and the global Maintenance card already counts
+                 against the active fleet, so both agree by construction.
+                 The flag is the only field so far. SSID status and the rest of the per-
+                 aircraft checks belong in the expanded row below each aircraft. -->
+            <div id="maintenance" class="tab-content">
+                <div class="media-widget-section">
+                    <span class="filter-group-label">Fleet Maintenance</span>
+                    <div class="media-widget-strip" id="maintenanceWidgets"></div>
+                </div>
+
+                <div class="filter-groups">
+                    <div class="filter-group-block">
+                        <span class="filter-group-label">Aircraft Type</span>
+                        <div class="quick-filters" id="maintTypeFilterPills"></div>
+                    </div>
+                    <div class="filter-group-block">
+                        <span class="filter-group-label">Station</span>
+                        <div class="quick-filters" id="maintStationFilterPills"></div>
+                    </div>
+                    <div class="filter-group-block">
+                        <span class="filter-group-label">Maintenance</span>
+                        <div class="quick-filters">
+                            <button class="qf-btn active" onclick="setMaintFlagFilter('', this)">All</button>
+                            <button class="qf-btn" onclick="setMaintFlagFilter('open', this)">Flagged</button>
+                            <button class="qf-btn" onclick="setMaintFlagFilter('clear', this)">Clear</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-actions-row">
+                    <span id="maintSignedInAs" class="signed-in-as" style="display:none;"></span>
+                    <button id="maintEditBtn" class="qf-btn edit-btn" onclick="toggleMaintEdit()">🔒 Sign in to edit</button>
+                    <button id="maintResetBtn" class="qf-btn" onclick="resetMaintenanceTable()">↺ Reset</button>
+                </div>
+
+                <div class="table-scroll-wrapper">
+                    <table class="aircraft-table" id="maintenanceTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortMaintTable(1)">Aircraft</th>
+                                <th class="sortable-th" data-col="2" data-label="Type" onclick="sortMaintTable(2)">Type</th>
+                                <th class="sortable-th" data-col="3" data-label="Station" onclick="sortMaintTable(3)">Station</th>
+                                <th class="sortable-th" data-col="4" data-label="Maintenance" onclick="sortMaintTable(4)">Maintenance</th>
+                                <th class="sortable-th" data-col="5" data-label="Flagged" onclick="sortMaintTable(5)">Flagged</th>
+                                <th class="sortable-th col-comment" data-col="6" data-label="Reason" onclick="sortMaintTable(6)">Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody id="maintenanceTableBody">
                             <!-- Populated by JavaScript -->
                         </tbody>
                     </table>
@@ -2161,6 +2285,7 @@
             if (!fleetEditMode) populateFleetTable();
             populateAircraftTable();
             if (!mediaEditMode) populateMediaTable();
+            if (!maintEditMode) populateMaintenanceTable();
             populateScheduleTables();
             updateMetrics();
         }
@@ -2591,6 +2716,7 @@
         function updateAuthUI() {
             updateScheduleEditUI();
             updateMediaEditUI();
+            updateMaintEditUI();
             updateFleetEditUI();
             const editBtn = document.getElementById('editModeBtn');
             const signOutBtn = document.getElementById('signOutBtn');
@@ -2680,6 +2806,8 @@
                 populateAircraftTable();
             } else if (tabName === 'media') {
                 populateMediaTable();
+            } else if (tabName === 'maintenance') {
+                populateMaintenanceTable();
             } else if (tabName === 'schedule') {
                 populateScheduleTables();
             }
@@ -3501,6 +3629,302 @@
             } finally {
                 if (btn) btn.disabled = false;
                 updateMediaEditUI();
+            }
+        }
+
+        // ===== Maintenance page =====
+        // Scope is the active fleet — the same set the global Maintenance card counts
+        // against, so the tab and the card cannot disagree. Stored/retired aircraft are
+        // out by definition: they are not flying, so they carry no open issue.
+        //
+        // The flag is the only field stored so far. `maintenance` in the rules is
+        // deliberately small (open / reason / flaggedAt) so SSID status and the rest of
+        // the per-aircraft checks can be added one at a time — and remember `$other` is
+        // false, so a new field must be added to database.rules.json before it can be
+        // written at all.
+        let maintEditMode = false;
+        let pendingMaint = {};      // { tail: { open, reason } } staged until Save
+        let maintTypeFilter = '', maintStationFilter = '', maintFlagFilter = '';
+        const maintExpanded = new Set();
+
+        function maintenanceFleet() {
+            return activeFleet().sort((a, b) => a.id.localeCompare(b.id));
+        }
+
+        // The stored record with anything staged-but-unsaved laid over it. flaggedAt is
+        // stamped on Save, so it is never staged.
+        function maintRecordOf(a) {
+            const stored = a.maintenance || {};
+            const staged = pendingMaint[a.id] || {};
+            return {
+                open:      staged.open   !== undefined ? staged.open   : !!stored.open,
+                reason:    staged.reason !== undefined ? staged.reason : (stored.reason || ''),
+                flaggedAt: stored.flaggedAt || '',
+            };
+        }
+
+        function populateMaintenanceTable() {
+            const tbody = document.getElementById('maintenanceTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const editing = maintEditMode && canEdit();
+
+            maintenanceFleet().forEach((aircraft, idx) => {
+                const rec = maintRecordOf(aircraft);
+                const flag = rec.open ? 'open' : 'clear';
+                const station = aircraft.station || 'N/A';
+
+                const row = document.createElement('tr');
+                if (rec.open) row.classList.add('maint-row-open');
+                row.dataset.type = aircraft.type;
+                row.dataset.station = station;
+                row.dataset.mflag = flag;
+
+                const flagCell = editing
+                    ? `<select class="edit-select" data-id="${aircraft.id}" data-field="open" onchange="handleMaintEdit(this)">
+                           <option value="clear" ${rec.open ? '' : 'selected'}>Clear</option>
+                           <option value="open" ${rec.open ? 'selected' : ''}>Flagged</option>
+                       </select>`
+                    : `<span class="status-badge maint-${flag}">${rec.open ? 'FLAGGED' : 'CLEAR'}</span>`;
+
+                const reasonCell = editing
+                    ? `<input class="edit-text comment-input" value="${escAttr(rec.reason)}" placeholder="What is open?" data-id="${aircraft.id}" data-field="reason" onchange="handleMaintEdit(this)">`
+                    : `<span class="comment-text">${rec.reason ? escAttr(rec.reason) : '—'}</span>`;
+
+                // Flagged rows sort to the top: 0 before 1, read as numbers by sortTable.
+                row.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td data-sort="${aircraft.id}"><button class="maint-expand-btn" title="Show details" onclick="toggleMaintExpand('${aircraft.id}')">${maintExpanded.has(aircraft.id) ? '▾' : '▸'}</button><strong>${aircraft.id}</strong></td>
+                    <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
+                    <td>${station}</td>
+                    <td data-sort="${rec.open ? 0 : 1}">${flagCell}</td>
+                    <td data-sort="${escAttr(rec.flaggedAt)}">${rec.flaggedAt ? fmtMediaDate(rec.flaggedAt) : '—'}</td>
+                    <td class="col-comment" data-sort="${escAttr(rec.reason)}">${reasonCell}</td>
+                `;
+                tbody.appendChild(row);
+
+                if (maintExpanded.has(aircraft.id)) tbody.appendChild(maintDetailRow(aircraft, rec));
+            });
+
+            renderMaintenanceWidgets();
+            populateMaintFilterPills();
+            applyMaintFilters();
+            updateSortIndicators('maintenanceTable');
+            updateMaintEditUI();
+        }
+
+        // The drawer under a row: everything per-aircraft that is too detailed for a
+        // column of its own. Today it gathers what the other tabs already know about the
+        // airframe; SSID status and the remaining system checks join it here.
+        function maintDetailRow(a, rec) {
+            const tr = document.createElement('tr');
+            tr.className = 'maint-detail-row';
+            const item = (label, value) => `<div class="maint-detail-item"><dt>${label}</dt><dd>${value || '—'}</dd></div>`;
+            const media = a.media || {};
+            const linefit = isLinefit(a);
+
+            tr.innerHTML = `<td colspan="7">
+                <dl class="maint-detail-grid">
+                    ${item('Aircraft Type', escAttr(a.type))}
+                    ${item('Base Station', a.station || 'N/A')}
+                    ${item('Fit', linefit ? 'Linefit' : 'Retrofit')}
+                    ${linefit
+                        ? item('SBC Config A.13', a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
+                        : item('Middleware', swVersionOf(a))}
+                    ${linefit
+                        ? item('Software Scope', 'HBC+ — outside MSP scope')
+                        : item('Completion', a.completionLocation
+                            ? `${a.completionLocation}${a.completionDate ? ' — ' + a.completionDate : ''}`
+                            : 'Not completed')}
+                    ${linefit
+                        ? item('Media', 'Out of media scope')
+                        : item('Media Cycle', media.mediaCycle ? cycleToDisplay(media.mediaCycle) : 'No media')}
+                    ${item('Maintenance Flag', rec.open ? 'Open' : 'Clear')}
+                    ${item('Flagged (UTC)', rec.flaggedAt ? fmtMediaDate(rec.flaggedAt) : '—')}
+                    ${item('Reason', rec.reason ? escAttr(rec.reason) : '—')}
+                </dl>
+                <div class="maint-detail-pending">SSID status and the remaining per-aircraft checks will appear here.</div>
+            </td>`;
+            return tr;
+        }
+
+        function toggleMaintExpand(id) {
+            if (maintExpanded.has(id)) maintExpanded.delete(id); else maintExpanded.add(id);
+            populateMaintenanceTable();
+        }
+
+        // sortTable treats every row in the tbody as a peer and reads cells[col]; a
+        // detail row has a single colspan cell, so collapse the drawers before sorting.
+        function sortMaintTable(col) {
+            if (maintExpanded.size) { maintExpanded.clear(); populateMaintenanceTable(); }
+            sortTable('maintenanceTable', col);
+        }
+
+        // Counts come from committed data, so these read the same as the global card:
+        // a staged, unsaved flag colours its own row and moves nothing else until Save.
+        function renderMaintenanceWidgets() {
+            const grid = document.getElementById('maintenanceWidgets');
+            if (!grid) return;
+            const fleet = maintenanceFleet();
+            const open = fleet.filter(maintenanceOpen);
+
+            const card = (label, count, total, type) => {
+                const pct = Math.round((count / (total || 1)) * 1000) / 10;
+                return `<div class="media-widget media-widget-${type}">
+                    <div class="media-widget-label">${label}</div>
+                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${total}</span><span class="media-widget-pct">${pct}%</span></div>
+                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
+                </div>`;
+            };
+
+            let html = card('Open Issues', open.length, fleet.length, open.length ? 'alert' : 'no_media');
+            html += card('Clear', fleet.length - open.length, fleet.length, 'latest');
+            // One card per station actually present, measured against that station's own
+            // active count — so a station with two of its four aircraft open reads 50%.
+            [...new Set(fleet.map(a => a.station || 'N/A'))].sort().forEach(s => {
+                const atStation = fleet.filter(a => (a.station || 'N/A') === s);
+                const openHere = atStation.filter(maintenanceOpen).length;
+                html += card(s, openHere, atStation.length, openHere ? 'alert' : 'no_media');
+            });
+            grid.innerHTML = html;
+        }
+
+        function populateMaintFilterPills() {
+            const fleet = maintenanceFleet();
+
+            const typeBox = document.getElementById('maintTypeFilterPills');
+            if (typeBox) {
+                const types = [...new Set(fleet.map(a => a.type))].sort();
+                if (typeBox.dataset.types !== types.join('|')) {   // rebuild only when the set changes
+                    typeBox.innerHTML = `<button class="qf-btn ${maintTypeFilter === '' ? 'active' : ''}" onclick="setMaintTypeFilter('', this)">All</button>` +
+                        types.map(t => `<button class="qf-btn ${maintTypeFilter === t ? 'active' : ''}" onclick="setMaintTypeFilter('${escAttr(t)}', this)">${TYPE_SHORT_LABEL[t] || t}</button>`).join('');
+                    typeBox.dataset.types = types.join('|');
+                }
+            }
+
+            const stBox = document.getElementById('maintStationFilterPills');
+            if (stBox) {
+                const stations = [...new Set(fleet.map(a => a.station || 'N/A'))].sort();
+                if (stBox.dataset.stations !== stations.join('|')) {
+                    stBox.innerHTML = `<button class="qf-btn ${maintStationFilter === '' ? 'active' : ''}" onclick="setMaintStationFilter('', this)">All</button>` +
+                        stations.map(s => `<button class="qf-btn ${maintStationFilter === s ? 'active' : ''}" onclick="setMaintStationFilter('${escAttr(s)}', this)">${s}</button>`).join('');
+                    stBox.dataset.stations = stations.join('|');
+                }
+            }
+        }
+
+        function setMaintTypeFilter(t, btn)    { maintTypeFilter = t; setActiveInGroup(btn); applyMaintFilters(); }
+        function setMaintStationFilter(s, btn) { maintStationFilter = s; setActiveInGroup(btn); applyMaintFilters(); }
+        function setMaintFlagFilter(f, btn)    { maintFlagFilter = f; setActiveInGroup(btn); applyMaintFilters(); }
+
+        function applyMaintFilters() {
+            document.querySelectorAll('#maintenanceTableBody tr').forEach(row => {
+                if (row.classList.contains('maint-detail-row')) return;   // follows its parent below
+                const ok = (maintTypeFilter === '' || row.dataset.type === maintTypeFilter)
+                    && (maintStationFilter === '' || row.dataset.station === maintStationFilter)
+                    && (maintFlagFilter === '' || row.dataset.mflag === maintFlagFilter);
+                row.style.display = ok ? '' : 'none';
+                const detail = row.nextElementSibling;
+                if (detail && detail.classList.contains('maint-detail-row')) detail.style.display = ok ? '' : 'none';
+            });
+        }
+
+        function resetMaintenanceTable() {
+            maintTypeFilter = ''; maintStationFilter = ''; maintFlagFilter = '';
+            maintExpanded.clear();
+            document.querySelectorAll('#maintenance .filter-groups .quick-filters').forEach(group => {
+                group.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
+                const first = group.querySelector('.qf-btn');
+                if (first) first.classList.add('active');
+            });
+            delete lastSort['maintenanceTable'];
+            updateSortIndicators('maintenanceTable');
+            populateMaintenanceTable();
+        }
+
+        // ===== Maintenance edit mode (same staged-then-Save shape as Media and Fleet) =====
+        async function toggleMaintEdit() {
+            if (maintEditMode) { await commitMaintChanges(); return; }
+            if (!canEdit() && !(await promptSignIn())) return;
+            if (!canEdit()) return;
+            maintEditMode = true;
+            pendingMaint = {};
+            populateMaintenanceTable();
+        }
+
+        function updateMaintEditUI() {
+            const btn = document.getElementById('maintEditBtn');
+            const who = document.getElementById('maintSignedInAs');
+            if (!btn) return;
+            const editing = maintEditMode && canEdit();
+            btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '💾 Save' : '✏️ Edit');
+            btn.classList.toggle('save-active', editing);
+            if (who) {
+                who.textContent = canEdit() ? authUser.email : '';
+                who.style.display = canEdit() ? '' : 'none';
+            }
+        }
+
+        function handleMaintEdit(el) {
+            const id = el.dataset.id, field = el.dataset.field;
+            const entry = pendingMaint[id] || {};
+            if (field === 'open') entry.open = el.value === 'open';
+            else entry.reason = el.value.trim();
+            pendingMaint[id] = entry;
+            setSyncStatus(`🟡 ${id} staged — press Save`, '#e0a800');
+            // Only the flag repaints the row (badge, highlight, sort key). Re-rendering
+            // on a reason change would just yank focus out of the next input.
+            if (field === 'open') populateMaintenanceTable();
+        }
+
+        async function commitMaintChanges() {
+            const ids = Object.keys(pendingMaint);
+            if (!ids.length) { maintEditMode = false; populateMaintenanceTable(); return; }
+            const token = await getIdToken();
+            if (!token) return;
+
+            const btn = document.getElementById('maintEditBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+            setSyncStatus('🟡 Saving maintenance...', '#e0a800');
+
+            const nowUTC = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+            const multi = {};
+            ids.forEach(id => {
+                const e = pendingMaint[id];
+                const stored = (aircraftLive[id] && aircraftLive[id].maintenance) || {};
+                if (e.open === false) {
+                    // Clearing drops the whole record rather than storing open:false, so
+                    // a cleared aircraft carries no stale reason or timestamp. Nothing
+                    // else may be written under the same path in one PATCH — Firebase
+                    // rejects a multi-path update where one path contains another.
+                    multi[`${id}/maintenance`] = null;
+                    return;
+                }
+                if (e.open === true) {
+                    multi[`${id}/maintenance/open`] = true;
+                    // Stamp when it was raised, and leave an existing stamp alone so
+                    // re-saving a row does not restart the clock on an old issue.
+                    if (!stored.open || !stored.flaggedAt) multi[`${id}/maintenance/flaggedAt`] = nowUTC;
+                }
+                if (e.reason !== undefined) multi[`${id}/maintenance/reason`] = e.reason || null;
+            });
+
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify(multi),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                pendingMaint = {};
+                maintEditMode = false;
+                renderAll();
+            } catch (e) {
+                // Keep edit mode on so staged work isn't lost — they can retry Save.
+                setSyncStatus(`🔴 Could not save maintenance — ${e.message}`, '#dc3545');
+            } finally {
+                if (btn) btn.disabled = false;
+                updateMaintEditUI();
             }
         }
 
