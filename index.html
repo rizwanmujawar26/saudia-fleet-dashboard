@@ -1020,6 +1020,9 @@
         .media-widget-no_media .media-widget-pct  { color: #5a6169; }
         .media-widget-no_media .media-widget-fill { background: #adb5bd; }
 
+        .status-badge.sw-latest { background: #28a745; color: #fff; }
+        .status-badge.sw-old    { background: #f0ad4e; color: #4a3208; }
+
         /* ===== Fleet page ===== */
         .status-badge.fit-retrofit { background: #e3ecf5; color: #2f5f8a; }
         .status-badge.fit-linefit  { background: #efe9f7; color: #59468a; }
@@ -1440,7 +1443,7 @@
             <!-- Key Metrics -->
             <div class="dashboard-grid">
                 <div class="metric-card primary">
-                    <div class="metric-label">Middleware 2.1.0 Software Update</div>
+                    <div class="metric-label">Middleware <span id="metricSwVersionLabel">2.1.0</span> Software Update</div>
                     <div class="metric-value" id="metricCompletedValue">-</div>
                     <div class="metric-label" style="margin-top: 10px;">of 40 Aircraft</div>
                     <div class="metric-progress">
@@ -1479,7 +1482,7 @@
             <!-- Tabs Navigation -->
             <div class="tabs">
                 <button class="tab-button active" onclick="switchTab('overview')">📊 Overview</button>
-                <button class="tab-button" onclick="switchTab('aircraft')">🛠️ Software</button>
+                <button class="tab-button" onclick="switchTab('aircraft')">💿 Software</button>
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
                 <button class="tab-button" onclick="switchTab('schedule')">📅 Schedule</button>
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
@@ -1487,20 +1490,6 @@
 
             <!-- Overview Tab -->
             <div id="overview" class="tab-content active">
-                <h2 style="color: #0a5c34; margin-bottom: 20px;">Project Overview</h2>
-
-                <div class="overview-panel">
-                    <section class="overview-block">
-                        <h3 class="overview-heading">📋 Fleet Completion Overview</h3>
-                        <div class="fleet-overview-grid" id="fleetOverviewGrid"></div>
-                    </section>
-
-                    <section class="overview-block">
-                        <h3 class="overview-heading">🏢 Completed Aircraft by Station</h3>
-                        <div class="station-grid" id="stationCompletionGrid"></div>
-                    </section>
-                </div>
-
                 <div class="timeline">
                     <div class="timeline-section completed">
                         <div class="timeline-title-row">
@@ -1527,6 +1516,21 @@
 
             <!-- Aircraft Status Tab -->
             <div id="aircraft" class="tab-content">
+                <div class="media-widget-section">
+                    <span class="filter-group-label">Middleware Version Progress</span>
+                    <div class="media-widget-strip" id="swVersionWidgets"></div>
+                </div>
+
+                <div class="media-widget-section">
+                    <span class="filter-group-label">Completion by Aircraft Type</span>
+                    <div class="fleet-overview-grid" id="fleetOverviewGrid"></div>
+                </div>
+
+                <div class="media-widget-section">
+                    <span class="filter-group-label">Completed by Station</span>
+                    <div class="station-grid" id="stationCompletionGrid"></div>
+                </div>
+
                 <div class="filter-groups">
                     <div class="filter-group-block">
                         <span class="filter-group-label">Aircraft Type</span>
@@ -1567,7 +1571,7 @@
                                 <th class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortTable('aircraftTable', 1)">Aircraft</th>
                                 <th class="sortable-th" data-col="2" data-label="Type" onclick="sortTable('aircraftTable', 2)">Type</th>
                                 <th class="sortable-th" data-col="3" data-label="Status" onclick="sortTable('aircraftTable', 3)">Status</th>
-                                <th class="sortable-th" data-col="4" data-label="Middleware 2.1.0" onclick="sortTable('aircraftTable', 4)">Middleware 2.1.0</th>
+                                <th class="sortable-th" data-col="4" data-label="Middleware" onclick="sortTable('aircraftTable', 4)">Middleware</th>
                                 <th class="sortable-th" data-col="5" data-label="IPHO Mode" onclick="sortTable('aircraftTable', 5)">IPHO Mode</th>
                                 <th class="sortable-th" data-col="6" data-label="SES Migration" onclick="sortTable('aircraftTable', 6)">SES Migration</th>
                                 <th class="sortable-th" data-col="7" data-label="Date" onclick="sortTable('aircraftTable', 7)">Date</th>
@@ -2733,7 +2737,18 @@
                 }
 
                 // Middleware column always mirrors Status as read-only text
-                const middlewareCell = `<span class="system-indicator system-${aircraft.status === 'completed' ? 'completed' : 'pending'}"></span>${aircraft.status === 'completed' ? 'Complete' : aircraft.status === 'in-progress' ? 'In Progress' : 'Pending'}`;
+                // Middleware is now the aircraft's actual software level, not a mirror of
+                // status. SW_VERSIONS is ordered oldest-first; the last entry is "latest".
+                const ver = aircraft.swVersion || SW_VERSIONS[0];
+                const isLatest = ver === latestSwVersion();
+                let middlewareCell;
+                if (editMode) {
+                    middlewareCell = `<select class="edit-select" data-id="${aircraft.id}" data-field="swVersion" onchange="handleAircraftEdit(this)">
+                        ${SW_VERSIONS.map(v => `<option value="${v}" ${v === ver ? 'selected' : ''}>${v}</option>`).join('')}
+                    </select>`;
+                } else {
+                    middlewareCell = `<span class="status-badge sw-${isLatest ? 'latest' : 'old'}">${ver}</span>`;
+                }
 
                 const iphoDone = aircraft.iphoStatus === 'completed';
                 let iphoCell;
@@ -2792,7 +2807,7 @@
                     <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong></td>
                     <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
                     <td data-sort="${statusSort}">${statusCell}</td>
-                    <td data-sort="${statusSort}">${middlewareCell}</td>
+                    <td data-sort="${ver}">${middlewareCell}</td>
                     <td data-sort="${iphoSort}">${iphoCell}</td>
                     <td data-sort="${mg101Sort}">${mg101Cell}</td>
                     <td data-sort="${dateSort}">${dateCell}</td>
@@ -2804,6 +2819,7 @@
 
             applyAircraftFilters();
             updateSortIndicators('aircraftTable');
+            renderSwVersionWidgets();
             populateHbcTable();
         }
 
@@ -2854,6 +2870,45 @@
                     fail(`Could not add — ${e.message}`);
                 }
             });
+        }
+
+        // ===== Software versions =====
+        // Ordered oldest first; the last entry is the current target. Add a version here
+        // and it gains its own widget and edit option with no other change.
+        const SW_VERSIONS = ['2.0.0', '2.1.0'];
+
+        function latestSwVersion() { return SW_VERSIONS[SW_VERSIONS.length - 1]; }
+
+        function swFleet() {
+            return aircraftData.filter(a => a.status !== 'excluded');
+        }
+
+        function renderSwVersionWidgets() {
+            const grid = document.getElementById('swVersionWidgets');
+            if (!grid) return;
+            const fleet = swFleet();
+            const scope = fleet.length || 1;
+            const counts = {};
+            fleet.forEach(a => {
+                const v = a.swVersion || SW_VERSIONS[0];
+                counts[v] = (counts[v] || 0) + 1;
+            });
+            // Newest first, and include any version present in the data even if it is
+            // not yet listed in SW_VERSIONS.
+            const versions = [...new Set([...Object.keys(counts), ...SW_VERSIONS])]
+                .filter(v => counts[v])
+                .sort((a, b) => SW_VERSIONS.indexOf(b) - SW_VERSIONS.indexOf(a) || b.localeCompare(a));
+
+            grid.innerHTML = versions.map(v => {
+                const n = counts[v] || 0;
+                const pct = Math.round((n / scope) * 1000) / 10;
+                const kind = v === latestSwVersion() ? 'latest' : 'older';
+                return `<div class="media-widget media-widget-${kind}">
+                    <div class="media-widget-label">Middleware ${v}</div>
+                    <div class="media-widget-figures"><span class="media-widget-count">${n}</span><span class="media-widget-of">/${scope}</span><span class="media-widget-pct">${pct}%</span></div>
+                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
+                </div>`;
+            }).join('');
         }
 
         // ===== Fleet page =====
@@ -4024,7 +4079,9 @@
         function updateMetrics() {
             const active = aircraftData.filter(a => a.status !== 'excluded');
             const completedStrict = active.filter(isCompletedStrict);
-            const middlewareCount = completedStrict.length;
+            // Counts aircraft actually on the latest middleware, which is now a stored
+            // version rather than a by-product of the completion status.
+            const middlewareCount = active.filter(a => (a.swVersion || SW_VERSIONS[0]) === latestSwVersion()).length;
             const middlewareRate = Math.round((middlewareCount / middlewareScope()) * 1000) / 10;
 
             const hbcAircraft = aircraftData.filter(a => a.id === 'ASBA' || a.id === 'ASBB');
@@ -4036,6 +4093,7 @@
             const remaining = projectScope() - projectCompleted;
 
             // Header cards
+            setText('metricSwVersionLabel', latestSwVersion());
             setText('metricCompletedValue', middlewareCount);
             setWidth('metricCompletedBar', middlewareRate + '%');
             setText('metricHbcTopValue', hbcCount);

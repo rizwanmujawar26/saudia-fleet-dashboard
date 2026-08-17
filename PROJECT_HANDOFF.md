@@ -90,6 +90,10 @@ the repo root, in case anything needs restoring.
    - `iphoStatus`: `'completed' | null`
    - `mg101Status`: `'' | 'provisioned' | 'done'` (SES Migration to MG 101)
    - `note`: free-text comment string (Software page comments)
+   - `swVersion`: the aircraft's middleware level, e.g. `'2.0.0'` / `'2.1.0'`.
+     Drives the Middleware column, the version widgets and the top metric card.
+     `SW_VERSIONS` in `index.html` is ordered oldest-first; the last entry is
+     "latest". Add a version there and it gains a widget and an edit option.
    - `media`: `{ mediaCycle, mediaDisplay, mediaSource, loadedDateUTC, comments }`
      — see the Media tab below; `media.comments` is separate from `note`
    - `beamcfgStatus` (ASBA/ASBB only): anything other than `'done'` renders as
@@ -111,11 +115,8 @@ always self-heals it.
 
 ## Tabs (5 total — System Tracking and By Station were removed earlier)
 
-1. **Overview** — top 4 metric cards (Middleware 23/40, HBC+ SBC 0/2, Project
-   Completion %, Remaining), Fleet Completion Overview (6 cards: Total
-   Completed, A320, A321, A321neo, A321XLR/SBC Config, A330 — each lists its
-   aircraft), Completed Aircraft by Station (Jeddah OEJN/JED, Riyadh
-   OERK/RUH), Timeline (calendar-strip of completion dates with hover
+1. **Overview** — starts with the Timeline. The Fleet Completion Overview and
+   Completed Aircraft by Station blocks moved to the Software tab. Timeline (calendar-strip of completion dates with hover
    tooltips + Oldest First/Latest First sort toggle, grouped-by-date list
    with type/location tag-pill rows and inline comments), 5 Project
    Objectives (Consolas for technical values, scope chips, nothing

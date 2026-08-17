@@ -16,6 +16,7 @@
         "mg101Status":        { ".validate": "newData.isString() && newData.val().matches(/^(provisioned|done)$/)" },
         "beamcfgStatus":      { ".validate": "newData.isString() && newData.val().matches(/^(pending|done)$/)" },
         "note":               { ".validate": "newData.isString() && newData.val().length <= 500" },
+        "swVersion":          { ".validate": "newData.isString() && newData.val().matches(/^[0-9]+\\\\.[0-9]+\\\\.[0-9]+$/)" },
 
         "media": {
           "mediaCycle":    { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)" },
