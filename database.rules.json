@@ -30,6 +30,19 @@
       }
     },
 
+    "fleet": {
+      ".read": true,
+
+      "$tail": {
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
+
+        "type":    { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "station": { ".validate": "newData.isString() && newData.val().length <= 10" },
+
+        "$other":  { ".validate": false }
+      }
+    },
+
     "schedule": {
       ".read": true,
 

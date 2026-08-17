@@ -947,17 +947,78 @@
             background: #fdf0f1;
         }
 
-        #mediaWidgets {
-            margin-bottom: 22px;
+        .media-widget-section {
+            margin-bottom: 20px;
         }
 
-        .media-widget .stat-value { margin: 6px 0 2px; }
-        .media-widget .stat-list  { min-height: 0; }
+        /* One row that scrolls sideways instead of wrapping, same treatment as the
+           tab strip — a wrapped second row of widgets pushed the table off a phone. */
+        .media-widget-strip {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 4px 2px 6px;
+            margin-top: 8px;
+            scrollbar-width: none;
+        }
 
-        .media-widget-latest   { border-left-color: #28a745; }
-        .media-widget-previous { border-left-color: #1f8fe0; }
-        .media-widget-older    { border-left-color: #f0ad4e; }
-        .media-widget-no_media { border-left-color: #adb5bd; }
+        .media-widget-strip::-webkit-scrollbar { display: none; }
+
+        /* Tinted, not white: on the white page the cards had no discernible shape. */
+        .media-widget {
+            flex: 0 0 auto;
+            min-width: 168px;
+            border: 1px solid;
+            border-left-width: 4px;
+            border-radius: 8px;
+            padding: 12px 14px;
+        }
+
+        .media-widget-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #55606a;
+            white-space: nowrap;
+        }
+
+        .media-widget-figures {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            margin: 6px 0 8px;
+        }
+
+        .media-widget-count { font-size: 24px; font-weight: 700; color: #1f2937; line-height: 1; }
+        .media-widget-of    { font-size: 13px; color: #7a838c; }
+        .media-widget-pct   { font-size: 13px; font-weight: 700; margin-left: auto; }
+
+        .media-widget-track {
+            background: rgba(0,0,0,0.08);
+            border-radius: 10px;
+            height: 6px;
+            overflow: hidden;
+        }
+
+        .media-widget-fill { height: 100%; border-radius: 10px; }
+
+        .media-widget-latest   { background: #eaf6ee; border-color: #bfe3cb; border-left-color: #28a745; }
+        .media-widget-latest   .media-widget-pct  { color: #1e7e34; }
+        .media-widget-latest   .media-widget-fill { background: #28a745; }
+
+        .media-widget-previous { background: #e9f2fb; border-color: #c3ddf3; border-left-color: #1f8fe0; }
+        .media-widget-previous .media-widget-pct  { color: #14649e; }
+        .media-widget-previous .media-widget-fill { background: #1f8fe0; }
+
+        .media-widget-older    { background: #fdf4e6; border-color: #f3ddb4; border-left-color: #f0ad4e; }
+        .media-widget-older    .media-widget-pct  { color: #8a5a12; }
+        .media-widget-older    .media-widget-fill { background: #f0ad4e; }
+
+        .media-widget-no_media { background: #f1f3f5; border-color: #dde1e5; border-left-color: #adb5bd; }
+        .media-widget-no_media .media-widget-pct  { color: #5a6169; }
+        .media-widget-no_media .media-widget-fill { background: #adb5bd; }
 
         .sched-status-cell {
             white-space: nowrap;
@@ -1254,6 +1315,43 @@
             .header-logo {
                 height: 58px;
             }
+
+            /* The filter block was eating a large slice of a phone screen: oversized
+               group labels, generous padding and pills wrapping over several rows. */
+            .filter-groups {
+                gap: 12px;
+                padding: 10px 12px;
+                margin-bottom: 12px;
+            }
+
+            .filter-group-label {
+                font-size: 9.5px;
+                letter-spacing: 0.3px;
+            }
+
+            .filter-group-block {
+                gap: 4px;
+                width: 100%;
+            }
+
+            .quick-filters {
+                gap: 6px;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                scrollbar-width: none;
+                padding-bottom: 2px;
+            }
+
+            .quick-filters::-webkit-scrollbar { display: none; }
+
+            .qf-btn {
+                flex: 0 0 auto;
+                padding: 5px 11px;
+                font-size: 11.5px;
+            }
+
+            .media-widget { min-width: 150px; padding: 10px 12px; }
+            .media-widget-count { font-size: 21px; }
 
             .tabs {
                 margin-bottom: 20px;
@@ -1664,6 +1762,7 @@
 
                 <div class="table-actions-row">
                     <span id="signedInAs" class="signed-in-as" style="display:none;"></span>
+                    <button id="addAircraftBtn" class="qf-btn" style="display:none;" onclick="openAddAircraft()">➕ Add Aircraft</button>
                     <button id="signOutBtn" class="qf-btn" style="display:none;" onclick="signOut()">Sign out</button>
                     <button id="editModeBtn" class="qf-btn edit-btn" onclick="toggleEditMode()">🔒 Sign in to edit</button>
                     <button id="aircraftResetBtn" class="qf-btn" onclick="resetAircraftTable()">↺ Reset</button>
@@ -1712,7 +1811,10 @@
 
             <!-- Media Tab -->
             <div id="media" class="tab-content">
-                <div class="fleet-overview-grid" id="mediaWidgets"></div>
+                <div class="media-widget-section">
+                    <span class="filter-group-label">Monthly Media Update Progress</span>
+                    <div class="media-widget-strip" id="mediaWidgets"></div>
+                </div>
 
                 <div class="filter-groups">
                     <div class="filter-group-block">
@@ -1968,6 +2070,28 @@
             <div style="display:flex; gap:10px;">
                 <button id="signInCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="signInSubmit" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Sign in</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addAircraftOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:10px; padding:28px; width:90%; max-width:400px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+            <h3 style="color:#0a5c34; margin-bottom:6px;">Add Aircraft to Fleet</h3>
+            <p style="font-size:13px; color:#666; margin-bottom:16px;">Adds to the fleet roster — the aircraft appears on Software, Media and every count on the Overview.</p>
+            <label class="add-sched-label">Registration</label>
+            <input id="addAcId" class="add-sched-input" placeholder="e.g. AS77" autocomplete="off">
+            <label class="add-sched-label">Aircraft Type</label>
+            <select id="addAcType" class="add-sched-input"></select>
+            <label class="add-sched-label">Base Station</label>
+            <select id="addAcStation" class="add-sched-input">
+                <option value="JED">Jeddah (JED)</option>
+                <option value="RUH">Riyadh (RUH)</option>
+                <option value="N/A">N/A</option>
+            </select>
+            <div id="addAcError" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
+            <div style="display:flex; gap:10px; margin-top:6px;">
+                <button id="addAcCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button id="addAcSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Add Aircraft</button>
             </div>
         </div>
     </div>
@@ -2384,12 +2508,29 @@
         let aircraftLive = {};
         let aircraftData = aircraftStatic.map(a => ({ ...a }));
 
+        // The roster lives at /fleet so aircraft can be added from the app rather than
+        // by editing this file. aircraftStatic is the fallback if /fleet is empty or
+        // unreachable, so the page still renders offline.
+        let fleetRoster = aircraftStatic.slice();
+
+        function setFleetRoster(data) {
+            const rows = Object.entries(data || {}).map(([id, v]) => ({ id, type: v.type, station: v.station }));
+            if (rows.length) fleetRoster = rows.sort((a, b) => a.id.localeCompare(b.id));
+        }
+
         function rebuildAircraftData() {
-            aircraftData = aircraftStatic.map(s => {
+            aircraftData = fleetRoster.map(s => {
                 const live = aircraftLive[s.id] || {};
                 return { ...s, ...live };
             });
         }
+
+        // Scope numbers are counted from the roster, not hardcoded, so adding aircraft
+        // updates every metric card and percentage at once.
+        function projectScope()    { return fleetRoster.length; }
+        function hbcScope()        { return aircraftData.filter(a => a.status === 'excluded').length; }
+        function middlewareScope() { return projectScope() - hbcScope(); }
+        function mediaScope()      { return middlewareScope(); }   // HBC+ pair is out of media scope
 
         function renderAll() {
             if (editMode) {
@@ -2454,6 +2595,11 @@
                     setSyncStatus('🔴 Offline — showing last known data. Edits are disabled.', '#dc3545');
                 });
 
+            fetch(`${FIREBASE_DB_URL}/fleet.json`)
+                .then(r => r.json())
+                .then(data => { setFleetRoster(data); renderAll(); startFleetStream(); })
+                .catch(() => { /* keep the embedded fallback roster */ });
+
             fetch(`${FIREBASE_DB_URL}/schedule.json`)
                 .then(r => r.json())
                 .then(data => {
@@ -2481,6 +2627,17 @@
             }
             // Don't yank the inputs out from under someone mid-edit.
             if (!scheduleEditMode) populateScheduleTables();
+        }
+
+        function startFleetStream() {
+            const es = new EventSource(`${FIREBASE_DB_URL}/fleet.json`);
+            const onMsg = () => {
+                fetch(`${FIREBASE_DB_URL}/fleet.json`).then(r => r.json())
+                    .then(d => { setFleetRoster(d); renderAll(); })
+                    .catch(() => {});
+            };
+            es.addEventListener('put', onMsg);
+            es.addEventListener('patch', onMsg);
         }
 
         function startScheduleStream() {
@@ -2620,7 +2777,7 @@
         // The newest cycle anywhere in the fleet — the yardstick every row is judged by.
         function latestMediaCycle() {
             let best = '';
-            aircraftData.forEach(a => {
+            mediaFleet().forEach(a => {
                 const c = a.media && a.media.mediaCycle;
                 if (c && cycleSortKey(c) > cycleSortKey(best)) best = c;
             });
@@ -2819,6 +2976,9 @@
             const signOutBtn = document.getElementById('signOutBtn');
             const whoami = document.getElementById('signedInAs');
             if (!editBtn) return;
+
+            const addBtn = document.getElementById('addAircraftBtn');
+            if (addBtn) addBtn.style.display = canEdit() ? '' : 'none';
 
             if (!canEdit()) {
                 editBtn.textContent = '🔒 Sign in to edit';
@@ -3156,6 +3316,54 @@
             populateHbcTable();
         }
 
+        // ===== Fleet roster: add aircraft from the app =====
+        // Writes to /fleet, which every table, filter and metric derives from, so one
+        // entry here updates the whole dashboard without a code change.
+        function openAddAircraft() {
+            if (!canEdit()) return;
+            const typeSel = document.getElementById('addAcType');
+            const known = [...new Set(fleetRoster.map(a => a.type))].sort();
+            typeSel.innerHTML = known.map(t => `<option value="${escAttr(t)}">${TYPE_SHORT_LABEL[t] || t} — ${escAttr(t)}</option>`).join('');
+            document.getElementById('addAcId').value = '';
+            document.getElementById('addAcStation').value = 'JED';
+            const err = document.getElementById('addAcError');
+            err.textContent = ''; err.style.display = 'none';
+            document.getElementById('addAircraftOverlay').style.display = 'flex';
+            document.getElementById('addAcId').focus();
+        }
+
+        function initAddAircraftModal() {
+            const overlay = document.getElementById('addAircraftOverlay');
+            const err = document.getElementById('addAcError');
+            document.getElementById('addAcCancel').addEventListener('click', () => { overlay.style.display = 'none'; });
+            document.getElementById('addAcSave').addEventListener('click', async () => {
+                const id = document.getElementById('addAcId').value.trim().toUpperCase();
+                const type = document.getElementById('addAcType').value;
+                const station = document.getElementById('addAcStation').value;
+                const fail = m => { err.textContent = m; err.style.display = 'block'; };
+
+                if (!/^[A-Z0-9]{2,10}$/.test(id)) return fail('Registration should be letters and digits only, e.g. AS77.');
+                if (fleetRoster.some(a => a.id === id)) return fail(`${id} is already in the fleet.`);
+                if (!type) return fail('Pick an aircraft type.');
+
+                const token = await getIdToken();
+                if (!token) return;
+                try {
+                    const res = await fetch(`${FIREBASE_DB_URL}/fleet/${id}.json?auth=${token}`, {
+                        method: 'PUT', body: JSON.stringify({ type, station }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                    fleetRoster = fleetRoster.concat([{ id, type, station }]).sort((a, b) => a.id.localeCompare(b.id));
+                    overlay.style.display = 'none';
+                    renderAll();
+                    setSyncStatus(`🟢 ${id} added to the fleet — now ${projectScope()} aircraft`, '#28a745');
+                } catch (e) {
+                    fail(`Could not add — ${e.message}`);
+                }
+            });
+        }
+
         // ===== Media page =====
         let mediaEditMode = false;
         let pendingMedia = {};          // { tail: {raw, parsed} } staged until Save
@@ -3163,8 +3371,9 @@
         let mediaMonthFilter = '';      // '' = all, a cycle like '0826', or 'none'
         let mediaStatusFilter = '';
 
+        // Media is tracked for the main fleet only — the HBC+ pair carries no media load.
         function mediaFleet() {
-            return aircraftData.slice().sort((a, b) => a.id.localeCompare(b.id));
+            return aircraftData.filter(a => a.status !== 'excluded').sort((a, b) => a.id.localeCompare(b.id));
         }
 
         function populateMediaTable() {
@@ -3226,30 +3435,31 @@
             if (!grid) return;
             const counts = {};
             let none = 0;
-            aircraftData.forEach(a => {
+            mediaFleet().forEach(a => {
                 const c = a.media && a.media.mediaCycle;
                 if (c) counts[c] = (counts[c] || 0) + 1;
                 else none++;
             });
 
-            const cycles = Object.keys(counts).sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
-            let html = cycles.map(c => {
-                const type = c === latest ? 'latest' : (c === previousCycle(latest) ? 'previous' : 'older');
-                return `<div class="simple-stat-card media-widget media-widget-${type}">
-                    <div class="stat-label">${cycleToDisplay(c)} Media</div>
-                    <div class="stat-value">${counts[c]}</div>
-                    <div class="stat-list">${counts[c] === 1 ? 'Aircraft' : 'Aircraft'}</div>
+            const scope = mediaScope() || 1;
+            const card = (label, count, type) => {
+                const pct = Math.round((count / scope) * 1000) / 10;
+                return `<div class="media-widget media-widget-${type}">
+                    <div class="media-widget-label">${label}</div>
+                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${scope}</span><span class="media-widget-pct">${pct}%</span></div>
+                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
                 </div>`;
-            }).join('');
+            };
 
-            if (none) {
-                html += `<div class="simple-stat-card media-widget media-widget-no_media">
-                    <div class="stat-label">No Media</div>
-                    <div class="stat-value">${none}</div>
-                    <div class="stat-list">Aircraft</div>
-                </div>`;
-            }
-            grid.innerHTML = html || '<div class="simple-stat-card"><div class="stat-label">No Media Data</div></div>';
+            const cycles = Object.keys(counts).sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
+            let html = cycles.map(c => card(
+                cycleToDisplay(c),
+                counts[c],
+                c === latest ? 'latest' : (c === previousCycle(latest) ? 'previous' : 'older')
+            )).join('');
+
+            if (none) html += card('No Media', none, 'no_media');
+            grid.innerHTML = html || '<div class="media-widget media-widget-no_media"><div class="media-widget-label">No Media Data</div></div>';
         }
 
         function renderMediaMonthFilter() {
@@ -3257,7 +3467,7 @@
             if (!box) return;
             const present = {};
             let none = false;
-            aircraftData.forEach(a => {
+            mediaFleet().forEach(a => {
                 const c = a.media && a.media.mediaCycle;
                 if (c) present[c] = true; else none = true;
             });
@@ -3900,10 +4110,10 @@
             // Like every other card here, list only what's actually done — not the scope.
             const hbcDone = hbcAircraft.filter(a => a.beamcfgStatus === 'done');
             const hbcCount = hbcDone.length;
-            const hbcPct = Math.round((hbcCount / HBC_SCOPE) * 1000) / 10;
+            const hbcPct = Math.round((hbcCount / hbcScope()) * 1000) / 10;
             const xlrCard = `<div class="simple-stat-card type-stat-card">
                 <div class="stat-label">A321XLR <span class="scope-chip">SBC CONFIG</span></div>
-                <div class="stat-frac">${hbcCount}/${HBC_SCOPE}</div>
+                <div class="stat-frac">${hbcCount}/${hbcScope()}</div>
                 <div class="stat-pct">${hbcPct}%</div>
                 <div class="type-progress-bar-track"><div class="type-progress-bar-fill" style="width:${hbcPct}%"></div></div>
                 ${statList(hbcDone.map(a => 'HZ-' + a.id))}
@@ -3911,10 +4121,10 @@
 
             // Whole-fleet rollup. Same anatomy as the per-type cards, including the
             // empty list slot, so it sits level with them instead of running short.
-            const totalPct = Math.round((completedStrict.length / PROJECT_SCOPE) * 1000) / 10;
+            const totalPct = Math.round((completedStrict.length / projectScope()) * 1000) / 10;
             let html = `<div class="simple-stat-card type-stat-card">
                 <div class="stat-label">TOTAL</div>
-                <div class="stat-frac">${completedStrict.length}/${PROJECT_SCOPE}</div>
+                <div class="stat-frac">${completedStrict.length}/${projectScope()}</div>
                 <div class="stat-pct">${totalPct}%</div>
                 <div class="type-progress-bar-track"><div class="type-progress-bar-fill" style="width:${totalPct}%"></div></div>
                 <div class="stat-list"></div>
@@ -4090,23 +4300,22 @@
         }
 
         // Project scope: 40 Middleware 2.1.0 aircraft + 2 HBC+ SBC Config aircraft = 42 total
-        const MIDDLEWARE_SCOPE = 40;
-        const HBC_SCOPE = 2;
-        const PROJECT_SCOPE = MIDDLEWARE_SCOPE + HBC_SCOPE;
+        // Kept as thin aliases so existing call sites read the same; the numbers now
+        // come from the live roster (see projectScope/hbcScope/middlewareScope).
 
         function updateMetrics() {
             const active = aircraftData.filter(a => a.status !== 'excluded');
             const completedStrict = active.filter(isCompletedStrict);
             const middlewareCount = completedStrict.length;
-            const middlewareRate = Math.round((middlewareCount / MIDDLEWARE_SCOPE) * 1000) / 10;
+            const middlewareRate = Math.round((middlewareCount / middlewareScope()) * 1000) / 10;
 
             const hbcAircraft = aircraftData.filter(a => a.id === 'ASBA' || a.id === 'ASBB');
             const hbcCount = hbcAircraft.filter(a => a.beamcfgStatus === 'done').length;
-            const hbcRate = Math.round((hbcCount / HBC_SCOPE) * 1000) / 10;
+            const hbcRate = Math.round((hbcCount / hbcScope()) * 1000) / 10;
 
             const projectCompleted = middlewareCount + hbcCount;
-            const projectRate = Math.round((projectCompleted / PROJECT_SCOPE) * 1000) / 10;
-            const remaining = PROJECT_SCOPE - projectCompleted;
+            const projectRate = Math.round((projectCompleted / projectScope()) * 1000) / 10;
+            const remaining = projectScope() - projectCompleted;
 
             // Header cards
             setText('metricCompletedValue', middlewareCount);
@@ -4114,7 +4323,7 @@
             setText('metricHbcTopValue', hbcCount);
             setWidth('metricHbcTopBar', hbcRate + '%');
             setText('metricRateValue', projectRate + '%');
-            setText('metricRateSubLabel', `${projectCompleted} / ${PROJECT_SCOPE} Total`);
+            setText('metricRateSubLabel', `${projectCompleted} / ${projectScope()} Total`);
             setWidth('metricRateBar', projectRate + '%');
             setText('metricRemainingValue', remaining);
             setWidth('metricRemainingBar', (100 - projectRate) + '%');
@@ -4134,6 +4343,7 @@
 
             loadAuthSession();
             initScheduleAddModal();
+            initAddAircraftModal();
             updateAuthUI();
             updateScheduleEditUI();
             renderObjectives();

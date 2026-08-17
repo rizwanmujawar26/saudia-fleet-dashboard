@@ -71,8 +71,13 @@ the repo root, in case anything needs restoring.
 
 **Data has two layers, merged at runtime into a single `aircraftData` array:**
 
-1. **Static/structural** — `aircraftStatic` JS array embedded directly in
-   `index.html` (id, type, station). Rarely changes; edit via code + git push.
+1. **Fleet roster** — Firebase `/fleet/{tail}` = `{ type, station }`, the single
+   source of truth for which aircraft exist. Add one via **➕ Add Aircraft** on
+   the Software tab (signed-in editors only) and every table, filter pill and
+   metric picks it up — scope numbers are counted from the roster by
+   `projectScope()` / `hbcScope()` / `middlewareScope()` / `mediaScope()`, not
+   hardcoded. The `aircraftStatic` array in `index.html` is now only a fallback
+   for when `/fleet` is empty or unreachable.
 2. **Live fields** — Firebase `/aircraft/{tailId}`. Each one is constrained by
    a `.validate` rule, so the allowed values below are enforced, not just
    conventions:
@@ -126,7 +131,8 @@ always self-heals it.
    registration with a Reset button; sortable columns show ↑/↓. **This is the
    only tab where data can be edited**, and only by a signed-in allowlisted
    editor (see the security section above).
-3. **Media** — monthly media-loading status for all 42 aircraft. Columns:
+3. **Media** — monthly media-loading status for the main fleet only
+   (`status !== 'excluded'`, so the HBC+ pair is out of media scope). Columns:
    `# | Aircraft | Type | Status | Media Loaded | Date UTC | Comments`.
    Everything on this page derives from one stored object per aircraft at
    `/aircraft/{tail}/media`:
