@@ -130,15 +130,50 @@
             background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
         }
 
-        /* Three cards, not the four this grid was sized for — auto-fit at 280px left
-           them wrapping 2 + 1. */
+        /* Fixed 2 x 2 rather than auto-fit, so the pairing stays deliberate:
+           the two Software cards on top, Media and Maintenance beneath. */
         .global-widgets {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
         }
 
-        @media (max-width: 820px) {
+        @media (max-width: 700px) {
             .global-widgets { grid-template-columns: 1fr; }
         }
+
+        /* Same reading order as the local widgets: count on the left, percentage
+           pushed to the right edge, both sitting directly above the bar. */
+        .global-widgets .metric-card {
+            text-align: left;
+            padding: 18px 20px;
+        }
+
+        .global-widgets .metric-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .fit-chip {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            border-radius: 4px;
+            padding: 2px 7px;
+            text-transform: uppercase;
+        }
+
+        .fit-chip-retrofit { background: #e3ecf5; color: #2f5f8a; }
+        .fit-chip-linefit  { background: #efe9f7; color: #59468a; }
+
+        /* Linefit card: violet, matching its pill and distinct from the retrofit green */
+        .metric-card.linefit {
+            border-left-color: #6f52ad;
+            background: linear-gradient(135deg, #f4f1fa 0%, #e2dbf2 100%);
+        }
+
+        .metric-card.linefit .metric-value,
+        .metric-card.linefit .metric-pct { color: #55407f; }
 
         /* Maintenance: same lightness as the other cards so it sits in the row rather
            than shouting, but unmistakably red when something is open. */
@@ -173,21 +208,22 @@
         .metric-figures {
             display: flex;
             align-items: baseline;
-            justify-content: center;
-            gap: 6px;
-            margin: 10px 0 4px;
+            gap: 2px;
+            margin: 8px 0 6px;
         }
 
         .metric-of {
-            font-size: 13px;
+            font-size: 14px;
             color: #6b757e;
         }
 
+        /* margin-left:auto is what pins the percentage to the right edge, level with
+           the end of the progress bar below it. */
         .metric-pct {
             font-size: 17px;
             font-weight: 700;
             color: #0a5c34;
-            margin-left: 6px;
+            margin-left: auto;
         }
 
         .metric-value {
@@ -1519,11 +1555,10 @@
                  Per-tab breakdowns are the local widgets inside each tab. -->
             <div class="dashboard-grid global-widgets">
                 <div class="metric-card primary">
-                    <div class="metric-label">Software Loading Progress</div>
+                    <div class="metric-label">Software Loading Progress <span class="fit-chip fit-chip-retrofit">Retrofit</span></div>
                     <div class="metric-sublabel" id="metricSwSubLabel">Middleware 2.1.0</div>
                     <div class="metric-figures">
-                        <span class="metric-value" id="metricSwValue">-</span>
-                        <span class="metric-of" id="metricSwOf">of 40</span>
+                        <span class="metric-value" id="metricSwValue">-</span><span class="metric-of" id="metricSwOf">/40</span>
                         <span class="metric-pct" id="metricSwPct">-</span>
                     </div>
                     <div class="metric-progress">
@@ -1531,12 +1566,23 @@
                     </div>
                 </div>
 
+                <div class="metric-card linefit">
+                    <div class="metric-label">Software Loading Progress <span class="fit-chip fit-chip-linefit">Linefit</span></div>
+                    <div class="metric-sublabel">SBC Configuration A.13</div>
+                    <div class="metric-figures">
+                        <span class="metric-value" id="metricSbcValue">-</span><span class="metric-of" id="metricSbcOf">/2</span>
+                        <span class="metric-pct" id="metricSbcPct">-</span>
+                    </div>
+                    <div class="metric-progress">
+                        <div class="metric-progress-bar" id="metricSbcBar" style="width: 0%; background: linear-gradient(90deg, #8b6fc4, #6f52ad);"></div>
+                    </div>
+                </div>
+
                 <div class="metric-card info">
                     <div class="metric-label">Media Loading Progress</div>
                     <div class="metric-sublabel" id="metricMediaSubLabel">—</div>
                     <div class="metric-figures">
-                        <span class="metric-value" id="metricMediaValue">-</span>
-                        <span class="metric-of" id="metricMediaOf">of 40</span>
+                        <span class="metric-value" id="metricMediaValue">-</span><span class="metric-of" id="metricMediaOf">/40</span>
                         <span class="metric-pct" id="metricMediaPct">-</span>
                     </div>
                     <div class="metric-progress">
@@ -1548,8 +1594,7 @@
                     <div class="metric-label">Maintenance</div>
                     <div class="metric-sublabel" id="metricMaintSubLabel">Open issues</div>
                     <div class="metric-figures">
-                        <span class="metric-value" id="metricMaintValue">-</span>
-                        <span class="metric-of" id="metricMaintOf">of 42 active</span>
+                        <span class="metric-value" id="metricMaintValue">-</span><span class="metric-of" id="metricMaintOf">/42 active</span>
                         <span class="metric-pct" id="metricMaintPct">-</span>
                     </div>
                     <div class="metric-progress">
@@ -4169,11 +4214,20 @@
             const swRate = Math.round((swCount / swScope) * 1000) / 10;
             setText('metricSwSubLabel', `Middleware ${latestSwVersion()}`);
             setText('metricSwValue', swCount);
-            setText('metricSwOf', `of ${middlewareScope()}`);
+            setText('metricSwOf', `/${middlewareScope()}`);
             setText('metricSwPct', swRate + '%');
             setWidth('metricSwBar', swRate + '%');
 
-            // --- Global widget 2: media loading, measured against the newest cycle ---
+            // --- Global widget 2: linefit / SBC configuration on the HBC+ pair ---
+            const sbcDone = aircraftData.filter(a => isLinefit(a) && a.beamcfgStatus === 'done').length;
+            const sbcScope = hbcScope() || 1;
+            const sbcRate = Math.round((sbcDone / sbcScope) * 1000) / 10;
+            setText('metricSbcValue', sbcDone);
+            setText('metricSbcOf', `/${hbcScope()}`);
+            setText('metricSbcPct', sbcRate + '%');
+            setWidth('metricSbcBar', sbcRate + '%');
+
+            // --- Global widget 3: media loading, measured against the newest cycle ---
             const latestCycle = latestMediaCycle();
             const mediaOn = latestCycle
                 ? mediaFleet().filter(a => a.media && a.media.mediaCycle === latestCycle).length : 0;
@@ -4181,16 +4235,16 @@
             const mediaRate = Math.round((mediaOn / medScope) * 1000) / 10;
             setText('metricMediaSubLabel', latestCycle ? cycleToDisplay(latestCycle) : 'No media loaded');
             setText('metricMediaValue', mediaOn);
-            setText('metricMediaOf', `of ${mediaScope()}`);
+            setText('metricMediaOf', `/${mediaScope()}`);
             setText('metricMediaPct', mediaRate + '%');
             setWidth('metricMediaBar', mediaRate + '%');
 
-            // --- Global widget 3: maintenance ---
+            // --- Global widget 4: maintenance ---
             const activeCount = activeFleet().length;
             const maintCount = activeFleet().filter(maintenanceOpen).length;
             const maintRate = activeCount ? Math.round((maintCount / activeCount) * 1000) / 10 : 0;
             setText('metricMaintValue', maintCount);
-            setText('metricMaintOf', `of ${activeCount} active`);
+            setText('metricMaintOf', `/${activeCount} active`);
             setText('metricMaintPct', maintRate + '%');
             setText('metricMaintSubLabel', maintCount ? 'Open issues' : 'No open issues');
             setWidth('metricMaintBar', maintRate + '%');

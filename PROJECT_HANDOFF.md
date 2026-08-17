@@ -101,9 +101,11 @@ the repo root, in case anything needs restoring.
 
 ## Widget vocabulary
 
-- **Global widgets** — the row above the tab bar, `.global-widgets`, showing
-  fleet-wide programme health on every tab: Software Loading Progress, Media
-  Loading Progress, Maintenance.
+- **Global widgets** — a fixed 2 x 2 grid above the tab bar, `.global-widgets`,
+  showing fleet-wide programme health on every tab. Top row is the two software
+  streams (Retrofit / Middleware, Linefit / SBC Configuration A.13), bottom row
+  is Media Loading and Maintenance. Figures follow the local-widget reading
+  order: count at the left edge of the progress bar, percentage at the right.
 - **Local widgets** — the `.media-widget-strip` rows inside a tab, showing that
   tab's own breakdown (version progress, media months, fleet composition...).
 
