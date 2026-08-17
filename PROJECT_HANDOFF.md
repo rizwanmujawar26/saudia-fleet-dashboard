@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.0, 2026-08-17)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.4.1, 2026-08-17)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -97,6 +97,20 @@ clobber the other.
 `station` (JED/RUH), `status` (`scheduled|in-progress|completed|postponed`).
 
 ### `/editors/{uid}` — allowlist, readable only by that uid, never client-writable
+
+### `/visits` — the only world-writable node in the database
+
+`total` and `daily/{YYYY-MM-DD}`, both plain integers. **A write is accepted only
+when it equals the stored value plus one** (or is the first write, equal to 1), so
+the rule doubles as the compare-and-swap: a concurrent visit is rejected rather
+than overwriting, and the client re-reads and retries. RTDB has no increment verb
+over REST — this is what replaces it.
+
+Deletes, decrements, jumps, non-numbers, malformed day keys and unknown children
+are all rejected (12 curl cases verified). The residual exposure is that anyone
+can inflate the counter one increment per request; nothing else in the database
+is reachable this way. If that ever matters, the fix is an authenticated
+endpoint, not tighter rules here.
 
 ---
 
@@ -233,6 +247,42 @@ the editor's email would publish the team's addresses. Add it only if that is
 acceptable.
 
 Reserved: 🛠️ emoji is the Maintenance tab's.
+
+---
+
+## System status bar (the footer)
+
+The old three-line footer is gone. In its place `.sysbar` is a compact capsule
+strip — brand, version, aircraft count, sync age, visit count, environment —
+mirroring the header's gradient and accent stripe so the page is bookended.
+Clicking any capsule opens `#sysInfoOverlay`, a technical panel in three
+sections (Build / Data / Usage).
+
+- **Release identity has one home:** `APP_VERSION`, `APP_BUILD`, `APP_ENV`,
+  `APP_DEPLOYED`. Bump those and the bar, the panel and the page title text all
+  follow. Never write a version anywhere else.
+- **Every figure is read from the existing helpers** — `projectScope()`,
+  `middlewareScope()`, `mediaScope()`, `latestSwVersion()`, `latestMediaCycle()`.
+  The panel's Software/Media Tracked are the same numbers as the global widgets;
+  they are not a second copy.
+- **`setSyncStatus()` kept its signature** — all ~20 call sites are untouched —
+  but now drives the bar instead of a `<p>`. Healthy collapses to the breathing
+  brand dot; warn and error open a capsule showing the message in full, because
+  a failed save must never end up hidden in a tooltip. `syncLevelOf()` maps the
+  old colour argument to the level.
+- **`markDataSync()`** is called only where Firebase data actually lands (the
+  initial fetch and the stream `put`/`patch`), not on local re-renders — that is
+  what "Synced 2m ago" measures. It spins the arrows, throttled to one turn per
+  1.2s so a burst of stream events is not a blur.
+- **The visit counter counts once per browser session**, guarded by
+  `sessionStorage` plus an in-memory `visitCounted` flag, so a reload or a second
+  `initVisitCounter()` call cannot double count. Private mode reads the totals
+  and counts nothing.
+- Animation is decoration only; everything is disabled under
+  `prefers-reduced-motion`.
+
+The HBC+ exclusion note the old footer carried still exists — it is the
+`.footnote` at the bottom of the Overview tab, which is where it always was.
 
 ---
 

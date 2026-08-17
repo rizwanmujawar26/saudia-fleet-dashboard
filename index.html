@@ -1570,13 +1570,333 @@
             }
         }
 
-        .footer {
-            text-align: center;
+        /* ===== System status bar =====
+           Reads as instrumentation, not as a website footer. It mirrors the header —
+           same dark green gradient, same accent stripe inverted along the top edge —
+           so the page is bookended rather than trailing off into grey.
+           Everything here is deliberately low-contrast: the dashboard is the subject,
+           this is the status line underneath it. */
+        .sysbar {
+            position: relative;
+            background:
+                radial-gradient(120% 180% at 50% 0%, rgba(47,168,79,0.16) 0%, rgba(47,168,79,0) 60%),
+                linear-gradient(135deg, #073f24 0%, #0a5c34 55%, #0d6b3d 100%);
+            padding: 13px 20px;
+            border-top: 1px solid rgba(255,255,255,0.09);
+        }
+
+        /* The header's stripe, mirrored. Faint here so it reads as a seam. */
+        .sysbar::before {
+            content: '';
+            position: absolute;
+            left: 0; right: 0; top: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #2fa84f, #1f8fe0, #101f3d, #2fa84f, #1f8fe0);
+            opacity: 0.55;
+        }
+
+        .sysbar-inner {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* Translucent capsule over the gradient — glass, not a painted box. */
+        .sys-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 11px;
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 999px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025));
+            color: rgba(255,255,255,0.72);
+            font-family: inherit;
+            font-size: 11.5px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            line-height: 1;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: transform 0.18s ease, background 0.18s ease,
+                        border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .sys-chip:hover {
+            transform: translateY(-1px);
+            background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+            border-color: rgba(255,255,255,0.22);
+            color: #fff;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.10);
+        }
+
+        .sys-chip:focus-visible {
+            outline: 2px solid rgba(120,220,160,0.7);
+            outline-offset: 2px;
+        }
+
+        .sys-chip svg {
+            width: 12px;
+            height: 12px;
+            flex-shrink: 0;
+            opacity: 0.75;
+        }
+
+        .sys-chip:hover svg { opacity: 1; }
+
+        /* Values in a mono face so figures line up as they tick over. */
+        .sys-val {
+            font-variant-numeric: tabular-nums;
+            font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 11px;
+            color: rgba(255,255,255,0.92);
+        }
+
+        .sys-chip-brand {
+            color: rgba(255,255,255,0.95);
+            border-color: rgba(255,255,255,0.20);
+            background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+
+        .sys-sep {
+            width: 1px;
+            height: 15px;
+            background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.18), rgba(255,255,255,0));
+            flex-shrink: 0;
+        }
+
+        /* Status dot. The glow is a box-shadow ring so it can breathe without
+           reflowing anything around it. */
+        .sys-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: #9aa6ad;
+            box-shadow: 0 0 0 0 rgba(154,166,173,0.5);
+        }
+
+        .sys-dot-live    { background: #43d17c; animation: sysBreathe 3.4s ease-in-out infinite; }
+        .sys-dot-warn    { background: #e9b949; animation: sysBreathe 1.6s ease-in-out infinite; }
+        .sys-dot-error   { background: #f2585f; animation: sysBreathe 1.1s ease-in-out infinite; }
+
+        @keyframes sysBreathe {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(67,209,124,0.45), 0 0 5px rgba(67,209,124,0.5); }
+            50%      { box-shadow: 0 0 0 4px rgba(67,209,124,0.00), 0 0 9px rgba(67,209,124,0.85); }
+        }
+
+        /* Environment capsule reads as a label, not a metric. */
+        .sys-chip-env .sys-env-text {
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.80);
+        }
+
+        /* One turn of the arrows when fresh data lands — the only motion that is not
+           a slow loop, so a sync is actually noticeable without being loud. */
+        .sys-sync-icon { transform-origin: 50% 50%; }
+        .sys-sync-icon.spin { animation: sysSpin 0.75s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        @keyframes sysSpin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        /* The visit count lifts and fades as it changes rather than snapping. */
+        .sys-count.bump { animation: sysBump 0.6s ease; }
+
+        @keyframes sysBump {
+            0%   { opacity: 0.35; transform: translateY(3px); }
+            60%  { opacity: 1;    transform: translateY(-1px); }
+            100% { opacity: 1;    transform: translateY(0); }
+        }
+
+        /* An error from setSyncStatus is shown in full rather than hidden behind a
+           dot — losing a failed save into a tooltip would be worse than the old footer. */
+        .sys-chip-status.is-error {
+            border-color: rgba(242,88,95,0.55);
+            background: linear-gradient(180deg, rgba(242,88,95,0.24), rgba(242,88,95,0.10));
+            color: #ffe3e5;
+        }
+
+        .sys-chip-status.is-warn {
+            border-color: rgba(233,185,73,0.5);
+            background: linear-gradient(180deg, rgba(233,185,73,0.20), rgba(233,185,73,0.08));
+            color: #fff2d4;
+        }
+
+        .sys-status-msg {
+            max-width: 320px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ===== System information panel ===== */
+        .sysinfo-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1100;
+            background: rgba(4, 20, 12, 0.62);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            align-items: center;
+            justify-content: center;
             padding: 20px;
-            background: #f8f9fa;
-            color: #666;
-            font-size: 12px;
-            border-top: 1px solid #e0e0e0;
+        }
+
+        .sysinfo-overlay.open { display: flex; animation: sysFade 0.18s ease; }
+
+        @keyframes sysFade { from { opacity: 0; } to { opacity: 1; } }
+
+        .sysinfo-panel {
+            width: 100%;
+            max-width: 660px;
+            max-height: 86vh;
+            overflow-y: auto;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background:
+                radial-gradient(90% 120% at 0% 0%, rgba(47,168,79,0.18) 0%, rgba(47,168,79,0) 55%),
+                linear-gradient(160deg, #072d1b 0%, #0a3f27 55%, #062516 100%);
+            box-shadow: 0 24px 70px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08);
+            animation: sysRise 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+        }
+
+        @keyframes sysRise {
+            from { opacity: 0; transform: translateY(10px) scale(0.99); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .sysinfo-head {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 17px 20px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.09);
+        }
+
+        .sysinfo-title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1.1px;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        .sysinfo-sub {
+            font-size: 11px;
+            color: rgba(255,255,255,0.50);
+            margin-top: 3px;
+            letter-spacing: 0.3px;
+        }
+
+        .sysinfo-close {
+            margin-left: auto;
+            border: 1px solid rgba(255,255,255,0.14);
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.7);
+            border-radius: 8px;
+            width: 28px;
+            height: 28px;
+            font-size: 15px;
+            line-height: 1;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        .sysinfo-close:hover { background: rgba(255,255,255,0.13); color: #fff; }
+
+        .sysinfo-section {
+            padding: 15px 20px 5px;
+        }
+
+        .sysinfo-section-label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.42);
+            margin-bottom: 10px;
+        }
+
+        .sysinfo-section-label svg { width: 12px; height: 12px; }
+
+        .sysinfo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 1px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 9px;
+            overflow: hidden;
+        }
+
+        /* Hairline dividers come from the grid gap showing through, so each cell just
+           needs its own solid ground. */
+        .sysinfo-cell {
+            background: rgba(255,255,255,0.028);
+            padding: 10px 13px;
+            transition: background 0.15s ease;
+        }
+
+        .sysinfo-cell:hover { background: rgba(255,255,255,0.07); }
+
+        .sysinfo-key {
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.40);
+        }
+
+        .sysinfo-value {
+            margin-top: 5px;
+            font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12.5px;
+            color: rgba(255,255,255,0.93);
+            font-variant-numeric: tabular-nums;
+            word-break: break-word;
+        }
+
+        .sysinfo-value .sysinfo-muted { color: rgba(255,255,255,0.45); font-size: 11px; }
+
+        .sysinfo-foot {
+            padding: 13px 20px 17px;
+            font-size: 10.5px;
+            color: rgba(255,255,255,0.35);
+            letter-spacing: 0.3px;
+            text-align: center;
+        }
+
+        @media (max-width: 700px) {
+            .sysbar { padding: 11px 12px; }
+            .sysbar-inner { gap: 5px; }
+            .sys-chip { padding: 5px 9px; font-size: 11px; }
+            /* Separators are decoration; wrapped rows read better without them. */
+            .sys-sep { display: none; }
+            .sys-status-msg { max-width: 180px; }
+        }
+
+        /* Motion is decoration here — none of it carries meaning on its own. */
+        @media (prefers-reduced-motion: reduce) {
+            .sys-dot-live, .sys-dot-warn, .sys-dot-error,
+            .sys-sync-icon.spin, .sys-count.bump,
+            .sysinfo-panel, .sysinfo-overlay.open {
+                animation: none !important;
+            }
+            .sys-chip { transition: none; }
         }
 
         .footnote {
@@ -2064,10 +2384,99 @@
 
         </div>
 
-        <div class="footer">
-            <p>Saudia Connectivity Fleet Status | Last Updated: <span id="lastUpdated">August 13, 2026</span> | All times in UTC (Zulu) as per operational schedule</p>
-            <p>Excludes HBC+ aircraft (HZ-ASBA, HZ-ASBB) from MSP loading scope — tracked separately for BEAMCFG update | Total fleet in scope: 40 aircraft (42 total)</p>
-            <p id="syncStatus" style="margin-top: 8px; font-weight: 600;">🟡 Connecting to live data...</p>
+        <!-- System status bar. Every figure here is read from the same helpers the
+             dashboard itself uses — nothing is restated or hardcoded. Clicking any
+             capsule opens the system information panel. -->
+        <footer class="sysbar" id="sysbar">
+            <div class="sysbar-inner" id="sysbarInner">
+                <button type="button" class="sys-chip sys-chip-brand" onclick="openSysInfo()" title="System information">
+                    <span class="sys-dot sys-dot-live" id="sysBrandDot"></span>
+                    <span>NSG IFEC</span>
+                </button>
+
+                <span class="sys-sep"></span>
+
+                <button type="button" class="sys-chip" onclick="openSysInfo()" id="sysVersionChip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5"/><path d="M12 12v10"/></svg>
+                    <span class="sys-val" id="sysVersion">—</span>
+                </button>
+
+                <span class="sys-sep"></span>
+
+                <button type="button" class="sys-chip" onclick="openSysInfo()" id="sysFleetChip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.8 19.2 16 11l3.5-3.5a2.1 2.1 0 0 0-3-3L13 8 4.8 6.2a.5.5 0 0 0-.5.8l3.9 4.2-2.3 2.3-1.8-.4a.5.5 0 0 0-.5.8L5.5 16l1.1 2a.5.5 0 0 0 .8-.1l-.4-1.8 2.3-2.3 4.2 3.9a.5.5 0 0 0 .8-.5z"/></svg>
+                    <span class="sys-val" id="sysFleetCount">—</span>
+                    <span>Aircraft</span>
+                </button>
+
+                <span class="sys-sep"></span>
+
+                <button type="button" class="sys-chip" onclick="openSysInfo()" id="sysSyncChip">
+                    <svg class="sys-sync-icon" id="sysSyncIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+                    <span class="sys-val" id="sysSyncAge">—</span>
+                </button>
+
+                <span class="sys-sep"></span>
+
+                <button type="button" class="sys-chip" onclick="openSysInfo()" id="sysVisitsChip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span class="sys-val sys-count" id="sysVisits">—</span>
+                    <span>Views</span>
+                </button>
+
+                <span class="sys-sep"></span>
+
+                <button type="button" class="sys-chip sys-chip-env" onclick="openSysInfo()">
+                    <span class="sys-env-text" id="sysEnv">—</span>
+                    <span class="sys-dot sys-dot-live"></span>
+                </button>
+
+                <!-- Only appears when setSyncStatus reports something other than healthy,
+                     so a failed save is never silent. -->
+                <button type="button" class="sys-chip sys-chip-status" id="sysStatusChip" onclick="openSysInfo()" style="display:none;">
+                    <span class="sys-dot" id="sysStatusDot"></span>
+                    <span class="sys-status-msg" id="sysStatusMsg"></span>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <div class="sysinfo-overlay" id="sysInfoOverlay">
+        <div class="sysinfo-panel" role="dialog" aria-modal="true" aria-label="System information">
+            <div class="sysinfo-head">
+                <span class="sys-dot sys-dot-live" id="sysInfoHeadDot"></span>
+                <div>
+                    <div class="sysinfo-title">System Information</div>
+                    <div class="sysinfo-sub" id="sysInfoSub">NSG IFEC Fleet Dashboard</div>
+                </div>
+                <button type="button" class="sysinfo-close" id="sysInfoClose" aria-label="Close">✕</button>
+            </div>
+
+            <div class="sysinfo-section">
+                <div class="sysinfo-section-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5"/></svg>
+                    Build
+                </div>
+                <div class="sysinfo-grid" id="sysInfoBuild"></div>
+            </div>
+
+            <div class="sysinfo-section">
+                <div class="sysinfo-section-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+                    Data
+                </div>
+                <div class="sysinfo-grid" id="sysInfoData"></div>
+            </div>
+
+            <div class="sysinfo-section">
+                <div class="sysinfo-section-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Usage
+                </div>
+                <div class="sysinfo-grid" id="sysInfoUsage"></div>
+            </div>
+
+            <div class="sysinfo-foot" id="sysInfoFoot"></div>
         </div>
     </div>
 
@@ -2248,6 +2657,14 @@
                 .sort((a, b) => (toISODate(a.date) + ' ' + (a.time || '')).localeCompare(toISODate(b.date) + ' ' + (b.time || '')));
         }
 
+        // ===== Release identity =====
+        // The only place these live. The status bar and the system information panel
+        // both read them from here — do not restate a version anywhere else.
+        const APP_VERSION  = '2.4.1';
+        const APP_BUILD    = '2026.08.17.01';
+        const APP_ENV      = 'Production';
+        const APP_DEPLOYED = '2026-08-17T20:30:00Z';
+
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
         // fields kept up to date in Firebase (status, iphoStatus, completionDate, note, ...).
@@ -2336,9 +2753,23 @@
             renderAll();
         }
 
+        // The old footer had a plain <p> for this. The ~20 call sites are unchanged;
+        // the message now drives the status bar instead. A healthy state collapses to
+        // the breathing dot on the brand capsule, and anything else opens a capsule
+        // showing the message in full — a failed save must not end up in a tooltip.
+        let syncState = { text: 'Connecting to live data…', level: 'warn' };
+
         function setSyncStatus(text, color) {
-            const el = document.getElementById('syncStatus');
-            if (el) { el.textContent = text; el.style.color = color; }
+            // The `u` flag is load-bearing: these emoji are surrogate pairs, and without
+            // it the class matches half a pair and leaves a replacement character behind.
+            syncState = { text: String(text || '').replace(/^[🟢🟡🔴]\s*/u, ''), level: syncLevelOf(color) };
+            renderSysStatus();
+        }
+
+        function syncLevelOf(color) {
+            if (color === '#dc3545') return 'error';
+            if (color === '#e0a800') return 'warn';
+            return 'live';
         }
 
         function connectLiveSync() {
@@ -2346,6 +2777,7 @@
                 .then(r => r.json())
                 .then(data => {
                     aircraftLive = data || {};
+                    markDataSync();
                     renderAll();
                     startLiveStream();
                 })
@@ -2411,11 +2843,13 @@
             es.addEventListener('put', e => {
                 const msg = JSON.parse(e.data);
                 applyLivePathUpdate(msg.path, msg.data);
+                markDataSync();
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             });
             es.addEventListener('patch', e => {
                 const msg = JSON.parse(e.data);
                 applyLivePathUpdate(msg.path, msg.data);
+                markDataSync();
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             });
             es.onopen = () => setSyncStatus('🟢 Live — synced with your team', '#28a745');
@@ -4719,17 +5153,235 @@
             renderFleetOverview(active, completedStrict);
             renderStationCompletion(completedStrict);
             renderTimeline(completedStrict);
+            renderSysBar();     // fleet count and the open panel follow the same data
+        }
+
+        // ===== System status bar =====
+        // Every figure comes from the helper the dashboard already uses — projectScope,
+        // middlewareScope, mediaScope, latestSwVersion, latestMediaCycle. Nothing here
+        // is a second copy of a number shown elsewhere.
+
+        let lastDataSyncAt = 0;
+        let sysSpinAt = 0;
+
+        // Called where Firebase data actually lands, not on every local re-render.
+        function markDataSync() {
+            lastDataSyncAt = Date.now();
+            const icon = document.getElementById('sysSyncIcon');
+            // A burst of stream events should be one turn of the arrows, not a blur.
+            if (icon && Date.now() - sysSpinAt > 1200) {
+                sysSpinAt = Date.now();
+                icon.classList.remove('spin');
+                void icon.offsetWidth;          // restart the animation
+                icon.classList.add('spin');
+            }
+            renderSysBar();
+        }
+
+        function sysRelTime(ts) {
+            if (!ts) return 'never';
+            const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+            if (s < 10) return 'just now';
+            if (s < 60) return `${s}s ago`;
+            const m = Math.round(s / 60);
+            if (m < 60) return `${m}m ago`;
+            const h = Math.round(m / 60);
+            if (h < 24) return `${h}h ago`;
+            return `${Math.round(h / 24)}d ago`;
+        }
+
+        // Project convention: DD-Mon-YYYY, Zulu.
+        function fmtSysStamp(iso) {
+            const m = (iso || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+            return m ? `${m[3]}-${MONTH_NAMES[+m[2] - 1]}-${m[1]} ${m[4]}:${m[5]}Z` : (iso || '—');
+        }
+
+        function setHTML(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+
+        // Only animates when the figure actually changes, so a periodic re-render
+        // does not make the bar twitch.
+        function setSysCount(id, n) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const next = (n === null || n === undefined) ? '—' : n.toLocaleString('en-US');
+            if (el.textContent === next) return;
+            el.textContent = next;
+            el.classList.remove('bump');
+            void el.offsetWidth;
+            el.classList.add('bump');
+        }
+
+        function renderSysBar() {
+            setText('sysVersion', 'v' + APP_VERSION);
+            setText('sysFleetCount', projectScope());
+            setText('sysSyncAge', sysRelTime(lastDataSyncAt));
+            setText('sysEnv', APP_ENV);
+            setSysCount('sysVisits', visitTotals.total);
+            renderSysStatus();
+            if (sysInfoIsOpen()) renderSysInfo();
+        }
+
+        function renderSysStatus() {
+            const cls = `sys-dot sys-dot-${syncState.level}`;
+            const brand = document.getElementById('sysBrandDot');
+            const headDot = document.getElementById('sysInfoHeadDot');
+            if (brand) brand.className = cls;
+            if (headDot) headDot.className = cls;
+
+            const chip = document.getElementById('sysStatusChip');
+            if (!chip) return;
+            // Healthy collapses to the breathing brand dot; anything else says so.
+            chip.style.display = syncState.level === 'live' ? 'none' : '';
+            chip.classList.toggle('is-error', syncState.level === 'error');
+            chip.classList.toggle('is-warn', syncState.level === 'warn');
+            const dot = document.getElementById('sysStatusDot');
+            if (dot) dot.className = cls;
+            setText('sysStatusMsg', syncState.text);
+            chip.title = syncState.text;
+        }
+
+        // ===== Visit counter (same Firebase RTDB, no second backend) =====
+        // /visits/total and /visits/daily/{YYYY-MM-DD}. The rules accept a write only
+        // when it equals the stored value plus one, which makes the rule itself the
+        // compare-and-swap: a concurrent visit gets rejected rather than overwriting,
+        // and we simply re-read and retry. RTDB has no increment verb over REST.
+        const VISIT_SESSION_KEY = 'fleetVisitCounted';
+        let visitTotals = { total: null, today: null };
+        let visitCounted = false;       // guards a double call within one page life
+
+        function utcDayKey() {
+            return new Date().toISOString().slice(0, 10);
+        }
+
+        async function refreshVisitTotals() {
+            try {
+                const v = (await (await fetch(`${FIREBASE_DB_URL}/visits.json`)).json()) || {};
+                visitTotals.total = typeof v.total === 'number' ? v.total : 0;
+                visitTotals.today = (v.daily && v.daily[utcDayKey()]) || 0;
+                renderSysBar();
+            } catch (e) { /* the bar shows — until it can be read */ }
+        }
+
+        async function bumpVisitCounter(path, tries = 5) {
+            for (let i = 0; i < tries; i++) {
+                const cur = await (await fetch(`${FIREBASE_DB_URL}/${path}.json`)).json();
+                const next = (typeof cur === 'number' ? cur : 0) + 1;
+                const put = await fetch(`${FIREBASE_DB_URL}/${path}.json`, {
+                    method: 'PUT', body: JSON.stringify(next),
+                });
+                if (put.ok) return next;
+                // Rejected: someone else incremented between our read and our write.
+                // Back off a little so retries do not lock step with each other.
+                await new Promise(r => setTimeout(r, 60 + Math.random() * 160));
+            }
+            return null;
+        }
+
+        // One count per browser session. A reload, a re-render, or a second call in the
+        // same page life does not count again — sessionStorage is the durable half of
+        // that, visitCounted the in-memory half.
+        function shouldCountVisit() {
+            if (visitCounted) return false;
+            visitCounted = true;
+            try {
+                if (sessionStorage.getItem(VISIT_SESSION_KEY)) return false;
+                sessionStorage.setItem(VISIT_SESSION_KEY, '1');
+                return true;
+            } catch (e) {
+                return false;       // private mode: show the totals, do not count
+            }
+        }
+
+        async function initVisitCounter() {
+            await refreshVisitTotals();
+            if (!shouldCountVisit()) return;
+            try {
+                const total = await bumpVisitCounter('visits/total');
+                const today = await bumpVisitCounter(`visits/daily/${utcDayKey()}`);
+                if (total !== null) visitTotals.total = total;
+                if (today !== null) visitTotals.today = today;
+                renderSysBar();
+            } catch (e) { /* a view counter is never worth a visible failure */ }
+        }
+
+        // ===== System information panel =====
+        function sysInfoIsOpen() {
+            const o = document.getElementById('sysInfoOverlay');
+            return !!o && o.classList.contains('open');
+        }
+
+        function openSysInfo() {
+            const o = document.getElementById('sysInfoOverlay');
+            if (!o) return;
+            renderSysInfo();
+            o.classList.add('open');
+            refreshVisitTotals();   // the figures may have moved since load
+        }
+
+        function closeSysInfo() {
+            const o = document.getElementById('sysInfoOverlay');
+            if (o) o.classList.remove('open');
+        }
+
+        function renderSysInfo() {
+            const cell = (k, v, sub) =>
+                `<div class="sysinfo-cell">
+                    <div class="sysinfo-key">${escAttr(k)}</div>
+                    <div class="sysinfo-value">${escAttr(v)}${sub ? ` <span class="sysinfo-muted">${escAttr(sub)}</span>` : ''}</div>
+                </div>`;
+
+            setHTML('sysInfoBuild', [
+                cell('Dashboard Version', 'v' + APP_VERSION),
+                cell('Build Number', APP_BUILD),
+                cell('Environment', APP_ENV),
+                cell('Last Deployment', fmtSysStamp(APP_DEPLOYED)),
+            ].join(''));
+
+            const latestCycle = latestMediaCycle();
+            const swOn = aircraftData.filter(a => !isLinefit(a) && swVersionOf(a) === latestSwVersion()).length;
+            const mediaOn = latestCycle
+                ? mediaFleet().filter(a => a.media && a.media.mediaCycle === latestCycle).length : 0;
+
+            setHTML('sysInfoData', [
+                cell('Aircraft in Scope', projectScope(), `${middlewareScope()} retrofit · ${hbcScope()} linefit`),
+                cell('Software Tracked', `${swOn} / ${middlewareScope()}`, `on ${latestSwVersion()}`),
+                cell('Media Tracked', `${mediaOn} / ${mediaScope()}`, latestCycle ? `on ${cycleToDisplay(latestCycle)}` : 'no cycle loaded'),
+                cell('Last Data Sync', sysRelTime(lastDataSyncAt),
+                     lastDataSyncAt ? fmtSysStamp(new Date(lastDataSyncAt).toISOString()) : ''),
+                cell('Data Source', 'Firebase Realtime Database', FIREBASE_DB_URL.replace(/^https:\/\//, '')),
+                cell('Dashboard Status', syncState.text),
+            ].join(''));
+
+            setHTML('sysInfoUsage', [
+                cell('Total Visits', visitTotals.total === null ? '—' : visitTotals.total.toLocaleString('en-US')),
+                cell('Visits Today', visitTotals.today === null ? '—' : visitTotals.today.toLocaleString('en-US'), 'UTC day'),
+            ].join(''));
+
+            setText('sysInfoSub', `NSG IFEC Fleet Dashboard · build ${APP_BUILD}`);
+            setText('sysInfoFoot',
+                `All times UTC (Zulu) · ${hbcScope()} HBC+ linefit aircraft tracked outside MSP loading scope`);
+        }
+
+        function initSysBar() {
+            const overlay = document.getElementById('sysInfoOverlay');
+            const close = document.getElementById('sysInfoClose');
+            if (close) close.onclick = closeSysInfo;
+            if (overlay) overlay.onclick = e => { if (e.target === overlay) closeSysInfo(); };
+            document.addEventListener('keydown', e => { if (e.key === 'Escape' && sysInfoIsOpen()) closeSysInfo(); });
+
+            renderSysBar();
+            initVisitCounter();
+            // Keeps "2m ago" honest without touching anything else.
+            setInterval(renderSysBar, 30000);
         }
 
         // Initialize on page load
         window.addEventListener('load', function() {
-            // Set last updated date
-            const today = new Date();
-            const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            const dateStr = today.toLocaleDateString('en-US', options);
-            document.getElementById('lastUpdated').textContent = dateStr;
-
             loadAuthSession();
+            initSysBar();
             initScheduleAddModal();
             initAddAircraftModal();
             updateAuthUI();

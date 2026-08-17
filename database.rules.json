@@ -71,6 +71,22 @@
       }
     },
 
+    "visits": {
+      ".read": true,
+
+      "total": {
+        ".write": "newData.exists() && newData.isNumber() && ((!data.exists() && newData.val() === 1) || newData.val() === data.val() + 1)"
+      },
+
+      "daily": {
+        "$day": {
+          ".write": "$day.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.exists() && newData.isNumber() && ((!data.exists() && newData.val() === 1) || newData.val() === data.val() + 1)"
+        }
+      },
+
+      "$other": { ".write": false }
+    },
+
     "editors": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
