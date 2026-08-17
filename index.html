@@ -1151,8 +1151,15 @@
         .media-widget-alert .media-widget-pct  { color: #a52834; }
         .media-widget-alert .media-widget-fill { background: #dc3545; }
 
-        .status-badge.maint-open  { background: #dc3545; color: #fff; }
-        .status-badge.maint-clear { background: #e8eaec; color: #5a6169; }
+        .status-badge.maint-open        { background: #dc3545; color: #fff; }
+        .status-badge.maint-serviceable { background: #e8eaec; color: #5a6169; }
+
+        /* Public vs Hidden is a configuration fact, not a health signal — tinted, not
+           red/green, so it cannot be misread as something needing attention. */
+        .status-badge.wifi-public { background: #e3ecf5; color: #2f5f8a; }
+        .status-badge.wifi-hidden { background: #eceaf2; color: #574b78; }
+
+        .maint-loc-input { min-width: 130px; }
 
         #maintenanceTable td:not(.col-comment) {
             white-space: nowrap;
@@ -2207,15 +2214,11 @@
                         <div class="quick-filters" id="maintTypeFilterPills"></div>
                     </div>
                     <div class="filter-group-block">
-                        <span class="filter-group-label">Station</span>
-                        <div class="quick-filters" id="maintStationFilterPills"></div>
-                    </div>
-                    <div class="filter-group-block">
                         <span class="filter-group-label">Maintenance</span>
                         <div class="quick-filters">
                             <button class="qf-btn active" onclick="setMaintFlagFilter('', this)">All</button>
                             <button class="qf-btn" onclick="setMaintFlagFilter('open', this)">Flagged</button>
-                            <button class="qf-btn" onclick="setMaintFlagFilter('clear', this)">Clear</button>
+                            <button class="qf-btn" onclick="setMaintFlagFilter('serviceable', this)">Serviceable</button>
                         </div>
                     </div>
                 </div>
@@ -2234,10 +2237,12 @@
                                 <th class="maint-expand-col"></th>
                                 <th class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortMaintTable(2)">Aircraft</th>
                                 <th class="sortable-th" data-col="3" data-label="Type" onclick="sortMaintTable(3)">Type</th>
-                                <th class="sortable-th" data-col="4" data-label="Station" onclick="sortMaintTable(4)">Station</th>
-                                <th class="sortable-th" data-col="5" data-label="Maintenance" onclick="sortMaintTable(5)">Maintenance</th>
-                                <th class="sortable-th" data-col="6" data-label="Flagged" onclick="sortMaintTable(6)">Flagged</th>
-                                <th class="sortable-th col-comment" data-col="7" data-label="Reason" onclick="sortMaintTable(7)">Reason</th>
+                                <th class="sortable-th" data-col="4" data-label="Retrofit Location" onclick="sortMaintTable(4)">Retrofit Location</th>
+                                <th class="sortable-th" data-col="5" data-label="WiFi" onclick="sortMaintTable(5)">WiFi</th>
+                                <th class="sortable-th" data-col="6" data-label="Activated" onclick="sortMaintTable(6)">Activated</th>
+                                <th class="sortable-th" data-col="7" data-label="Maintenance" onclick="sortMaintTable(7)">Maintenance</th>
+                                <th class="sortable-th" data-col="8" data-label="Flagged" onclick="sortMaintTable(8)">Flagged</th>
+                                <th class="sortable-th col-comment" data-col="9" data-label="Reason" onclick="sortMaintTable(9)">Reason</th>
                             </tr>
                         </thead>
                         <tbody id="maintenanceTableBody">
@@ -2660,10 +2665,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.4.1';
-        const APP_BUILD    = '2026.08.17.01';
+        const APP_VERSION  = '2.5.0';
+        const APP_BUILD    = '2026.08.17.02';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-17T20:30:00Z';
+        const APP_DEPLOYED = '2026-08-17T21:10:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -3472,7 +3477,7 @@
                 }
                 const mg101Sort = aircraft.mg101Status === 'done' ? 2 : aircraft.mg101Status === 'provisioned' ? 1 : 0;
 
-                const dateSort = toISODate(aircraft.completionDate) || '9999-99-99';
+                const dateSort = dateSortKey(toISODate(aircraft.completionDate)) || '99999999';
                 let dateCell;
                 if (editMode) {
                     dateCell = `<div class="date-cell-group">
@@ -3888,7 +3893,7 @@
                     <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
                     <td data-sort="${cycleSortKey(effective.mediaCycle)}">${statusCell}</td>
                     <td data-sort="${escAttr(effective.mediaSource || '')}">${loadedCell}</td>
-                    <td data-sort="${escAttr(effective.loadedDateUTC || '')}">${dateCell}</td>
+                    <td data-sort="${dateSortKey(effective.loadedDateUTC)}">${dateCell}</td>
                     <td class="col-comment" data-sort="${escAttr(media.comments || '')}">${commentCell}</td>
                 `;
                 tbody.appendChild(row);
@@ -4094,32 +4099,43 @@
         // false, so a new field must be added to database.rules.json before it can be
         // written at all.
         let maintEditMode = false;
-        let pendingMaint = {};      // { tail: { open, reason } } staged until Save
-        let maintTypeFilter = '', maintStationFilter = '', maintFlagFilter = '';
+        let pendingMaint = {};      // { tail: { open, reason, retrofitLocation, ... } } staged until Save
+        let maintTypeFilter = '', maintFlagFilter = '';
         const maintExpanded = new Set();
+
+        const WIFI_OPTIONS = [
+            { value: 'public', label: 'Public' },
+            { value: 'hidden', label: 'Hidden' },
+        ];
 
         function maintenanceFleet() {
             return activeFleet().sort((a, b) => a.id.localeCompare(b.id));
         }
 
-        // The real bases only. `N/A` is what the roster stores for the linefit pair,
-        // which is based nowhere — it is the absence of a station, not one more of them,
-        // so it gets no filter pill and no widget card. Those aircraft still list under
-        // "All", their Station cell just reads as empty.
-        function maintStations(fleet) {
-            return [...new Set(fleet.map(a => a.station).filter(s => s && s !== 'N/A'))].sort();
-        }
-
         // The stored record with anything staged-but-unsaved laid over it. flaggedAt is
         // stamped on Save, so it is never staged.
+        //
+        // retrofitLocation / wifiVisibility / activatedDate sit at the TOP LEVEL of
+        // /aircraft/{tail}, deliberately not under `maintenance`. Clearing a flag
+        // deletes that whole subtree, which would take the retrofit location and the
+        // activation date with it every time an aircraft was marked serviceable.
         function maintRecordOf(a) {
             const stored = a.maintenance || {};
             const staged = pendingMaint[a.id] || {};
+            const pick = (key, fallback) => staged[key] !== undefined ? staged[key] : fallback;
             return {
                 open:      staged.open   !== undefined ? staged.open   : !!stored.open,
                 reason:    staged.reason !== undefined ? staged.reason : (stored.reason || ''),
                 flaggedAt: stored.flaggedAt || '',
+                retrofitLocation: pick('retrofitLocation', a.retrofitLocation || ''),
+                wifiVisibility:   pick('wifiVisibility',   a.wifiVisibility   || ''),
+                activatedDate:    pick('activatedDate',    a.activatedDate    || ''),
             };
+        }
+
+        function wifiLabel(v) {
+            const opt = WIFI_OPTIONS.find(o => o.value === v);
+            return opt ? opt.label : '';
         }
 
         function populateMaintenanceTable() {
@@ -4130,27 +4146,44 @@
 
             maintenanceFleet().forEach((aircraft, idx) => {
                 const rec = maintRecordOf(aircraft);
-                const flag = rec.open ? 'open' : 'clear';
-                const station = aircraft.station || 'N/A';
+                const flag = rec.open ? 'open' : 'serviceable';
                 const expanded = maintExpanded.has(aircraft.id);
 
                 const row = document.createElement('tr');
                 if (rec.open) row.classList.add('maint-row-open');
                 row.dataset.type = aircraft.type;
-                row.dataset.station = station;
                 row.dataset.mflag = flag;
                 row.onclick = e => maintRowClick(e, aircraft.id);
 
                 const flagCell = editing
                     ? `<select class="edit-select" data-id="${aircraft.id}" data-field="open" onchange="handleMaintEdit(this)">
-                           <option value="clear" ${rec.open ? '' : 'selected'}>Clear</option>
+                           <option value="serviceable" ${rec.open ? '' : 'selected'}>Serviceable</option>
                            <option value="open" ${rec.open ? 'selected' : ''}>Flagged</option>
                        </select>`
-                    : `<span class="status-badge maint-${flag}">${rec.open ? 'FLAGGED' : 'CLEAR'}</span>`;
+                    : `<span class="status-badge maint-${flag}">${rec.open ? 'FLAGGED' : 'SERVICEABLE'}</span>`;
 
                 const reasonCell = editing
                     ? `<input class="edit-text comment-input" value="${escAttr(rec.reason)}" placeholder="What is open?" data-id="${aircraft.id}" data-field="reason" onchange="handleMaintEdit(this)">`
                     : `<span class="comment-text">${rec.reason ? escAttr(rec.reason) : '—'}</span>`;
+
+                // Free text, not a fixed list: the retrofit happens wherever the MRO is
+                // — Doha, Malta, Jeddah — and that set is not knowable in advance.
+                const locCell = editing
+                    ? `<input class="edit-text maint-loc-input" maxlength="60" value="${escAttr(rec.retrofitLocation)}" placeholder="City or MRO" data-id="${aircraft.id}" data-field="retrofitLocation" onchange="handleMaintEdit(this)">`
+                    : (rec.retrofitLocation ? escAttr(rec.retrofitLocation) : '—');
+
+                const wifiCell = editing
+                    ? `<select class="edit-select" data-id="${aircraft.id}" data-field="wifiVisibility" onchange="handleMaintEdit(this)">
+                           <option value="" ${rec.wifiVisibility ? '' : 'selected'}>—</option>
+                           ${WIFI_OPTIONS.map(o => `<option value="${o.value}" ${o.value === rec.wifiVisibility ? 'selected' : ''}>${o.label}</option>`).join('')}
+                       </select>`
+                    : (rec.wifiVisibility
+                        ? `<span class="status-badge wifi-${rec.wifiVisibility}">${wifiLabel(rec.wifiVisibility).toUpperCase()}</span>`
+                        : '—');
+
+                const activatedCell = editing
+                    ? `<input type="date" class="edit-date" value="${toISODate(rec.activatedDate)}" data-id="${aircraft.id}" data-field="activatedDate" onchange="handleMaintEdit(this)">`
+                    : (rec.activatedDate || '—');
 
                 // The caret owns a column of its own so the registration cell reads
                 // exactly as it does on every other page. Flagged rows sort to the top:
@@ -4160,9 +4193,11 @@
                     <td class="maint-expand-col"><span class="maint-caret ${expanded ? 'open' : ''}" role="button" aria-expanded="${expanded}" aria-label="Details for ${aircraft.id}">▶</span></td>
                     <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong></td>
                     <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
-                    <td>${station === 'N/A' ? '—' : station}</td>
+                    <td data-sort="${escAttr(rec.retrofitLocation)}">${locCell}</td>
+                    <td data-sort="${escAttr(rec.wifiVisibility)}">${wifiCell}</td>
+                    <td data-sort="${dateSortKey(toISODate(rec.activatedDate))}">${activatedCell}</td>
                     <td data-sort="${rec.open ? 0 : 1}">${flagCell}</td>
-                    <td data-sort="${escAttr(rec.flaggedAt)}">${rec.flaggedAt ? fmtMediaDate(rec.flaggedAt) : '—'}</td>
+                    <td data-sort="${dateSortKey(rec.flaggedAt)}">${rec.flaggedAt ? fmtMediaDate(rec.flaggedAt) : '—'}</td>
                     <td class="col-comment" data-sort="${escAttr(rec.reason)}">${reasonCell}</td>
                 `;
                 tbody.appendChild(row);
@@ -4187,10 +4222,13 @@
             const media = a.media || {};
             const linefit = isLinefit(a);
 
-            tr.innerHTML = `<td colspan="8">
+            tr.innerHTML = `<td colspan="10">
                 <dl class="maint-detail-grid">
                     ${item('Aircraft Type', escAttr(a.type))}
                     ${item('Base Station', a.station && a.station !== 'N/A' ? a.station : '')}
+                    ${item('Retrofit Location', escAttr(rec.retrofitLocation))}
+                    ${item('WiFi Visibility', wifiLabel(rec.wifiVisibility))}
+                    ${item('Activated', rec.activatedDate)}
                     ${item('Fit', linefit ? 'Linefit' : 'Retrofit')}
                     ${linefit
                         ? item('SBC Config A.13', a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
@@ -4203,7 +4241,7 @@
                     ${linefit
                         ? item('Media', 'Out of media scope')
                         : item('Media Cycle', media.mediaCycle ? cycleToDisplay(media.mediaCycle) : 'No media')}
-                    ${item('Maintenance Flag', rec.open ? 'Open' : 'Clear')}
+                    ${item('Maintenance Flag', rec.open ? 'Open' : 'Serviceable')}
                     ${item('Flagged (UTC)', rec.flaggedAt ? fmtMediaDate(rec.flaggedAt) : '—')}
                     ${item('Reason', rec.reason ? escAttr(rec.reason) : '—')}
                 </dl>
@@ -4249,17 +4287,12 @@
                 </div>`;
             };
 
+            // Two cards, and deliberately only two: they are complements of the same
+            // total, so anything else on this strip would be a third way of saying it.
+            // "Serviceable" rather than "Clear" — the MRO term for an aircraft with
+            // nothing outstanding against it.
             let html = card('Open Issues', open.length, fleet.length, open.length ? 'alert' : 'no_media');
-            html += card('Clear', fleet.length - open.length, fleet.length, 'latest');
-            // One card per real station, measured against that station's own active
-            // count — so a station with two of its four aircraft open reads 50%.
-            // N/A is not a station: the linefit pair is based nowhere, and a card for
-            // it was reading as a third base.
-            maintStations(fleet).forEach(s => {
-                const atStation = fleet.filter(a => a.station === s);
-                const openHere = atStation.filter(maintenanceOpen).length;
-                html += card(s, openHere, atStation.length, openHere ? 'alert' : 'no_media');
-            });
+            html += card('Serviceable', fleet.length - open.length, fleet.length, 'latest');
             grid.innerHTML = html;
         }
 
@@ -4275,27 +4308,15 @@
                     typeBox.dataset.types = types.join('|');
                 }
             }
-
-            const stBox = document.getElementById('maintStationFilterPills');
-            if (stBox) {
-                const stations = maintStations(fleet);
-                if (stBox.dataset.stations !== stations.join('|')) {
-                    stBox.innerHTML = `<button class="qf-btn ${maintStationFilter === '' ? 'active' : ''}" onclick="setMaintStationFilter('', this)">All</button>` +
-                        stations.map(s => `<button class="qf-btn ${maintStationFilter === s ? 'active' : ''}" onclick="setMaintStationFilter('${escAttr(s)}', this)">${s}</button>`).join('');
-                    stBox.dataset.stations = stations.join('|');
-                }
-            }
         }
 
-        function setMaintTypeFilter(t, btn)    { maintTypeFilter = t; setActiveInGroup(btn); applyMaintFilters(); }
-        function setMaintStationFilter(s, btn) { maintStationFilter = s; setActiveInGroup(btn); applyMaintFilters(); }
-        function setMaintFlagFilter(f, btn)    { maintFlagFilter = f; setActiveInGroup(btn); applyMaintFilters(); }
+        function setMaintTypeFilter(t, btn) { maintTypeFilter = t; setActiveInGroup(btn); applyMaintFilters(); }
+        function setMaintFlagFilter(f, btn) { maintFlagFilter = f; setActiveInGroup(btn); applyMaintFilters(); }
 
         function applyMaintFilters() {
             document.querySelectorAll('#maintenanceTableBody tr').forEach(row => {
                 if (row.classList.contains('maint-detail-row')) return;   // follows its parent below
                 const ok = (maintTypeFilter === '' || row.dataset.type === maintTypeFilter)
-                    && (maintStationFilter === '' || row.dataset.station === maintStationFilter)
                     && (maintFlagFilter === '' || row.dataset.mflag === maintFlagFilter);
                 row.style.display = ok ? '' : 'none';
                 const detail = row.nextElementSibling;
@@ -4304,7 +4325,7 @@
         }
 
         function resetMaintenanceTable() {
-            maintTypeFilter = ''; maintStationFilter = ''; maintFlagFilter = '';
+            maintTypeFilter = ''; maintFlagFilter = '';
             maintExpanded.clear();
             document.querySelectorAll('#maintenance .filter-groups .quick-filters').forEach(group => {
                 group.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
@@ -4343,7 +4364,10 @@
             const id = el.dataset.id, field = el.dataset.field;
             const entry = pendingMaint[id] || {};
             if (field === 'open') entry.open = el.value === 'open';
-            else entry.reason = el.value.trim();
+            // The input is ISO; the project stores and shows DD-Mon-YYYY.
+            else if (field === 'activatedDate') entry.activatedDate = el.value ? fmtDate(el.value) : '';
+            else if (field === 'wifiVisibility') entry.wifiVisibility = el.value;
+            else entry[field] = el.value.trim();
             pendingMaint[id] = entry;
             setSyncStatus(`🟡 ${id} staged — press Save`, '#e0a800');
             // Only the flag repaints the row (badge, highlight, sort key). Re-rendering
@@ -4366,6 +4390,14 @@
             ids.forEach(id => {
                 const e = pendingMaint[id];
                 const stored = (aircraftLive[id] && aircraftLive[id].maintenance) || {};
+
+                // Aircraft attributes, written at the top level. They must be staged
+                // before the early return below, or clearing a flag in the same batch
+                // would silently drop them.
+                ['retrofitLocation', 'wifiVisibility', 'activatedDate'].forEach(f => {
+                    if (e[f] !== undefined) multi[`${id}/${f}`] = e[f] || null;
+                });
+
                 if (e.open === false) {
                     // Clearing drops the whole record rather than storing open:false, so
                     // a cleared aircraft carries no stale reason or timestamp. Nothing
@@ -4436,7 +4468,7 @@
                     <td>${idx + 1}</td>
                     <td data-sort="${aircraft.id}"><strong>HZ-${aircraft.id}</strong></td>
                     <td data-sort="${done ? 1 : 0}">${beamCell}</td>
-                    <td data-sort="${toISODate(aircraft.completionDate) || '9999-99-99'}">${dateCell}</td>
+                    <td data-sort="${dateSortKey(toISODate(aircraft.completionDate)) || '99999999'}">${dateCell}</td>
                     <td class="col-comment" data-sort="${escAttr(aircraft.note || '')}">${commentCell}</td>
                 `;
                 tbody.appendChild(row);
@@ -4749,6 +4781,15 @@
                 jedSection.style.display = '';
                 ruhSection.style.display = '';
             }
+        }
+
+        // sortTable tries parseFloat before falling back to a string compare, and
+        // parseFloat('2026-05-19') is 2026 — so every date within a year compared equal
+        // and date columns only ever sorted by year. Stripping the separators makes the
+        // key a real number (20260519) that sorts correctly on the numeric path.
+        // Pass an ISO date or timestamp; '' stays '' so blanks fall to the string path.
+        function dateSortKey(isoish) {
+            return String(isoish || '').replace(/\D/g, '');
         }
 
         let lastSort = {};

@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.4.1, 2026-08-17)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.5.0, 2026-08-17)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -87,6 +87,18 @@ adding it to the rules first.
 | `note` | Software-page comment |
 | `media` | `{ mediaCycle, mediaDisplay, mediaSource, loadedDateUTC, comments }` |
 | `maintenance` | `{ open, reason, flaggedAt }` — see the Maintenance tab |
+| `retrofitLocation` | free text ≤ 60: the city or MRO where the retrofit was done (Doha, Malta, Jeddah…) |
+| `wifiVisibility` | `public` \| `hidden` |
+| `activatedDate` | `DD-Mon-YYYY` |
+
+The last three are edited on the Maintenance tab but stored at the **top level**,
+deliberately *not* under `maintenance` — clearing a flag writes `maintenance: null`,
+which would take them with it every time an aircraft was marked serviceable.
+
+`retrofitLocation` is not `completionLocation`. Completion is where the *software*
+load finished and is constrained to Jeddah/Riyadh; retrofit location is where the
+physical installation happened and can be any MRO anywhere. If those ever turn out
+to mean the same thing operationally, collapse them — do not keep both in sync.
 
 `media.comments` is deliberately separate from `note` so editing one cannot
 clobber the other.
@@ -171,7 +183,13 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
    Columns: `# | Aircraft | Type | Status | Media Loaded | Date UTC | Comments`.
 4. **Maintenance** — the **active** fleet only (`fleetStatus === 'active'`), the same
    set the global Maintenance card counts against, so the two cannot disagree.
-   Columns: `# | ▸ | Aircraft | Type | Station | Maintenance | Flagged | Reason`.
+   Columns: `# | ▸ | Aircraft | Type | Retrofit Location | WiFi | Activated |
+   Maintenance | Flagged | Reason`. Two widgets only — Open Issues and
+   Serviceable — and they are complements of one total, so a third card on that
+   strip would just be another way of saying the same thing.
+   **"Serviceable", not "Clear"** — the MRO term for an aircraft with nothing
+   outstanding against it. The badge, the widget and the filter pill all use it;
+   the `mflag` dataset value is `serviceable`.
    Clicking anywhere on a row opens a drawer of per-aircraft detail — that is where
    **SSID status and the remaining system checks go**. The caret has a hair-width
    column to itself (col 1, `.maint-expand-col`) so the Aircraft cell stays plain
@@ -181,9 +199,8 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
    would collapse the row. **Sortable columns start at 2** — sorting also collapses
    the drawers first (`sortMaintTable()`), because `sortTable` treats a one-cell
    detail row as a peer.
-   `N/A` is not a station: it is what the roster stores for the linefit pair, which
-   is based nowhere, so it gets no pill and no widget card and its Station cell
-   reads `—`. The station cards therefore need not sum to Open Issues.
+   There is no station filter — the tab is about the retrofit and its systems, not
+   about which base an aircraft flies from. Base Station is still in the drawer.
 5. **Schedule** — standalone forward-looking plan, deliberately **not** linked
    to completion status. Entries drop off automatically 24h past their slot
    (`SCHEDULE_GRACE_MS`); in that window they show `⚠ Overdue` so they can be
@@ -288,6 +305,12 @@ The HBC+ exclusion note the old footer carried still exists — it is the
 
 ## Conventions
 
+- **A date column's `data-sort` must go through `dateSortKey()`.** `sortTable`
+  tries `parseFloat` before falling back to a string compare, and
+  `parseFloat('2026-05-19')` is `2026` — so a raw ISO key made every date within a
+  year compare equal, and date columns silently sorted by year only. `dateSortKey`
+  strips the separators to give a real number (`20260519`). All four date columns
+  use it.
 - **Dates are always `DD-Mon-YYYY`** (e.g. `17-Aug-2026`). Never `M/D/YYYY` —
   month-first numeric dates are not used in this region and read as the wrong
   day. `parseScheduleUTC()` / `toISODate()` / `fmtDate()` are the only parsers.
