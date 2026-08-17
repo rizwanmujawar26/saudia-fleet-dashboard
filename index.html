@@ -216,18 +216,36 @@
             width: 1%;
         }
 
-        #aircraftTable th {
+        #aircraftTable th,
+        #hbcTable th {
             padding: 12px 10px;
         }
 
-        #aircraftTable td {
+        #aircraftTable td,
+        #hbcTable td {
             padding: 10px;
         }
 
-        #aircraftTable .col-comment {
+        /* Everything centres so headers sit over their data; only free text reads
+           badly that way, so Comments stays left. */
+        #aircraftTable th, #aircraftTable td,
+        #hbcTable th, #hbcTable td {
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        #aircraftTable .col-comment,
+        #hbcTable .col-comment {
             width: 100%;
             white-space: normal;
             min-width: 180px;
+            text-align: left;
+        }
+
+        #hbcTable td:not(.col-comment),
+        #hbcTable th:not(.col-comment) {
+            white-space: nowrap;
+            width: 1%;
         }
 
         .comment-text {
@@ -506,8 +524,11 @@
             user-select: none;
         }
 
+        /* Must be an opaque green. A translucent white here outranks the th's own
+           background, so the header washed out to near-white and its white text
+           disappeared. */
         .sortable-th:hover {
-            background: rgba(255,255,255,0.12);
+            background: #137a49;
         }
 
         /* Project Overview panel — one grey field behind both blocks inside it */
@@ -1547,9 +1568,9 @@
                                 <th class="sortable-th" data-col="3" data-label="Status" onclick="sortTable('aircraftTable', 3)">Status</th>
                                 <th class="sortable-th" data-col="4" data-label="Middleware 2.1.0" onclick="sortTable('aircraftTable', 4)">Middleware 2.1.0</th>
                                 <th class="sortable-th" data-col="5" data-label="IPHO Mode" onclick="sortTable('aircraftTable', 5)">IPHO Mode</th>
-                                <th class="sortable-th" data-col="6" data-label="SES Migration to MG 101" onclick="sortTable('aircraftTable', 6)">SES Migration to MG 101</th>
-                                <th class="sortable-th" data-col="7" data-label="Completion Date (UTC)" onclick="sortTable('aircraftTable', 7)">Completion Date (UTC)</th>
-                                <th class="sortable-th" data-col="8" data-label="Completion Location" onclick="sortTable('aircraftTable', 8)">Completion Location</th>
+                                <th class="sortable-th" data-col="6" data-label="SES Migration" onclick="sortTable('aircraftTable', 6)">SES Migration</th>
+                                <th class="sortable-th" data-col="7" data-label="Date" onclick="sortTable('aircraftTable', 7)">Date</th>
+                                <th class="sortable-th" data-col="8" data-label="Base" onclick="sortTable('aircraftTable', 8)">Base</th>
                                 <th class="sortable-th col-comment" data-col="9" data-label="Comments" onclick="sortTable('aircraftTable', 9)">Comments</th>
                             </tr>
                         </thead>
@@ -1565,9 +1586,10 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Aircraft</th>
-                                <th>BEAMCFG_MOD3_NSG_A.13 Status</th>
-                                <th>Completion Date (UTC)</th>
+                                <th class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortTable('hbcTable', 1)">Aircraft</th>
+                                <th class="sortable-th" data-col="2" data-label="BEAMCFG" onclick="sortTable('hbcTable', 2)">BEAMCFG</th>
+                                <th class="sortable-th" data-col="3" data-label="Date" onclick="sortTable('hbcTable', 3)">Date</th>
+                                <th class="sortable-th col-comment" data-col="4" data-label="Comments" onclick="sortTable('hbcTable', 4)">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="hbcTableBody">
@@ -2777,21 +2799,23 @@
                 let iphoCell;
                 if (editMode) {
                     iphoCell = `<select class="edit-select" data-id="${aircraft.id}" data-field="iphoStatus" onchange="handleAircraftEdit(this)">
-                        <option value="" ${!iphoDone ? 'selected' : ''}>Pending</option>
-                        <option value="completed" ${iphoDone ? 'selected' : ''}>Done</option>
+                        <option value="" ${!iphoDone ? 'selected' : ''}>Disabled</option>
+                        <option value="completed" ${iphoDone ? 'selected' : ''}>Enabled</option>
                     </select>`;
                 } else {
-                    iphoCell = `<span class="system-indicator system-${iphoDone ? 'completed' : 'pending'}"></span>${iphoDone ? 'Done' : 'Pending'}`;
+                    iphoCell = `<span class="system-indicator system-${iphoDone ? 'completed' : 'pending'}"></span>${iphoDone ? 'Enabled' : 'Disabled'}`;
                 }
                 const iphoSort = iphoDone ? 'completed' : 'pending';
 
-                const mg101Label = aircraft.mg101Status === 'done' ? 'Done' : aircraft.mg101Status === 'provisioned' ? 'Provisioned' : 'Pending';
+                // The column reports which modem generation the aircraft is on, so the
+                // labels name it: not-yet-migrated reads MG6, migrated reads MG101.
+                const mg101Label = aircraft.mg101Status === 'done' ? 'MG101' : aircraft.mg101Status === 'provisioned' ? 'Provisioned' : 'MG6';
                 let mg101Cell;
                 if (editMode) {
                     mg101Cell = `<select class="edit-select" data-id="${aircraft.id}" data-field="mg101Status" onchange="handleAircraftEdit(this)">
-                        <option value="" ${!aircraft.mg101Status ? 'selected' : ''}>Pending</option>
+                        <option value="" ${!aircraft.mg101Status ? 'selected' : ''}>MG6</option>
                         <option value="provisioned" ${aircraft.mg101Status === 'provisioned' ? 'selected' : ''}>Provisioned</option>
-                        <option value="done" ${aircraft.mg101Status === 'done' ? 'selected' : ''}>Done</option>
+                        <option value="done" ${aircraft.mg101Status === 'done' ? 'selected' : ''}>MG101</option>
                     </select>`;
                 } else {
                     mg101Cell = `<span class="system-indicator system-${aircraft.mg101Status === 'done' ? 'completed' : 'pending'}"></span>${mg101Label}`;
@@ -2870,14 +2894,19 @@
                 } else {
                     dateCell = `<span class="view-text">${fmtDate(aircraft.completionDate) || '—'}</span>`;
                 }
+                const commentCell = editMode
+                    ? `<input class="edit-text comment-input" value="${escAttr(aircraft.note || '')}" placeholder="Add a comment" data-id="${aircraft.id}" data-field="note" onchange="handleAircraftEdit(this)">`
+                    : `<span class="comment-text">${aircraft.note ? escAttr(aircraft.note) : '—'}</span>`;
                 row.innerHTML = `
                     <td>${idx + 1}</td>
-                    <td><strong>HZ-${aircraft.id}</strong></td>
-                    <td>${beamCell}</td>
-                    <td>${dateCell}</td>
+                    <td data-sort="${aircraft.id}"><strong>HZ-${aircraft.id}</strong></td>
+                    <td data-sort="${done ? 1 : 0}">${beamCell}</td>
+                    <td data-sort="${toISODate(aircraft.completionDate) || '9999-99-99'}">${dateCell}</td>
+                    <td class="col-comment" data-sort="${escAttr(aircraft.note || '')}">${commentCell}</td>
                 `;
                 tbody.appendChild(row);
             });
+            updateSortIndicators('hbcTable');
         }
 
         // Single parser for every schedule date, so the format is defined in exactly
@@ -3239,7 +3268,9 @@
                 const col = parseInt(th.dataset.col, 10);
                 const label = th.dataset.label || th.textContent.trim();
                 const isSorted = sort && sort.col === col;
-                th.textContent = label + (isSorted ? (sort.dir === 1 ? ' ↑' : ' ↓') : '');
+                // Unsorted columns still show ↕, otherwise there's nothing to say
+                // the header is clickable at all.
+                th.textContent = label + (isSorted ? (sort.dir === 1 ? ' ↑' : ' ↓') : ' ↕');
             });
         }
 
