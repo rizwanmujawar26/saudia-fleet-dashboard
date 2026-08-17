@@ -83,8 +83,8 @@ the repo root, in case anything needs restoring.
 2. **Live fields** — Firebase `/aircraft/{tailId}`. Each one is constrained by
    a `.validate` rule, so the allowed values below are enforced, not just
    conventions:
-   - `status`: `'scheduled' | 'in-progress' | 'completed' | 'excluded'`
-     (`'excluded'` marks the two HBC+ aircraft; `populateHbcTable` filters on it)
+   - *(`status` was removed — it duplicated facts now held by `swVersion` and
+     `fit`. See "Single sources" below.)*
    - `completionDate`: string, format `'DD-Mon-YYYY'` (e.g. `'13-Aug-2026'`)
    - `completionLocation`: `'Jeddah' | 'Riyadh' | null`
    - `iphoStatus`: `'completed' | null`
@@ -99,9 +99,28 @@ the repo root, in case anything needs restoring.
    - `beamcfgStatus` (ASBA/ASBB only): anything other than `'done'` renders as
      Pending (ASBA/ASBB currently hold `'pending'`).
 
-**"Completed" is defined consistently everywhere on the page as:**
-`status === 'completed' AND completionLocation is set`. Don't compute it any
-other way — several widgets rely on this exact definition matching.
+## Single sources — do not reintroduce duplicates
+
+Two facts were each stored twice, which meant an editor could change one and
+leave the dashboard self-contradictory. Both are now derived from exactly one
+field:
+
+- **Linefit / HBC+ scope** — `fit === 'linefit'` on `/fleet` is the only marker.
+  Use `isLinefit(a)`. The old `/aircraft` `status === 'excluded'` is gone.
+- **Completion** — `isCompletedStrict(a)` is
+  `swVersionOf(a) === latestSwVersion() && completionLocation`. The Status
+  column is a *view* of this via `aircraftStatusOf(a)`, not an editable field;
+  the old stored `status` is gone and the rules now reject it.
+
+So an editor sets **Middleware version** and **Completion Location**, and the
+Status column, row highlight, type cards, station cards, Timeline and the top
+metric cards all follow. Verified: upgrading one aircraft moved completed rows,
+the metric, the total card, the station count, the version widget and the
+Timeline together, 24 -> 25.
+
+Note the metric card counts aircraft *on the latest middleware* (software
+level), while completion additionally requires a location — so they can
+legitimately differ by the aircraft still showing "⚠ needed to count as done".
 
 **Project scope math (also used everywhere):**
 `42 total = 40 Middleware-scope aircraft + 2 HBC+ SBC-config aircraft (ASBA, ASBB)`

@@ -2020,7 +2020,7 @@
         // Scope numbers are counted from the roster, not hardcoded, so adding aircraft
         // updates every metric card and percentage at once.
         function projectScope()    { return fleetRoster.length; }
-        function hbcScope()        { return aircraftData.filter(a => a.status === 'excluded').length; }
+        function hbcScope()        { return aircraftData.filter(isLinefit).length; }
         function middlewareScope() { return projectScope() - hbcScope(); }
         function mediaScope()      { return middlewareScope(); }   // HBC+ pair is out of media scope
 
@@ -2708,12 +2708,12 @@
             populateTypeFilterOptions();
 
             // Default view: alphabetical by registration (also drives the # column)
-            const mainFleet = aircraftData.filter(a => a.status !== 'excluded').sort((a, b) => a.id.localeCompare(b.id));
+            const mainFleet = aircraftData.filter(a => !isLinefit(a)).sort((a, b) => a.id.localeCompare(b.id));
 
             mainFleet.forEach((aircraft, idx) => {
                 const row = document.createElement('tr');
-                if (aircraft.status === 'completed') row.classList.add('completed');
-                row.dataset.status = aircraft.status || 'scheduled';
+                if (isCompletedStrict(aircraft)) row.classList.add('completed');
+                row.dataset.status = aircraftStatusOf(aircraft);
                 row.dataset.type = aircraft.type;
                 row.dataset.location = aircraft.completionLocation || '';
 
@@ -2723,23 +2723,15 @@
                     ? `<input class="edit-text comment-input" value="${escAttr(aircraft.note || '')}" placeholder="Add a comment" data-id="${aircraft.id}" data-field="note" onchange="handleAircraftEdit(this)">`
                     : `<span class="comment-text">${aircraft.note ? escAttr(aircraft.note) : '—'}</span>`;
 
-                const statusLabel = aircraft.status === 'completed' ? 'Completed' : aircraft.status === 'in-progress' ? 'In Progress' : 'Scheduled';
-                const statusSort = aircraft.status || 'scheduled';
-                let statusCell;
-                if (editMode) {
-                    statusCell = `<select class="edit-select" data-id="${aircraft.id}" data-field="status" onchange="handleAircraftEdit(this)">
-                        <option value="scheduled" ${aircraft.status === 'scheduled' || !aircraft.status ? 'selected' : ''}>Scheduled</option>
-                        <option value="in-progress" ${aircraft.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
-                        <option value="completed" ${aircraft.status === 'completed' ? 'selected' : ''}>Completed</option>
-                    </select>`;
-                } else {
-                    statusCell = `<span class="status-badge status-${statusSort}">${statusLabel}</span>`;
-                }
+                // Read-only: it is computed from Middleware + Completion Location, both
+                // of which are editable right here in the same row.
+                const statusSort = aircraftStatusOf(aircraft);
+                const statusCell = `<span class="status-badge status-${statusSort}">${statusSort === 'completed' ? 'Completed' : 'Scheduled'}</span>`;
 
                 // Middleware column always mirrors Status as read-only text
                 // Middleware is now the aircraft's actual software level, not a mirror of
                 // status. SW_VERSIONS is ordered oldest-first; the last entry is "latest".
-                const ver = aircraft.swVersion || SW_VERSIONS[0];
+                const ver = swVersionOf(aircraft);
                 const isLatest = ver === latestSwVersion();
                 let middlewareCell;
                 if (editMode) {
@@ -2790,7 +2782,7 @@
                 }
 
                 const loc = aircraft.completionLocation || '';
-                const locWarning = (aircraft.status === 'completed' && !loc) ? `<div class="loc-warning">⚠ needed to count as done</div>` : '';
+                const locWarning = (swVersionOf(aircraft) === latestSwVersion() && !loc) ? `<div class="loc-warning">⚠ needed to count as done</div>` : '';
                 let locCell;
                 if (editMode) {
                     locCell = `<select class="edit-select" data-id="${aircraft.id}" data-field="completionLocation" onchange="handleAircraftEdit(this)">
@@ -2877,10 +2869,16 @@
         // and it gains its own widget and edit option with no other change.
         const SW_VERSIONS = ['2.0.0', '2.1.0'];
 
+        function swVersionOf(a) { return a.swVersion || SW_VERSIONS[0]; }
+
+        // Linefit aircraft (the HBC+ pair) are out of scope for middleware, media and
+        // the completion maths. `fit` on the fleet roster is the only thing that says so.
+        function isLinefit(a) { return a.fit === 'linefit'; }
+
         function latestSwVersion() { return SW_VERSIONS[SW_VERSIONS.length - 1]; }
 
         function swFleet() {
-            return aircraftData.filter(a => a.status !== 'excluded');
+            return aircraftData.filter(a => !isLinefit(a));
         }
 
         function renderSwVersionWidgets() {
@@ -2890,7 +2888,7 @@
             const scope = fleet.length || 1;
             const counts = {};
             fleet.forEach(a => {
-                const v = a.swVersion || SW_VERSIONS[0];
+                const v = swVersionOf(a);
                 counts[v] = (counts[v] || 0) + 1;
             });
             // Newest first, and include any version present in the data even if it is
@@ -3146,7 +3144,7 @@
 
         // Media is tracked for the main fleet only — the HBC+ pair carries no media load.
         function mediaFleet() {
-            return aircraftData.filter(a => a.status !== 'excluded').sort((a, b) => a.id.localeCompare(b.id));
+            return aircraftData.filter(a => !isLinefit(a)).sort((a, b) => a.id.localeCompare(b.id));
         }
 
         function populateMediaTable() {
@@ -3386,7 +3384,7 @@
             const tbody = document.getElementById('hbcTableBody');
             if (!tbody) return;
             tbody.innerHTML = '';
-            const hbc = aircraftData.filter(a => a.status === 'excluded').sort((a, b) => a.id.localeCompare(b.id));
+            const hbc = aircraftData.filter(isLinefit).sort((a, b) => a.id.localeCompare(b.id));
             hbc.forEach((aircraft, idx) => {
                 const row = document.createElement('tr');
                 const done = aircraft.beamcfgStatus === 'done';
@@ -3814,8 +3812,16 @@
         // aircraftData + scheduleLive, called after every load and every live update.
         // "Completed" for all counting/reporting purposes: status=completed AND a completion
         // location has been recorded (single consistent definition, used everywhere on the page).
+        // Completion derives from the software the aircraft actually runs. It used to
+        // read a separately stored `status`, which meant setting an aircraft to 2.1.0
+        // left it counted as incomplete until someone remembered to flip status too.
         function isCompletedStrict(a) {
-            return a.status === 'completed' && !!a.completionLocation;
+            return swVersionOf(a) === latestSwVersion() && !!a.completionLocation;
+        }
+
+        // The Status column is a view of that, not a field of its own.
+        function aircraftStatusOf(a) {
+            return isCompletedStrict(a) ? 'completed' : 'scheduled';
         }
 
         const TYPE_GROUPS = [
@@ -4077,11 +4083,11 @@
         // come from the live roster (see projectScope/hbcScope/middlewareScope).
 
         function updateMetrics() {
-            const active = aircraftData.filter(a => a.status !== 'excluded');
+            const active = aircraftData.filter(a => !isLinefit(a));
             const completedStrict = active.filter(isCompletedStrict);
             // Counts aircraft actually on the latest middleware, which is now a stored
             // version rather than a by-product of the completion status.
-            const middlewareCount = active.filter(a => (a.swVersion || SW_VERSIONS[0]) === latestSwVersion()).length;
+            const middlewareCount = active.filter(a => swVersionOf(a) === latestSwVersion()).length;
             const middlewareRate = Math.round((middlewareCount / middlewareScope()) * 1000) / 10;
 
             const hbcAircraft = aircraftData.filter(a => a.id === 'ASBA' || a.id === 'ASBB');
