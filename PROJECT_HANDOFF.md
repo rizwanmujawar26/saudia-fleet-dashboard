@@ -52,7 +52,7 @@ and refresh a minute before expiry. Writes carry `?auth=<idToken>`.
 public client config that identify the project, not secrets — the rules are what
 grant access.
 
-**Where editing appears:** Aircraft Status tab only. The actions row shows
+**Where editing appears:** the Software, Media and Schedule tabs. The actions row shows
 `🔒 Sign in to edit` until a signed-in editor is present, then `✏️ Edit` /
 `💾 Save` plus the account email and Sign out. The ✏️ comment button renders
 only for signed-in editors. **The Overview timeline only ever displays
@@ -82,7 +82,9 @@ the repo root, in case anything needs restoring.
    - `completionLocation`: `'Jeddah' | 'Riyadh' | null`
    - `iphoStatus`: `'completed' | null`
    - `mg101Status`: `'' | 'provisioned' | 'done'` (SES Migration to MG 101)
-   - `note`: free-text comment string
+   - `note`: free-text comment string (Software page comments)
+   - `media`: `{ mediaCycle, mediaDisplay, mediaSource, loadedDateUTC, comments }`
+     — see the Media tab below; `media.comments` is separate from `note`
    - `beamcfgStatus` (ASBA/ASBB only): anything other than `'done'` renders as
      Pending (ASBA/ASBB currently hold `'pending'`).
 
@@ -100,7 +102,7 @@ Firebase JS SDK, to keep the page a single lean file. Known quirk: the local
 back-to-back (only observed during heavy scripted testing); a page reload
 always self-heals it.
 
-## Tabs (4 total — System Tracking and By Station were removed earlier)
+## Tabs (5 total — System Tracking and By Station were removed earlier)
 
 1. **Overview** — top 4 metric cards (Middleware 23/40, HBC+ SBC 0/2, Project
    Completion %, Remaining), Fleet Completion Overview (6 cards: Total
@@ -118,19 +120,43 @@ always self-heals it.
    come back.
    Each Fleet Completion Overview card lists **only completed** aircraft, or
    "None yet" — never its full scope.
-2. **Aircraft Status** — Main Fleet table (40 aircraft, all columns) + HBC+
+2. **Software** (tab id is still `aircraft`) — Main Fleet table (40 aircraft, all columns) + HBC+
    table (2 aircraft, simplified BEAMCFG-only columns). Quick-filter pill
    groups: Aircraft Type / Location / Status. Default sort alphabetical by
    registration with a Reset button; sortable columns show ↑/↓. **This is the
    only tab where data can be edited**, and only by a signed-in allowlisted
    editor (see the security section above).
-3. **Schedule** — standalone forward-looking plan, deliberately **not**
+3. **Media** — monthly media-loading status for all 42 aircraft. Columns:
+   `# | Aircraft | Type | Status | Media Loaded | Date UTC | Comments`.
+   Everything on this page derives from one stored object per aircraft at
+   `/aircraft/{tail}/media`:
+   ```
+   mediaCycle    "0826"                  MMYY
+   mediaDisplay  "August 2026"
+   mediaSource   "ME-SVA-UGO-0826"
+   loadedDateUTC "2026-08-16T04:22:00Z"
+   comments      free text (separate from the Software page's `note`)
+   ```
+   Editors type one string — `2026-08-16 04:22:00 (ME-SVA-UGO-0826)` — and
+   `parseMediaEntry()` derives all four fields. Seconds are optional.
+   **mediaStatus is never stored.** It is relative to the newest cycle in the
+   fleet, so it is computed on every render by `mediaStatusType()`: equal to the
+   newest cycle = `latest` (green), one calendar month behind = `previous`
+   (blue), anything older = `older` (amber), absent = `no_media` (grey).
+   Storing it would go stale the moment a newer cycle lands.
+   Cycles are compared via `cycleSortKey()` (MMYY → YYYYMM) so January sorts
+   above the previous December; `previousCycle()` rolls the year likewise.
+   The month widgets and the Media Month filter pills are both built from the
+   cycles actually present, newest first — a new cycle creates its own widget
+   and pill with no code change, and months with no aircraft never appear.
+
+4. **Schedule** — standalone forward-looking plan, deliberately **not**
    linked to `aircraftData` completion status (an aircraft can be
    "Completed" for Middleware but still have a separate, unrelated
    upcoming workpackage here). Entries whose date has passed are filtered
    out automatically at render time — the list self-prunes, no manual
    cleanup needed. Currently holds 5 upcoming entries, all Jeddah.
-4. **Downloads** — PDF/PNG/JPEG export per tab + full dashboard + square
+5. **Downloads** — PDF/PNG/JPEG export per tab + full dashboard + square
    metrics format, via html2canvas + jsPDF.
 
 ## Branding

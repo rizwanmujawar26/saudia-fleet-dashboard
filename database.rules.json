@@ -17,6 +17,15 @@
         "beamcfgStatus":      { ".validate": "newData.isString() && newData.val().matches(/^(pending|done)$/)" },
         "note":               { ".validate": "newData.isString() && newData.val().length <= 500" },
 
+        "media": {
+          "mediaCycle":    { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)" },
+          "mediaDisplay":  { ".validate": "newData.isString() && newData.val().length <= 32" },
+          "mediaSource":   { ".validate": "newData.isString() && newData.val().length <= 64" },
+          "loadedDateUTC": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/)" },
+          "comments":      { ".validate": "newData.isString() && newData.val().length <= 500" },
+          "$other":        { ".validate": false }
+        },
+
         "$other":             { ".validate": false }
       }
     },

@@ -915,6 +915,50 @@
             white-space: nowrap;
         }
 
+        /* ===== Media page ===== */
+        /* Status colours are assigned by recency, never chosen by hand. */
+        .status-badge.media-latest   { background: #28a745; color: #fff; }
+        .status-badge.media-previous { background: #1f8fe0; color: #fff; }
+        .status-badge.media-older    { background: #f0ad4e; color: #4a3208; }
+        .status-badge.media-none     { background: #adb5bd; color: #fff; }
+
+        #mediaTable tbody tr.media-row-latest {
+            background: rgba(40, 167, 69, 0.08);
+        }
+
+        #mediaTable td:not(.col-comment) {
+            white-space: nowrap;
+        }
+
+        .media-source {
+            font-family: Consolas, 'SF Mono', Menlo, monospace;
+            font-size: 12.5px;
+            color: #444;
+        }
+
+        .media-input {
+            min-width: 250px;
+            font-family: Consolas, 'SF Mono', Menlo, monospace;
+            font-size: 11.5px;
+        }
+
+        .edit-invalid {
+            border-color: #dc3545;
+            background: #fdf0f1;
+        }
+
+        #mediaWidgets {
+            margin-bottom: 22px;
+        }
+
+        .media-widget .stat-value { margin: 6px 0 2px; }
+        .media-widget .stat-list  { min-height: 0; }
+
+        .media-widget-latest   { border-left-color: #28a745; }
+        .media-widget-previous { border-left-color: #1f8fe0; }
+        .media-widget-older    { border-left-color: #f0ad4e; }
+        .media-widget-no_media { border-left-color: #adb5bd; }
+
         .sched-status-cell {
             white-space: nowrap;
         }
@@ -1545,7 +1589,8 @@
             <!-- Tabs Navigation -->
             <div class="tabs">
                 <button class="tab-button active" onclick="switchTab('overview')">📊 Overview</button>
-                <button class="tab-button" onclick="switchTab('aircraft')">✈️ Aircraft Status</button>
+                <button class="tab-button" onclick="switchTab('aircraft')">✈️ Software</button>
+                <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
                 <button class="tab-button" onclick="switchTab('schedule')">📅 Schedule</button>
                 <button class="tab-button" onclick="switchTab('downloads')">📥 Downloads</button>
             </div>
@@ -1659,6 +1704,60 @@
                             </tr>
                         </thead>
                         <tbody id="hbcTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Media Tab -->
+            <div id="media" class="tab-content">
+                <div class="fleet-overview-grid" id="mediaWidgets"></div>
+
+                <div class="filter-groups">
+                    <div class="filter-group-block">
+                        <span class="filter-group-label">Aircraft Type</span>
+                        <div class="quick-filters" id="mediaTypeFilterPills">
+                            <button class="qf-btn active" onclick="setMediaTypeFilter('', this)">All</button>
+                        </div>
+                    </div>
+                    <div class="filter-group-block">
+                        <span class="filter-group-label">Media Month</span>
+                        <!-- Built from whatever cycles exist in the data — see renderMediaMonthFilter -->
+                        <div class="quick-filters" id="mediaMonthFilterPills"></div>
+                    </div>
+                    <div class="filter-group-block">
+                        <span class="filter-group-label">Status</span>
+                        <div class="quick-filters">
+                            <button class="qf-btn active" onclick="setMediaStatusFilter('', this)">All Status</button>
+                            <button class="qf-btn" onclick="setMediaStatusFilter('latest', this)">Latest Media</button>
+                            <button class="qf-btn" onclick="setMediaStatusFilter('previous', this)">Previous Media</button>
+                            <button class="qf-btn" onclick="setMediaStatusFilter('older', this)">Older Media</button>
+                            <button class="qf-btn" onclick="setMediaStatusFilter('no_media', this)">No Media</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-actions-row">
+                    <span id="mediaSignedInAs" class="signed-in-as" style="display:none;"></span>
+                    <button id="mediaEditBtn" class="qf-btn edit-btn" onclick="toggleMediaEdit()">🔒 Sign in to edit</button>
+                    <button id="mediaResetBtn" class="qf-btn" onclick="resetMediaTable()">↺ Reset</button>
+                </div>
+
+                <div class="table-scroll-wrapper">
+                    <table class="aircraft-table" id="mediaTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortTable('mediaTable', 1)">Aircraft</th>
+                                <th class="sortable-th" data-col="2" data-label="Type" onclick="sortTable('mediaTable', 2)">Type</th>
+                                <th class="sortable-th" data-col="3" data-label="Status" onclick="sortTable('mediaTable', 3)">Status</th>
+                                <th class="sortable-th" data-col="4" data-label="Media Loaded" onclick="sortTable('mediaTable', 4)">Media Loaded</th>
+                                <th class="sortable-th" data-col="5" data-label="Date UTC" onclick="sortTable('mediaTable', 5)">Date UTC</th>
+                                <th class="sortable-th col-comment" data-col="6" data-label="Comments" onclick="sortTable('mediaTable', 6)">Comments</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mediaTableBody">
                             <!-- Populated by JavaScript -->
                         </tbody>
                     </table>
@@ -2294,7 +2393,7 @@
 
         function renderAll() {
             if (editMode) {
-                // Freeze the Aircraft Status table while someone is mid-edit so incoming
+                // Freeze the Software table while someone is mid-edit so incoming
                 // live updates can't overwrite their staged changes. Everything else
                 // (Overview, Schedule) keeps updating normally.
                 populateScheduleTables();
@@ -2303,6 +2402,7 @@
             }
             rebuildAircraftData();
             populateAircraftTable();
+            if (!mediaEditMode) populateMediaTable();
             populateScheduleTables();
             updateMetrics();
         }
@@ -2431,6 +2531,118 @@
             return '';
         }
 
+        // ===== Media module =====
+        // Media lives at /aircraft/{tail}/media so it travels with the aircraft record
+        // and rides the same live sync as everything else. mediaStatus is deliberately
+        // NOT stored: it is relative to the newest cycle in the fleet, so persisting it
+        // would go stale the moment a newer cycle lands. It is derived on every render.
+        const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June',
+                            'July', 'August', 'September', 'October', 'November', 'December'];
+
+        // A cycle is MMYY ("0826"). Sort key is YYYYMM so cycles order correctly across
+        // a year boundary — 0126 (Jan 2026) must sort above 1225 (Dec 2025).
+        function cycleSortKey(cycle) {
+            if (!/^\d{4}$/.test(cycle)) return 0;
+            const mm = parseInt(cycle.slice(0, 2), 10);
+            const yy = parseInt(cycle.slice(2), 10);
+            return (2000 + yy) * 100 + mm;
+        }
+
+        function cycleToDisplay(cycle) {
+            if (!/^\d{4}$/.test(cycle)) return '';
+            const mm = parseInt(cycle.slice(0, 2), 10);
+            return `${MONTH_FULL[mm - 1]} 20${cycle.slice(2)}`;
+        }
+
+        function cycleToShort(cycle) {
+            if (!/^\d{4}$/.test(cycle)) return '';
+            const mm = parseInt(cycle.slice(0, 2), 10);
+            return `${MONTH_FULL[mm - 1].slice(0, 3).toUpperCase()} 20${cycle.slice(2)}`;
+        }
+
+        // Calendar step back one month, so January rolls to December of the prior year.
+        function previousCycle(cycle) {
+            if (!/^\d{4}$/.test(cycle)) return '';
+            let mm = parseInt(cycle.slice(0, 2), 10);
+            let yy = parseInt(cycle.slice(2), 10);
+            mm -= 1;
+            if (mm === 0) { mm = 12; yy -= 1; }
+            return String(mm).padStart(2, '0') + String(yy).padStart(2, '0');
+        }
+
+        // "2026-07-07 01:45:31 (ME-SVA-UGO-0726)" -> the four stored fields.
+        // Seconds are optional; the source may be given with or without parentheses.
+        function parseMediaEntry(raw) {
+            const text = (raw || '').trim();
+            if (!text) return { cleared: true };
+
+            const dm = text.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+            if (!dm) return { error: 'Need a date and time like 2026-08-16 04:22:00' };
+            const [, y, mo, d, h, mi, s] = dm;
+            if (+mo < 1 || +mo > 12 || +d < 1 || +d > 31 || +h > 23 || +mi > 59) {
+                return { error: 'That date or time is out of range' };
+            }
+
+            const sm = text.match(/\(([^)]+)\)/) || text.match(/([A-Za-z]{2,}(?:-[A-Za-z0-9]+)+)\s*$/);
+            if (!sm) return { error: 'Need a media source like (ME-SVA-UGO-0826)' };
+            const mediaSource = sm[1].trim();
+
+            const cm = mediaSource.match(/(\d{4})\s*$/);
+            if (!cm) return { error: 'Media source must end in a 4-digit MMYY cycle, e.g. 0826' };
+            const mediaCycle = cm[1];
+            if (+mediaCycle.slice(0, 2) < 1 || +mediaCycle.slice(0, 2) > 12) {
+                return { error: `"${mediaCycle}" is not a valid MMYY cycle — the month must be 01-12` };
+            }
+
+            return {
+                mediaCycle,
+                mediaDisplay: cycleToDisplay(mediaCycle),
+                mediaSource,
+                loadedDateUTC: `${y}-${mo}-${d}T${h}:${mi}:${s || '00'}Z`,
+            };
+        }
+
+        // "2026-08-16T04:22:00Z" -> "2026-08-16 04:22 UTC"
+        function fmtMediaDate(iso) {
+            if (!iso) return '';
+            const m = iso.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+            return m ? `${m[1]} ${m[2]} UTC` : iso;
+        }
+
+        // Round-trips a stored record back into the string the editor accepts.
+        function mediaToInputString(media) {
+            if (!media || !media.loadedDateUTC) return '';
+            const m = media.loadedDateUTC.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})Z$/);
+            const stamp = m ? `${m[1]} ${m[2]}` : media.loadedDateUTC;
+            return `${stamp} (${media.mediaSource || ''})`;
+        }
+
+        // The newest cycle anywhere in the fleet — the yardstick every row is judged by.
+        function latestMediaCycle() {
+            let best = '';
+            aircraftData.forEach(a => {
+                const c = a.media && a.media.mediaCycle;
+                if (c && cycleSortKey(c) > cycleSortKey(best)) best = c;
+            });
+            return best;
+        }
+
+        function mediaStatusType(aircraft, latest) {
+            const c = aircraft.media && aircraft.media.mediaCycle;
+            if (!c) return 'no_media';
+            if (!latest) return 'older';
+            if (c === latest) return 'latest';
+            if (c === previousCycle(latest)) return 'previous';
+            return 'older';
+        }
+
+        const MEDIA_STATUS_CLASS = {
+            latest: 'media-latest',
+            previous: 'media-previous',
+            older: 'media-older',
+            no_media: 'media-none',
+        };
+
         // ===== Auth (Firebase Identity Toolkit REST — no SDK, keeps this a single file) =====
         // authUser.canEdit is only a UI hint. The database rules are what actually decide,
         // so a tampered-with canEdit still gets "Permission denied" on the write.
@@ -2452,7 +2664,9 @@
             authUser = null;
             editMode = false;
             scheduleEditMode = false;
+            mediaEditMode = false;
             pendingChanges = {};
+            pendingMedia = {};
             try { sessionStorage.removeItem(AUTH_SESSION_KEY); } catch (e) { /* non-fatal */ }
             updateAuthUI();
             renderAll();
@@ -2600,6 +2814,7 @@
 
         function updateAuthUI() {
             updateScheduleEditUI();
+            updateMediaEditUI();
             const editBtn = document.getElementById('editModeBtn');
             const signOutBtn = document.getElementById('signOutBtn');
             const whoami = document.getElementById('signedInAs');
@@ -2684,6 +2899,8 @@
             // Populate tables if needed
             if (tabName === 'aircraft') {
                 populateAircraftTable();
+            } else if (tabName === 'media') {
+                populateMediaTable();
             } else if (tabName === 'schedule') {
                 populateScheduleTables();
             }
@@ -2937,6 +3154,249 @@
             applyAircraftFilters();
             updateSortIndicators('aircraftTable');
             populateHbcTable();
+        }
+
+        // ===== Media page =====
+        let mediaEditMode = false;
+        let pendingMedia = {};          // { tail: {raw, parsed} } staged until Save
+        let mediaTypeFilter = '';
+        let mediaMonthFilter = '';      // '' = all, a cycle like '0826', or 'none'
+        let mediaStatusFilter = '';
+
+        function mediaFleet() {
+            return aircraftData.slice().sort((a, b) => a.id.localeCompare(b.id));
+        }
+
+        function populateMediaTable() {
+            const tbody = document.getElementById('mediaTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const latest = latestMediaCycle();
+            const editing = mediaEditMode && canEdit();
+
+            mediaFleet().forEach((aircraft, idx) => {
+                const media = aircraft.media || {};
+                const staged = pendingMedia[aircraft.id];
+                const effective = staged && staged.parsed ? staged.parsed : media;
+                const type = mediaStatusType({ media: effective }, latest);
+
+                const row = document.createElement('tr');
+                if (type === 'latest') row.classList.add('media-row-latest');
+                row.dataset.type = aircraft.type;
+                row.dataset.cycle = effective.mediaCycle || 'none';
+                row.dataset.mstatus = type;
+
+                const badgeText = type === 'no_media' ? 'NO MEDIA' : cycleToShort(effective.mediaCycle);
+                const statusCell = `<span class="status-badge ${MEDIA_STATUS_CLASS[type]}">${badgeText}</span>`;
+
+                const loadedCell = editing
+                    ? `<input class="edit-text media-input" value="${escAttr(staged ? staged.raw : mediaToInputString(media))}" placeholder="2026-08-16 04:22:00 (ME-SVA-UGO-0826)" data-id="${aircraft.id}" onchange="handleMediaEdit(this)">`
+                    : `<span class="media-source">${effective.mediaSource ? escAttr(effective.mediaSource) : '—'}</span>`;
+
+                const dateCell = `<span class="view-text">${fmtMediaDate(effective.loadedDateUTC) || '—'}</span>`;
+
+                const commentCell = editing
+                    ? `<input class="edit-text comment-input" value="${escAttr(media.comments || '')}" placeholder="Add a comment" data-id="${aircraft.id}" onchange="handleMediaComment(this)">`
+                    : `<span class="comment-text">${media.comments ? escAttr(media.comments) : '—'}</span>`;
+
+                row.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong></td>
+                    <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
+                    <td data-sort="${cycleSortKey(effective.mediaCycle)}">${statusCell}</td>
+                    <td data-sort="${escAttr(effective.mediaSource || '')}">${loadedCell}</td>
+                    <td data-sort="${escAttr(effective.loadedDateUTC || '')}">${dateCell}</td>
+                    <td class="col-comment" data-sort="${escAttr(media.comments || '')}">${commentCell}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            renderMediaWidgets(latest);
+            renderMediaMonthFilter();
+            populateMediaTypeFilter();
+            applyMediaFilters();
+            updateSortIndicators('mediaTable');
+            updateMediaEditUI();
+        }
+
+        // Widgets are one per cycle actually present, newest first, plus No Media last.
+        // Nothing here is hardcoded, so a new cycle appears on its own.
+        function renderMediaWidgets(latest) {
+            const grid = document.getElementById('mediaWidgets');
+            if (!grid) return;
+            const counts = {};
+            let none = 0;
+            aircraftData.forEach(a => {
+                const c = a.media && a.media.mediaCycle;
+                if (c) counts[c] = (counts[c] || 0) + 1;
+                else none++;
+            });
+
+            const cycles = Object.keys(counts).sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
+            let html = cycles.map(c => {
+                const type = c === latest ? 'latest' : (c === previousCycle(latest) ? 'previous' : 'older');
+                return `<div class="simple-stat-card media-widget media-widget-${type}">
+                    <div class="stat-label">${cycleToDisplay(c)} Media</div>
+                    <div class="stat-value">${counts[c]}</div>
+                    <div class="stat-list">${counts[c] === 1 ? 'Aircraft' : 'Aircraft'}</div>
+                </div>`;
+            }).join('');
+
+            if (none) {
+                html += `<div class="simple-stat-card media-widget media-widget-no_media">
+                    <div class="stat-label">No Media</div>
+                    <div class="stat-value">${none}</div>
+                    <div class="stat-list">Aircraft</div>
+                </div>`;
+            }
+            grid.innerHTML = html || '<div class="simple-stat-card"><div class="stat-label">No Media Data</div></div>';
+        }
+
+        function renderMediaMonthFilter() {
+            const box = document.getElementById('mediaMonthFilterPills');
+            if (!box) return;
+            const present = {};
+            let none = false;
+            aircraftData.forEach(a => {
+                const c = a.media && a.media.mediaCycle;
+                if (c) present[c] = true; else none = true;
+            });
+            const cycles = Object.keys(present).sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
+
+            let html = `<button class="qf-btn ${mediaMonthFilter === '' ? 'active' : ''}" onclick="setMediaMonthFilter('', this)">All Media</button>`;
+            html += cycles.map(c =>
+                `<button class="qf-btn ${mediaMonthFilter === c ? 'active' : ''}" onclick="setMediaMonthFilter('${c}', this)">${cycleToDisplay(c)}</button>`
+            ).join('');
+            if (none) {
+                html += `<button class="qf-btn ${mediaMonthFilter === 'none' ? 'active' : ''}" onclick="setMediaMonthFilter('none', this)">No Media</button>`;
+            }
+            box.innerHTML = html;
+        }
+
+        function populateMediaTypeFilter() {
+            const box = document.getElementById('mediaTypeFilterPills');
+            if (!box || box.dataset.populated) return;
+            [...new Set(aircraftStatic.map(a => a.type))].sort().forEach(t => {
+                const btn = document.createElement('button');
+                btn.className = 'qf-btn';
+                btn.textContent = TYPE_SHORT_LABEL[t] || t;
+                btn.onclick = () => setMediaTypeFilter(t, btn);
+                box.appendChild(btn);
+            });
+            box.dataset.populated = '1';
+        }
+
+        function setMediaTypeFilter(t, btn) { mediaTypeFilter = t; setActiveInGroup(btn); applyMediaFilters(); }
+        function setMediaMonthFilter(c, btn) { mediaMonthFilter = c; setActiveInGroup(btn); applyMediaFilters(); }
+        function setMediaStatusFilter(s, btn) { mediaStatusFilter = s; setActiveInGroup(btn); applyMediaFilters(); }
+
+        function applyMediaFilters() {
+            document.querySelectorAll('#mediaTableBody tr').forEach(row => {
+                const typeOk = mediaTypeFilter === '' || row.dataset.type === mediaTypeFilter;
+                const monthOk = mediaMonthFilter === '' || row.dataset.cycle === mediaMonthFilter;
+                const statusOk = mediaStatusFilter === '' || row.dataset.mstatus === mediaStatusFilter;
+                row.style.display = (typeOk && monthOk && statusOk) ? '' : 'none';
+            });
+        }
+
+        function resetMediaTable() {
+            mediaTypeFilter = ''; mediaMonthFilter = ''; mediaStatusFilter = '';
+            document.querySelectorAll('#media .filter-groups .quick-filters').forEach(group => {
+                group.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
+                const first = group.querySelector('.qf-btn');
+                if (first) first.classList.add('active');
+            });
+            delete lastSort['mediaTable'];
+            updateSortIndicators('mediaTable');
+            populateMediaTable();
+        }
+
+        // ===== Media edit mode (same staged-then-Save shape as the Software table) =====
+        async function toggleMediaEdit() {
+            if (mediaEditMode) { await commitMediaChanges(); return; }
+            if (!canEdit() && !(await promptSignIn())) return;
+            if (!canEdit()) return;
+            mediaEditMode = true;
+            pendingMedia = {};
+            populateMediaTable();
+        }
+
+        function updateMediaEditUI() {
+            const btn = document.getElementById('mediaEditBtn');
+            const who = document.getElementById('mediaSignedInAs');
+            if (!btn) return;
+            const editing = mediaEditMode && canEdit();
+            btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '💾 Save' : '✏️ Edit');
+            btn.classList.toggle('save-active', editing);
+            if (who) {
+                who.textContent = canEdit() ? authUser.email : '';
+                who.style.display = canEdit() ? '' : 'none';
+            }
+        }
+
+        function handleMediaEdit(el) {
+            const id = el.dataset.id;
+            const result = parseMediaEntry(el.value);
+            el.classList.remove('edit-invalid');
+            if (result.error) {
+                el.classList.add('edit-invalid');
+                el.title = result.error;
+                setSyncStatus(`🔴 ${id}: ${result.error}`, '#dc3545');
+                return;
+            }
+            el.title = '';
+            pendingMedia[id] = { raw: el.value, parsed: result.cleared ? {} : result, cleared: !!result.cleared };
+            setSyncStatus(result.cleared ? `🟡 ${id}: media will be cleared on Save` : `🟡 ${id}: ${result.mediaDisplay} staged — press Save`, '#e0a800');
+            populateMediaTable();
+        }
+
+        function handleMediaComment(el) {
+            const id = el.dataset.id;
+            const entry = pendingMedia[id] || { raw: null, parsed: null };
+            entry.comments = el.value.trim();
+            pendingMedia[id] = entry;
+            setSyncStatus(`🟡 ${id}: comment staged — press Save`, '#e0a800');
+        }
+
+        async function commitMediaChanges() {
+            const ids = Object.keys(pendingMedia);
+            if (!ids.length) { mediaEditMode = false; populateMediaTable(); return; }
+            const token = await getIdToken();
+            if (!token) return;
+
+            const btn = document.getElementById('mediaEditBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+            setSyncStatus('🟡 Saving media...', '#e0a800');
+
+            const multi = {};
+            ids.forEach(id => {
+                const e = pendingMedia[id];
+                if (e.cleared) {
+                    multi[`${id}/media`] = null;
+                } else if (e.parsed && e.parsed.mediaCycle) {
+                    ['mediaCycle', 'mediaDisplay', 'mediaSource', 'loadedDateUTC'].forEach(f => {
+                        multi[`${id}/media/${f}`] = e.parsed[f];
+                    });
+                }
+                if (e.comments !== undefined) multi[`${id}/media/comments`] = e.comments || null;
+            });
+
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify(multi),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                pendingMedia = {};
+                mediaEditMode = false;
+                renderAll();
+            } catch (e) {
+                setSyncStatus(`🔴 Could not save media — ${e.message}`, '#dc3545');
+            } finally {
+                if (btn) btn.disabled = false;
+                updateMediaEditUI();
+            }
         }
 
         function populateHbcTable() {
