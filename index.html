@@ -1004,6 +1004,18 @@
 
         .media-widget-fill { height: 100%; border-radius: 10px; }
 
+        /* Type widgets carry their tint inline (from TYPE_PILL_COLORS) so the strip
+           matches the Timeline pills; they only need sizing here. */
+        .type-widget { min-width: 150px; }
+
+        /* Station cards keep their registration list, so they need more room than a
+           plain figure widget — and the list is clamped by .stat-list already. */
+        .station-widget { min-width: 300px; max-width: 460px; }
+
+        .station-widget .stat-list { margin-top: 4px; }
+
+        .station-widget .media-widget-of { font-size: 12px; }
+
         .media-widget-latest   { background: #eaf6ee; border-color: #bfe3cb; border-left-color: #28a745; }
         .media-widget-latest   .media-widget-pct  { color: #1e7e34; }
         .media-widget-latest   .media-widget-fill { background: #28a745; }
@@ -1523,12 +1535,12 @@
 
                 <div class="media-widget-section">
                     <span class="filter-group-label">Completion by Aircraft Type</span>
-                    <div class="fleet-overview-grid" id="fleetOverviewGrid"></div>
+                    <div class="media-widget-strip" id="fleetOverviewGrid"></div>
                 </div>
 
                 <div class="media-widget-section">
                     <span class="filter-group-label">Completed by Station</span>
-                    <div class="station-grid" id="stationCompletionGrid"></div>
+                    <div class="media-widget-strip" id="stationCompletionGrid"></div>
                 </div>
 
                 <div class="filter-groups">
@@ -3873,46 +3885,36 @@
                 }
             });
 
-            const typeCard = g => {
-                const s = typeStats[g.key];
-                const pct = s.total ? Math.round((s.completed / s.total) * 1000) / 10 : 0;
-                return `<div class="simple-stat-card type-stat-card">
-                    <div class="stat-label">${g.label}</div>
-                    <div class="stat-frac">${s.completed}/${s.total}</div>
-                    <div class="stat-pct">${pct}%</div>
-                    <div class="type-progress-bar-track"><div class="type-progress-bar-fill" style="width:${pct}%"></div></div>
-                    ${statList(s.ids)}
+            // Same anatomy as the Middleware widgets, tinted with the type colours the
+            // Timeline pills already use — on a white page the old white cards had no
+            // visible edge at all. The registration lists are dropped: they made every
+            // card a different height and the tables below carry the same detail.
+            const tintStyle = c => `background:${c.bg}; border-color:${c.bd}; border-left-color:${c.fg}`;
+
+            const widget = (label, done, total, colors) => {
+                const pct = total ? Math.round((done / total) * 1000) / 10 : 0;
+                return `<div class="media-widget type-widget" style="${tintStyle(colors)}">
+                    <div class="media-widget-label" style="color:${colors.fg}">${label}</div>
+                    <div class="media-widget-figures">
+                        <span class="media-widget-count">${done}</span>
+                        <span class="media-widget-of">/${total}</span>
+                        <span class="media-widget-pct" style="color:${colors.fg}">${pct}%</span>
+                    </div>
+                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%; background:${colors.fg}"></div></div>
                 </div>`;
             };
 
-            const hbcAircraft = aircraftData.filter(a => a.id === 'ASBA' || a.id === 'ASBB');
-            // Like every other card here, list only what's actually done — not the scope.
-            const hbcDone = hbcAircraft.filter(a => a.beamcfgStatus === 'done');
-            const hbcCount = hbcDone.length;
-            const hbcPct = Math.round((hbcCount / hbcScope()) * 1000) / 10;
-            const xlrCard = `<div class="simple-stat-card type-stat-card">
-                <div class="stat-label">A321XLR <span class="scope-chip">SBC CONFIG</span></div>
-                <div class="stat-frac">${hbcCount}/${hbcScope()}</div>
-                <div class="stat-pct">${hbcPct}%</div>
-                <div class="type-progress-bar-track"><div class="type-progress-bar-fill" style="width:${hbcPct}%"></div></div>
-                ${statList(hbcDone.map(a => 'HZ-' + a.id))}
-            </div>`;
+            const TOTAL_COLORS = { bg: '#eaf6ee', bd: '#bfe3cb', fg: '#1e7e34' };
 
-            // Whole-fleet rollup. Same anatomy as the per-type cards, including the
-            // empty list slot, so it sits level with them instead of running short.
-            const totalPct = Math.round((completedStrict.length / projectScope()) * 1000) / 10;
-            let html = `<div class="simple-stat-card type-stat-card">
-                <div class="stat-label">TOTAL</div>
-                <div class="stat-frac">${completedStrict.length}/${projectScope()}</div>
-                <div class="stat-pct">${totalPct}%</div>
-                <div class="type-progress-bar-track"><div class="type-progress-bar-fill" style="width:${totalPct}%"></div></div>
-                <div class="stat-list"></div>
-            </div>`;
-            html += typeCard(TYPE_GROUPS[0]); // A320
-            html += typeCard(TYPE_GROUPS[1]); // A321
-            html += typeCard(TYPE_GROUPS[2]); // A321neo
-            html += xlrCard;                  // A321XLR
-            html += typeCard(TYPE_GROUPS[3]); // A330
+            const hbcAircraft = aircraftData.filter(isLinefit);
+            const hbcDone = hbcAircraft.filter(a => a.beamcfgStatus === 'done');
+
+            let html = widget('Total', completedStrict.length, projectScope(), TOTAL_COLORS);
+            TYPE_GROUPS.forEach(g => {
+                const s = typeStats[g.key];
+                html += widget(g.label, s.completed, s.total, TYPE_PILL_COLORS[g.key] || NEUTRAL_PILL);
+            });
+            html += widget('A321XLR · SBC', hbcDone.length, hbcScope(), TYPE_PILL_COLORS['A321-253NY XLR'] || NEUTRAL_PILL);
 
             grid.innerHTML = html;
         }
@@ -3924,18 +3926,15 @@
             const ruh = completedStrict.filter(a => a.completionLocation === 'Riyadh');
             // The section heading already says these are completed aircraft by station,
             // so the cards only need to name the station.
-            grid.innerHTML = `
-                <div class="simple-stat-card">
-                    <div class="stat-label">Jeddah <span class="stat-code">OEJN / JED</span></div>
-                    <div class="stat-value">${jed.length}</div>
-                    ${statList(jed.map(a => a.id))}
-                </div>
-                <div class="simple-stat-card">
-                    <div class="stat-label">Riyadh <span class="stat-code">OERK / RUH</span></div>
-                    <div class="stat-value">${ruh.length}</div>
-                    ${statList(ruh.map(a => a.id))}
-                </div>
-            `;
+            const stCard = (name, code, list, c) => `
+                <div class="media-widget station-widget" style="background:${c.bg}; border-color:${c.bd}; border-left-color:${c.fg}">
+                    <div class="media-widget-label" style="color:${c.fg}">${name} <span class="stat-code">${code}</span></div>
+                    <div class="media-widget-figures"><span class="media-widget-count">${list.length}</span><span class="media-widget-of">/${completedStrict.length || 0} completed</span></div>
+                    ${statList(list.map(a => a.id))}
+                </div>`;
+            grid.innerHTML =
+                stCard('Jeddah', 'OEJN / JED', jed, LOCATION_PILL_COLORS['Jeddah']) +
+                stCard('Riyadh', 'OERK / RUH', ruh, LOCATION_PILL_COLORS['Riyadh']);
         }
 
         function renderObjectives() {
