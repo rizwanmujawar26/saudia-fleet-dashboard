@@ -198,6 +198,46 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            table-layout: auto;
+        }
+
+        /* Every other column shrinks to its content; Comments takes what's left.
+           The 100% width is the standard trick for "absorb the remaining space" —
+           auto layout gives the greedy column whatever the others don't use.
+           Only the cells get nowrap: headers must be free to wrap, or long labels
+           like "SES Migration to MG 101" set the column width instead of the data
+           ("Done"), and the table overflows before Comments gets any room. */
+        #aircraftTable td:not(.col-comment) {
+            white-space: nowrap;
+            width: 1%;
+        }
+
+        #aircraftTable th:not(.col-comment) {
+            width: 1%;
+        }
+
+        #aircraftTable th {
+            padding: 12px 10px;
+        }
+
+        #aircraftTable td {
+            padding: 10px;
+        }
+
+        #aircraftTable .col-comment {
+            width: 100%;
+            white-space: normal;
+            min-width: 180px;
+        }
+
+        .comment-text {
+            font-size: 12.5px;
+            color: #555;
+            line-height: 1.45;
+        }
+
+        .comment-input {
+            min-width: 170px;
         }
 
         .aircraft-table th {
@@ -961,21 +1001,6 @@
             background: #f0f0f0;
         }
 
-        .comment-edit-btn {
-            margin-left: 6px;
-            flex-shrink: 0;
-            border: none;
-            background: #f0f0f0;
-            border-radius: 4px;
-            padding: 2px 9px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .comment-edit-btn:hover {
-            background: #e0e0e0;
-        }
-
         .view-text {
             font-size: 13px;
             color: #333;
@@ -1525,6 +1550,7 @@
                                 <th class="sortable-th" data-col="6" data-label="SES Migration to MG 101" onclick="sortTable('aircraftTable', 6)">SES Migration to MG 101</th>
                                 <th class="sortable-th" data-col="7" data-label="Completion Date (UTC)" onclick="sortTable('aircraftTable', 7)">Completion Date (UTC)</th>
                                 <th class="sortable-th" data-col="8" data-label="Completion Location" onclick="sortTable('aircraftTable', 8)">Completion Location</th>
+                                <th class="sortable-th col-comment" data-col="9" data-label="Comments" onclick="sortTable('aircraftTable', 9)">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="aircraftTableBody">
@@ -1800,18 +1826,6 @@
             <div style="display:flex; gap:10px; margin-top:6px;">
                 <button id="addSchedCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="addSchedSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Add Entry</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="commentModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-        <div style="background:white; border-radius:10px; padding:28px; width:90%; max-width:420px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-            <h3 style="color:#0a5c34; margin-bottom:8px;">Comment — <span id="commentModalAircraftId"></span></h3>
-            <p style="font-size:13px; color:#666; margin-bottom:16px;">E.g. migration status, SIM card replacement details, blockers.</p>
-            <textarea id="commentModalInput" rows="4" maxlength="500" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ccc; border-radius:6px; font-size:14px; margin-bottom:16px; font-family:inherit; resize:vertical;"></textarea>
-            <div style="display:flex; gap:10px;">
-                <button id="commentModalCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
-                <button id="commentModalSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save</button>
             </div>
         </div>
     </div>
@@ -2548,36 +2562,12 @@
             const field = el.dataset.field;
             let value = el.value;
             if (field === 'completionDate') value = value ? fmtDate(value) : null;
-            if (['iphoStatus', 'mg101Status', 'completionLocation', 'beamcfgStatus'].includes(field)) value = value || null;
+            // Empty means "no value" for these — null removes the field rather than
+            // storing an empty string, which the rules reject anyway.
+            if (['iphoStatus', 'mg101Status', 'completionLocation', 'beamcfgStatus', 'note'].includes(field)) value = value.trim ? (value.trim() || null) : (value || null);
             // Edit Mode stages changes locally; nothing hits Firebase until Save is clicked.
             stageChange(id, field, value);
             populateAircraftTable();
-        }
-
-        // ===== Comment editor (Aircraft Status table only — the Overview only displays) =====
-        function openCommentEditor(id) {
-            if (!canEdit()) return;
-            const aircraft = aircraftData.find(a => a.id === id);
-            document.getElementById('commentModalAircraftId').textContent = id;
-            document.getElementById('commentModalInput').value = (aircraft && aircraft.note) || '';
-            const overlay = document.getElementById('commentModalOverlay');
-            overlay.dataset.aircraftId = id;
-            overlay.style.display = 'flex';
-            document.getElementById('commentModalInput').focus();
-        }
-
-        function initCommentModal() {
-            const overlay = document.getElementById('commentModalOverlay');
-            const input = document.getElementById('commentModalInput');
-            document.getElementById('commentModalCancel').addEventListener('click', () => {
-                overlay.style.display = 'none';
-            });
-            document.getElementById('commentModalSave').addEventListener('click', async () => {
-                const id = overlay.dataset.aircraftId;
-                const text = input.value.trim();
-                overlay.style.display = 'none';
-                await saveAircraftField(id, 'note', text || null);
-            });
         }
 
         function switchTab(tabName) {
@@ -2761,11 +2751,11 @@
                 row.dataset.type = aircraft.type;
                 row.dataset.location = aircraft.completionLocation || '';
 
-                const noteDisplay = aircraft.note ? `<div style="font-size: 11px; color: #d9534f; margin-top: 3px; font-weight: 600;">⚠️ ${aircraft.note}</div>` : '';
-                // Only offered to signed-in editors — a button that can't save is worse than none.
-                const commentBtn = canEdit()
-                    ? `<button class="comment-edit-btn" onclick="openCommentEditor('${aircraft.id}')" title="Add/edit comment">✏️</button>`
-                    : '';
+                // Comments live in their own column now. They're operational notes, not
+                // faults, so they read as plain text rather than red warnings.
+                const commentCell = editMode
+                    ? `<input class="edit-text comment-input" value="${escAttr(aircraft.note || '')}" placeholder="Add a comment" data-id="${aircraft.id}" data-field="note" onchange="handleAircraftEdit(this)">`
+                    : `<span class="comment-text">${aircraft.note ? escAttr(aircraft.note) : '—'}</span>`;
 
                 const statusLabel = aircraft.status === 'completed' ? 'Completed' : aircraft.status === 'in-progress' ? 'In Progress' : 'Scheduled';
                 const statusSort = aircraft.status || 'scheduled';
@@ -2835,7 +2825,7 @@
 
                 row.innerHTML = `
                     <td>${idx + 1}</td>
-                    <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong>${commentBtn}${noteDisplay}</td>
+                    <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong></td>
                     <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
                     <td data-sort="${statusSort}">${statusCell}</td>
                     <td data-sort="${statusSort}">${middlewareCell}</td>
@@ -2843,6 +2833,7 @@
                     <td data-sort="${mg101Sort}">${mg101Cell}</td>
                     <td data-sort="${dateSort}">${dateCell}</td>
                     <td data-sort="${loc}">${locCell}</td>
+                    <td class="col-comment" data-sort="${escAttr(aircraft.note || '')}">${commentCell}</td>
                 `;
                 tbody.appendChild(row);
             });
@@ -3578,7 +3569,6 @@
             document.getElementById('lastUpdated').textContent = dateStr;
 
             loadAuthSession();
-            initCommentModal();
             initScheduleAddModal();
             updateAuthUI();
             updateScheduleEditUI();
