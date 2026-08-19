@@ -1586,6 +1586,136 @@
             font-size: 12.5px;
         }
 
+        /* ===== Hardware tab ===== */
+        /* The equipment list is split by fit, so it needs a heading inside the list
+           itself rather than the single header the maintenance list uses. */
+        .hw-group {
+            padding: 7px 12px 6px;
+            background: #f2f5f3;
+            border-bottom: 1px solid #e5e9ec;
+            border-top: 1px solid #e5e9ec;
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #4a6b52;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .hw-group:first-child { border-top: none; }
+
+        .hw-group-note { font-weight: 600; letter-spacing: 0.4px; color: #98a1a9; text-transform: none; }
+
+        /* Small count of how many aircraft have a serial recorded for this unit. */
+        .hw-fitted {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #4a6b52;
+            background: #e9f3ec;
+            border: 1px solid #d5e8dc;
+            border-radius: 10px;
+            padding: 1px 8px;
+            white-space: nowrap;
+        }
+
+        .hw-fitted.none { color: #8a939b; background: #f1f3f5; border-color: #dde1e5; }
+
+        .hw-section {
+            padding: 13px 16px 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .hw-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #4a6b52;
+        }
+
+        .hw-issues {
+            list-style: none;
+            margin: 0;
+            padding: 0 16px 6px;
+        }
+
+        .hw-issue {
+            border: 1px solid #e5e9ec;
+            border-left: 3px solid #e9b949;
+            border-radius: 8px;
+            padding: 10px 13px;
+            margin-bottom: 9px;
+        }
+
+        .hw-issue.resolved { border-left-color: #28a745; }
+
+        .hw-issue-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .hw-issue-title { font-size: 13px; font-weight: 700; color: #1f2937; }
+
+        .status-badge.issue-open     { background: #fdf1e3; color: #8a5312; }
+        .status-badge.issue-resolved { background: #eaf6ee; color: #1e7e34; }
+
+        .hw-issue-field { font-size: 12px; color: #46505a; line-height: 1.45; margin-top: 6px; }
+        .hw-issue-field b {
+            color: #6b757e; font-weight: 700; font-size: 10.5px;
+            text-transform: uppercase; letter-spacing: 0.4px; display: block;
+        }
+
+        .hw-issue-del {
+            margin-left: auto;
+            border: 1px solid #f0c8cc;
+            background: #fdf0f1;
+            border-radius: 4px;
+            padding: 1px 7px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .hw-issue-del:hover { background: #f8dfe1; }
+
+        /* Fitment: one row per aircraft of this fit, serial derived from activities. */
+        .hw-fit-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .hw-fit-table th {
+            text-align: left;
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #8a939b;
+            padding: 6px 10px;
+            border-bottom: 1px solid #e5e9ec;
+            white-space: nowrap;
+        }
+
+        .hw-fit-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eef1f3;
+            font-size: 12.5px;
+            color: #26313a;
+            white-space: nowrap;
+        }
+
+        .hw-fit-table tr:last-child td { border-bottom: none; }
+        .hw-fit-table tbody tr:hover { background: rgba(10, 92, 52, 0.03); }
+
+        .hw-serial {
+            font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .hw-none { color: #b3bac0; }
+
         /* The activity modal is taller than the others, so it scrolls internally. */
         .act-modal {
             background: #fff;
@@ -2440,6 +2570,7 @@
                 <button class="tab-button" onclick="switchTab('aircraft')">💿 Software</button>
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
                 <button class="tab-button" onclick="switchTab('maintenance')">🛠️ Maintenance</button>
+                <button class="tab-button" onclick="switchTab('hardware')">🔧 Hardware</button>
                 <button class="tab-button" onclick="switchTab('schedule')">📅 Schedule</button>
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
             </div>
@@ -2664,6 +2795,33 @@
                         <ul class="maint-list" id="maintList"></ul>
                     </div>
                     <div class="maint-detail-panel" id="maintDetailPanel"></div>
+                </div>
+            </div>
+
+            <!-- Hardware Tab -->
+            <!-- LRUs on the left in two fit groups, the selected unit on the right.
+                 Serial numbers are NOT stored here: they are derived from the on/off
+                 details of hardware activities recorded on the Maintenance page. Only
+                 what belongs to the unit itself — software version, part number, known
+                 issues — lives at /hardware/{id}.
+                 The two-pane shell reuses the .maint-* classes; they style a generic
+                 list/detail layout and the prefix is historical. -->
+            <div id="hardware" class="tab-content">
+                <div class="table-actions-row">
+                    <span id="hwSignedInAs" class="signed-in-as" style="display:none;"></span>
+                    <button id="hwAddIssueBtn" class="qf-btn" style="display:none;" onclick="openAddIssue()">➕ Add Known Issue</button>
+                    <button id="hwEditBtn" class="qf-btn edit-btn" onclick="toggleHwEdit()">🔒 Sign in to edit</button>
+                </div>
+
+                <div class="maint-split">
+                    <div class="maint-list-panel">
+                        <div class="maint-list-head">
+                            <span>Equipment</span>
+                            <span id="hwListCount"></span>
+                        </div>
+                        <ul class="maint-list" id="hwList"></ul>
+                    </div>
+                    <div class="maint-detail-panel" id="hwDetailPanel"></div>
                 </div>
             </div>
 
@@ -2962,6 +3120,34 @@
         </div>
     </div>
 
+    <div id="addIssueOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="act-modal">
+            <h3 style="color:#0a5c34; margin-bottom:6px;">Add Known Issue</h3>
+            <p style="font-size:13px; color:#666; margin-bottom:16px;" id="addIssueFor">—</p>
+
+            <label class="add-sched-label">Title</label>
+            <input id="addIssueTitle" class="add-sched-input" maxlength="120" placeholder="e.g. Intermittent loss of lock after cold soak" autocomplete="off">
+
+            <label class="add-sched-label">Detail</label>
+            <textarea id="addIssueDetail" class="add-sched-input" maxlength="1000" placeholder="What is seen, and when"></textarea>
+
+            <label class="add-sched-label">Resolution</label>
+            <textarea id="addIssueResolution" class="add-sched-input" maxlength="1000" placeholder="Fix, workaround, or what is still outstanding"></textarea>
+
+            <label class="add-sched-label">Status</label>
+            <select id="addIssueStatus" class="add-sched-input">
+                <option value="open">Open</option>
+                <option value="resolved">Resolved</option>
+            </select>
+
+            <div id="addIssueError" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
+            <div style="display:flex; gap:10px; margin-top:6px;">
+                <button id="addIssueCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button id="addIssueSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save Issue</button>
+            </div>
+        </div>
+    </div>
+
     <div class="sysinfo-overlay" id="sysInfoOverlay">
         <div class="sysinfo-panel" role="dialog" aria-modal="true" aria-label="System information">
             <div class="sysinfo-head">
@@ -3214,13 +3400,124 @@
                 .sort((x, y) => dateSortKey(toISODate(y.date)).localeCompare(dateSortKey(toISODate(x.date))) || (y.id).localeCompare(x.id));
         }
 
+        // ===== Hardware (LRUs) =====
+        // The catalogue is code, not data: these are the line-replaceable units the
+        // programme fits, and the set changes with the programme, not with an editor.
+        // Per-LRU facts that DO change — software version, part number, known issues —
+        // live at /hardware/{id}.
+        //
+        // Retrofit and linefit are separate entries even where the name matches, because
+        // they are different units with their own serials and their own issues. The
+        // MODMAN is the clearest case: the linefit one is not the retrofit one.
+        //
+        // `aliases` are matched against a hardware activity's `details.partReplaced`, so
+        // what an engineer typed on the Maintenance page resolves to an LRU here. The
+        // aircraft's own fit decides which of the two lists a match belongs to, so the
+        // two fits can share alias spellings without colliding.
+        const HARDWARE_LRUS = [
+            { id: 'sim',        label: 'SIM Card',   fit: 'retrofit', aliases: ['sim', 'sim card', 'simcard'] },
+            { id: 'ife_server', label: 'IFE Server', fit: 'retrofit', aliases: ['ife server', 'ifeserver', 'ife'] },
+            { id: 'modman',     label: 'MODMAN',     fit: 'retrofit', aliases: ['modman', 'mod man'] },
+            { id: 'kandu',      label: 'KANDU',      fit: 'retrofit', aliases: ['kandu'] },
+            { id: 'krfu',       label: 'KRFU',       fit: 'retrofit', aliases: ['krfu'] },
+            { id: 'rx_antenna', label: 'RX Antenna', fit: 'retrofit', aliases: ['rx antenna', 'rx ant', 'rx'] },
+            { id: 'tx_antenna', label: 'TX Antenna', fit: 'retrofit', aliases: ['tx antenna', 'tx ant', 'tx'] },
+
+            // PLACEHOLDER SET — mirrors the retrofit list so the pane is usable today.
+            // The real linefit equipment list has not been given yet; correcting it is
+            // an edit to this array and nothing else.
+            { id: 'lf_sim',        label: 'SIM Card',   fit: 'linefit', aliases: ['sim', 'sim card', 'simcard'] },
+            { id: 'lf_ife_server', label: 'IFE Server', fit: 'linefit', aliases: ['ife server', 'ifeserver', 'ife'] },
+            { id: 'lf_modman',     label: 'MODMAN',     fit: 'linefit', aliases: ['modman', 'mod man'] },
+            { id: 'lf_kandu',      label: 'KANDU',      fit: 'linefit', aliases: ['kandu'] },
+            { id: 'lf_krfu',       label: 'KRFU',       fit: 'linefit', aliases: ['krfu'] },
+            { id: 'lf_rx_antenna', label: 'RX Antenna', fit: 'linefit', aliases: ['rx antenna', 'rx ant', 'rx'] },
+            { id: 'lf_tx_antenna', label: 'TX Antenna', fit: 'linefit', aliases: ['tx antenna', 'tx ant', 'tx'] },
+        ];
+
+        let hardwareLive = {};      // /hardware/{lruId} — swVersion, partNumber, vendor, notes, issues
+
+        function lruById(id) {
+            return HARDWARE_LRUS.find(l => l.id === id) || null;
+        }
+
+        function lrusForFit(fit) {
+            return HARDWARE_LRUS.filter(l => l.fit === fit);
+        }
+
+        function fitOf(aircraft) {
+            return isLinefit(aircraft) ? 'linefit' : 'retrofit';
+        }
+
+        function normalisePart(v) {
+            return String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+
+        // A hardware activity belongs to an LRU when what was typed as the replaced part
+        // matches one of its aliases and the aircraft is of that LRU's fit.
+        function activityMatchesLru(act, lru, aircraft) {
+            if (act.category !== 'hardware_rr') return false;
+            if (!aircraft || fitOf(aircraft) !== lru.fit) return false;
+            const part = normalisePart((act.details || {}).partReplaced);
+            if (!part) return false;
+            return lru.aliases.some(a => a === part) || lru.aliases.some(a => part.includes(a));
+        }
+
+        // What is fitted to each aircraft for this LRU, derived from /activities — the
+        // on/off details recorded on the Maintenance page. Nothing about serials is
+        // stored twice; an aircraft with no recorded change simply has no serial yet.
+        function hardwareFitment(lru) {
+            const byTail = {};
+            aircraftData.forEach(a => { byTail[a.id] = a; });
+            const acts = activityEntries();
+
+            return activeFleet()
+                .filter(a => fitOf(a) === lru.fit)
+                .sort((a, b) => a.id.localeCompare(b.id))
+                .map(a => {
+                    const mine = acts
+                        .filter(x => x.aircraft === a.id && activityMatchesLru(x, lru, byTail[x.aircraft]))
+                        .sort((x, y) => dateSortKey(toISODate(y.date)).localeCompare(dateSortKey(toISODate(x.date))));
+                    const latest = mine[0];
+                    const d = (latest && latest.details) || {};
+                    return {
+                        aircraft: a,
+                        serial: d.newPart || '',
+                        partNumber: d.partNumber || '',
+                        removed: d.oldPart || '',
+                        date: latest ? latest.date : '',
+                        location: latest ? latest.location : '',
+                        changes: mine.length,
+                    };
+                });
+        }
+
+        function hardwareRecordOf(lruId) {
+            const stored = hardwareLive[lruId] || {};
+            const staged = pendingHw[lruId] || {};
+            const pick = (k, f) => staged[k] !== undefined ? staged[k] : (stored[k] || '');
+            return {
+                swVersion:  pick('swVersion'),
+                partNumber: pick('partNumber'),
+                vendor:     pick('vendor'),
+                notes:      pick('notes'),
+                issues:     stored.issues || {},
+            };
+        }
+
+        function hardwareIssues(lruId) {
+            const issues = (hardwareLive[lruId] || {}).issues || {};
+            return Object.entries(issues).map(([id, v]) => ({ id, ...v }))
+                .sort((a, b) => String(b.loggedAt || '').localeCompare(String(a.loggedAt || '')));
+        }
+
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.7.3';
-        const APP_BUILD    = '2026.08.19.07';
+        const APP_VERSION  = '2.8.0';
+        const APP_BUILD    = '2026.08.19.08';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-19T19:15:00Z';
+        const APP_DEPLOYED = '2026-08-19T19:30:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -3277,6 +3574,7 @@
             populateAircraftTable();
             if (!mediaEditMode) populateMediaTable();
             if (!maintEditMode) renderMaintenancePage();
+            if (!hwEditMode) renderHardwarePage();
             populateScheduleTables();
             updateMetrics();
         }
@@ -3357,16 +3655,33 @@
                 })
                 .catch(() => populateScheduleTables());
 
+            fetch(`${FIREBASE_DB_URL}/hardware.json`)
+                .then(r => r.json())
+                .then(data => { hardwareLive = data || {}; renderHardwarePage(); startHardwareStream(); })
+                .catch(() => { /* the tab still lists the catalogue, just without notes */ });
+
             fetch(`${FIREBASE_DB_URL}/activities.json`)
                 .then(r => r.json())
                 .then(data => {
                     activitiesLive = data || {};
                     markDataSync();
                     renderMaintenancePage();
+                    renderHardwarePage();     // fitment is derived from activities
                     updateMetrics();          // the Timeline reads activities too
                     startActivitiesStream();
                 })
                 .catch(() => { /* the tab still renders, just with no history */ });
+        }
+
+        function startHardwareStream() {
+            const es = new EventSource(`${FIREBASE_DB_URL}/hardware.json`);
+            const onMsg = () => {
+                fetch(`${FIREBASE_DB_URL}/hardware.json`).then(r => r.json())
+                    .then(d => { hardwareLive = d || {}; markDataSync(); renderHardwarePage(); })
+                    .catch(() => {});
+            };
+            es.addEventListener('put', onMsg);
+            es.addEventListener('patch', onMsg);
         }
 
         // A whole-node re-read on every event: activities are few and low-traffic, so
@@ -3380,6 +3695,7 @@
                         activitiesLive = d || {};
                         markDataSync();
                         renderMaintenancePage();
+                        renderHardwarePage();
                         updateMetrics();
                     })
                     .catch(() => {});
@@ -3755,6 +4071,7 @@
             updateScheduleEditUI();
             updateMediaEditUI();
             updateMaintEditUI();
+            updateHwEditUI();
             updateFleetEditUI();
             const editBtn = document.getElementById('editModeBtn');
             const signOutBtn = document.getElementById('signOutBtn');
@@ -3846,6 +4163,8 @@
                 populateMediaTable();
             } else if (tabName === 'maintenance') {
                 renderMaintenancePage();
+            } else if (tabName === 'hardware') {
+                renderHardwarePage();
             } else if (tabName === 'schedule') {
                 populateScheduleTables();
             }
@@ -5205,6 +5524,304 @@
             }
         }
 
+        // ===== Hardware page =====
+        let hwEditMode = false;
+        let pendingHw = {};             // { lruId: { swVersion, partNumber, vendor, notes } }
+        let hwSelectedId = HARDWARE_LRUS.length ? HARDWARE_LRUS[0].id : '';
+
+        function selectHwLru(id) {
+            hwSelectedId = id;
+            renderHwList();
+            renderHwDetail();
+        }
+
+        // How many aircraft of this fit have a serial on record.
+        function hwFittedCount(lru) {
+            const rows = hardwareFitment(lru);
+            return { fitted: rows.filter(r => r.serial).length, total: rows.length };
+        }
+
+        function renderHwList() {
+            const list = document.getElementById('hwList');
+            if (!list) return;
+
+            const group = (fit, label, note) => {
+                const lrus = lrusForFit(fit);
+                if (!lrus.length) return '';
+                return `<li class="hw-group"><span>${label}</span>${note ? `<span class="hw-group-note">${escAttr(note)}</span>` : ''}</li>` +
+                    lrus.map(lru => {
+                        const { fitted, total } = hwFittedCount(lru);
+                        const open = hardwareIssues(lru.id).filter(i => i.status !== 'resolved').length;
+                        return `<li class="maint-list-item ${lru.id === hwSelectedId ? 'selected' : ''}" onclick="selectHwLru('${escAttr(lru.id)}')">
+                            <div class="maint-list-main">
+                                <div class="maint-list-reg">${escAttr(lru.label)}</div>
+                                <div class="maint-list-type">${fitted} of ${total} fitted${open ? ` · ${open} open` : ''}</div>
+                            </div>
+                            <span class="hw-fitted ${fitted ? '' : 'none'}">${fitted}/${total}</span>
+                        </li>`;
+                    }).join('');
+            };
+
+            const retroCount = activeFleet().filter(a => fitOf(a) === 'retrofit').length;
+            const lineCount  = activeFleet().filter(a => fitOf(a) === 'linefit').length;
+
+            list.innerHTML =
+                group('retrofit', 'Retrofit', `${retroCount} aircraft`) +
+                group('linefit', 'Linefit', `${lineCount} aircraft`);
+
+            setText('hwListCount', String(HARDWARE_LRUS.length));
+            const sel = list.querySelector('.maint-list-item.selected');
+            if (sel) sel.scrollIntoView({ block: 'nearest' });
+        }
+
+        function renderHwDetail() {
+            const panel = document.getElementById('hwDetailPanel');
+            if (!panel) return;
+            const lru = lruById(hwSelectedId);
+            if (!lru) {
+                panel.innerHTML = '<div class="maint-empty">Select a unit to see its details and fitment.</div>';
+                return;
+            }
+
+            const rec = hardwareRecordOf(lru.id);
+            const editing = hwEditMode && canEdit();
+            const rows = hardwareFitment(lru);
+            const fitted = rows.filter(r => r.serial).length;
+            const issues = hardwareIssues(lru.id);
+
+            const cell = (key, val) => `<div class="maint-profile-cell">
+                <div class="maint-profile-key">${key}</div>
+                <div class="maint-profile-val">${val || '—'}</div>
+            </div>`;
+
+            const field = (name, value, placeholder) => editing
+                ? `<input class="edit-text" value="${escAttr(value)}" placeholder="${escAttr(placeholder)}" data-lru="${escAttr(lru.id)}" data-field="${name}" onchange="handleHwEdit(this)">`
+                : escAttr(value);
+
+            const profile = [
+                cell('Software Version', field('swVersion', rec.swVersion, 'e.g. 4.2.1')),
+                cell('Part Number', field('partNumber', rec.partNumber, 'e.g. KRFU-1200')),
+                cell('Vendor', field('vendor', rec.vendor, 'e.g. Hughes')),
+                cell('Fit', lru.fit === 'linefit' ? 'Linefit' : 'Retrofit'),
+                cell('Aircraft Fitted', `${fitted} of ${rows.length}`),
+                cell('Open Issues', String(issues.filter(i => i.status !== 'resolved').length)),
+                cell('Notes', field('notes', rec.notes, 'Anything worth knowing about this unit')),
+            ].join('');
+
+            const issueCard = i => `<li class="hw-issue ${i.status === 'resolved' ? 'resolved' : ''}">
+                <div class="hw-issue-top">
+                    <span class="hw-issue-title">${escAttr(i.title || 'Untitled issue')}</span>
+                    <span class="status-badge issue-${i.status === 'resolved' ? 'resolved' : 'open'}">${i.status === 'resolved' ? 'RESOLVED' : 'OPEN'}</span>
+                    ${i.loggedAt ? `<span class="maint-act-cat">${escAttr(fmtSysStamp(i.loggedAt))}</span>` : ''}
+                    ${canEdit() ? `<button class="hw-issue-del" title="Delete this issue" onclick="deleteHwIssue('${escAttr(lru.id)}','${escAttr(i.id)}')">🗑</button>` : ''}
+                </div>
+                ${i.detail ? `<div class="hw-issue-field"><b>Detail</b>${escAttr(i.detail)}</div>` : ''}
+                ${i.resolution ? `<div class="hw-issue-field"><b>Resolution</b>${escAttr(i.resolution)}</div>` : ''}
+            </li>`;
+
+            // Serials come from the on/off details of hardware activities. An aircraft
+            // with no recorded change simply has nothing to show yet — that is a gap in
+            // the record, not a missing unit, so it reads as "no record" rather than 0.
+            const fitRow = r => `<tr>
+                <td><strong>${escAttr(r.aircraft.id)}</strong></td>
+                <td>${escAttr(TYPE_SHORT_LABEL[r.aircraft.type] || r.aircraft.type)}</td>
+                <td>${r.serial ? `<span class="hw-serial">${escAttr(r.serial)}</span>` : '<span class="hw-none">no record</span>'}</td>
+                <td>${r.partNumber ? escAttr(r.partNumber) : '<span class="hw-none">—</span>'}</td>
+                <td>${r.date ? escAttr(r.date) : '<span class="hw-none">—</span>'}</td>
+                <td>${r.removed ? `<span class="hw-serial">${escAttr(r.removed)}</span>` : '<span class="hw-none">—</span>'}</td>
+                <td>${r.changes || '<span class="hw-none">0</span>'}</td>
+            </tr>`;
+
+            panel.innerHTML = `
+                <div class="maint-detail-head">
+                    <span class="maint-detail-reg">${escAttr(lru.label)}</span>
+                    <span class="status-badge fit-${lru.fit}">${lru.fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>
+                    <span class="hw-fitted ${fitted ? '' : 'none'}">${fitted}/${rows.length} fitted</span>
+                </div>
+                <div class="maint-profile">${profile}</div>
+
+                <div class="hw-section">
+                    <span class="hw-section-title">Known Issues</span>
+                    <span class="timeline-day-count">${issues.length} logged</span>
+                </div>
+                <ul class="hw-issues">${
+                    issues.length ? issues.map(issueCard).join('')
+                                  : '<li class="maint-empty">No issues logged for this unit.</li>'
+                }</ul>
+
+                <div class="hw-section">
+                    <span class="hw-section-title">Fitment</span>
+                    <span class="timeline-day-count">${rows.length} aircraft</span>
+                </div>
+                <div class="table-scroll-wrapper" style="padding: 0 16px 16px;">
+                    <table class="hw-fit-table">
+                        <thead><tr>
+                            <th>Aircraft</th><th>Type</th><th>Serial Fitted</th><th>Part No</th>
+                            <th>Fitted</th><th>Removed S/N</th><th>Changes</th>
+                        </tr></thead>
+                        <tbody>${rows.map(fitRow).join('')}</tbody>
+                    </table>
+                </div>`;
+        }
+
+        function renderHardwarePage() {
+            renderHwList();
+            renderHwDetail();
+            updateHwEditUI();
+        }
+
+        // ===== Hardware edit mode (same staged-then-Save shape as the other pages) =====
+        async function toggleHwEdit() {
+            if (hwEditMode) { await commitHwChanges(); return; }
+            if (!canEdit() && !(await promptSignIn())) return;
+            if (!canEdit()) return;
+            hwEditMode = true;
+            pendingHw = {};
+            renderHardwarePage();
+        }
+
+        function updateHwEditUI() {
+            const btn = document.getElementById('hwEditBtn');
+            const who = document.getElementById('hwSignedInAs');
+            const add = document.getElementById('hwAddIssueBtn');
+            if (add) add.style.display = canEdit() ? '' : 'none';
+            if (!btn) return;
+            const editing = hwEditMode && canEdit();
+            btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '💾 Save' : '✏️ Edit');
+            btn.classList.toggle('save-active', editing);
+            if (who) {
+                who.textContent = canEdit() ? authUser.email : '';
+                who.style.display = canEdit() ? '' : 'none';
+            }
+        }
+
+        function handleHwEdit(el) {
+            const id = el.dataset.lru, field = el.dataset.field;
+            pendingHw[id] = pendingHw[id] || {};
+            pendingHw[id][field] = el.value.trim();
+            setSyncStatus(`🟡 ${lruById(id) ? lruById(id).label : id} staged — press Save`, '#e0a800');
+        }
+
+        async function commitHwChanges() {
+            const ids = Object.keys(pendingHw);
+            if (!ids.length) { hwEditMode = false; renderHardwarePage(); return; }
+            const token = await getIdToken();
+            if (!token) return;
+
+            const btn = document.getElementById('hwEditBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+            setSyncStatus('🟡 Saving hardware...', '#e0a800');
+
+            const multi = {};
+            ids.forEach(id => Object.entries(pendingHw[id]).forEach(([f, v]) => {
+                multi[`${id}/${f}`] = v || null;     // blank deletes rather than storing ''
+            }));
+
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/hardware.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify(multi),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                ids.forEach(id => {
+                    hardwareLive[id] = { ...(hardwareLive[id] || {}), ...pendingHw[id] };
+                });
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                pendingHw = {};
+                hwEditMode = false;
+                renderHardwarePage();
+            } catch (e) {
+                setSyncStatus(`🔴 Could not save hardware — ${e.message}`, '#dc3545');
+            } finally {
+                if (btn) btn.disabled = false;
+                updateHwEditUI();
+            }
+        }
+
+        // ===== Known issues =====
+        function openAddIssue() {
+            if (!canEdit()) { promptSignIn().then(ok => { if (ok) openAddIssue(); }); return; }
+            const lru = lruById(hwSelectedId);
+            if (!lru) return;
+            setText('addIssueFor', `${lru.label} — ${lru.fit === 'linefit' ? 'Linefit' : 'Retrofit'}`);
+            ['addIssueTitle', 'addIssueDetail', 'addIssueResolution'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.value = '';
+            });
+            document.getElementById('addIssueStatus').value = 'open';
+            const err = document.getElementById('addIssueError');
+            err.textContent = ''; err.style.display = 'none';
+            document.getElementById('addIssueOverlay').style.display = 'flex';
+            document.getElementById('addIssueTitle').focus();
+        }
+
+        function initAddIssueModal() {
+            const overlay = document.getElementById('addIssueOverlay');
+            if (!overlay) return;
+            const err = document.getElementById('addIssueError');
+            const close = () => { overlay.style.display = 'none'; };
+            document.getElementById('addIssueCancel').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+            document.getElementById('addIssueSave').addEventListener('click', async () => {
+                const lru = lruById(hwSelectedId);
+                if (!lru) return;
+                const val = id => (document.getElementById(id).value || '').trim();
+                const entry = {
+                    title: val('addIssueTitle'),
+                    detail: val('addIssueDetail'),
+                    resolution: val('addIssueResolution'),
+                    status: val('addIssueStatus'),
+                    loggedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+                };
+                Object.keys(entry).forEach(k => { if (entry[k] === '') delete entry[k]; });
+                if (!entry.title) {
+                    err.textContent = 'A title is required.';
+                    err.style.display = 'block';
+                    return;
+                }
+                const token = await getIdToken();
+                if (!token) return;
+                const btn = document.getElementById('addIssueSave');
+                btn.disabled = true; btn.textContent = 'Saving...';
+                const id = 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                try {
+                    const res = await fetch(`${FIREBASE_DB_URL}/hardware/${lru.id}/issues/${id}.json?auth=${token}`, {
+                        method: 'PUT', body: JSON.stringify(entry),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                    hardwareLive[lru.id] = hardwareLive[lru.id] || {};
+                    hardwareLive[lru.id].issues = hardwareLive[lru.id].issues || {};
+                    hardwareLive[lru.id].issues[id] = entry;
+                    close();
+                    renderHardwarePage();
+                    setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                } catch (e) {
+                    err.textContent = `Could not save issue — ${e.message}`;
+                    err.style.display = 'block';
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Save Issue';
+                }
+            });
+        }
+
+        async function deleteHwIssue(lruId, issueId) {
+            const issue = ((hardwareLive[lruId] || {}).issues || {})[issueId];
+            if (!issue) return;
+            if (!confirm(`Delete this issue?\n\n${issue.title || 'Untitled'}`)) return;
+            const token = await getIdToken();
+            if (!token) return;
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/hardware/${lruId}/issues/${issueId}.json?auth=${token}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('delete failed');
+                delete hardwareLive[lruId].issues[issueId];
+                renderHardwarePage();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not delete issue — ${e.message}`, '#dc3545');
+            }
+        }
+
         function populateHbcTable() {
             const tbody = document.getElementById('hbcTableBody');
             if (!tbody) return;
@@ -6417,6 +7034,7 @@
             initSysBar();
             initScheduleAddModal();
             initAddActivityModal();
+            initAddIssueModal();
             initAddAircraftModal();
             updateAuthUI();
             updateScheduleEditUI();

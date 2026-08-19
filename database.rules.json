@@ -107,6 +107,32 @@
       }
     },
 
+    "hardware": {
+      ".read": true,
+
+      "$lru": {
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
+
+        "swVersion":  { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "partNumber": { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "vendor":     { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "notes":      { ".validate": "newData.isString() && newData.val().length <= 1000" },
+
+        "issues": {
+          "$issue": {
+            "title":      { ".validate": "newData.isString() && newData.val().length <= 120" },
+            "detail":     { ".validate": "newData.isString() && newData.val().length <= 1000" },
+            "resolution": { ".validate": "newData.isString() && newData.val().length <= 1000" },
+            "status":     { ".validate": "newData.isString() && newData.val().matches(/^(open|resolved)$/)" },
+            "loggedAt":   { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/)" },
+            "$other":     { ".validate": false }
+          }
+        },
+
+        "$other":     { ".validate": false }
+      }
+    },
+
     "visits": {
       ".read": true,
 

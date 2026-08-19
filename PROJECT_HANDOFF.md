@@ -127,6 +127,14 @@ This is the only record of maintenance work. The aircraft history reads it and
 the Timeline derives from it — there is no Timeline collection and nothing is
 entered twice.
 
+### `/hardware/{lruId}` — what belongs to the unit, not to an aircraft
+
+`swVersion`, `partNumber`, `vendor`, `notes`, and `issues/{id}`
+(`title`, `detail`, `resolution`, `status` open|resolved, `loggedAt`).
+
+**Serial numbers are deliberately NOT here.** They are derived from the on/off
+details of hardware activities in `/activities` — see the Hardware tab below.
+
 ### `/visits` — the only world-writable node in the database
 
 `total` and `daily/{YYYY-MM-DD}`, both plain integers. **A write is accepted only
@@ -167,6 +175,33 @@ Adding an aircraft moves every table, filter and percentage at once.
 Note the software widget counts aircraft *on the latest middleware*, while
 completion additionally requires a location — they can legitimately differ by
 an aircraft showing "⚠ needed to count as done".
+
+---
+
+## Hardware tab — the LRU catalogue is code
+
+`HARDWARE_LRUS` in the page is the single definition of which line-replaceable
+units the programme fits: `{ id, label, fit, aliases }`. It is code, not data,
+because the set changes with the programme rather than with an editor.
+
+**Retrofit and linefit are separate entries even where the name matches** — they
+are different units with their own serials and their own issues. The MODMAN is the
+clearest case. The two lists can share alias spellings without colliding, because
+the *aircraft's* fit decides which list a match belongs to.
+
+**Fitment is derived, never stored.** `hardwareFitment(lru)` walks `/activities`
+for `hardware_rr` records whose `details.partReplaced` matches an alias, takes the
+most recent per aircraft, and reads the serial from `details.newPart`, the removed
+one from `oldPart`, and the date from the activity. An aircraft with no recorded
+change reads "no record" — a gap in the record, not a missing unit.
+
+⚠️ **The linefit list is a placeholder.** It currently mirrors the retrofit set so
+the pane is usable; the real linefit equipment list has not been supplied.
+Correcting it is an edit to `HARDWARE_LRUS` and nothing else.
+
+The two-pane shell reuses the `.maint-*` classes — they style a generic
+list/detail layout and the prefix is historical. Worth unifying under a neutral
+name when something else needs the same shell.
 
 ---
 
@@ -228,7 +263,7 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
 ---
 
-## Tabs (6)
+## Tabs (7)
 
 1. **Overview** — starts with the Timeline (calendar strip + grouped-by-date
    list). One divider per day, nothing between aircraft. Beware
