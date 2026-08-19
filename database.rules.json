@@ -94,6 +94,8 @@
 
         "details": {
           "partReplaced":        { ".validate": "newData.isString() && newData.val().length <= 120" },
+          "lruId":               { ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_]{1,40}$/)" },
+          "position":            { ".validate": "newData.isString() && newData.val().length <= 20" },
           "partNumber":          { ".validate": "newData.isString() && newData.val().length <= 60" },
           "oldPart":             { ".validate": "newData.isString() && newData.val().length <= 60" },
           "newPart":             { ".validate": "newData.isString() && newData.val().length <= 60" },

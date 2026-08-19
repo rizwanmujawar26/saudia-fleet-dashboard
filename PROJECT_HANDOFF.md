@@ -194,6 +194,23 @@ are different units with their own serials and their own issues. The MODMAN is t
 clearest case. The two lists can share alias spellings without colliding, because
 the *aircraft's* fit decides which list a match belongs to.
 
+**Quantity varies by aircraft type.** `lruQtyFor(lru, type)` reads `qtyByType`
+falling back to `qty` (default 1). CWAP is the case that introduced it: three on an
+A320, five on an A330. Any LRU fitted more than once anywhere in its fleet becomes
+**position-tracked** — the fitment list shows one row per aircraft *per position*
+and the activity carries `details.position`.
+
+⚠️ CWAP quantities for the **A321 and A321neo were never specified** and currently
+fall back to 1. Fix them in `qtyByType`.
+
+**The part is picked, not typed.** The Add Activity form's Part dropdown is built
+from `HARDWARE_LRUS`, filtered to the selected aircraft's fit and rebuilt when the
+aircraft changes — add a part to the catalogue and it appears there with no other
+wiring. New records store `details.lruId`, so the link to the Hardware tab is exact;
+`activityMatchesLru()` falls back to alias matching only for records typed as free
+text before the picker existed. Part number is **not** asked for on the activity:
+it belongs to the unit and is defined once on the Hardware tab.
+
 **Fitment is derived, never stored.** `hardwareFitment(lru)` walks `/activities`
 for `hardware_rr` records whose `details.partReplaced` matches an alias and reads
 the current state from the **latest** change, not from the last serial ever

@@ -1709,6 +1709,15 @@
 
         .hw-vacant { color: #a5541f; font-weight: 600; font-size: 12px; }
 
+        /* Which of the several units on this aircraft a row refers to. */
+        .hw-pos {
+            font-weight: 700;
+            font-size: 12px;
+            color: #1c5b96;
+        }
+
+        .hw-pos-of { font-weight: 600; color: #9aa6ad; font-size: 10.5px; }
+
         .hw-firstfit {
             font-size: 10px;
             color: #4a6b52;
@@ -3154,12 +3163,16 @@
                 <div class="act-extra-label">Hardware Detail</div>
                 <div class="act-row">
                     <div>
-                        <label class="add-sched-label">Part Replaced</label>
-                        <input id="addActPartReplaced" class="add-sched-input" maxlength="120" placeholder="e.g. KRFU" autocomplete="off">
+                        <label class="add-sched-label">Part</label>
+                        <!-- Options come from the Hardware tab's catalogue, filtered to
+                             the selected aircraft's fit — add a part there and it appears
+                             here. Part number is not asked for: it belongs to the unit
+                             and is defined once on the Hardware tab. -->
+                        <select id="addActPart" class="add-sched-input"></select>
                     </div>
-                    <div>
-                        <label class="add-sched-label">Part Number</label>
-                        <input id="addActPartNumber" class="add-sched-input" maxlength="60" autocomplete="off">
+                    <div id="addActPositionWrap" style="display:none;">
+                        <label class="add-sched-label">Position</label>
+                        <select id="addActPosition" class="add-sched-input"></select>
                     </div>
                 </div>
                 <div class="act-row">
@@ -3545,6 +3558,11 @@
             { id: 'krfu',       label: 'KRFU',       fit: 'retrofit', aliases: ['krfu'] },
             { id: 'rx_antenna', label: 'RX Antenna', fit: 'retrofit', aliases: ['rx antenna', 'rx ant', 'rx'] },
             { id: 'tx_antenna', label: 'TX Antenna', fit: 'retrofit', aliases: ['tx antenna', 'tx ant', 'tx'] },
+            // Fitted more than once per aircraft, and a different number by type — so
+            // its fitment is tracked per position rather than one serial per aircraft.
+            // Types absent from qtyByType fall back to `qty`.
+            { id: 'cwap', label: 'CWAP', fit: 'retrofit', aliases: ['cwap', 'wap'],
+              qty: 1, qtyByType: { 'A320-214': 3, 'A330-343': 5 } },
 
             // PLACEHOLDER SET — mirrors the retrofit list so the pane is usable today.
             // The real linefit equipment list has not been given yet; correcting it is
@@ -3572,6 +3590,28 @@
             return isLinefit(aircraft) ? 'linefit' : 'retrofit';
         }
 
+        // How many of this unit a given aircraft carries. Most are one; CWAP is three on
+        // an A320 and five on an A330, so anything above one is tracked per position.
+        function lruQtyFor(lru, type) {
+            const byType = lru.qtyByType || {};
+            if (byType[type] !== undefined) return byType[type];
+            return lru.qty === undefined ? 1 : lru.qty;
+        }
+
+        // True when this unit is fitted more than once anywhere in the fleet it applies
+        // to — that is what turns the fitment list into one row per position.
+        function lruIsMulti(lru) {
+            return activeFleet().some(a => fitOf(a) === lru.fit && lruQtyFor(lru, a.type) > 1);
+        }
+
+        // The label to show for a hardware activity. New records carry the LRU id, so
+        // the label follows the catalogue; older ones only have the typed text.
+        function activityPartLabel(act) {
+            const d = act.details || {};
+            const lru = d.lruId ? lruById(d.lruId) : null;
+            return lru ? lru.label : (d.partReplaced || '');
+        }
+
         function normalisePart(v) {
             return String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
         }
@@ -3581,7 +3621,11 @@
         function activityMatchesLru(act, lru, aircraft) {
             if (act.category !== 'hardware_rr') return false;
             if (!aircraft || fitOf(aircraft) !== lru.fit) return false;
-            const part = normalisePart((act.details || {}).partReplaced);
+            const d = act.details || {};
+            // Records written by the picker carry the id, so the match is exact. The
+            // alias pass is only for records typed as free text before the picker.
+            if (d.lruId) return d.lruId === lru.id;
+            const part = normalisePart(d.partReplaced);
             if (!part) return false;
             return lru.aliases.some(a => a === part) || lru.aliases.some(a => part.includes(a));
         }
@@ -3599,12 +3643,14 @@
             return o ? o.label : 'Awaiting Shop';
         }
 
-        // Every change recorded for this LRU on this aircraft, newest first.
-        function lruChangesFor(lru, tailId) {
+        // Every change recorded for this LRU on this aircraft, newest first. When a
+        // position is given, only that position's changes.
+        function lruChangesFor(lru, tailId, position) {
             const byTail = {};
             aircraftData.forEach(a => { byTail[a.id] = a; });
             return activityEntries()
-                .filter(x => x.aircraft === tailId && activityMatchesLru(x, lru, byTail[x.aircraft]))
+                .filter(x => x.aircraft === tailId && activityMatchesLru(x, lru, byTail[x.aircraft])
+                    && (position === undefined || String((x.details || {}).position || '') === String(position)))
                 .sort((x, y) => dateSortKey(toISODate(y.date)).localeCompare(dateSortKey(toISODate(x.date))));
         }
 
@@ -3617,30 +3663,44 @@
         // the position empty — so the current state is whatever the LATEST change says,
         // not simply the last serial ever mentioned.
         function hardwareFitment(lru) {
-            return activeFleet()
+            const multi = lruIsMulti(lru);
+            const rows = [];
+
+            activeFleet()
                 .filter(a => fitOf(a) === lru.fit)
                 .sort((a, b) => a.id.localeCompare(b.id))
-                .map(a => {
-                    const mine = lruChangesFor(lru, a.id);
-                    const latest = mine[0];
-                    const d = (latest && latest.details) || {};
-                    // Count units that actually came off, not changes — a first fit
-                    // removes nothing and should not read as a removal.
-                    const removals = mine.filter(x => (x.details || {}).oldPart).length;
-                    return {
-                        aircraft: a,
-                        serial: d.newPart || '',
-                        partNumber: d.partNumber || '',
-                        removed: d.oldPart || '',
-                        date: latest ? latest.date : '',
-                        location: latest ? latest.location : '',
-                        removals,
-                        changes: mine.length,
-                        // Latest change took a unit off and put nothing back.
-                        vacant: !!(latest && !d.newPart && d.oldPart),
-                        firstFit: !!(latest && d.newPart && !d.oldPart && mine.length === 1),
-                    };
+                .forEach(a => {
+                    const qty = lruQtyFor(lru, a.type);
+                    if (qty <= 0) return;
+                    // One row per fitted position when there is more than one of this
+                    // unit on the aircraft, otherwise a single row as before.
+                    const positions = multi
+                        ? Array.from({ length: qty }, (_, i) => String(i + 1))
+                        : [undefined];
+
+                    positions.forEach(pos => {
+                        const mine = lruChangesFor(lru, a.id, pos);
+                        const latest = mine[0];
+                        const d = (latest && latest.details) || {};
+                        rows.push({
+                            aircraft: a,
+                            position: pos || '',
+                            qty,
+                            serial: d.newPart || '',
+                            removed: d.oldPart || '',
+                            date: latest ? latest.date : '',
+                            location: latest ? latest.location : '',
+                            // Count units that actually came off, not changes — a first
+                            // fit removes nothing and should not read as a removal.
+                            removals: mine.filter(x => (x.details || {}).oldPart).length,
+                            changes: mine.length,
+                            vacant: !!(latest && !d.newPart && d.oldPart),
+                            firstFit: !!(latest && d.newPart && !d.oldPart && mine.length === 1),
+                        });
+                    });
                 });
+
+            return rows;
         }
 
         // Every unit ever removed for this LRU across the fleet, newest first. This is
@@ -3658,7 +3718,7 @@
                         id: x.id, tail: x.aircraft, type: (byTail[x.aircraft] || {}).type || '',
                         date: x.date, location: x.location || '',
                         serial: d.oldPart, replacedBy: d.newPart || '',
-                        partNumber: d.partNumber || '',
+                        position: d.position || '',
                         reason: d.removalReason || '',
                         shopStatus: d.shopStatus || 'pending',
                         shopRef: d.shopRef || '',
@@ -3689,10 +3749,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.9.1';
-        const APP_BUILD    = '2026.08.19.10';
+        const APP_VERSION  = '2.10.0';
+        const APP_BUILD    = '2026.08.19.11';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-19T19:50:00Z';
+        const APP_DEPLOYED = '2026-08-19T20:05:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -5362,7 +5422,8 @@
                 ? `<span><b>${label}:</b> ${escAttr(val)}</span>` : '';
 
             const techBits = [
-                tech('Part', d.partReplaced),
+                tech('Part', activityPartLabel(act)),
+                tech('Position', d.position),
                 tech('P/N', d.partNumber),
                 tech('Old S/N', d.oldPart),
                 tech('New S/N', d.newPart),
@@ -5563,6 +5624,41 @@
             modem_commissioning: 'actExtraModem',
         };
 
+        // The part list follows the aircraft, because retrofit and linefit carry
+        // different equipment. Rebuilt on open and whenever the aircraft changes, so a
+        // part added on the Hardware tab shows up here with no further wiring.
+        function syncActParts() {
+            const sel = document.getElementById('addActPart');
+            if (!sel) return;
+            const tail = document.getElementById('addActAircraft').value;
+            const aircraft = aircraftData.find(a => a.id === tail);
+            const fit = aircraft ? fitOf(aircraft) : 'retrofit';
+            const previous = sel.value;
+            const lrus = lrusForFit(fit);
+            sel.innerHTML = '<option value="">— select a part —</option>' +
+                lrus.map(l => `<option value="${escAttr(l.id)}">${escAttr(l.label)}</option>`).join('');
+            if (lrus.some(l => l.id === previous)) sel.value = previous;
+            syncActPositions();
+        }
+
+        // Only shown when the chosen part is fitted more than once on that aircraft.
+        function syncActPositions() {
+            const wrap = document.getElementById('addActPositionWrap');
+            const posSel = document.getElementById('addActPosition');
+            const lru = lruById(document.getElementById('addActPart').value);
+            const tail = document.getElementById('addActAircraft').value;
+            const aircraft = aircraftData.find(a => a.id === tail);
+            const qty = (lru && aircraft) ? lruQtyFor(lru, aircraft.type) : 1;
+            if (!lru || qty <= 1) {
+                wrap.style.display = 'none';
+                posSel.innerHTML = '';
+                return;
+            }
+            wrap.style.display = '';
+            posSel.innerHTML = Array.from({ length: qty }, (_, i) =>
+                `<option value="${i + 1}">${i + 1} of ${qty}</option>`).join('');
+        }
+
         function syncActExtras() {
             const cat = document.getElementById('addActCategory').value;
             const wanted = ACT_EXTRA_BLOCKS[cat];
@@ -5585,6 +5681,8 @@
                 catSel.innerHTML = ACTIVITY_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('');
                 catSel.dataset.built = '1';
                 catSel.addEventListener('change', syncActExtras);
+                acSel.addEventListener('change', syncActParts);
+                document.getElementById('addActPart').addEventListener('change', syncActPositions);
             }
             catSel.value = 'hardware_rr';
 
@@ -5593,11 +5691,17 @@
             const sel = aircraftData.find(a => a.id === acSel.value);
             document.getElementById('addActLocation').value = (sel && (sel.retrofitLocation || aircraftLocationOf(sel))) || '';
             document.getElementById('addActDate').value = new Date().toISOString().slice(0, 10);
-            ['addActTitle', 'addActTask', 'addActOutcome', 'addActNotes', 'addActPartReplaced',
-             'addActPartNumber', 'addActOldPart', 'addActNewPart', 'addActRemovalReason',
+            ['addActTitle', 'addActTask', 'addActOutcome', 'addActNotes',
+             'addActOldPart', 'addActNewPart', 'addActRemovalReason',
              'addActSoftwareName', 'addActVersion', 'addActModemType', 'addActCommissioningResult']
                 .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
+            // Blank on every open: the remembered value is only there to survive an
+            // aircraft change mid-form, not to carry over into the next activity.
+            syncActParts();
+            const partSel = document.getElementById('addActPart');
+            if (partSel) partSel.value = '';
+            syncActPositions();
             syncActExtras();
             const err = document.getElementById('addActError');
             err.textContent = ''; err.style.display = 'none';
@@ -5633,7 +5737,11 @@
                 // is false in the rules, and an empty string would be stored as data.
                 const detailsByCategory = {
                     hardware_rr: {
-                        partReplaced: val('addActPartReplaced'), partNumber: val('addActPartNumber'),
+                        // The catalogue id is the link to the Hardware tab; the part
+                        // number is not repeated here because it belongs to the unit.
+                        lruId: val('addActPart'),
+                        position: document.getElementById('addActPositionWrap').style.display === 'none'
+                            ? '' : val('addActPosition'),
                         oldPart: val('addActOldPart'), newPart: val('addActNewPart'),
                         // Only meaningful when something actually came off.
                         removalReason: val('addActOldPart') ? val('addActRemovalReason') : '',
@@ -5653,6 +5761,11 @@
 
                 if (!entry.aircraft || !entry.date || !entry.title) {
                     err.textContent = 'Aircraft, date and title are all required.';
+                    err.style.display = 'block';
+                    return;
+                }
+                if (category === 'hardware_rr' && !details.lruId) {
+                    err.textContent = 'Choose which part this was. Add it on the Hardware tab first if it is not listed.';
                     err.style.display = 'block';
                     return;
                 }
@@ -5780,7 +5893,13 @@
                 cell('Part Number', field('partNumber', rec.partNumber, 'e.g. KRFU-1200')),
                 cell('Vendor', field('vendor', rec.vendor, 'e.g. Hughes')),
                 cell('Fit', lru.fit === 'linefit' ? 'Linefit' : 'Retrofit'),
-                cell('Aircraft Fitted', `${fitted} of ${rows.length}`),
+                cell('Units per Aircraft', (() => {
+                    const types = [...new Set(activeFleet().filter(a => fitOf(a) === lru.fit).map(a => a.type))].sort();
+                    const parts = types.map(t => `${TYPE_SHORT_LABEL[t] || t} ×${lruQtyFor(lru, t)}`);
+                    const qtys = [...new Set(types.map(t => lruQtyFor(lru, t)))];
+                    return qtys.length === 1 ? String(qtys[0]) : parts.join(' · ');
+                })()),
+                cell('Positions Fitted', `${fitted} of ${rows.length}`),
                 cell('Open Issues', String(issues.filter(i => i.status !== 'resolved').length)),
                 cell('Notes', field('notes', rec.notes, 'Anything worth knowing about this unit')),
             ].join('');
@@ -5819,13 +5938,17 @@
                     : '<span class="hw-none">—</span>'}</td>`;
             };
 
+            // Part number is a property of the unit, not of a fitment, so it lives in
+            // the profile above rather than repeating identically down every row.
+            const multi = lruIsMulti(lru);
+
             const fitRow = r => `<tr>
                 <td><strong>${escAttr(r.aircraft.id)}</strong></td>
                 <td>${escAttr(TYPE_SHORT_LABEL[r.aircraft.type] || r.aircraft.type)}</td>
+                ${multi ? `<td><span class="hw-pos">${escAttr(r.position)}<span class="hw-pos-of">/${r.qty}</span></span></td>` : ''}
                 <td>${r.vacant
                         ? '<span class="hw-vacant">removed — none fitted</span>'
                         : (r.serial ? `<span class="hw-serial">${escAttr(r.serial)}</span>` : '<span class="hw-none">no record</span>')}</td>
-                <td>${r.partNumber ? escAttr(r.partNumber) : '<span class="hw-none">—</span>'}</td>
                 <td>${r.date ? escAttr(r.date) : '<span class="hw-none">—</span>'}${r.firstFit ? ' <span class="hw-firstfit">first fit</span>' : ''}</td>
                 ${isSim ? roamingCell(r) : ''}
                 <td>${r.removals
@@ -5840,7 +5963,7 @@
                 <div class="hw-issue-top">
                     <span class="hw-serial hw-removal-sn">${escAttr(x.serial)}</span>
                     <span class="status-badge shop-badge shop-${escAttr(x.shopStatus)}">${escAttr(shopStatusLabel(x.shopStatus))}</span>
-                    <span class="maint-act-cat">${escAttr(x.tail)}${x.type ? ' · ' + escAttr(TYPE_SHORT_LABEL[x.type] || x.type) : ''} · ${escAttr(x.date || '—')}</span>
+                    <span class="maint-act-cat">${escAttr(x.tail)}${x.position ? ` · pos ${escAttr(x.position)}` : ''}${x.type ? ' · ' + escAttr(TYPE_SHORT_LABEL[x.type] || x.type) : ''} · ${escAttr(x.date || '—')}</span>
                     ${canEdit() ? `<button class="hw-shop-btn" onclick="openShopReport('${escAttr(x.id)}')">Shop report</button>` : ''}
                 </div>
                 <div class="hw-removal-body">
@@ -5875,7 +5998,7 @@
                 <div class="table-scroll-wrapper" style="padding: 0 16px 16px;">
                     <table class="hw-fit-table">
                         <thead><tr>
-                            <th>Aircraft</th><th>Type</th><th>Serial Fitted</th><th>Part No</th>
+                            <th>Aircraft</th><th>Type</th>${multi ? '<th>Pos</th>' : ''}<th>Serial Fitted</th>
                             <th>Installed</th>${isSim ? '<th>Roaming</th>' : ''}<th>Removals</th>
                         </tr></thead>
                         <tbody>${rows.map(fitRow).join('')}</tbody>
