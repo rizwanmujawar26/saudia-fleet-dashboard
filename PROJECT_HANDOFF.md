@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.7.0, 2026-08-19)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.10.0, 2026-08-19)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -14,15 +14,19 @@ Realtime Database so the whole team sees the same data instantly.
 - **Local path:** `/Users/rizwanmujawar/Downloads/saudia-fleet-dashboard/index.html`
 - **Firebase project:** `saudia-fleet-dashboard` (Realtime Database, us-central1)
   DB URL: `https://saudia-fleet-dashboard-default-rtdb.firebaseio.com`
-- Single file, ~4100 lines, vanilla HTML/CSS/JS. No build step, no framework,
+- Single file, ~7,500 lines, vanilla HTML/CSS/JS. No build step, no framework,
   and **no external scripts at all** — nothing to fetch from a CDN.
+- **There is no build, lint or type tooling, deliberately.** The checks that do
+  exist are in *Local dev workflow* below. Don't add a toolchain unasked.
 
 `gh` CLI and `firebase` CLI (via `npx firebase-tools`) are already authenticated
 on this Mac — no login needed to keep working.
 
-Current data (2026-08-17): 42 aircraft (40 retrofit + 2 linefit), 24 on
-Middleware 2.1.0, 38 with media loaded, 22 schedule entries, 1 allowlisted
-editor.
+Live data (read from the database 2026-08-19): 42 aircraft (40 retrofit +
+2 linefit), 24 on Middleware 2.1.0, 38 with media loaded, 24 schedule entries,
+1 maintenance activity, 1 hardware record, 69 visits, 1 allowlisted editor.
+`/activities` and `/hardware` are new and barely populated — a Hardware fitment
+reading "no record" is a gap in the record, not a fault.
 
 ---
 
@@ -344,29 +348,24 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
    The profile fields that are editable (retrofit location, WiFi, activated,
    flag, reason) become inputs in Edit mode, using the same staged-then-Save
    flow the table used — nothing that could be edited before was lost.
-   **Add New Activity** writes one `/activities` record and nothing else.
-   Two widgets only — Open Issues and
-   Serviceable — and they are complements of one total, so a third card on that
-   strip would just be another way of saying the same thing.
+   **Add New Activity** writes one `/activities` record and nothing else — the
+   aircraft history and the Timeline both derive from it.
+   Two widgets only — Open Issues and Serviceable — complements of one total, so a
+   third card on that strip would just restate them.
    **"Serviceable", not "Clear"** — the MRO term for an aircraft with nothing
    outstanding against it. The badge, the widget and the filter pill all use it;
    the `mflag` dataset value is `serviceable`.
-   Clicking anywhere on a row opens a drawer of per-aircraft detail — that is where
-   **SSID status and the remaining system checks go**. The caret has a hair-width
-   column to itself (col 1, `.maint-expand-col`) so the Aircraft cell stays plain
-   `<strong>` and lines up with the Software, Media and Fleet tables; inline before
-   the registration it read as a stray dot. It rotates rather than swapping glyph.
-   `maintRowClick()` exempts selects and inputs, or opening a dropdown in Edit mode
-   would collapse the row. **Sortable columns start at 2** — sorting also collapses
-   the drawers first (`sortMaintTable()`), because `sortTable` treats a one-cell
-   detail row as a peer.
-   There is no station filter — the tab is about the retrofit and its systems, not
-   about which base an aircraft flies from. Base Station is still in the drawer.
-5. **Schedule** — standalone forward-looking plan, deliberately **not** linked
+   Filters are Aircraft Type and Maintenance status. There is no station filter —
+   the tab is about the retrofit and its systems, not which base an aircraft flies
+   from. Base Station is one of the profile fields.
+5. **Hardware** — the LRU catalogue on the left in two fit groups, the selected unit
+   on the right: profile, known issues, fitment, removed units. See *Hardware tab*
+   above. Serials are derived from `/activities` and never stored here.
+6. **Schedule** — standalone forward-looking plan, deliberately **not** linked
    to completion status. Entries drop off automatically 24h past their slot
    (`SCHEDULE_GRACE_MS`); in that window they show `⚠ Overdue` so they can be
    rescheduled rather than vanishing.
-6. **Fleet** — owns the roster: add / edit / remove, incl. linefit. Removing
+7. **Fleet** — owns the roster: add / edit / remove, incl. linefit. Removing
    deletes only the `/fleet` entry; `/aircraft` history survives, so re-adding
    the registration restores it.
 
@@ -417,8 +416,9 @@ Firebase rejects a multi-path update where one path contains another.
 
 **Adding SSID status (or anything else) means editing `database.rules.json`
 first** — `$other` is `false` under `maintenance`, so an undeclared field is
-rejected outright. Then render it in `maintDetailRow()`, which is the drawer
-under each row and the intended home for the per-aircraft checks.
+rejected outright. Then render it in `renderMaintDetail()`, the right-hand panel.
+The drawer that used to hold this is gone; SSID could equally become an LRU on the
+Hardware tab instead — that decision is still open.
 
 `flaggedBy` was deliberately left out: `/aircraft` is world-readable, so storing
 the editor's email would publish the team's addresses. Add it only if that is
@@ -459,8 +459,10 @@ sections (Build / Data / Usage).
 - Animation is decoration only; everything is disabled under
   `prefers-reduced-motion`.
 
-The HBC+ exclusion note the old footer carried still exists — it is the
-`.footnote` at the bottom of the Overview tab, which is where it always was.
+The HBC+ exclusion note that the old footer carried was moved to the Overview's
+`.footnote` block, and then removed altogether at the user's request in v2.7.0.
+The same fact is still stated in the Software tab's HBC+ table title and in the
+Project Objectives list, so nothing was lost.
 
 ---
 
@@ -519,16 +521,27 @@ Use the Browser tool's `preview_start` (not direct `navigate` — `localhost`
 gets blocked by policy that way). `.claude/launch.json` defines that server as
 `dashboard`, so `preview_start {name: "dashboard"}` starts and opens it.
 
-Before every deploy:
-1. Extract the `<script>` block and run `node --check` on it.
-2. Test the change in the local browser preview.
-3. `git add/commit/push` — GitHub Pages auto-deploys.
+There is no build, lint or type tooling. These are the checks that stand in for
+it — run all of them before every deploy:
 
-Rules deploy separately:
+1. Extract the `<script>` block and `node --check` it.
+2. `python3 -c "import json; json.load(open('database.rules.json'))"`.
+3. **No duplicate DOM ids** in the markup — easy to introduce in a 7,500-line file.
+4. **Every `onclick`/`onchange` handler named in the markup exists in the script.**
+   Both of these are one-off greps; there is no linter to catch them.
+5. Test in the local browser preview, and read the console for errors.
+6. `git add/commit/push` — GitHub Pages auto-deploys.
+
+Rules deploy separately, and **must land before the page** when a change adds a
+field: the page's writes fail with `Permission denied` until they do.
 
 ```bash
-firebase deploy --only database --project saudia-fleet-dashboard
+npx --yes firebase-tools deploy --only database --project saudia-fleet-dashboard
 ```
+
+The `--yes` matters. `~/.claude/settings.json` `autoMode.soft_deny` carries
+`Bash(firebase deploy:*)`, and the exact string above is the form allowlisted in
+the project settings; without `--yes` the deploy is gated.
 
 After changing rules, re-check enforcement with plain `curl`: anonymous read of
 `/aircraft.json` should be `200`; anonymous write, and reads of `/editors.json`
@@ -542,15 +555,24 @@ live.
 
 - **Verify by hash, not by eye:** `curl` the live `index.html` and `diff` it
   against local. `shasum -a 256` on both is the fastest proof.
-- **Pages builds can wedge.** A build stuck in `building`, or `errored` with
-  "Page build failed", is usually GitHub-side. `gh api -X POST .../pages/builds`
-  often returns 503 during incidents. The reliable nudge is an empty commit:
-  `git commit --allow-empty -m "Retrigger Pages build" && git push`.
+- **Pages builds can wedge**, usually during a GitHub incident — check
+  githubstatus.com before assuming it is your change.
+- **`pages/builds/latest` goes stale.** A wedged build sits at `building` with
+  `updated == created` and never moves; the repo-level `gh api repos/.../pages`
+  told the truth (`status: errored`) when `builds/latest` did not. Check both.
+- **To recover a wedged build:** `gh api -X POST .../pages/builds` once the
+  incident has passed — it returned `queued` and built in 61s. It only 503s
+  *during* an incident. An empty commit is the fallback, but it did nothing during
+  the outage, so try the API first and keep the history clean.
 - `.nojekyll` is in the repo root — this is one static file and Jekyll only
   added a build step that could fail. Don't remove it.
-- **The in-app browser cannot reach Firebase.** Pages load but tables render
-  empty. That is a tooling limitation, not a site fault — verify by injecting
-  data client-side, or check the served file's markup and hash instead.
+- **The in-app browser reaches Firebase only sometimes.** When it cannot, pages
+  load but tables render empty and the status bar stays on "Connecting" — a
+  tooling limitation, not a site fault. Seed `fleetRoster` / `aircraftLive` /
+  `activitiesLive` client-side and call `renderAll()` to exercise rendering, and
+  stub `window.fetch` to capture write payloads without touching live data.
+- **`read_console_messages` keeps a tab's whole history.** An error fixed ten
+  minutes ago still shows. Open a fresh tab to confirm a clean load.
 - **Back up before bulk edits.** `cp index.html` to a scratch path before any
   scripted multi-block deletion; a section-comment-based removal once cut 3,256
   lines instead of ~600 and the backup was the only thing that made it a
@@ -560,25 +582,109 @@ live.
 
 ## Open items
 
-- **SSID status on the Maintenance tab** — the drawer (`maintDetailRow()`) is
-  built and waiting for it; add the field to the rules first. Whether the flag
-  should then be *derived* from SSID and the other checks, instead of set by
-  hand, is still open — today it is a manual editor toggle.
-- **Sorting the Maintenance table is lost on re-render** — expanding a drawer,
-  staging an edit or a live update repopulates the table in registration order.
-  Every other table behaves the same way; fix it for all of them or none.
-- **`AQL` carries a vestigial `pinHash`** from the old PIN system. Nothing
-  reads it; rules now reject writing it. Safe to clear whenever.
-- **"In Progress" no longer exists on the Software page.** The old stored enum
-  had it, nothing used it, and neither version nor location expresses it. If
-  it's wanted back it needs its own field.
-- **`ASBA`/`ASBB` notes read "HBC+ Aircraft"** — redundant against the table
-  title, now visible in the HBC+ Comments column. Clear whenever.
+### Waiting on the user — ask, don't guess
+
+- **The linefit equipment list is a placeholder.** `HARDWARE_LRUS` currently
+  mirrors the retrofit set for linefit so the pane is usable. The real list has
+  never been supplied. One-array fix.
+- **CWAP quantities for A321 and A321neo** were never given and fall back to 1.
+  Stated so far: A320 ×3, A330 ×5, retrofit only. Whether linefit carries CWAP at
+  all is also unanswered.
+- **What should drive the maintenance flag.** Today it is a manual editor toggle.
+  Deriving it from SSID and the other checks — the way completion derives from
+  version + location — is the better shape, but the criteria have not been agreed.
+
+### Known gaps and cleanups
+
+- **SSID status has no home yet.** It was going in the old expandable drawer,
+  which no longer exists. It now belongs either in the Maintenance right panel's
+  profile grid or as an LRU on the Hardware tab. Rules first, either way.
+- **Alias matching is legacy-only but still load-bearing.** Activities logged
+  before the part picker carry free text in `details.partReplaced`; a typo in one
+  of those silently detaches it from its LRU. New records use `lruId` and are
+  exact. Consider a one-off backfill.
+- **The two-pane shell is styled by `.maint-*` classes** that the Hardware tab also
+  uses. They style a generic list/detail layout and the prefix is historical —
+  worth a neutral name if a third page needs the same shell.
+- **`AQL` carries a vestigial `pinHash`** from the old PIN system. Nothing reads
+  it; rules reject writing it. Safe to clear whenever.
+- **`ASBA`/`ASBB` notes read "HBC+ Aircraft"** — redundant against the table title,
+  visible in the HBC+ Comments column. Clear whenever.
+- **"In Progress" no longer exists on the Software page.** The old stored enum had
+  it, nothing used it, and neither version nor location expresses it. It would need
+  its own field.
+- **No test suite.** A regression is only caught if someone exercises the page. One
+  did slip through mid-session (a helper deleted with the block around it) and was
+  caught in the browser, not by any check.
+
+---
+
+## Change log
+
+Newest first. Each entry is one deployed commit; `git log` has the full reasoning
+in the commit bodies.
+
+### v2.10.0 — Hardware part picker, CWAP, per-position fitment
+Part Replaced became a dropdown fed by `HARDWARE_LRUS`, filtered to the aircraft's
+fit. Records store `details.lruId`, so the link is exact instead of typo-prone.
+Part Number left the activity form and the fitment table — it belongs to the unit.
+CWAP introduced **quantity per aircraft type**, so any multi-unit LRU is now tracked
+per position.
+
+### v2.9.1 — Calendar strip geometry and month grouping
+Fixed the white sliver under month tiles (`.cal-tile` is a flex column with the
+count band pushed to the bottom; the strip stretches tiles to the tallest). Every
+month gets a tile, current month open by default, past months folded. Year band
+grey → blue.
+
+### v2.9.0 — Unit lifecycle, removal history, shop reports, SIM roaming
+Fitment reads current state from the latest change, distinguishing first fit /
+swap / removed-and-not-refitted. Removed Units became the shop queue, with
+findings fillable long after the removal. `simRoaming` added to `/aircraft`.
+
+### v2.8.0 — Hardware tab
+LRU catalogue in code, `/hardware/{lruId}` for what belongs to the unit, fitment
+derived from `/activities`. Retrofit and linefit kept as separate entries.
+
+### v2.7.x — Sticky header and tab strip
+Header pinned (`.container` had to lose `overflow: hidden`), tab strip pinned under
+it at `var(--header-h)`, published by a `ResizeObserver`.
+
+### v2.7.0 — Timeline folding, filters, location codes
+Month tiles for past months, a week of day cards behind Show more, JED/RUH station
+codes, filter order Software/Hardware/Media. The Maintenance **filter pill** was
+removed; the nav tab was removed by mistake in the same commit and restored in
+`009bb94`.
+
+### v2.6.x — Header clock
+JED+UTC clocks, then reduced to a single calendar-style tile (weekday / day / month
+/ `HH:MM Z`), brand left-aligned, subtitle centred on the title.
+
+### v2.5.0 — Fleet-wide Timeline, two-panel Maintenance
+Timeline became every connectivity activity derived from Software, Media and
+`/activities`. Maintenance lost its table for a list/detail layout and gained Add
+New Activity.
+
+### v2.4.1 — System status bar
+The old three-line footer became a live capsule strip with a system information
+panel and a real visit counter on `/visits`.
+
+### Earlier — Maintenance tab foundation
+Maintenance tab, the `maintenance` flag feeding the global card, retrofit location,
+WiFi visibility, activation date, and "Serviceable" replacing "Clear".
+
+---
 
 ## Status
 
-The user considers this a working portal under active extension. Expect
-targeted asks — new modules (Maintenance, SIM tracking), data updates, and UI
-polish — rather than rebuilds. **Do not rebuild from scratch; reuse the
-existing table framework, filter pills, widget strips, status badges and
-auth-gated edit flow.**
+A working portal under active extension. Expect targeted asks — new modules, data
+updates, UI polish — rather than rebuilds. **Do not rebuild from scratch; reuse the
+existing table framework, filter pills, widget strips, status badges, the two-pane
+shell and the auth-gated edit flow.**
+
+Two working agreements from the user:
+
+- **Deploy without being asked.** Rules first, then the page; verify by hash. The
+  full checklist is in *Local dev workflow*.
+- **Ask before removing anything major** — a tab, a page, a feature, a data node.
+  This is the exception to the above. Additive and cosmetic changes just ship.
