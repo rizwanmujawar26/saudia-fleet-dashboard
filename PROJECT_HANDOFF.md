@@ -228,13 +228,7 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
 ---
 
-## Tabs (5 shown, 6 built)
-
-**The Maintenance tab button is currently removed from the tab strip**, pending the
-page rework. The page, its code and `/activities` are all intact — restoring the
-one `<button>` in the tab strip brings it straight back. While it is hidden there
-is no UI for Add New Activity, so Hardware entries on the Timeline can only come
-from records that already exist.
+## Tabs (6)
 
 1. **Overview** — starts with the Timeline (calendar strip + grouped-by-date
    list). One divider per day, nothing between aircraft. Beware

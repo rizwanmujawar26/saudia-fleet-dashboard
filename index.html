@@ -2409,6 +2409,7 @@
                 <button class="tab-button active" onclick="switchTab('overview')">📊 Overview</button>
                 <button class="tab-button" onclick="switchTab('aircraft')">💿 Software</button>
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
+                <button class="tab-button" onclick="switchTab('maintenance')">🛠️ Maintenance</button>
                 <button class="tab-button" onclick="switchTab('schedule')">📅 Schedule</button>
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
             </div>
@@ -2596,9 +2597,6 @@
                  card counts against, so the tab and the card cannot disagree.
                  Per-aircraft activities live at /activities and are the single source
                  for the Maintenance and Hardware entries on the Timeline. -->
-            <!-- Tab button removed for now, pending the Maintenance page rework. The
-                 page and all its code are intact — restoring the button in the tab
-                 strip brings it straight back. -->
             <div id="maintenance" class="tab-content">
                 <div class="media-widget-section">
                     <span class="filter-group-label">Fleet Maintenance</span>
@@ -3189,10 +3187,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.7.0';
-        const APP_BUILD    = '2026.08.19.04';
+        const APP_VERSION  = '2.7.1';
+        const APP_BUILD    = '2026.08.19.05';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-19T18:55:00Z';
+        const APP_DEPLOYED = '2026-08-19T19:05:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
