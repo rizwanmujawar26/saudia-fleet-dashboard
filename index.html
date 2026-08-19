@@ -338,6 +338,11 @@
            white "cover" layers scroll with the content (background-attachment: local)
            while the dark edge layers stay put, so a shadow shows only on the side
            that still has content off-screen. */
+        /* Pins directly under the header, so the global widgets scroll away but the
+           tab strip stays reachable. `top` is the header's measured height, published
+           as --header-h by initStickyHeader — the header changes height between
+           breakpoints and again when the title wraps, so a hardcoded offset would be
+           wrong on most screens. z-index sits under the header (500) and over content. */
         .tabs {
             display: flex;
             gap: 0;
@@ -348,6 +353,9 @@
             overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
+            position: sticky;
+            top: var(--header-h, 130px);
+            z-index: 400;
             background:
                 linear-gradient(to right, #ffffff 30%, rgba(255,255,255,0)) left center,
                 linear-gradient(to left, #ffffff 30%, rgba(255,255,255,0)) right center,
@@ -356,6 +364,11 @@
             background-repeat: no-repeat;
             background-size: 30px 100%, 30px 100%, 13px 100%, 13px 100%;
             background-attachment: local, local, scroll, scroll;
+            /* Under all four gradient layers. Those are edge fades and are clear
+               through the middle — without an opaque base the page showed through the
+               strip once it was pinned. The scroll-shadow effect is unaffected: it
+               already assumes a solid ground beneath it. */
+            background-color: #ffffff;
         }
 
         .tabs::-webkit-scrollbar {
@@ -3204,10 +3217,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.7.2';
-        const APP_BUILD    = '2026.08.19.06';
+        const APP_VERSION  = '2.7.3';
+        const APP_BUILD    = '2026.08.19.07';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-19T19:10:00Z';
+        const APP_DEPLOYED = '2026-08-19T19:15:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6363,6 +6376,16 @@
         function initStickyHeader() {
             const header = document.querySelector('.header');
             if (!header) return;
+
+            // The tab strip pins to the bottom of the header, so it needs the header's
+            // real height — which differs by breakpoint and again when the title wraps.
+            // Observing the element beats hardcoding a number per breakpoint.
+            const publishHeight = () => document.documentElement.style.setProperty(
+                '--header-h', Math.round(header.getBoundingClientRect().height) + 'px');
+            publishHeight();
+            if (window.ResizeObserver) new ResizeObserver(publishHeight).observe(header);
+            else window.addEventListener('resize', publishHeight);
+
             let stuck = null;
             const onScroll = () => {
                 const now = window.scrollY > 12;

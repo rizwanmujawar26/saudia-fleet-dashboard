@@ -385,8 +385,18 @@ undo by accident:
 - **`z-index: 500`**, deliberately below the modal overlays (1000, and 1100 for the
   system information panel) so an overlay still covers the header.
 
-`initStickyHeader()` only toggles `.is-stuck` for the shadow, and only when the
-state changes — the pinning itself is pure CSS.
+**The tab strip pins under it**, at `top: var(--header-h)`, so the global widgets
+scroll away but the tabs stay reachable. `initStickyHeader()` publishes
+`--header-h` from the header's measured height and keeps it current with a
+`ResizeObserver` — the header is a different height per breakpoint and different
+again when the title wraps, so a hardcoded offset is wrong on most screens.
+
+`.tabs` also needed `background-color: #ffffff`. Its four gradient layers are edge
+fades for the scroll-shadow effect and are clear through the middle, so without an
+opaque base the page showed through the strip once it was pinned.
+
+`initStickyHeader()` otherwise only toggles `.is-stuck` for the shadow, and only
+when the state changes — the pinning itself is pure CSS.
 
 ---
 
