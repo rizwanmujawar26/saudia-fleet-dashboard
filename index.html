@@ -49,7 +49,7 @@
         /* Logo sits beside the title and subtitle as one block. The subtitle used to
            live outside this flex row, so the header's text-align:center pushed it
            across the full width while the title stayed next to the logo — the two
-           lines never shared a left edge. */
+           lines never lined up with each other. */
         .header-brand {
             display: flex;
             align-items: center;
@@ -64,8 +64,11 @@
             filter: brightness(0) invert(1);
         }
 
+        /* Centred, not left: the block is only as wide as the title, so centring
+           here centres the subtitle under CONNECTIVITY FLEET STATUS rather than
+           across the whole header. */
         .header-titles {
-            text-align: left;
+            text-align: center;
         }
 
         .header h1 {
@@ -79,6 +82,60 @@
             font-size: 16px;
             opacity: 0.95;
             margin-top: 6px;
+        }
+
+        /* Both clocks are formatted from one instant, pinned to the right so the
+           centred brand keeps its position regardless of how wide this gets. */
+        .header-clock {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            text-align: center;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .hc-date {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.7px;
+            opacity: 0.75;
+            margin-bottom: 8px;
+            white-space: nowrap;
+        }
+
+        .hc-times {
+            display: flex;
+            align-items: stretch;
+            gap: 13px;
+        }
+
+        .hc-zone {
+            text-align: center;
+            min-width: 54px;
+        }
+
+        .hc-label {
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: 1.1px;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+
+        /* Tabular figures so the digits do not shuffle sideways each minute. */
+        .hc-time {
+            font-size: 19px;
+            font-weight: 600;
+            font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.5px;
+        }
+
+        .hc-div {
+            width: 1px;
+            background: rgba(255, 255, 255, 0.25);
         }
 
         .content {
@@ -1791,6 +1848,19 @@
                 height: 58px;
             }
 
+            /* Absolute in the corner would sit on top of the title at this width. */
+            .header-clock {
+                position: static;
+                transform: none;
+                margin: 14px auto 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .hc-date { margin-bottom: 6px; }
+            .hc-time { font-size: 16px; }
+
             /* The filter block was eating a large slice of a phone screen: oversized
                group labels, generous padding and pills wrapping over several rows. */
             .filter-groups {
@@ -2216,6 +2286,20 @@
                 <div class="header-titles">
                     <h1>CONNECTIVITY FLEET STATUS</h1>
                     <p>Software, Media &amp; Maintenance Dashboard</p>
+                </div>
+            </div>
+            <div class="header-clock" title="Date shown is the UTC (Zulu) date">
+                <div class="hc-date" id="hcDate">—</div>
+                <div class="hc-times">
+                    <div class="hc-zone">
+                        <div class="hc-label">JED</div>
+                        <div class="hc-time" id="hcJed">--:--</div>
+                    </div>
+                    <div class="hc-div"></div>
+                    <div class="hc-zone">
+                        <div class="hc-label">UTC</div>
+                        <div class="hc-time" id="hcUtc">--:--</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3059,10 +3143,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.6.0';
-        const APP_BUILD    = '2026.08.19.01';
+        const APP_VERSION  = '2.6.1';
+        const APP_BUILD    = '2026.08.19.02';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-19T18:30:00Z';
+        const APP_DEPLOYED = '2026-08-19T18:35:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6108,6 +6192,23 @@
                 `All times UTC (Zulu) · ${hbcScope()} HBC+ linefit aircraft tracked outside MSP loading scope`);
         }
 
+        // ===== Header clocks =====
+        // Both readings come from one instant and are formatted per zone, so they can
+        // never drift apart. JED is Arabia Standard Time (UTC+3, no DST) — Intl applies
+        // the offset rather than the page hardcoding +3, and hourCycle h23 keeps
+        // midnight as 00 rather than 24.
+        function renderHeaderClock() {
+            const now = new Date();
+            const hhmm = tz => new Intl.DateTimeFormat('en-GB', {
+                timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+            }).format(now);
+            setText('hcJed', hhmm('Asia/Riyadh'));
+            setText('hcUtc', hhmm('UTC'));
+            // One date, and it is the UTC one — the whole dashboard is Zulu. Between
+            // 21:00 and 24:00 UTC that means Jeddah is already on the next day.
+            setText('hcDate', fmtDate(now.toISOString().slice(0, 10)));
+        }
+
         function initSysBar() {
             const overlay = document.getElementById('sysInfoOverlay');
             const close = document.getElementById('sysInfoClose');
@@ -6124,6 +6225,8 @@
         // Initialize on page load
         window.addEventListener('load', function() {
             loadAuthSession();
+            renderHeaderClock();
+            setInterval(renderHeaderClock, 1000);
             initSysBar();
             initScheduleAddModal();
             initAddActivityModal();
