@@ -32,9 +32,12 @@
             background: linear-gradient(135deg, #0a5c34 0%, #137a49 100%);
             color: white;
             padding: 22px 30px 26px;
-            text-align: center;
             border-bottom: none;
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
         }
 
         .header::after {
@@ -53,8 +56,9 @@
         .header-brand {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             gap: 20px;
+            min-width: 0;
         }
 
         .header-logo {
@@ -84,58 +88,54 @@
             margin-top: 6px;
         }
 
-        /* Both clocks are formatted from one instant, pinned to the right so the
-           centred brand keeps its position regardless of how wide this gets. */
+        /* Same shape as the Timeline's .cal-tile so the two read as one family. The
+           weekday cap is white rather than red here: on the green header a red band
+           made the clock look like an alert. Everything in it is UTC — the Z on the
+           time is the only label it needs. */
         .header-clock {
-            position: absolute;
-            right: 30px;
-            top: 50%;
-            transform: translateY(-50%);
+            flex: 0 0 auto;
+            width: 66px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
             text-align: center;
-            color: #fff;
-            line-height: 1;
         }
 
-        .hc-date {
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.7px;
-            opacity: 0.75;
-            margin-bottom: 8px;
-            white-space: nowrap;
-        }
-
-        .hc-times {
-            display: flex;
-            align-items: stretch;
-            gap: 13px;
-        }
-
-        .hc-zone {
-            text-align: center;
-            min-width: 54px;
-        }
-
-        .hc-label {
+        .hc-weekday {
             font-size: 9.5px;
             font-weight: 700;
-            letter-spacing: 1.1px;
-            opacity: 0.7;
-            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #6b757e;
+            padding: 4px 0 1px;
         }
 
-        /* Tabular figures so the digits do not shuffle sideways each minute. */
+        .hc-day {
+            font-size: 22px;
+            font-weight: 700;
+            color: #0a5c34;
+            line-height: 1;
+            padding: 1px 0 0;
+        }
+
+        .hc-month {
+            font-size: 9.5px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            padding: 2px 0 5px;
+        }
+
         .hc-time {
-            font-size: 19px;
-            font-weight: 600;
-            font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+            background: #0a5c34;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            padding: 3px 0;
             font-variant-numeric: tabular-nums;
-            letter-spacing: 0.5px;
-        }
-
-        .hc-div {
-            width: 1px;
-            background: rgba(255, 255, 255, 0.25);
         }
 
         .content {
@@ -1832,34 +1832,39 @@
                 letter-spacing: 0.5px;
             }
 
-            /* 12px, not 13: the subtitle only gets ~198px beside the logo on a 360px
-               handset, and at 13px this line measures 206px and wraps. */
+            /* The nowrap here predates the clock tile. With the tile taking the right
+               end of the row the subtitle no longer has the width to stay on one line,
+               and nowrap made it run underneath the tile instead of wrapping. */
             .header p {
-                font-size: 12px;
+                font-size: 11.5px;
                 margin-top: 4px;
-                white-space: nowrap;
+            }
+
+            .header {
+                padding: 16px 14px 20px;
+                gap: 10px;
             }
 
             .header-brand {
-                gap: 14px;
+                gap: 12px;
+                min-width: 0;
+            }
+
+            /* Lets the text block shrink below its intrinsic width instead of
+               overflowing the flex row. */
+            .header-titles {
+                min-width: 0;
             }
 
             .header-logo {
-                height: 58px;
+                height: 52px;
             }
 
-            /* Absolute in the corner would sit on top of the title at this width. */
-            .header-clock {
-                position: static;
-                transform: none;
-                margin: 14px auto 0;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .hc-date { margin-bottom: 6px; }
-            .hc-time { font-size: 16px; }
+            /* Small enough to stay on the row beside the brand; just trimmed. */
+            .header-clock { width: 54px; }
+            .hc-day { font-size: 18px; }
+            .hc-weekday, .hc-month { font-size: 8.5px; }
+            .hc-time { font-size: 10px; }
 
             /* The filter block was eating a large slice of a phone screen: oversized
                group labels, generous padding and pills wrapping over several rows. */
@@ -2288,19 +2293,11 @@
                     <p>Software, Media &amp; Maintenance Dashboard</p>
                 </div>
             </div>
-            <div class="header-clock" title="Date shown is the UTC (Zulu) date">
-                <div class="hc-date" id="hcDate">—</div>
-                <div class="hc-times">
-                    <div class="hc-zone">
-                        <div class="hc-label">JED</div>
-                        <div class="hc-time" id="hcJed">--:--</div>
-                    </div>
-                    <div class="hc-div"></div>
-                    <div class="hc-zone">
-                        <div class="hc-label">UTC</div>
-                        <div class="hc-time" id="hcUtc">--:--</div>
-                    </div>
-                </div>
+            <div class="header-clock" title="UTC (Zulu)">
+                <div class="hc-weekday" id="hcWeekday">—</div>
+                <div class="hc-day" id="hcDay">--</div>
+                <div class="hc-month" id="hcMonth">—</div>
+                <div class="hc-time" id="hcTime">--:-- Z</div>
             </div>
         </div>
 
@@ -3143,10 +3140,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.6.1';
-        const APP_BUILD    = '2026.08.19.02';
+        const APP_VERSION  = '2.6.2';
+        const APP_BUILD    = '2026.08.19.03';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-19T18:35:00Z';
+        const APP_DEPLOYED = '2026-08-19T18:40:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6192,21 +6189,16 @@
                 `All times UTC (Zulu) · ${hbcScope()} HBC+ linefit aircraft tracked outside MSP loading scope`);
         }
 
-        // ===== Header clocks =====
-        // Both readings come from one instant and are formatted per zone, so they can
-        // never drift apart. JED is Arabia Standard Time (UTC+3, no DST) — Intl applies
-        // the offset rather than the page hardcoding +3, and hourCycle h23 keeps
-        // midnight as 00 rather than 24.
+        // ===== Header clock =====
+        // Every part is UTC, so weekday, date and time can never disagree with each
+        // other. hourCycle h23 keeps midnight as 00 rather than 24.
         function renderHeaderClock() {
             const now = new Date();
-            const hhmm = tz => new Intl.DateTimeFormat('en-GB', {
-                timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-            }).format(now);
-            setText('hcJed', hhmm('Asia/Riyadh'));
-            setText('hcUtc', hhmm('UTC'));
-            // One date, and it is the UTC one — the whole dashboard is Zulu. Between
-            // 21:00 and 24:00 UTC that means Jeddah is already on the next day.
-            setText('hcDate', fmtDate(now.toISOString().slice(0, 10)));
+            const part = opt => new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', ...opt }).format(now);
+            setText('hcWeekday', part({ weekday: 'short' }).toUpperCase());
+            setText('hcDay', part({ day: 'numeric' }));
+            setText('hcMonth', part({ month: 'short' }).toUpperCase());
+            setText('hcTime', part({ hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) + ' Z');
         }
 
         function initSysBar() {
