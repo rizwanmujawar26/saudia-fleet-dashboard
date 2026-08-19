@@ -372,6 +372,24 @@ The HBC+ exclusion note the old footer carried still exists — it is the
 
 ---
 
+## Sticky header
+
+The header is `position: sticky; top: 0` so the clock and fleet identity stay on
+screen while the page scrolls behind. Two things make that work and are easy to
+undo by accident:
+
+- **`.container` must not have `overflow: hidden`.** An ancestor with it silently
+  kills `position: sticky` on its children — the header simply never pins, with no
+  error. The rounded corners it used to clip are now carried by `.header`
+  (`12px 12px 0 0`) and `.sysbar` (`0 0 12px 12px`) themselves.
+- **`z-index: 500`**, deliberately below the modal overlays (1000, and 1100 for the
+  system information panel) so an overlay still covers the header.
+
+`initStickyHeader()` only toggles `.is-stuck` for the shadow, and only when the
+state changes — the pinning itself is pure CSS.
+
+---
+
 ## Conventions
 
 - **A date column's `data-sort` must go through `dateSortKey()`.** `sortTable`

@@ -19,25 +19,41 @@
             min-height: 100vh;
         }
 
+        /* No overflow:hidden here. It was only clipping the header and the status bar
+           to the rounded corners, and an ancestor with overflow:hidden silently kills
+           position:sticky on its children — the header would never pin. Those two
+           children carry the corner radius themselves instead. */
         .container {
             max-width: 1600px;
             margin: 0 auto;
             background: white;
             border-radius: 12px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            overflow: hidden;
         }
 
+        /* Pinned, so the clock and the fleet identity stay on screen while the page
+           scrolls behind. z-index sits well under the modals (1000+) so an overlay
+           still covers it. */
         .header {
             background: linear-gradient(135deg, #0a5c34 0%, #137a49 100%);
             color: white;
             padding: 22px 30px 26px;
             border-bottom: none;
-            position: relative;
+            position: sticky;
+            top: 0;
+            z-index: 500;
+            border-radius: 12px 12px 0 0;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 16px;
+            transition: box-shadow 0.2s ease;
+        }
+
+        /* Only once it is actually pinned — a bar that floats over content needs to
+           say so, or the page just slides under a flat edge. */
+        .header.is-stuck {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
         }
 
         .header::after {
@@ -1986,6 +2002,7 @@
                 linear-gradient(135deg, #073f24 0%, #0a5c34 55%, #0d6b3d 100%);
             padding: 13px 20px;
             border-top: 1px solid rgba(255,255,255,0.09);
+            border-radius: 0 0 12px 12px;
         }
 
         /* The header's stripe, mirrored. Faint here so it reads as a seam. */
@@ -3187,10 +3204,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.7.1';
-        const APP_BUILD    = '2026.08.19.05';
+        const APP_VERSION  = '2.7.2';
+        const APP_BUILD    = '2026.08.19.06';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-19T19:05:00Z';
+        const APP_DEPLOYED = '2026-08-19T19:10:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6341,6 +6358,20 @@
             setText('hcTime', part({ hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) + ' Z');
         }
 
+        // The bar is pinned by CSS; this only tracks whether it is currently over
+        // content, and flips the class on the transition rather than every scroll tick.
+        function initStickyHeader() {
+            const header = document.querySelector('.header');
+            if (!header) return;
+            let stuck = null;
+            const onScroll = () => {
+                const now = window.scrollY > 12;
+                if (now !== stuck) { stuck = now; header.classList.toggle('is-stuck', now); }
+            };
+            window.addEventListener('scroll', onScroll, { passive: true });
+            onScroll();
+        }
+
         function initSysBar() {
             const overlay = document.getElementById('sysInfoOverlay');
             const close = document.getElementById('sysInfoClose');
@@ -6359,6 +6390,7 @@
             loadAuthSession();
             renderHeaderClock();
             setInterval(renderHeaderClock, 1000);
+            initStickyHeader();
             initSysBar();
             initScheduleAddModal();
             initAddActivityModal();
