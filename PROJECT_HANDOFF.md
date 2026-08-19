@@ -90,6 +90,7 @@ adding it to the rules first.
 | `retrofitLocation` | free text ≤ 60: the city or MRO where the retrofit was done (Doha, Malta, Jeddah…) |
 | `wifiVisibility` | `public` \| `hidden` |
 | `activatedDate` | `DD-Mon-YYYY` |
+| `simRoaming` | `active` \| `inactive` — the SIM subscription, not the card |
 
 The last three are edited on the Maintenance tab but stored at the **top level**,
 deliberately *not* under `maintenance` — clearing a flag writes `maintenance: null`,
@@ -114,8 +115,12 @@ clobber the other.
 
 `aircraft`, `date` (DD-Mon-YYYY), `location` (free text), `category`, `title`,
 `task`, `outcome`, `notes`, `loggedAt`, and a `details` sub-object whose fields
-depend on the category (`partReplaced`/`partNumber`/`oldPart`/`newPart`,
-`softwareName`/`version`, `modemType`/`commissioningResult`).
+depend on the category (`partReplaced`/`partNumber`/`oldPart`/`newPart`
+plus `removalReason`, `shopStatus`, `shopRef`, `shopFinding`;
+`softwareName`/`version`; `modemType`/`commissioningResult`).
+
+A hardware record is the whole life-event of a unit: what came off, what went on,
+why, and — filled in later — what the shop found. The Hardware tab reads all of it.
 
 `category` is one of `hardware_rr`, `software_update`, `modem_commissioning`,
 `troubleshooting`, `maintenance`, `configuration`, `inspection`, `modification`,
@@ -190,10 +195,32 @@ clearest case. The two lists can share alias spellings without colliding, becaus
 the *aircraft's* fit decides which list a match belongs to.
 
 **Fitment is derived, never stored.** `hardwareFitment(lru)` walks `/activities`
-for `hardware_rr` records whose `details.partReplaced` matches an alias, takes the
-most recent per aircraft, and reads the serial from `details.newPart`, the removed
-one from `oldPart`, and the date from the activity. An aircraft with no recorded
-change reads "no record" — a gap in the record, not a missing unit.
+for `hardware_rr` records whose `details.partReplaced` matches an alias and reads
+the current state from the **latest** change, not from the last serial ever
+mentioned. Three cases, all distinguished:
+
+| case | record | shows as |
+|---|---|---|
+| first fit | `newPart` only | serial + install date, tagged "first fit", 0 removals |
+| swap | `oldPart` + `newPart` | new serial, removals count +1 |
+| removed, nothing refitted | `oldPart` only | "removed — none fitted" |
+
+An aircraft with no recorded change reads "no record" — a gap in the record, not a
+missing unit. **Removals count units that came off**, not changes, so a first fit
+never reads as a removal.
+
+**The Removed Units section is the shop queue.** `hardwareRemovals(lru)` lists every
+unit ever taken off this LRU across the fleet, newest first, with its
+`removalReason` and the shop's verdict (`shopStatus`, `shopRef`, `shopFinding`).
+Those live on the removal activity because **the removal is the activity** — a
+parallel collection would drift from it. "Shop report" PATCHes
+`/activities/{id}/details`, so a finding can be filled in long after the removal
+was logged.
+
+**SIM roaming** is on `/aircraft/{tail}/simRoaming`, not on the card: it is a
+subscription state that survives a card swap. The Roaming column appears only for
+the SIM units, and editing it writes to `/aircraft` while the LRU's own fields
+write to `/hardware` — one Save, two correctly-targeted writes.
 
 ⚠️ **The linefit list is a placeholder.** It currently mirrors the retrofit set so
 the pane is usable; the real linefit equipment list has not been supplied.

@@ -1679,6 +1679,75 @@
 
         .hw-issue-del:hover { background: #f8dfe1; }
 
+        /* Roaming is a subscription state, not a health signal — tinted, not red/green. */
+        .status-badge.roam-active   { background: #e6f0fb; color: #1c5b96; }
+        .status-badge.roam-inactive { background: #f1f3f5; color: #6b757e; }
+
+        .hw-vacant { color: #a5541f; font-weight: 600; font-size: 12px; }
+
+        .hw-firstfit {
+            font-size: 10px;
+            color: #4a6b52;
+            background: #e9f3ec;
+            border-radius: 8px;
+            padding: 1px 6px;
+            white-space: nowrap;
+        }
+
+        .hw-removals {
+            display: inline-block;
+            min-width: 18px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 11.5px;
+            color: #8a5312;
+            background: #fdf1e3;
+            border: 1px solid #f6ddc0;
+            border-radius: 9px;
+            padding: 0 6px;
+        }
+
+        /* One removed unit and its journey through the shop. */
+        .hw-removal {
+            border: 1px solid #e5e9ec;
+            border-left: 3px solid #b3bac0;
+            border-radius: 8px;
+            padding: 10px 13px;
+            margin-bottom: 9px;
+        }
+
+        .hw-removal.shop-pending  { border-left-color: #e9b949; }
+        .hw-removal.shop-in_shop  { border-left-color: #1f8fe0; }
+        .hw-removal.shop-repaired { border-left-color: #28a745; }
+        .hw-removal.shop-no_fault { border-left-color: #55606a; }
+        .hw-removal.shop-scrap    { border-left-color: #dc3545; }
+
+        .hw-removal-sn { font-size: 13px; font-weight: 700; }
+
+        .status-badge.shop-badge { font-size: 10.5px; padding: 4px 10px; }
+        .status-badge.shop-pending  { background: #fdf1e3; color: #8a5312; }
+        .status-badge.shop-in_shop  { background: #e6f0fb; color: #1c5b96; }
+        .status-badge.shop-repaired { background: #eaf6ee; color: #1e7e34; }
+        .status-badge.shop-no_fault { background: #eef1f3; color: #4a5560; }
+        .status-badge.shop-scrap    { background: #fdeff0; color: #a52834; }
+
+        .hw-removal-body { margin-top: 2px; }
+
+        .hw-shop-btn {
+            margin-left: auto;
+            border: 1px solid #cfe0f4;
+            background: #f2f7fc;
+            color: #1c5b96;
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .hw-shop-btn:hover { background: #e4eef8; }
+
         /* Fitment: one row per aircraft of this fit, serial derived from activities. */
         .hw-fit-table {
             width: 100%;
@@ -3071,14 +3140,16 @@
                 </div>
                 <div class="act-row">
                     <div>
-                        <label class="add-sched-label">Old Part S/N</label>
+                        <label class="add-sched-label">Removed S/N <span style="text-transform:none; font-weight:400;">(blank on a first fit)</span></label>
                         <input id="addActOldPart" class="add-sched-input" maxlength="60" autocomplete="off">
                     </div>
                     <div>
-                        <label class="add-sched-label">New Part S/N</label>
+                        <label class="add-sched-label">Fitted S/N</label>
                         <input id="addActNewPart" class="add-sched-input" maxlength="60" autocomplete="off">
                     </div>
                 </div>
+                <label class="add-sched-label">Reason for Removal <span style="text-transform:none; font-weight:400;">(only if a unit came off)</span></label>
+                <input id="addActRemovalReason" class="add-sched-input" maxlength="200" placeholder="e.g. No RF output after power cycle" autocomplete="off">
             </div>
 
             <div class="act-extra" id="actExtraSoftware">
@@ -3116,6 +3187,34 @@
             <div style="display:flex; gap:10px; margin-top:6px;">
                 <button id="addActCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="addActSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save Activity</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="shopOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="act-modal" style="max-width:480px;">
+            <h3 style="color:#0a5c34; margin-bottom:6px;">Shop Report</h3>
+            <p style="font-size:13px; color:#666; margin-bottom:16px;" id="shopReportFor">—</p>
+
+            <label class="add-sched-label">Status</label>
+            <select id="shopStatus" class="add-sched-input">
+                <option value="pending">Awaiting Shop</option>
+                <option value="in_shop">In Shop</option>
+                <option value="repaired">Repaired</option>
+                <option value="no_fault">No Fault Found</option>
+                <option value="scrap">Scrapped</option>
+            </select>
+
+            <label class="add-sched-label">Shop Reference <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+            <input id="shopRef" class="add-sched-input" maxlength="60" placeholder="e.g. RO-2026-0418" autocomplete="off">
+
+            <label class="add-sched-label">Findings</label>
+            <textarea id="shopFinding" class="add-sched-input" maxlength="1000" placeholder="What the shop found, and what was done"></textarea>
+
+            <div id="shopError" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
+            <div style="display:flex; gap:10px; margin-top:6px;">
+                <button id="shopCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button id="shopSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save Report</button>
             </div>
         </div>
     </div>
@@ -3463,23 +3562,47 @@
             return lru.aliases.some(a => a === part) || lru.aliases.some(a => part.includes(a));
         }
 
-        // What is fitted to each aircraft for this LRU, derived from /activities — the
-        // on/off details recorded on the Maintenance page. Nothing about serials is
-        // stored twice; an aircraft with no recorded change simply has no serial yet.
-        function hardwareFitment(lru) {
+        const SHOP_STATUSES = [
+            { value: 'pending',  label: 'Awaiting Shop' },
+            { value: 'in_shop',  label: 'In Shop' },
+            { value: 'repaired', label: 'Repaired' },
+            { value: 'no_fault', label: 'No Fault Found' },
+            { value: 'scrap',    label: 'Scrapped' },
+        ];
+
+        function shopStatusLabel(v) {
+            const o = SHOP_STATUSES.find(x => x.value === v);
+            return o ? o.label : 'Awaiting Shop';
+        }
+
+        // Every change recorded for this LRU on this aircraft, newest first.
+        function lruChangesFor(lru, tailId) {
             const byTail = {};
             aircraftData.forEach(a => { byTail[a.id] = a; });
-            const acts = activityEntries();
+            return activityEntries()
+                .filter(x => x.aircraft === tailId && activityMatchesLru(x, lru, byTail[x.aircraft]))
+                .sort((x, y) => dateSortKey(toISODate(y.date)).localeCompare(dateSortKey(toISODate(x.date))));
+        }
 
+        // What is fitted to each aircraft for this LRU, derived from /activities — the
+        // on/off details recorded on the Maintenance page. Nothing about serials is
+        // stored twice.
+        //
+        // A first fit carries only a fitted serial and its date. A later swap carries
+        // both a removed and a fitted serial. A removal with nothing fitted back leaves
+        // the position empty — so the current state is whatever the LATEST change says,
+        // not simply the last serial ever mentioned.
+        function hardwareFitment(lru) {
             return activeFleet()
                 .filter(a => fitOf(a) === lru.fit)
                 .sort((a, b) => a.id.localeCompare(b.id))
                 .map(a => {
-                    const mine = acts
-                        .filter(x => x.aircraft === a.id && activityMatchesLru(x, lru, byTail[x.aircraft]))
-                        .sort((x, y) => dateSortKey(toISODate(y.date)).localeCompare(dateSortKey(toISODate(x.date))));
+                    const mine = lruChangesFor(lru, a.id);
                     const latest = mine[0];
                     const d = (latest && latest.details) || {};
+                    // Count units that actually came off, not changes — a first fit
+                    // removes nothing and should not read as a removal.
+                    const removals = mine.filter(x => (x.details || {}).oldPart).length;
                     return {
                         aircraft: a,
                         serial: d.newPart || '',
@@ -3487,7 +3610,35 @@
                         removed: d.oldPart || '',
                         date: latest ? latest.date : '',
                         location: latest ? latest.location : '',
+                        removals,
                         changes: mine.length,
+                        // Latest change took a unit off and put nothing back.
+                        vacant: !!(latest && !d.newPart && d.oldPart),
+                        firstFit: !!(latest && d.newPart && !d.oldPart && mine.length === 1),
+                    };
+                });
+        }
+
+        // Every unit ever removed for this LRU across the fleet, newest first. This is
+        // the shop queue: each entry is one physical unit off an aircraft, carrying why
+        // it came off and whatever the shop has since reported on it.
+        function hardwareRemovals(lru) {
+            const byTail = {};
+            aircraftData.forEach(a => { byTail[a.id] = a; });
+            return activityEntries()
+                .filter(x => activityMatchesLru(x, lru, byTail[x.aircraft]) && (x.details || {}).oldPart)
+                .sort((x, y) => dateSortKey(toISODate(y.date)).localeCompare(dateSortKey(toISODate(x.date))))
+                .map(x => {
+                    const d = x.details || {};
+                    return {
+                        id: x.id, tail: x.aircraft, type: (byTail[x.aircraft] || {}).type || '',
+                        date: x.date, location: x.location || '',
+                        serial: d.oldPart, replacedBy: d.newPart || '',
+                        partNumber: d.partNumber || '',
+                        reason: d.removalReason || '',
+                        shopStatus: d.shopStatus || 'pending',
+                        shopRef: d.shopRef || '',
+                        shopFinding: d.shopFinding || '',
                     };
                 });
         }
@@ -3514,10 +3665,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.8.0';
-        const APP_BUILD    = '2026.08.19.08';
+        const APP_VERSION  = '2.9.0';
+        const APP_BUILD    = '2026.08.19.09';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-19T19:30:00Z';
+        const APP_DEPLOYED = '2026-08-19T19:40:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -5419,8 +5570,8 @@
             document.getElementById('addActLocation').value = (sel && (sel.retrofitLocation || aircraftLocationOf(sel))) || '';
             document.getElementById('addActDate').value = new Date().toISOString().slice(0, 10);
             ['addActTitle', 'addActTask', 'addActOutcome', 'addActNotes', 'addActPartReplaced',
-             'addActPartNumber', 'addActOldPart', 'addActNewPart', 'addActSoftwareName',
-             'addActVersion', 'addActModemType', 'addActCommissioningResult']
+             'addActPartNumber', 'addActOldPart', 'addActNewPart', 'addActRemovalReason',
+             'addActSoftwareName', 'addActVersion', 'addActModemType', 'addActCommissioningResult']
                 .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
             syncActExtras();
@@ -5460,6 +5611,8 @@
                     hardware_rr: {
                         partReplaced: val('addActPartReplaced'), partNumber: val('addActPartNumber'),
                         oldPart: val('addActOldPart'), newPart: val('addActNewPart'),
+                        // Only meaningful when something actually came off.
+                        removalReason: val('addActOldPart') ? val('addActRemovalReason') : '',
                     },
                     software_update: {
                         softwareName: val('addActSoftwareName'), version: val('addActVersion'),
@@ -5622,15 +5775,57 @@
             // Serials come from the on/off details of hardware activities. An aircraft
             // with no recorded change simply has nothing to show yet — that is a gap in
             // the record, not a missing unit, so it reads as "no record" rather than 0.
+            //
+            // Roaming belongs to the SIM subscription rather than to the card, so it is
+            // stored on the aircraft and only shown for the SIM units.
+            const isSim = lru.id === 'sim' || lru.id === 'lf_sim';
+            const editing_ = editing;
+
+            const roamingCell = r => {
+                const v = r.aircraft.simRoaming || '';
+                if (editing_) {
+                    return `<td><select class="edit-select" data-tail="${escAttr(r.aircraft.id)}" data-field="simRoaming" onchange="handleRoamingEdit(this)">
+                        <option value="" ${v ? '' : 'selected'}>—</option>
+                        <option value="active" ${v === 'active' ? 'selected' : ''}>Active</option>
+                        <option value="inactive" ${v === 'inactive' ? 'selected' : ''}>Inactive</option>
+                    </select></td>`;
+                }
+                return `<td>${v
+                    ? `<span class="status-badge roam-${v}">${v === 'active' ? 'ROAMING' : 'NO ROAMING'}</span>`
+                    : '<span class="hw-none">—</span>'}</td>`;
+            };
+
             const fitRow = r => `<tr>
                 <td><strong>${escAttr(r.aircraft.id)}</strong></td>
                 <td>${escAttr(TYPE_SHORT_LABEL[r.aircraft.type] || r.aircraft.type)}</td>
-                <td>${r.serial ? `<span class="hw-serial">${escAttr(r.serial)}</span>` : '<span class="hw-none">no record</span>'}</td>
+                <td>${r.vacant
+                        ? '<span class="hw-vacant">removed — none fitted</span>'
+                        : (r.serial ? `<span class="hw-serial">${escAttr(r.serial)}</span>` : '<span class="hw-none">no record</span>')}</td>
                 <td>${r.partNumber ? escAttr(r.partNumber) : '<span class="hw-none">—</span>'}</td>
-                <td>${r.date ? escAttr(r.date) : '<span class="hw-none">—</span>'}</td>
-                <td>${r.removed ? `<span class="hw-serial">${escAttr(r.removed)}</span>` : '<span class="hw-none">—</span>'}</td>
-                <td>${r.changes || '<span class="hw-none">0</span>'}</td>
+                <td>${r.date ? escAttr(r.date) : '<span class="hw-none">—</span>'}${r.firstFit ? ' <span class="hw-firstfit">first fit</span>' : ''}</td>
+                ${isSim ? roamingCell(r) : ''}
+                <td>${r.removals
+                        ? `<span class="hw-removals">${r.removals}</span>`
+                        : '<span class="hw-none">0</span>'}</td>
             </tr>`;
+
+            const removals = hardwareRemovals(lru);
+            const openShop = removals.filter(x => x.shopStatus === 'pending' || x.shopStatus === 'in_shop').length;
+
+            const removalCard = x => `<li class="hw-removal shop-${escAttr(x.shopStatus)}">
+                <div class="hw-issue-top">
+                    <span class="hw-serial hw-removal-sn">${escAttr(x.serial)}</span>
+                    <span class="status-badge shop-badge shop-${escAttr(x.shopStatus)}">${escAttr(shopStatusLabel(x.shopStatus))}</span>
+                    <span class="maint-act-cat">${escAttr(x.tail)}${x.type ? ' · ' + escAttr(TYPE_SHORT_LABEL[x.type] || x.type) : ''} · ${escAttr(x.date || '—')}</span>
+                    ${canEdit() ? `<button class="hw-shop-btn" onclick="openShopReport('${escAttr(x.id)}')">Shop report</button>` : ''}
+                </div>
+                <div class="hw-removal-body">
+                    ${x.reason ? `<div class="hw-issue-field"><b>Reason for removal</b>${escAttr(x.reason)}</div>` : '<div class="hw-issue-field"><b>Reason for removal</b><span class="hw-none">not recorded</span></div>'}
+                    ${x.replacedBy ? `<div class="hw-issue-field"><b>Replaced by</b>${escAttr(x.replacedBy)}</div>` : ''}
+                    ${x.shopRef ? `<div class="hw-issue-field"><b>Shop reference</b>${escAttr(x.shopRef)}</div>` : ''}
+                    ${x.shopFinding ? `<div class="hw-issue-field"><b>Shop finding</b>${escAttr(x.shopFinding)}</div>` : ''}
+                </div>
+            </li>`;
 
             panel.innerHTML = `
                 <div class="maint-detail-head">
@@ -5657,11 +5852,20 @@
                     <table class="hw-fit-table">
                         <thead><tr>
                             <th>Aircraft</th><th>Type</th><th>Serial Fitted</th><th>Part No</th>
-                            <th>Fitted</th><th>Removed S/N</th><th>Changes</th>
+                            <th>Installed</th>${isSim ? '<th>Roaming</th>' : ''}<th>Removals</th>
                         </tr></thead>
                         <tbody>${rows.map(fitRow).join('')}</tbody>
                     </table>
-                </div>`;
+                </div>
+
+                <div class="hw-section">
+                    <span class="hw-section-title">Removed Units${openShop ? ` · ${openShop} awaiting shop` : ''}</span>
+                    <span class="timeline-day-count">${removals.length} removed</span>
+                </div>
+                <ul class="hw-issues">${
+                    removals.length ? removals.map(removalCard).join('')
+                                    : '<li class="maint-empty">No units removed for this equipment yet.</li>'
+                }</ul>`;
         }
 
         function renderHardwarePage() {
@@ -5677,6 +5881,7 @@
             if (!canEdit()) return;
             hwEditMode = true;
             pendingHw = {};
+            pendingRoaming = {};
             renderHardwarePage();
         }
 
@@ -5695,6 +5900,15 @@
             }
         }
 
+        // Roaming lives on the aircraft, so it is staged apart from the LRU's own
+        // fields and committed to /aircraft in the same Save.
+        let pendingRoaming = {};
+
+        function handleRoamingEdit(el) {
+            pendingRoaming[el.dataset.tail] = el.value;
+            setSyncStatus(`🟡 ${el.dataset.tail} roaming staged — press Save`, '#e0a800');
+        }
+
         function handleHwEdit(el) {
             const id = el.dataset.lru, field = el.dataset.field;
             pendingHw[id] = pendingHw[id] || {};
@@ -5704,7 +5918,8 @@
 
         async function commitHwChanges() {
             const ids = Object.keys(pendingHw);
-            if (!ids.length) { hwEditMode = false; renderHardwarePage(); return; }
+            const tails = Object.keys(pendingRoaming);
+            if (!ids.length && !tails.length) { hwEditMode = false; renderHardwarePage(); return; }
             const token = await getIdToken();
             if (!token) return;
 
@@ -5717,17 +5932,35 @@
                 multi[`${id}/${f}`] = v || null;     // blank deletes rather than storing ''
             }));
 
+            const roamMulti = {};
+            tails.forEach(t => { roamMulti[`${t}/simRoaming`] = pendingRoaming[t] || null; });
+
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/hardware.json?auth=${token}`, {
-                    method: 'PATCH', body: JSON.stringify(multi),
-                });
-                const data = await res.json();
-                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                ids.forEach(id => {
-                    hardwareLive[id] = { ...(hardwareLive[id] || {}), ...pendingHw[id] };
-                });
+                // Two nodes, so two writes — each is atomic in itself.
+                if (ids.length) {
+                    const res = await fetch(`${FIREBASE_DB_URL}/hardware.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(multi),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                    ids.forEach(id => { hardwareLive[id] = { ...(hardwareLive[id] || {}), ...pendingHw[id] }; });
+                }
+                if (tails.length) {
+                    const res2 = await fetch(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(roamMulti),
+                    });
+                    const data2 = await res2.json();
+                    if (!res2.ok || (data2 && data2.error)) throw new Error((data2 && data2.error) || 'write failed');
+                    tails.forEach(t => {
+                        aircraftLive[t] = aircraftLive[t] || {};
+                        if (pendingRoaming[t]) aircraftLive[t].simRoaming = pendingRoaming[t];
+                        else delete aircraftLive[t].simRoaming;
+                    });
+                    rebuildAircraftData();
+                }
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
                 pendingHw = {};
+                pendingRoaming = {};
                 hwEditMode = false;
                 renderHardwarePage();
             } catch (e) {
@@ -5801,6 +6034,71 @@
                     err.style.display = 'block';
                 } finally {
                     btn.disabled = false; btn.textContent = 'Save Issue';
+                }
+            });
+        }
+
+        // ===== Shop report =====
+        // Updates the removal activity itself. The removal IS the record of that unit
+        // coming off, so the shop's verdict belongs on it rather than in a parallel
+        // collection that could drift from it.
+        let shopReportActId = '';
+
+        function openShopReport(actId) {
+            const act = activitiesLive[actId];
+            if (!act) return;
+            if (!canEdit()) { promptSignIn().then(ok => { if (ok) openShopReport(actId); }); return; }
+            shopReportActId = actId;
+            const d = act.details || {};
+            setText('shopReportFor', `${d.oldPart || 'unit'} removed from ${act.aircraft} on ${act.date}`);
+            document.getElementById('shopStatus').value = d.shopStatus || 'pending';
+            document.getElementById('shopRef').value = d.shopRef || '';
+            document.getElementById('shopFinding').value = d.shopFinding || '';
+            const err = document.getElementById('shopError');
+            err.textContent = ''; err.style.display = 'none';
+            document.getElementById('shopOverlay').style.display = 'flex';
+            document.getElementById('shopFinding').focus();
+        }
+
+        function initShopReportModal() {
+            const overlay = document.getElementById('shopOverlay');
+            if (!overlay) return;
+            const err = document.getElementById('shopError');
+            const close = () => { overlay.style.display = 'none'; shopReportActId = ''; };
+            document.getElementById('shopCancel').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+            document.getElementById('shopSave').addEventListener('click', async () => {
+                const act = activitiesLive[shopReportActId];
+                if (!act) return;
+                const patch = {
+                    shopStatus:  document.getElementById('shopStatus').value,
+                    shopRef:     document.getElementById('shopRef').value.trim() || null,
+                    shopFinding: document.getElementById('shopFinding').value.trim() || null,
+                };
+                const token = await getIdToken();
+                if (!token) return;
+                const btn = document.getElementById('shopSave');
+                btn.disabled = true; btn.textContent = 'Saving...';
+                try {
+                    const res = await fetch(`${FIREBASE_DB_URL}/activities/${shopReportActId}/details.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(patch),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                    act.details = act.details || {};
+                    Object.entries(patch).forEach(([k, v]) => {
+                        if (v === null) delete act.details[k]; else act.details[k] = v;
+                    });
+                    close();
+                    renderHardwarePage();
+                    renderMaintenancePage();
+                    setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                } catch (e) {
+                    err.textContent = `Could not save shop report — ${e.message}`;
+                    err.style.display = 'block';
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Save Report';
                 }
             });
         }
@@ -7035,6 +7333,7 @@
             initScheduleAddModal();
             initAddActivityModal();
             initAddIssueModal();
+            initShopReportModal();
             initAddAircraftModal();
             updateAuthUI();
             updateScheduleEditUI();
