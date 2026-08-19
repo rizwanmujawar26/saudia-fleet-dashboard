@@ -623,9 +623,14 @@
             margin-bottom: 6px;
         }
 
+        /* A column, so the count band can be pinned to the bottom. The strip stretches
+           every tile to the tallest one; as a plain block the band sat wherever the
+           content ended, which left a white sliver under the shorter month tiles. */
         .cal-tile {
             flex: 0 0 auto;
-            width: 62px;
+            width: 64px;
+            display: flex;
+            flex-direction: column;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
@@ -648,63 +653,82 @@
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
-            padding: 3px 0;
+            padding: 4px 0;
             letter-spacing: 0.5px;
-        }
-
-        .cal-tile-day {
-            font-size: 22px;
-            font-weight: 700;
-            color: #0a5c34;
-            padding: 3px 0 0;
             line-height: 1;
         }
+
+        /* Day number and month abbreviation share one fixed-height slot, so a day tile
+           and a month tile are the same height without either being padded to match. */
+        .cal-tile-day,
+        .cal-tile-mon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 30px;
+            font-weight: 700;
+            color: #0a5c34;
+            line-height: 1;
+        }
+
+        .cal-tile-day { font-size: 22px; }
+        .cal-tile-mon { font-size: 17px; letter-spacing: 0.5px; }
 
         .cal-tile-month {
             font-size: 10px;
             color: #666;
             text-transform: uppercase;
-            padding: 2px 0 5px;
+            letter-spacing: 0.3px;
+            line-height: 1;
+            padding: 0 2px 6px;
         }
 
+        /* margin-top:auto is what actually kills the white sliver: the band goes to the
+           bottom of the tile however tall the strip has stretched it. */
         .cal-tile-count {
+            margin-top: auto;
             background: #28a745;
             color: white;
             font-size: 11px;
             font-weight: 700;
-            padding: 3px 0;
-        }
-
-        /* A whole past month folded into one tile. Same page shape as a day so the
-           strip stays one family; the dashed edge and the caret say it opens. */
-        .cal-tile-group {
-            border-style: dashed;
-            border-color: #c8d2cc;
-        }
-
-        .cal-tile-group.open {
-            border-style: solid;
-            box-shadow: 0 2px 12px rgba(10, 92, 52, 0.25);
-        }
-
-        /* The month sits in the slot the day number occupies on a day tile, so the
-           two line up down the strip. */
-        .cal-tile-mon {
-            font-size: 17px;
-            font-weight: 700;
-            color: #0a5c34;
-            letter-spacing: 0.5px;
-            padding: 5px 0 1px;
+            padding: 4px 0;
             line-height: 1;
         }
 
+        /* A whole month folded into one tile. Same page shape as a day so the strip
+           stays one family; the caret says it opens. */
+        .cal-tile-group {
+            border-color: #cfd8e6;
+        }
+
+        .cal-tile-group.open {
+            box-shadow: 0 2px 12px rgba(31, 111, 208, 0.25);
+            border-color: #9fbde8;
+        }
+
+        /* Blue at the same weight as the day tiles' red — grey read as disabled. */
         .cal-tile-group .cal-tile-header {
-            background: #55606a;
+            background: #1f6fd0;
         }
 
         .cal-caret {
             font-size: 9px;
             opacity: 0.9;
+        }
+
+        /* Separates a month tile from the days it contains, so the strip does not read
+           as one undifferentiated run of tiles. */
+        .cal-sep {
+            flex: 0 0 auto;
+            align-self: stretch;
+            display: flex;
+            align-items: center;
+            padding: 0 1px;
+            margin: 0 -2px;
+            color: #b3bac0;
+            font-size: 17px;
+            font-weight: 700;
+            user-select: none;
         }
 
         /* Progressive disclosure for the day list: a week is visible, the rest is one
@@ -3665,10 +3689,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.9.0';
-        const APP_BUILD    = '2026.08.19.09';
+        const APP_VERSION  = '2.9.1';
+        const APP_BUILD    = '2026.08.19.10';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-19T19:40:00Z';
+        const APP_DEPLOYED = '2026-08-19T19:50:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6851,12 +6875,37 @@
         // on for a screen and a half.
         const TIMELINE_VISIBLE_DAYS = 7;
         let timelineShowAllDays = false;
-        const timelineOpenMonths = new Set();   // 'YYYY-MM' groups expanded in the strip
+        // Only months the user has actually clicked are recorded. Everything else falls
+        // back to the rule — the current month is open, older months are folded — so the
+        // default stays right when the month rolls over rather than freezing whatever
+        // was current when the page loaded.
+        const timelineMonthOverrides = {};
+
+        function currentMonthKey() {
+            return new Date().toISOString().slice(0, 7);
+        }
+
+        function timelineMonthIsOpen(key) {
+            return (key in timelineMonthOverrides)
+                ? timelineMonthOverrides[key]
+                : key === currentMonthKey();
+        }
 
         function toggleTimelineMonth(key) {
-            if (timelineOpenMonths.has(key)) timelineOpenMonths.delete(key);
-            else timelineOpenMonths.add(key);
+            timelineMonthOverrides[key] = !timelineMonthIsOpen(key);
             renderTimeline();
+        }
+
+        // A day tile jumps to its group in the list. If that day is folded away behind
+        // Show more, open the list first rather than doing nothing.
+        function timelineJumpToDate(iso) {
+            let el = document.getElementById('dategroup-' + iso);
+            if (!el) {
+                timelineShowAllDays = true;
+                renderTimeline();
+                el = document.getElementById('dategroup-' + iso);
+            }
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function toggleTimelineShowAll() {
@@ -6883,7 +6932,6 @@
             if (timelineSortDir === 'desc') dateKeys.reverse();
 
             const plural = n => `${n} ${n === 1 ? 'activity' : 'activities'}`;
-            const thisMonth = new Date().toISOString().slice(0, 7);
 
             // ===== Calendar strip =====
             // Only the current month gets a tile per day. Everything older collapses to
@@ -6898,7 +6946,7 @@
                     const month = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
                     const monthLong = d.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
                     const tails = [...new Set(groups[key].map(x => x.tail))].join(', ');
-                    return `<div class="cal-tile" title="${escAttr(`${day} ${monthLong}: ${tails}`)}" onclick="const el=document.getElementById('dategroup-${key}'); if (el) el.scrollIntoView({behavior:'smooth', block:'center'});">
+                    return `<div class="cal-tile" title="${escAttr(`${day} ${monthLong}: ${tails}`)}" onclick="timelineJumpToDate('${key}')">
                         <div class="cal-tile-header">${weekday}</div>
                         <div class="cal-tile-day">${day}</div>
                         <div class="cal-tile-month">${month}</div>
@@ -6911,7 +6959,7 @@
                     const mon = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }).toUpperCase();
                     const monLong = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
                     const total = keys.reduce((n, k) => n + groups[k].length, 0);
-                    const open = timelineOpenMonths.has(monthKey);
+                    const open = timelineMonthIsOpen(monthKey);
                     return `<div class="cal-tile cal-tile-group ${open ? 'open' : ''}" title="${escAttr(`${monLong}: ${total} activities over ${keys.length} days — click to ${open ? 'collapse' : 'expand'}`)}" onclick="toggleTimelineMonth('${monthKey}')">
                         <div class="cal-tile-header">${d.getUTCFullYear()}</div>
                         <div class="cal-tile-mon">${mon}</div>
@@ -6920,25 +6968,26 @@
                     </div>`;
                 };
 
-                // Walk the dates in display order so month groups land where their
-                // dates would have been, whichever way the timeline is sorted.
+                // Every month gets a tile, the current one included, so the whole strip
+                // is navigable by month and the current month's total is the first thing
+                // read. Months keep the position their dates would have had, so the
+                // grouping is correct in both sort directions.
+                const monthsInOrder = [];
                 const monthDays = {};
                 dateKeys.forEach(k => {
                     const m = k.slice(0, 7);
-                    if (m !== thisMonth) (monthDays[m] = monthDays[m] || []).push(k);
+                    if (!monthDays[m]) { monthDays[m] = []; monthsInOrder.push(m); }
+                    monthDays[m].push(k);
                 });
 
-                const emitted = new Set();
-                let html = '';
-                dateKeys.forEach(key => {
-                    const m = key.slice(0, 7);
-                    if (m === thisMonth) { html += dayTile(key); return; }
-                    if (emitted.has(m)) return;
-                    emitted.add(m);
-                    html += monthTile(m, monthDays[m]);
-                    if (timelineOpenMonths.has(m)) html += monthDays[m].map(dayTile).join('');
-                });
-                stripEl.innerHTML = html;
+                stripEl.innerHTML = monthsInOrder.map(m => {
+                    let html = monthTile(m, monthDays[m]);
+                    if (timelineMonthIsOpen(m)) {
+                        html += '<div class="cal-sep" aria-hidden="true">\u203A</div>';
+                        html += monthDays[m].map(dayTile).join('');
+                    }
+                    return html;
+                }).join('');
             }
 
             const pillStyle = c => `background:${c.bg}; color:${c.fg}; border-color:${c.bd}`;

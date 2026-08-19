@@ -255,11 +255,24 @@ Filter pills are **All / Software / Hardware / Media**. There is no Maintenance
 pill for now — maintenance-kind activities still appear under All, they just have
 no filter of their own until the categories settle.
 
-**The calendar strip only gives the current month a tile per day.** Every earlier
-month collapses to one dashed tile (year / month / n days / total) that expands on
-click, tracked in `timelineOpenMonths`. Without that the strip grew without bound
-and the useful end of it scrolled off. Month tiles slot in where their dates would
-have been, so the grouping is correct in both sort directions.
+**Every month in the calendar strip gets a tile**, the current one included, so the
+strip is navigable by month and this month's total reads first. The current month
+is **open by default** (its days follow, after a `›` separator); earlier months are
+folded. Clicking any month tile toggles it — collapsing the current month leaves
+every month visible as a single tile each.
+
+`timelineMonthOverrides` records only months the user actually clicked;
+`timelineMonthIsOpen()` falls back to "is it the current month". That way the
+default stays correct when the month rolls over, rather than freezing whatever was
+current at page load. Month tiles keep the position their dates would have had, so
+the grouping is right in both sort directions.
+
+Tile geometry is load-bearing: `.cal-tile` is a **flex column** with
+`margin-top: auto` on `.cal-tile-count`. The strip stretches every tile to the
+tallest, and as a plain block the count band sat wherever the content ended — which
+left a white sliver under the shorter month tiles. Day number and month
+abbreviation also share one fixed-height slot so the two tile types match without
+either being padded to fit.
 
 **The day list shows `TIMELINE_VISIBLE_DAYS` (7) day cards**, the rest behind one
 Show more control that names how many are hidden. The Overview is a screen, not an
