@@ -646,6 +646,65 @@
             padding: 3px 0;
         }
 
+        /* A whole past month folded into one tile. Same page shape as a day so the
+           strip stays one family; the dashed edge and the caret say it opens. */
+        .cal-tile-group {
+            border-style: dashed;
+            border-color: #c8d2cc;
+        }
+
+        .cal-tile-group.open {
+            border-style: solid;
+            box-shadow: 0 2px 12px rgba(10, 92, 52, 0.25);
+        }
+
+        /* The month sits in the slot the day number occupies on a day tile, so the
+           two line up down the strip. */
+        .cal-tile-mon {
+            font-size: 17px;
+            font-weight: 700;
+            color: #0a5c34;
+            letter-spacing: 0.5px;
+            padding: 5px 0 1px;
+            line-height: 1;
+        }
+
+        .cal-tile-group .cal-tile-header {
+            background: #55606a;
+        }
+
+        .cal-caret {
+            font-size: 9px;
+            opacity: 0.9;
+        }
+
+        /* Progressive disclosure for the day list: a week is visible, the rest is one
+           click away. Keeps the Overview a screen rather than an archive. */
+        .tl-more {
+            display: flex;
+            justify-content: center;
+            margin-top: 4px;
+        }
+
+        .tl-more-btn {
+            border: 1px solid #d7dee2;
+            background: #fff;
+            color: #0a5c34;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 700;
+            padding: 7px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+
+        .tl-more-btn:hover {
+            background: #f2f7f4;
+            border-color: #0a5c34;
+            transform: translateY(-1px);
+        }
+
         /* Timeline — each day is its own card; no rules between aircraft */
         .timeline-date-group {
             background: #ffffff;
@@ -2243,16 +2302,6 @@
             .sys-chip { transition: none; }
         }
 
-        .footnote {
-            font-size: 12px;
-            color: #666;
-            margin-top: 20px;
-            padding: 15px;
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            border-radius: 4px;
-        }
-
 
 
 
@@ -2360,7 +2409,6 @@
                 <button class="tab-button active" onclick="switchTab('overview')">📊 Overview</button>
                 <button class="tab-button" onclick="switchTab('aircraft')">💿 Software</button>
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
-                <button class="tab-button" onclick="switchTab('maintenance')">🛠️ Maintenance</button>
                 <button class="tab-button" onclick="switchTab('schedule')">📅 Schedule</button>
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
             </div>
@@ -2383,6 +2431,7 @@
                         </div>
                         <div class="cal-strip" id="timelineCalendarStrip"></div>
                         <ul class="timeline-items" id="completedDeliveriesList"></ul>
+                        <div class="tl-more" id="timelineShowMore" style="display:none;"></div>
                     </div>
 
                     <div class="timeline-section">
@@ -2391,9 +2440,6 @@
                     </div>
                 </div>
 
-                <div class="footnote">
-                    <strong>⚠️ Note:</strong> Two Airbus HBC+ aircraft (HZ-ASBA, HZ-ASBB) are excluded from the main MSP/IPHO/Migration software loading scope (40 of 42 fleet aircraft). These two aircraft are tracked separately for Hughes Modem Beam Configuration (BEAMCFG_MOD3_NSG_A.13) update only.
-                </div>
             </div>
 
             <!-- Aircraft Status Tab -->
@@ -2550,6 +2596,9 @@
                  card counts against, so the tab and the card cannot disagree.
                  Per-aircraft activities live at /activities and are the single source
                  for the Maintenance and Hardware entries on the Timeline. -->
+            <!-- Tab button removed for now, pending the Maintenance page rework. The
+                 page and all its code are intact — restoring the button in the tab
+                 strip brings it straight back. -->
             <div id="maintenance" class="tab-content">
                 <div class="media-widget-section">
                     <span class="filter-group-label">Fleet Maintenance</span>
@@ -3140,10 +3189,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.6.2';
-        const APP_BUILD    = '2026.08.19.03';
+        const APP_VERSION  = '2.7.0';
+        const APP_BUILD    = '2026.08.19.04';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-19T18:40:00Z';
+        const APP_DEPLOYED = '2026-08-19T18:55:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -5606,6 +5655,21 @@
             'Riyadh': { bg: '#e9f3ec', fg: '#33684a', bd: '#d5e8dc' },
         };
 
+        // Timeline pills show the station code, not the city — "Jeddah" and "Riyadh"
+        // are most of the row's width otherwise. The stored value is unchanged and is
+        // still what LOCATION_PILL_COLORS is keyed on; this is display only. Anything
+        // not listed (a one-off MRO like Doha or Malta) is already short and passes
+        // straight through.
+        const LOCATION_CODES = {
+            'Jeddah': 'JED',
+            'Riyadh': 'RUH',
+            'Dammam': 'DMM',
+        };
+
+        function locationCode(loc) {
+            return LOCATION_CODES[loc] || loc;
+        }
+
         // The list is clamped to two lines by CSS so the cards stay the same height.
         // Nothing is lost — click expands, and the full list is in the tooltip.
         function statList(ids) {
@@ -5744,12 +5808,13 @@
         let timelineSortDir = 'desc';   // 'desc' = newest first (default), 'asc' = oldest first
         let timelineKindFilter = '';    // '' = all
 
+        // No Maintenance pill for now — maintenance-kind activities still appear under
+        // All, they just have no filter of their own until the categories settle.
         const TIMELINE_KINDS = [
-            { value: '',            label: 'All' },
-            { value: 'software',    label: 'Software' },
-            { value: 'media',       label: 'Media' },
-            { value: 'maintenance', label: 'Maintenance' },
-            { value: 'hardware',    label: 'Hardware' },
+            { value: '',         label: 'All' },
+            { value: 'software', label: 'Software' },
+            { value: 'hardware', label: 'Hardware' },
+            { value: 'media',    label: 'Media' },
         ];
 
         function setTimelineSort(dir) {
@@ -5838,6 +5903,24 @@
             return out;
         }
 
+        // How many day cards the list shows before the rest is folded away. One week
+        // of activity: enough to be the day-to-day view without the Overview running
+        // on for a screen and a half.
+        const TIMELINE_VISIBLE_DAYS = 7;
+        let timelineShowAllDays = false;
+        const timelineOpenMonths = new Set();   // 'YYYY-MM' groups expanded in the strip
+
+        function toggleTimelineMonth(key) {
+            if (timelineOpenMonths.has(key)) timelineOpenMonths.delete(key);
+            else timelineOpenMonths.add(key);
+            renderTimeline();
+        }
+
+        function toggleTimelineShowAll() {
+            timelineShowAllDays = !timelineShowAllDays;
+            renderTimeline();
+        }
+
         function renderTimeline() {
             setText('completedDeliveriesTitle', '📅 Timeline');
             renderTimelineKindPills();
@@ -5857,23 +5940,62 @@
             if (timelineSortDir === 'desc') dateKeys.reverse();
 
             const plural = n => `${n} ${n === 1 ? 'activity' : 'activities'}`;
+            const thisMonth = new Date().toISOString().slice(0, 7);
 
+            // ===== Calendar strip =====
+            // Only the current month gets a tile per day. Everything older collapses to
+            // one tile per month, which expands on click — otherwise the strip grows
+            // without bound and the useful end of it scrolls off.
             const stripEl = document.getElementById('timelineCalendarStrip');
             if (stripEl) {
-                stripEl.innerHTML = dateKeys.map(key => {
+                const dayTile = key => {
                     const d = new Date(key + 'T00:00:00Z');
                     const weekday = d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
                     const day = d.getUTCDate();
                     const month = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
                     const monthLong = d.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
                     const tails = [...new Set(groups[key].map(x => x.tail))].join(', ');
-                    return `<div class="cal-tile" title="${escAttr(`${day} ${monthLong}: ${tails}`)}" onclick="document.getElementById('dategroup-${key}').scrollIntoView({behavior:'smooth', block:'center'})">
+                    return `<div class="cal-tile" title="${escAttr(`${day} ${monthLong}: ${tails}`)}" onclick="const el=document.getElementById('dategroup-${key}'); if (el) el.scrollIntoView({behavior:'smooth', block:'center'});">
                         <div class="cal-tile-header">${weekday}</div>
                         <div class="cal-tile-day">${day}</div>
                         <div class="cal-tile-month">${month}</div>
                         <div class="cal-tile-count">${groups[key].length}</div>
                     </div>`;
-                }).join('');
+                };
+
+                const monthTile = (monthKey, keys) => {
+                    const d = new Date(monthKey + '-01T00:00:00Z');
+                    const mon = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }).toUpperCase();
+                    const monLong = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+                    const total = keys.reduce((n, k) => n + groups[k].length, 0);
+                    const open = timelineOpenMonths.has(monthKey);
+                    return `<div class="cal-tile cal-tile-group ${open ? 'open' : ''}" title="${escAttr(`${monLong}: ${total} activities over ${keys.length} days — click to ${open ? 'collapse' : 'expand'}`)}" onclick="toggleTimelineMonth('${monthKey}')">
+                        <div class="cal-tile-header">${d.getUTCFullYear()}</div>
+                        <div class="cal-tile-mon">${mon}</div>
+                        <div class="cal-tile-month">${keys.length} ${keys.length === 1 ? 'day' : 'days'}</div>
+                        <div class="cal-tile-count">${total} <span class="cal-caret">${open ? '▾' : '▸'}</span></div>
+                    </div>`;
+                };
+
+                // Walk the dates in display order so month groups land where their
+                // dates would have been, whichever way the timeline is sorted.
+                const monthDays = {};
+                dateKeys.forEach(k => {
+                    const m = k.slice(0, 7);
+                    if (m !== thisMonth) (monthDays[m] = monthDays[m] || []).push(k);
+                });
+
+                const emitted = new Set();
+                let html = '';
+                dateKeys.forEach(key => {
+                    const m = key.slice(0, 7);
+                    if (m === thisMonth) { html += dayTile(key); return; }
+                    if (emitted.has(m)) return;
+                    emitted.add(m);
+                    html += monthTile(m, monthDays[m]);
+                    if (timelineOpenMonths.has(m)) html += monthDays[m].map(dayTile).join('');
+                });
+                stripEl.innerHTML = html;
             }
 
             const pillStyle = c => `background:${c.bg}; color:${c.fg}; border-color:${c.bd}`;
@@ -5886,7 +6008,7 @@
                     <div class="tl-row">
                         <span class="tl-reg">${escAttr(x.tail)}</span>
                         ${typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : ''}
-                        ${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}">📍 ${escAttr(x.location)}</span>` : ''}
+                        ${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}
                         <span class="tl-kind tl-kind-${x.kind}">${x.kind}</span>
                         <span class="tl-title">${escAttr(x.title)}</span>
                         ${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}
@@ -5894,9 +6016,13 @@
                 </li>`;
             };
 
+            // ===== Day list =====
+            // A week's worth of days, then the rest behind one control. The count on the
+            // button says what is hidden, so it is never a mystery how much is left.
             const listEl = document.getElementById('completedDeliveriesList');
             if (listEl) {
-                const html = dateKeys.map(key => {
+                const shown = timelineShowAllDays ? dateKeys : dateKeys.slice(0, TIMELINE_VISIBLE_DAYS);
+                const html = shown.map(key => {
                     const d = new Date(key + 'T00:00:00Z');
                     const heading = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
                     return `<li class="timeline-date-group" id="dategroup-${key}">
@@ -5908,6 +6034,22 @@
                     </li>`;
                 }).join('');
                 listEl.innerHTML = html || '<li style="color:#999; font-size:13px;">No activities recorded yet</li>';
+            }
+
+            const moreWrap = document.getElementById('timelineShowMore');
+            if (moreWrap) {
+                const hidden = dateKeys.length - TIMELINE_VISIBLE_DAYS;
+                if (hidden > 0) {
+                    moreWrap.style.display = '';
+                    moreWrap.innerHTML = `<button class="tl-more-btn" onclick="toggleTimelineShowAll()">${
+                        timelineShowAllDays
+                            ? '▴ Show less'
+                            : `▾ Show ${hidden} more ${hidden === 1 ? 'day' : 'days'}`
+                    }</button>`;
+                } else {
+                    moreWrap.style.display = 'none';
+                    moreWrap.innerHTML = '';
+                }
             }
         }
 

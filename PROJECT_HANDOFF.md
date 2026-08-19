@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.6.0, 2026-08-19)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.7.0, 2026-08-19)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -189,6 +189,26 @@ The kind filter drives the day counts as well as the rows, so a tile reading
 "2" under Hardware means two hardware activities that day, not two of anything
 else. Default sort is **newest first**. The title carries no count.
 
+Filter pills are **All / Software / Hardware / Media**. There is no Maintenance
+pill for now — maintenance-kind activities still appear under All, they just have
+no filter of their own until the categories settle.
+
+**The calendar strip only gives the current month a tile per day.** Every earlier
+month collapses to one dashed tile (year / month / n days / total) that expands on
+click, tracked in `timelineOpenMonths`. Without that the strip grew without bound
+and the useful end of it scrolled off. Month tiles slot in where their dates would
+have been, so the grouping is correct in both sort directions.
+
+**The day list shows `TIMELINE_VISIBLE_DAYS` (7) day cards**, the rest behind one
+Show more control that names how many are hidden. The Overview is a screen, not an
+archive.
+
+Location pills show the station code via `locationCode()` — `LOCATION_CODES` maps
+Jeddah→JED, Riyadh→RUH, Dammam→DMM, and anything else (a one-off MRO) passes
+through unchanged. **Display only**: the stored value is untouched and is still
+what `LOCATION_PILL_COLORS` is keyed on, and the full name is in the pill's
+tooltip.
+
 Nothing writes a Timeline record. Adding a maintenance activity makes it appear
 on the Timeline on the next `updateMetrics()`, which the save already calls.
 
@@ -208,7 +228,13 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
 ---
 
-## Tabs (6)
+## Tabs (5 shown, 6 built)
+
+**The Maintenance tab button is currently removed from the tab strip**, pending the
+page rework. The page, its code and `/activities` are all intact — restoring the
+one `<button>` in the tab strip brings it straight back. While it is hidden there
+is no UI for Add New Activity, so Hardware entries on the Timeline can only come
+from records that already exist.
 
 1. **Overview** — starts with the Timeline (calendar strip + grouped-by-date
    list). One divider per day, nothing between aircraft. Beware
