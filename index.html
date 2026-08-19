@@ -1144,6 +1144,340 @@
             white-space: nowrap;
         }
 
+        /* Timeline activity-kind pills. One shape, four tints — the kind is a
+           category, not a status, so none of these borrow the red/green vocabulary
+           the status badges use. */
+        .tl-kind {
+            display: inline-flex;
+            align-items: center;
+            height: 20px;
+            padding: 0 9px;
+            font-size: 10.5px;
+            font-weight: 700;
+            line-height: 1;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .tl-kind-software    { background: #e6f0fb; color: #1c5b96; border-color: #cfe0f4; }
+        .tl-kind-media       { background: #e6f7f4; color: #10695c; border-color: #c9ebe4; }
+        .tl-kind-maintenance { background: #fdf1e3; color: #8a5312; border-color: #f6ddc0; }
+        .tl-kind-hardware    { background: #f1ecfa; color: #55408f; border-color: #ddd3f0; }
+
+        /* The activity's own words, after the pills. Muted so the registration still
+           leads the row. */
+        .tl-title {
+            font-size: 12.5px;
+            color: #3c4650;
+            font-weight: 600;
+        }
+
+        .tl-sub {
+            font-size: 11.5px;
+            color: #7a838c;
+        }
+
+        .timeline-filter-row {
+            margin-bottom: 12px;
+        }
+
+        .timeline-filter-row .quick-filters { margin-bottom: 0; }
+
+        /* ===== Maintenance page: two-panel (list + detail) ===== */
+        .maint-split {
+            display: grid;
+            grid-template-columns: 290px minmax(0, 1fr);
+            gap: 16px;
+            align-items: start;
+        }
+
+        .maint-list-panel {
+            border: 1px solid #e2e7ea;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .maint-list-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 9px 12px;
+            background: #f6f8f7;
+            border-bottom: 1px solid #e5e9ec;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #4a6b52;
+        }
+
+        /* Tall enough to be a working list, capped so the detail panel is never
+           pushed off the bottom of a laptop screen. */
+        .maint-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            max-height: 620px;
+            overflow-y: auto;
+        }
+
+        .maint-list-item {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 9px 12px;
+            border-bottom: 1px solid #eef1f3;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .maint-list-item:last-child { border-bottom: none; }
+        .maint-list-item:hover { background: rgba(10, 92, 52, 0.04); }
+
+        /* The selected row is marked on its leading edge, so the marker cannot be
+           confused with the flag dot on the trailing edge. */
+        .maint-list-item.selected {
+            background: #eef5f0;
+            box-shadow: inset 3px 0 0 #0a5c34;
+        }
+
+        .maint-list-main { min-width: 0; flex: 1; }
+
+        .maint-list-reg {
+            font-weight: 700;
+            font-size: 13.5px;
+            color: #1f2937;
+            letter-spacing: 0.2px;
+        }
+
+        .maint-list-type {
+            font-size: 11px;
+            color: #7a838c;
+            margin-top: 1px;
+        }
+
+        .maint-list-flag {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: #cfd5d9;
+        }
+
+        .maint-list-flag.open { background: #dc3545; box-shadow: 0 0 0 3px rgba(220,53,69,0.14); }
+
+        .maint-detail-panel {
+            border: 1px solid #e2e7ea;
+            border-radius: 10px;
+            background: #fff;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .maint-detail-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 13px 16px;
+            background: #f6f8f7;
+            border-bottom: 1px solid #e5e9ec;
+        }
+
+        .maint-detail-reg {
+            font-size: 17px;
+            font-weight: 700;
+            color: #0a5c34;
+            letter-spacing: 0.3px;
+        }
+
+        .maint-detail-head-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+        .maint-profile {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+            gap: 1px;
+            background: #eef1f3;
+            border-bottom: 1px solid #e5e9ec;
+        }
+
+        .maint-profile-cell {
+            background: #fff;
+            padding: 9px 14px;
+        }
+
+        .maint-profile-key {
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+            color: #8a939b;
+        }
+
+        .maint-profile-val {
+            margin-top: 3px;
+            font-size: 12.5px;
+            color: #26313a;
+            word-break: break-word;
+        }
+
+        .maint-profile-cell .edit-text,
+        .maint-profile-cell .edit-select,
+        .maint-profile-cell .edit-date { margin-top: 3px; width: 100%; box-sizing: border-box; }
+
+        /* ===== Activity history ===== */
+        .maint-history-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 16px 8px;
+        }
+
+        .maint-history-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #4a6b52;
+        }
+
+        .maint-history {
+            list-style: none;
+            margin: 0;
+            padding: 0 16px 16px;
+        }
+
+        .maint-act {
+            border: 1px solid #e5e9ec;
+            border-left: 3px solid #cfd5d9;
+            border-radius: 8px;
+            padding: 10px 13px;
+            margin-bottom: 9px;
+            transition: box-shadow 0.15s ease;
+        }
+
+        .maint-act:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+
+        /* The left edge carries the timeline kind, so the history and the Timeline
+           agree at a glance without repeating the pill twice per row. */
+        .maint-act.kind-software    { border-left-color: #1c5b96; }
+        .maint-act.kind-media       { border-left-color: #10695c; }
+        .maint-act.kind-maintenance { border-left-color: #d08a2c; }
+        .maint-act.kind-hardware    { border-left-color: #6f52ad; }
+
+        .maint-act-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .maint-act-date {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #0a5c34;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .maint-act-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-top: 5px;
+        }
+
+        .maint-act-cat {
+            font-size: 10.5px;
+            color: #7a838c;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .maint-act-body {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 6px 18px;
+            margin-top: 7px;
+        }
+
+        .maint-act-field { font-size: 12px; color: #46505a; line-height: 1.45; }
+        .maint-act-field b { color: #6b757e; font-weight: 700; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; display: block; }
+
+        .maint-act-tech {
+            margin-top: 7px;
+            padding-top: 7px;
+            border-top: 1px dashed #e5e9ec;
+            font-size: 11.5px;
+            color: #55606a;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 14px;
+        }
+
+        .maint-act-tech span b { color: #8a939b; font-weight: 700; }
+
+        .maint-act-del {
+            margin-left: auto;
+            border: 1px solid #f0c8cc;
+            background: #fdf0f1;
+            border-radius: 4px;
+            padding: 1px 7px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .maint-act-del:hover { background: #f8dfe1; }
+
+        .maint-empty {
+            padding: 26px 16px;
+            text-align: center;
+            color: #98a1a9;
+            font-size: 12.5px;
+        }
+
+        /* The activity modal is taller than the others, so it scrolls internally. */
+        .act-modal {
+            background: #fff;
+            border-radius: 10px;
+            padding: 24px;
+            width: 92%;
+            max-width: 560px;
+            max-height: 88vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .act-row { display: flex; gap: 10px; }
+        .act-row > div { flex: 1; min-width: 0; }
+
+        /* Only the fields that belong to the chosen category are shown. */
+        .act-extra { display: none; }
+        .act-extra.show { display: block; }
+
+        .act-extra-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+            color: #4a6b52;
+            margin: 14px 0 2px;
+            padding-top: 10px;
+            border-top: 1px solid #eef1f3;
+        }
+
+        textarea.add-sched-input { resize: vertical; min-height: 54px; font-family: inherit; }
+
+        @media (max-width: 900px) {
+            .maint-split { grid-template-columns: 1fr; }
+            .maint-list { max-height: 260px; }
+        }
+
         /* ===== Maintenance page ===== */
         /* Red is reserved for a real open flag; a clear fleet stays green and a widget
            that is counting nothing stays grey, same as the global Maintenance card. */
@@ -1160,78 +1494,6 @@
         .status-badge.wifi-hidden { background: #eceaf2; color: #574b78; }
 
         .maint-loc-input { min-width: 130px; }
-
-        #maintenanceTable td:not(.col-comment) {
-            white-space: nowrap;
-        }
-
-        .maint-row-open {
-            background: rgba(220, 53, 69, 0.06);
-        }
-
-        /* The caret gets a hair-width column of its own. Inline before the registration
-           it read as a stray dot — ". AQA" — and threw the Aircraft column out of line
-           with every other table. Here the registration cell is plain <strong>, exactly
-           as on the Software, Media and Fleet pages. */
-        .maint-expand-col {
-            width: 1%;
-            padding-right: 0 !important;
-        }
-
-        #maintenanceTable tbody tr:not(.maint-detail-row) {
-            cursor: pointer;
-        }
-
-        /* One shape that turns, rather than two glyphs that swap: closed points right,
-           open points down. */
-        .maint-caret {
-            display: inline-block;
-            font-size: 9px;
-            line-height: 1;
-            color: #b3bac0;
-            transition: transform 0.15s ease, color 0.15s ease;
-        }
-
-        #maintenanceTable tbody tr:hover .maint-caret { color: #0a5c34; }
-
-        .maint-caret.open {
-            transform: rotate(90deg);
-            color: #0a5c34;
-        }
-
-        .maint-detail-row > td {
-            background: #f7f9fa;
-            padding: 14px 18px 16px 40px;
-        }
-
-        .maint-detail-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 10px 24px;
-        }
-
-        .maint-detail-item {
-            font-size: 12.5px;
-            color: #333;
-        }
-
-        .maint-detail-item dt {
-            font-size: 10.5px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            color: #7a838c;
-            margin-bottom: 2px;
-        }
-
-        /* Says out loud that the drawer is unfinished, so an empty-looking panel does
-           not read as missing data. Delete this line when SSID lands. */
-        .maint-detail-pending {
-            margin-top: 12px;
-            font-size: 12px;
-            font-style: italic;
-            color: #8a939b;
-        }
 
         .sched-status-cell {
             white-space: nowrap;
@@ -2029,9 +2291,14 @@
                         <div class="timeline-title-row">
                             <div class="timeline-title" id="completedDeliveriesTitle">📅 Timeline</div>
                             <div class="timeline-sort-toggle">
-                                <button id="sortOldestBtn" class="qf-btn active" onclick="setTimelineSort('asc')">↑ Oldest First</button>
-                                <button id="sortLatestBtn" class="qf-btn" onclick="setTimelineSort('desc')">↓ Newest First</button>
+                                <button id="sortOldestBtn" class="qf-btn" onclick="setTimelineSort('asc')">↑ Oldest First</button>
+                                <button id="sortLatestBtn" class="qf-btn active" onclick="setTimelineSort('desc')">↓ Newest First</button>
                             </div>
+                        </div>
+                        <!-- Activity kinds. Built in JS from TIMELINE_KINDS so the set
+                             has exactly one definition. -->
+                        <div class="timeline-filter-row">
+                            <div class="quick-filters" id="timelineKindPills"></div>
                         </div>
                         <div class="cal-strip" id="timelineCalendarStrip"></div>
                         <ul class="timeline-items" id="completedDeliveriesList"></ul>
@@ -2197,11 +2464,11 @@
             </div>
 
             <!-- Maintenance Tab -->
-            <!-- Lists the active fleet only: a stored or retired aircraft cannot carry an
-                 open maintenance issue, and the global Maintenance card already counts
-                 against the active fleet, so both agree by construction.
-                 The flag is the only field so far. SSID status and the rest of the per-
-                 aircraft checks belong in the expanded row below each aircraft. -->
+            <!-- Two panels: the active fleet on the left, the selected aircraft on the
+                 right. Scope is the active fleet — the same set the global Maintenance
+                 card counts against, so the tab and the card cannot disagree.
+                 Per-aircraft activities live at /activities and are the single source
+                 for the Maintenance and Hardware entries on the Timeline. -->
             <div id="maintenance" class="tab-content">
                 <div class="media-widget-section">
                     <span class="filter-group-label">Fleet Maintenance</span>
@@ -2225,30 +2492,20 @@
 
                 <div class="table-actions-row">
                     <span id="maintSignedInAs" class="signed-in-as" style="display:none;"></span>
+                    <button id="maintAddActivityBtn" class="qf-btn" style="display:none;" onclick="openAddActivity()">➕ Add New Activity</button>
                     <button id="maintEditBtn" class="qf-btn edit-btn" onclick="toggleMaintEdit()">🔒 Sign in to edit</button>
-                    <button id="maintResetBtn" class="qf-btn" onclick="resetMaintenanceTable()">↺ Reset</button>
+                    <button id="maintResetBtn" class="qf-btn" onclick="resetMaintenancePage()">↺ Reset</button>
                 </div>
 
-                <div class="table-scroll-wrapper">
-                    <table class="aircraft-table" id="maintenanceTable">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th class="maint-expand-col"></th>
-                                <th class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortMaintTable(2)">Aircraft</th>
-                                <th class="sortable-th" data-col="3" data-label="Type" onclick="sortMaintTable(3)">Type</th>
-                                <th class="sortable-th" data-col="4" data-label="Retrofit Location" onclick="sortMaintTable(4)">Retrofit Location</th>
-                                <th class="sortable-th" data-col="5" data-label="WiFi" onclick="sortMaintTable(5)">WiFi</th>
-                                <th class="sortable-th" data-col="6" data-label="Activated" onclick="sortMaintTable(6)">Activated</th>
-                                <th class="sortable-th" data-col="7" data-label="Maintenance" onclick="sortMaintTable(7)">Maintenance</th>
-                                <th class="sortable-th" data-col="8" data-label="Flagged" onclick="sortMaintTable(8)">Flagged</th>
-                                <th class="sortable-th col-comment" data-col="9" data-label="Reason" onclick="sortMaintTable(9)">Reason</th>
-                            </tr>
-                        </thead>
-                        <tbody id="maintenanceTableBody">
-                            <!-- Populated by JavaScript -->
-                        </tbody>
-                    </table>
+                <div class="maint-split">
+                    <div class="maint-list-panel">
+                        <div class="maint-list-head">
+                            <span>Aircraft</span>
+                            <span id="maintListCount"></span>
+                        </div>
+                        <ul class="maint-list" id="maintList"></ul>
+                    </div>
+                    <div class="maint-detail-panel" id="maintDetailPanel"></div>
                 </div>
             </div>
 
@@ -2444,6 +2701,107 @@
                 </button>
             </div>
         </footer>
+    </div>
+
+    <div id="addActOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="act-modal">
+            <h3 style="color:#0a5c34; margin-bottom:6px;" id="addActHeading">Add New Activity</h3>
+            <p style="font-size:13px; color:#666; margin-bottom:16px;">Recorded against the aircraft and shown on the Timeline automatically — there is no separate Timeline entry to create.</p>
+
+            <div class="act-row">
+                <div>
+                    <label class="add-sched-label">Aircraft</label>
+                    <select id="addActAircraft" class="add-sched-input"></select>
+                </div>
+                <div>
+                    <label class="add-sched-label">Date</label>
+                    <input type="date" id="addActDate" class="add-sched-input">
+                </div>
+            </div>
+
+            <div class="act-row">
+                <div>
+                    <label class="add-sched-label">Location</label>
+                    <input id="addActLocation" class="add-sched-input" maxlength="60" placeholder="e.g. Jeddah" autocomplete="off">
+                </div>
+                <div>
+                    <label class="add-sched-label">Category</label>
+                    <select id="addActCategory" class="add-sched-input"></select>
+                </div>
+            </div>
+
+            <label class="add-sched-label">Title</label>
+            <input id="addActTitle" class="add-sched-input" maxlength="120" placeholder="e.g. KRFU Replacement" autocomplete="off">
+
+            <label class="add-sched-label">Task Performed</label>
+            <textarea id="addActTask" class="add-sched-input" maxlength="1000" placeholder="What was done"></textarea>
+
+            <label class="add-sched-label">Result / Outcome</label>
+            <textarea id="addActOutcome" class="add-sched-input" maxlength="1000" placeholder="How it ended"></textarea>
+
+            <!-- Category-specific fields. Only the block matching the chosen category
+                 is shown; the rest are not sent. -->
+            <div class="act-extra" id="actExtraHardware">
+                <div class="act-extra-label">Hardware Detail</div>
+                <div class="act-row">
+                    <div>
+                        <label class="add-sched-label">Part Replaced</label>
+                        <input id="addActPartReplaced" class="add-sched-input" maxlength="120" placeholder="e.g. KRFU" autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="add-sched-label">Part Number</label>
+                        <input id="addActPartNumber" class="add-sched-input" maxlength="60" autocomplete="off">
+                    </div>
+                </div>
+                <div class="act-row">
+                    <div>
+                        <label class="add-sched-label">Old Part S/N</label>
+                        <input id="addActOldPart" class="add-sched-input" maxlength="60" autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="add-sched-label">New Part S/N</label>
+                        <input id="addActNewPart" class="add-sched-input" maxlength="60" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <div class="act-extra" id="actExtraSoftware">
+                <div class="act-extra-label">Software Detail</div>
+                <div class="act-row">
+                    <div>
+                        <label class="add-sched-label">Software Name</label>
+                        <input id="addActSoftwareName" class="add-sched-input" maxlength="120" placeholder="e.g. Middleware" autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="add-sched-label">Version</label>
+                        <input id="addActVersion" class="add-sched-input" maxlength="40" placeholder="e.g. 2.1.0" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <div class="act-extra" id="actExtraModem">
+                <div class="act-extra-label">Commissioning Detail</div>
+                <div class="act-row">
+                    <div>
+                        <label class="add-sched-label">Modem Type</label>
+                        <input id="addActModemType" class="add-sched-input" maxlength="60" autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="add-sched-label">Commissioning Result</label>
+                        <input id="addActCommissioningResult" class="add-sched-input" maxlength="120" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <label class="add-sched-label" style="margin-top:14px;">Notes <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+            <textarea id="addActNotes" class="add-sched-input" maxlength="1000"></textarea>
+
+            <div id="addActError" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
+            <div style="display:flex; gap:10px; margin-top:6px;">
+                <button id="addActCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button id="addActSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save Activity</button>
+            </div>
+        </div>
     </div>
 
     <div class="sysinfo-overlay" id="sysInfoOverlay">
@@ -2662,13 +3020,49 @@
                 .sort((a, b) => (toISODate(a.date) + ' ' + (a.time || '')).localeCompare(toISODate(b.date) + ' ' + (b.time || '')));
         }
 
+        // ===== Maintenance activities =====
+        // /activities/{id} is the single record of work done on an aircraft. The
+        // Maintenance tab writes it, the aircraft history reads it, and the Timeline
+        // derives its Maintenance and Hardware entries from it — there is no separate
+        // Timeline collection to keep in step.
+        let activitiesLive = {};
+
+        // category -> label, plus the Timeline kind it maps to. Hardware R&R shows as
+        // Hardware, a software update as Software, and everything else as Maintenance.
+        const ACTIVITY_CATEGORIES = [
+            { value: 'hardware_rr',         label: 'Hardware Replacement / R&R', kind: 'hardware' },
+            { value: 'software_update',     label: 'Software Update',            kind: 'software' },
+            { value: 'modem_commissioning', label: 'Modem Commissioning',        kind: 'maintenance' },
+            { value: 'troubleshooting',     label: 'Troubleshooting',            kind: 'maintenance' },
+            { value: 'maintenance',         label: 'Maintenance',                kind: 'maintenance' },
+            { value: 'configuration',       label: 'Configuration',              kind: 'maintenance' },
+            { value: 'inspection',          label: 'Inspection',                 kind: 'maintenance' },
+            { value: 'modification',        label: 'Modification',               kind: 'maintenance' },
+            { value: 'other',               label: 'Other',                      kind: 'maintenance' },
+        ];
+
+        function activityCategory(value) {
+            return ACTIVITY_CATEGORIES.find(c => c.value === value) || ACTIVITY_CATEGORIES[ACTIVITY_CATEGORIES.length - 1];
+        }
+
+        function activityEntries() {
+            return Object.entries(activitiesLive).map(([id, a]) => ({ id, ...a }));
+        }
+
+        // Newest first, with the registration breaking ties so the order is stable.
+        function activitiesForAircraft(tail) {
+            return activityEntries()
+                .filter(a => a.aircraft === tail)
+                .sort((x, y) => dateSortKey(toISODate(y.date)).localeCompare(dateSortKey(toISODate(x.date))) || (y.id).localeCompare(x.id));
+        }
+
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.5.0';
-        const APP_BUILD    = '2026.08.17.02';
+        const APP_VERSION  = '2.6.0';
+        const APP_BUILD    = '2026.08.19.01';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-17T21:10:00Z';
+        const APP_DEPLOYED = '2026-08-19T18:30:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -2724,7 +3118,7 @@
             if (!fleetEditMode) populateFleetTable();
             populateAircraftTable();
             if (!mediaEditMode) populateMediaTable();
-            if (!maintEditMode) populateMaintenanceTable();
+            if (!maintEditMode) renderMaintenancePage();
             populateScheduleTables();
             updateMetrics();
         }
@@ -2804,6 +3198,36 @@
                     startScheduleStream();
                 })
                 .catch(() => populateScheduleTables());
+
+            fetch(`${FIREBASE_DB_URL}/activities.json`)
+                .then(r => r.json())
+                .then(data => {
+                    activitiesLive = data || {};
+                    markDataSync();
+                    renderMaintenancePage();
+                    updateMetrics();          // the Timeline reads activities too
+                    startActivitiesStream();
+                })
+                .catch(() => { /* the tab still renders, just with no history */ });
+        }
+
+        // A whole-node re-read on every event: activities are few and low-traffic, so
+        // the path-patching applyLivePathUpdate does for /aircraft would be more
+        // machinery than the data warrants.
+        function startActivitiesStream() {
+            const es = new EventSource(`${FIREBASE_DB_URL}/activities.json`);
+            const onMsg = () => {
+                fetch(`${FIREBASE_DB_URL}/activities.json`).then(r => r.json())
+                    .then(d => {
+                        activitiesLive = d || {};
+                        markDataSync();
+                        renderMaintenancePage();
+                        updateMetrics();
+                    })
+                    .catch(() => {});
+            };
+            es.addEventListener('put', onMsg);
+            es.addEventListener('patch', onMsg);
         }
 
         function applySchedulePathUpdate(path, data) {
@@ -3263,7 +3687,7 @@
             } else if (tabName === 'media') {
                 populateMediaTable();
             } else if (tabName === 'maintenance') {
-                populateMaintenanceTable();
+                renderMaintenancePage();
             } else if (tabName === 'schedule') {
                 populateScheduleTables();
             }
@@ -4101,7 +4525,7 @@
         let maintEditMode = false;
         let pendingMaint = {};      // { tail: { open, reason, retrofitLocation, ... } } staged until Save
         let maintTypeFilter = '', maintFlagFilter = '';
-        const maintExpanded = new Set();
+        let maintSelectedId = '';   // which aircraft the right panel is showing
 
         const WIFI_OPTIONS = [
             { value: 'public', label: 'Public' },
@@ -4138,136 +4562,190 @@
             return opt ? opt.label : '';
         }
 
-        function populateMaintenanceTable() {
-            const tbody = document.getElementById('maintenanceTableBody');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-            const editing = maintEditMode && canEdit();
-
-            maintenanceFleet().forEach((aircraft, idx) => {
-                const rec = maintRecordOf(aircraft);
+        // ===== Left panel: the aircraft list =====
+        function maintVisibleFleet() {
+            return maintenanceFleet().filter(a => {
+                const rec = maintRecordOf(a);
                 const flag = rec.open ? 'open' : 'serviceable';
-                const expanded = maintExpanded.has(aircraft.id);
-
-                const row = document.createElement('tr');
-                if (rec.open) row.classList.add('maint-row-open');
-                row.dataset.type = aircraft.type;
-                row.dataset.mflag = flag;
-                row.onclick = e => maintRowClick(e, aircraft.id);
-
-                const flagCell = editing
-                    ? `<select class="edit-select" data-id="${aircraft.id}" data-field="open" onchange="handleMaintEdit(this)">
-                           <option value="serviceable" ${rec.open ? '' : 'selected'}>Serviceable</option>
-                           <option value="open" ${rec.open ? 'selected' : ''}>Flagged</option>
-                       </select>`
-                    : `<span class="status-badge maint-${flag}">${rec.open ? 'FLAGGED' : 'SERVICEABLE'}</span>`;
-
-                const reasonCell = editing
-                    ? `<input class="edit-text comment-input" value="${escAttr(rec.reason)}" placeholder="What is open?" data-id="${aircraft.id}" data-field="reason" onchange="handleMaintEdit(this)">`
-                    : `<span class="comment-text">${rec.reason ? escAttr(rec.reason) : '—'}</span>`;
-
-                // Free text, not a fixed list: the retrofit happens wherever the MRO is
-                // — Doha, Malta, Jeddah — and that set is not knowable in advance.
-                const locCell = editing
-                    ? `<input class="edit-text maint-loc-input" maxlength="60" value="${escAttr(rec.retrofitLocation)}" placeholder="City or MRO" data-id="${aircraft.id}" data-field="retrofitLocation" onchange="handleMaintEdit(this)">`
-                    : (rec.retrofitLocation ? escAttr(rec.retrofitLocation) : '—');
-
-                const wifiCell = editing
-                    ? `<select class="edit-select" data-id="${aircraft.id}" data-field="wifiVisibility" onchange="handleMaintEdit(this)">
-                           <option value="" ${rec.wifiVisibility ? '' : 'selected'}>—</option>
-                           ${WIFI_OPTIONS.map(o => `<option value="${o.value}" ${o.value === rec.wifiVisibility ? 'selected' : ''}>${o.label}</option>`).join('')}
-                       </select>`
-                    : (rec.wifiVisibility
-                        ? `<span class="status-badge wifi-${rec.wifiVisibility}">${wifiLabel(rec.wifiVisibility).toUpperCase()}</span>`
-                        : '—');
-
-                const activatedCell = editing
-                    ? `<input type="date" class="edit-date" value="${toISODate(rec.activatedDate)}" data-id="${aircraft.id}" data-field="activatedDate" onchange="handleMaintEdit(this)">`
-                    : (rec.activatedDate || '—');
-
-                // The caret owns a column of its own so the registration cell reads
-                // exactly as it does on every other page. Flagged rows sort to the top:
-                // 0 before 1, read as numbers by sortTable.
-                row.innerHTML = `
-                    <td>${idx + 1}</td>
-                    <td class="maint-expand-col"><span class="maint-caret ${expanded ? 'open' : ''}" role="button" aria-expanded="${expanded}" aria-label="Details for ${aircraft.id}">▶</span></td>
-                    <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong></td>
-                    <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
-                    <td data-sort="${escAttr(rec.retrofitLocation)}">${locCell}</td>
-                    <td data-sort="${escAttr(rec.wifiVisibility)}">${wifiCell}</td>
-                    <td data-sort="${dateSortKey(toISODate(rec.activatedDate))}">${activatedCell}</td>
-                    <td data-sort="${rec.open ? 0 : 1}">${flagCell}</td>
-                    <td data-sort="${dateSortKey(rec.flaggedAt)}">${rec.flaggedAt ? fmtMediaDate(rec.flaggedAt) : '—'}</td>
-                    <td class="col-comment" data-sort="${escAttr(rec.reason)}">${reasonCell}</td>
-                `;
-                tbody.appendChild(row);
-
-                if (expanded) tbody.appendChild(maintDetailRow(aircraft, rec));
+                return (maintTypeFilter === '' || a.type === maintTypeFilter)
+                    && (maintFlagFilter === '' || flag === maintFlagFilter);
             });
-
-            renderMaintenanceWidgets();
-            populateMaintFilterPills();
-            applyMaintFilters();
-            updateSortIndicators('maintenanceTable');
-            updateMaintEditUI();
         }
 
-        // The drawer under a row: everything per-aircraft that is too detailed for a
-        // column of its own. Today it gathers what the other tabs already know about the
-        // airframe; SSID status and the remaining system checks join it here.
-        function maintDetailRow(a, rec) {
-            const tr = document.createElement('tr');
-            tr.className = 'maint-detail-row';
-            const item = (label, value) => `<div class="maint-detail-item"><dt>${label}</dt><dd>${value || '—'}</dd></div>`;
+        function renderMaintList() {
+            const list = document.getElementById('maintList');
+            if (!list) return;
+            const fleet = maintVisibleFleet();
+
+            setText('maintListCount', String(fleet.length));
+
+            list.innerHTML = fleet.map(a => {
+                const rec = maintRecordOf(a);
+                const selected = a.id === maintSelectedId;
+                return `<li class="maint-list-item ${selected ? 'selected' : ''}" onclick="selectMaintAircraft('${escAttr(a.id)}')">
+                    <div class="maint-list-main">
+                        <div class="maint-list-reg">${escAttr(a.id)}</div>
+                        <div class="maint-list-type">${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}${rec.open ? ' · Flagged' : ''}</div>
+                    </div>
+                    <span class="maint-list-flag ${rec.open ? 'open' : ''}" title="${rec.open ? 'Open maintenance issue' : 'Serviceable'}"></span>
+                </li>`;
+            }).join('') || '<li class="maint-empty">No aircraft match these filters</li>';
+
+            // After a filter change or a save the selection can sit outside the
+            // scrolled area — bring it back rather than leaving the panel looking
+            // like nothing is selected.
+            const sel = list.querySelector('.maint-list-item.selected');
+            if (sel) sel.scrollIntoView({ block: 'nearest' });
+        }
+
+        function selectMaintAircraft(id) {
+            maintSelectedId = id;
+            renderMaintList();
+            renderMaintDetail();
+        }
+
+        // ===== Right panel: profile + activity history =====
+        function renderMaintDetail() {
+            const panel = document.getElementById('maintDetailPanel');
+            if (!panel) return;
+
+            const fleet = maintVisibleFleet();
+            // Keep the selection valid as filters change, and default to the first row.
+            if (!fleet.some(a => a.id === maintSelectedId)) {
+                maintSelectedId = fleet.length ? fleet[0].id : '';
+            }
+            const a = aircraftData.find(x => x.id === maintSelectedId);
+            if (!a) {
+                panel.innerHTML = '<div class="maint-empty">Select an aircraft to see its profile and activity history.</div>';
+                return;
+            }
+
+            const rec = maintRecordOf(a);
+            const editing = maintEditMode && canEdit();
             const media = a.media || {};
             const linefit = isLinefit(a);
 
-            tr.innerHTML = `<td colspan="10">
-                <dl class="maint-detail-grid">
-                    ${item('Aircraft Type', escAttr(a.type))}
-                    ${item('Base Station', a.station && a.station !== 'N/A' ? a.station : '')}
-                    ${item('Retrofit Location', escAttr(rec.retrofitLocation))}
-                    ${item('WiFi Visibility', wifiLabel(rec.wifiVisibility))}
-                    ${item('Activated', rec.activatedDate)}
-                    ${item('Fit', linefit ? 'Linefit' : 'Retrofit')}
-                    ${linefit
-                        ? item('SBC Config A.13', a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
-                        : item('Middleware', swVersionOf(a))}
-                    ${linefit
-                        ? item('Software Scope', 'HBC+ — outside MSP scope')
-                        : item('Completion', a.completionLocation
-                            ? `${a.completionLocation}${a.completionDate ? ' — ' + a.completionDate : ''}`
-                            : 'Not completed')}
-                    ${linefit
-                        ? item('Media', 'Out of media scope')
-                        : item('Media Cycle', media.mediaCycle ? cycleToDisplay(media.mediaCycle) : 'No media')}
-                    ${item('Maintenance Flag', rec.open ? 'Open' : 'Serviceable')}
-                    ${item('Flagged (UTC)', rec.flaggedAt ? fmtMediaDate(rec.flaggedAt) : '—')}
-                    ${item('Reason', rec.reason ? escAttr(rec.reason) : '—')}
-                </dl>
-                <div class="maint-detail-pending">SSID status and the remaining per-aircraft checks will appear here.</div>
-            </td>`;
-            return tr;
+            const cell = (key, val) => `<div class="maint-profile-cell">
+                <div class="maint-profile-key">${key}</div>
+                <div class="maint-profile-val">${val || '—'}</div>
+            </div>`;
+
+            // Editable in Edit mode, read-only otherwise — the same staged-then-Save
+            // flow the table used, so nothing that could be edited before is lost.
+            const locVal = editing
+                ? `<input class="edit-text" maxlength="60" value="${escAttr(rec.retrofitLocation)}" placeholder="City or MRO" data-id="${a.id}" data-field="retrofitLocation" onchange="handleMaintEdit(this)">`
+                : escAttr(rec.retrofitLocation);
+
+            const wifiVal = editing
+                ? `<select class="edit-select" data-id="${a.id}" data-field="wifiVisibility" onchange="handleMaintEdit(this)">
+                       <option value="" ${rec.wifiVisibility ? '' : 'selected'}>—</option>
+                       ${WIFI_OPTIONS.map(o => `<option value="${o.value}" ${o.value === rec.wifiVisibility ? 'selected' : ''}>${o.label}</option>`).join('')}
+                   </select>`
+                : (rec.wifiVisibility ? `<span class="status-badge wifi-${rec.wifiVisibility}">${wifiLabel(rec.wifiVisibility).toUpperCase()}</span>` : '');
+
+            const activatedVal = editing
+                ? `<input type="date" class="edit-date" value="${toISODate(rec.activatedDate)}" data-id="${a.id}" data-field="activatedDate" onchange="handleMaintEdit(this)">`
+                : rec.activatedDate;
+
+            const flagVal = editing
+                ? `<select class="edit-select" data-id="${a.id}" data-field="open" onchange="handleMaintEdit(this)">
+                       <option value="serviceable" ${rec.open ? '' : 'selected'}>Serviceable</option>
+                       <option value="open" ${rec.open ? 'selected' : ''}>Flagged</option>
+                   </select>`
+                : `<span class="status-badge maint-${rec.open ? 'open' : 'serviceable'}">${rec.open ? 'FLAGGED' : 'SERVICEABLE'}</span>`;
+
+            const reasonVal = editing
+                ? `<input class="edit-text" maxlength="500" value="${escAttr(rec.reason)}" placeholder="What is open?" data-id="${a.id}" data-field="reason" onchange="handleMaintEdit(this)">`
+                : escAttr(rec.reason);
+
+            const profile = [
+                cell('Aircraft Type', escAttr(a.type)),
+                cell('Base Station', a.station && a.station !== 'N/A' ? escAttr(a.station) : ''),
+                cell('Retrofit Location', locVal),
+                linefit
+                    ? cell('SBC Config A.13', a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
+                    : cell('Middleware', swVersionOf(a)),
+                linefit
+                    ? cell('Software Scope', 'HBC+ — outside MSP scope')
+                    : cell('Completion', a.completionLocation
+                        ? `${escAttr(a.completionLocation)}${a.completionDate ? ' — ' + escAttr(a.completionDate) : ''}`
+                        : 'Not completed'),
+                linefit
+                    ? cell('Media', 'Out of media scope')
+                    : cell('Media Cycle', media.mediaCycle ? cycleToDisplay(media.mediaCycle) : 'No media'),
+                cell('WiFi Visibility', wifiVal),
+                cell('Activated', activatedVal),
+                cell('Fit', linefit ? 'Linefit' : 'Retrofit'),
+                cell('Maintenance Flag', flagVal),
+                cell('Flagged (UTC)', rec.flaggedAt ? fmtMediaDate(rec.flaggedAt) : ''),
+                cell('Reason', reasonVal),
+            ].join('');
+
+            const acts = activitiesForAircraft(a.id);
+
+            panel.innerHTML = `
+                <div class="maint-detail-head">
+                    <span class="maint-detail-reg">${escAttr(a.id)}</span>
+                    <span class="tl-pill" style="background:${(TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL).bg}; color:${(TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL).fg}; border-color:${(TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL).bd}">${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</span>
+                    <span class="status-badge maint-${rec.open ? 'open' : 'serviceable'}">${rec.open ? 'FLAGGED' : 'SERVICEABLE'}</span>
+                </div>
+                <div class="maint-profile">${profile}</div>
+                <div class="maint-history-head">
+                    <span class="maint-history-title">Activity History</span>
+                    <span class="timeline-day-count">${acts.length} ${acts.length === 1 ? 'activity' : 'activities'}</span>
+                </div>
+                <ul class="maint-history">${
+                    acts.length
+                        ? acts.map(renderActivityCard).join('')
+                        : '<li class="maint-empty">No activities recorded for this aircraft yet.</li>'
+                }</ul>`;
         }
 
-        function toggleMaintExpand(id) {
-            if (maintExpanded.has(id)) maintExpanded.delete(id); else maintExpanded.add(id);
-            populateMaintenanceTable();
+        function renderActivityCard(act) {
+            const cat = activityCategory(act.category);
+            const d = act.details || {};
+            const field = (label, val) => val
+                ? `<div class="maint-act-field"><b>${label}</b>${escAttr(val)}</div>` : '';
+            const tech = (label, val) => val
+                ? `<span><b>${label}:</b> ${escAttr(val)}</span>` : '';
+
+            const techBits = [
+                tech('Part', d.partReplaced),
+                tech('P/N', d.partNumber),
+                tech('Old S/N', d.oldPart),
+                tech('New S/N', d.newPart),
+                tech('Software', d.softwareName),
+                tech('Version', d.version),
+                tech('Modem', d.modemType),
+                tech('Result', d.commissioningResult),
+            ].filter(Boolean).join('');
+
+            return `<li class="maint-act kind-${cat.kind}">
+                <div class="maint-act-top">
+                    <span class="maint-act-date">${escAttr(act.date || '—')}</span>
+                    <span class="tl-kind tl-kind-${cat.kind}">${cat.kind}</span>
+                    ${act.location ? `<span class="tl-loc-pill" style="background:${(LOCATION_PILL_COLORS[act.location] || NEUTRAL_PILL).bg}; color:${(LOCATION_PILL_COLORS[act.location] || NEUTRAL_PILL).fg}; border-color:${(LOCATION_PILL_COLORS[act.location] || NEUTRAL_PILL).bd}">📍 ${escAttr(act.location)}</span>` : ''}
+                    <span class="maint-act-cat">${escAttr(cat.label)}</span>
+                    ${canEdit() ? `<button class="maint-act-del" title="Delete this activity" onclick="deleteActivity('${escAttr(act.id)}')">🗑</button>` : ''}
+                </div>
+                <div class="maint-act-title">${escAttr(act.title || cat.label)}</div>
+                <div class="maint-act-body">
+                    ${field('Task Performed', act.task)}
+                    ${field('Result / Outcome', act.outcome)}
+                    ${field('Notes', act.notes)}
+                </div>
+                ${techBits ? `<div class="maint-act-tech">${techBits}</div>` : ''}
+            </li>`;
         }
 
-        // The whole row is the target, so there is no small hit area to find. The caret
-        // has no handler of its own — the click bubbles up to here. Edit controls are
-        // exempt, or opening a dropdown would collapse the row out from under it.
-        function maintRowClick(e, id) {
-            if (e.target.closest('select, input, textarea, button, a')) return;
-            toggleMaintExpand(id);
-        }
-
-        // sortTable treats every row in the tbody as a peer and reads cells[col]; a
-        // detail row has a single colspan cell, so collapse the drawers before sorting.
-        function sortMaintTable(col) {
-            if (maintExpanded.size) { maintExpanded.clear(); populateMaintenanceTable(); }
-            sortTable('maintenanceTable', col);
+        // Single entry point for the tab — the list, the detail panel and the widgets
+        // are always redrawn together so they cannot disagree.
+        function renderMaintenancePage() {
+            renderMaintenanceWidgets();
+            populateMaintFilterPills();
+            renderMaintDetail();     // resolves the selection first
+            renderMaintList();
+            updateMaintEditUI();
         }
 
         // Counts come from committed data, so these read the same as the global card:
@@ -4310,31 +4788,18 @@
             }
         }
 
-        function setMaintTypeFilter(t, btn) { maintTypeFilter = t; setActiveInGroup(btn); applyMaintFilters(); }
-        function setMaintFlagFilter(f, btn) { maintFlagFilter = f; setActiveInGroup(btn); applyMaintFilters(); }
+        function setMaintTypeFilter(t, btn) { maintTypeFilter = t; setActiveInGroup(btn); renderMaintenancePage(); }
+        function setMaintFlagFilter(f, btn) { maintFlagFilter = f; setActiveInGroup(btn); renderMaintenancePage(); }
 
-        function applyMaintFilters() {
-            document.querySelectorAll('#maintenanceTableBody tr').forEach(row => {
-                if (row.classList.contains('maint-detail-row')) return;   // follows its parent below
-                const ok = (maintTypeFilter === '' || row.dataset.type === maintTypeFilter)
-                    && (maintFlagFilter === '' || row.dataset.mflag === maintFlagFilter);
-                row.style.display = ok ? '' : 'none';
-                const detail = row.nextElementSibling;
-                if (detail && detail.classList.contains('maint-detail-row')) detail.style.display = ok ? '' : 'none';
-            });
-        }
-
-        function resetMaintenanceTable() {
+        function resetMaintenancePage() {
             maintTypeFilter = ''; maintFlagFilter = '';
-            maintExpanded.clear();
+            maintSelectedId = '';
             document.querySelectorAll('#maintenance .filter-groups .quick-filters').forEach(group => {
                 group.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
                 const first = group.querySelector('.qf-btn');
                 if (first) first.classList.add('active');
             });
-            delete lastSort['maintenanceTable'];
-            updateSortIndicators('maintenanceTable');
-            populateMaintenanceTable();
+            renderMaintenancePage();
         }
 
         // ===== Maintenance edit mode (same staged-then-Save shape as Media and Fleet) =====
@@ -4344,12 +4809,14 @@
             if (!canEdit()) return;
             maintEditMode = true;
             pendingMaint = {};
-            populateMaintenanceTable();
+            renderMaintenancePage();
         }
 
         function updateMaintEditUI() {
             const btn = document.getElementById('maintEditBtn');
             const who = document.getElementById('maintSignedInAs');
+            const addBtn = document.getElementById('maintAddActivityBtn');
+            if (addBtn) addBtn.style.display = canEdit() ? '' : 'none';
             if (!btn) return;
             const editing = maintEditMode && canEdit();
             btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '💾 Save' : '✏️ Edit');
@@ -4372,12 +4839,12 @@
             setSyncStatus(`🟡 ${id} staged — press Save`, '#e0a800');
             // Only the flag repaints the row (badge, highlight, sort key). Re-rendering
             // on a reason change would just yank focus out of the next input.
-            if (field === 'open') populateMaintenanceTable();
+            if (field === 'open') renderMaintenancePage();
         }
 
         async function commitMaintChanges() {
             const ids = Object.keys(pendingMaint);
-            if (!ids.length) { maintEditMode = false; populateMaintenanceTable(); return; }
+            if (!ids.length) { maintEditMode = false; renderMaintenancePage(); return; }
             const token = await getIdToken();
             if (!token) return;
 
@@ -4431,6 +4898,152 @@
             } finally {
                 if (btn) btn.disabled = false;
                 updateMaintEditUI();
+            }
+        }
+
+        // ===== Add New Activity =====
+        // Writes one record to /activities. Nothing else is written: the aircraft
+        // history reads it and the Timeline derives from it, so there is no second
+        // entry to keep in step.
+        const ACT_EXTRA_BLOCKS = {
+            hardware_rr:         'actExtraHardware',
+            software_update:     'actExtraSoftware',
+            modem_commissioning: 'actExtraModem',
+        };
+
+        function syncActExtras() {
+            const cat = document.getElementById('addActCategory').value;
+            const wanted = ACT_EXTRA_BLOCKS[cat];
+            Object.values(ACT_EXTRA_BLOCKS).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('show', id === wanted);
+            });
+        }
+
+        function openAddActivity() {
+            if (!canEdit()) { promptSignIn().then(ok => { if (ok) openAddActivity(); }); return; }
+
+            const acSel = document.getElementById('addActAircraft');
+            acSel.innerHTML = maintenanceFleet()
+                .map(a => `<option value="${escAttr(a.id)}">${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</option>`).join('');
+            if (maintSelectedId) acSel.value = maintSelectedId;
+
+            const catSel = document.getElementById('addActCategory');
+            if (!catSel.dataset.built) {
+                catSel.innerHTML = ACTIVITY_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('');
+                catSel.dataset.built = '1';
+                catSel.addEventListener('change', syncActExtras);
+            }
+            catSel.value = 'hardware_rr';
+
+            // Default the location to whatever the aircraft's retrofit location is —
+            // most activities happen where the aircraft already is.
+            const sel = aircraftData.find(a => a.id === acSel.value);
+            document.getElementById('addActLocation').value = (sel && (sel.retrofitLocation || aircraftLocationOf(sel))) || '';
+            document.getElementById('addActDate').value = new Date().toISOString().slice(0, 10);
+            ['addActTitle', 'addActTask', 'addActOutcome', 'addActNotes', 'addActPartReplaced',
+             'addActPartNumber', 'addActOldPart', 'addActNewPart', 'addActSoftwareName',
+             'addActVersion', 'addActModemType', 'addActCommissioningResult']
+                .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+
+            syncActExtras();
+            const err = document.getElementById('addActError');
+            err.textContent = ''; err.style.display = 'none';
+            document.getElementById('addActOverlay').style.display = 'flex';
+            document.getElementById('addActTitle').focus();
+        }
+
+        function initAddActivityModal() {
+            const overlay = document.getElementById('addActOverlay');
+            if (!overlay) return;
+            const err = document.getElementById('addActError');
+            const close = () => { overlay.style.display = 'none'; };
+
+            document.getElementById('addActCancel').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+            document.getElementById('addActSave').addEventListener('click', async () => {
+                const val = id => (document.getElementById(id).value || '').trim();
+                const category = val('addActCategory');
+                const entry = {
+                    aircraft: val('addActAircraft'),
+                    date:     fmtDate(val('addActDate')),
+                    location: val('addActLocation'),
+                    category,
+                    title:    val('addActTitle'),
+                    task:     val('addActTask'),
+                    outcome:  val('addActOutcome'),
+                    notes:    val('addActNotes'),
+                    loggedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+                };
+
+                // Only the fields belonging to the chosen category are sent — `$other`
+                // is false in the rules, and an empty string would be stored as data.
+                const detailsByCategory = {
+                    hardware_rr: {
+                        partReplaced: val('addActPartReplaced'), partNumber: val('addActPartNumber'),
+                        oldPart: val('addActOldPart'), newPart: val('addActNewPart'),
+                    },
+                    software_update: {
+                        softwareName: val('addActSoftwareName'), version: val('addActVersion'),
+                    },
+                    modem_commissioning: {
+                        modemType: val('addActModemType'), commissioningResult: val('addActCommissioningResult'),
+                    },
+                };
+                const details = {};
+                Object.entries(detailsByCategory[category] || {}).forEach(([k, v]) => { if (v) details[k] = v; });
+                if (Object.keys(details).length) entry.details = details;
+
+                Object.keys(entry).forEach(k => { if (entry[k] === '') delete entry[k]; });
+
+                if (!entry.aircraft || !entry.date || !entry.title) {
+                    err.textContent = 'Aircraft, date and title are all required.';
+                    err.style.display = 'block';
+                    return;
+                }
+
+                const token = await getIdToken();
+                if (!token) return;
+                const btn = document.getElementById('addActSave');
+                btn.disabled = true; btn.textContent = 'Saving...';
+                const id = 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                try {
+                    const res = await fetch(`${FIREBASE_DB_URL}/activities/${id}.json?auth=${token}`, {
+                        method: 'PUT', body: JSON.stringify(entry),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                    activitiesLive[id] = entry;
+                    maintSelectedId = entry.aircraft;      // land on the aircraft just logged
+                    close();
+                    renderMaintenancePage();
+                    updateMetrics();                        // the Timeline picks it up here
+                    setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                } catch (e) {
+                    err.textContent = `Could not save activity — ${e.message}`;
+                    err.style.display = 'block';
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Save Activity';
+                }
+            });
+        }
+
+        async function deleteActivity(id) {
+            const act = activitiesLive[id];
+            if (!act) return;
+            if (!confirm(`Delete this activity?\n\n${act.date} — ${act.title}\n\nIt also disappears from the Timeline.`)) return;
+            const token = await getIdToken();
+            if (!token) return;
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/activities/${id}.json?auth=${token}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('delete failed');
+                delete activitiesLive[id];
+                renderMaintenancePage();
+                updateMetrics();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not delete activity — ${e.message}`, '#dc3545');
             }
         }
 
@@ -5042,7 +5655,21 @@
             `).join('');
         }
 
-        let timelineSortDir = 'asc'; // 'asc' = oldest first, 'desc' = latest first
+        // ===== Timeline =====
+        // Fleet-wide connectivity activity, derived from data that already exists:
+        // Software from the completion fields on /aircraft, Media from
+        // /aircraft/{tail}/media, and Maintenance + Hardware from /activities. There is
+        // no Timeline collection — nothing here is entered twice.
+        let timelineSortDir = 'desc';   // 'desc' = newest first (default), 'asc' = oldest first
+        let timelineKindFilter = '';    // '' = all
+
+        const TIMELINE_KINDS = [
+            { value: '',            label: 'All' },
+            { value: 'software',    label: 'Software' },
+            { value: 'media',       label: 'Media' },
+            { value: 'maintenance', label: 'Maintenance' },
+            { value: 'hardware',    label: 'Hardware' },
+        ];
 
         function setTimelineSort(dir) {
             timelineSortDir = dir;
@@ -5053,20 +5680,102 @@
             updateMetrics();
         }
 
-        function renderTimeline(completedStrict) {
-            setText('completedDeliveriesTitle', `📅 Timeline (${completedStrict.length})`);
-            const sorted = [...completedStrict].sort((a, b) => {
-                const da = toISODate(a.completionDate) || '9999-99-99';
-                const db = toISODate(b.completionDate) || '9999-99-99';
-                return da.localeCompare(db) || a.id.localeCompare(b.id);
+        function setTimelineKind(kind, btn) {
+            timelineKindFilter = kind;
+            setActiveInGroup(btn);
+            updateMetrics();
+        }
+
+        function renderTimelineKindPills() {
+            const box = document.getElementById('timelineKindPills');
+            if (!box || box.dataset.built) return;
+            box.innerHTML = TIMELINE_KINDS.map(k =>
+                `<button class="qf-btn ${k.value === timelineKindFilter ? 'active' : ''}" onclick="setTimelineKind('${k.value}', this)">${k.label}</button>`
+            ).join('');
+            box.dataset.built = '1';
+        }
+
+        // Where an activity happened, best available. Software carries its own
+        // completion location; media and the airframe fall back to the base station.
+        function aircraftLocationOf(a) {
+            if (a.completionLocation) return a.completionLocation;
+            if (a.station && a.station !== 'N/A') return a.station;
+            return '';
+        }
+
+        // The one place the three sources are folded into a single shape.
+        // { iso, kind, tail, type, location, title, sub }
+        function timelineActivities() {
+            const out = [];
+            const byTail = {};
+            aircraftData.forEach(a => { byTail[a.id] = a; });
+
+            aircraftData.forEach(a => {
+                // --- Software: the completion already recorded on the Software tab ---
+                const iso = toISODate(a.completionDate);
+                if (iso) {
+                    if (isLinefit(a)) {
+                        // The HBC+ pair is tracked for the SBC/beam configuration only.
+                        if (a.beamcfgStatus === 'done') {
+                            out.push({ iso, kind: 'software', tail: a.id, type: a.type,
+                                       location: aircraftLocationOf(a),
+                                       title: 'SBC Configuration A.13', sub: 'BEAMCFG_MOD3_NSG_A.13' });
+                        }
+                    } else {
+                        out.push({ iso, kind: 'software', tail: a.id, type: a.type,
+                                   location: a.completionLocation || '',
+                                   title: `Middleware ${swVersionOf(a)}`, sub: a.note || '' });
+                    }
+                }
+
+                // --- Media: the actual loaded date from the Media tab ---
+                const media = a.media || {};
+                if (media.loadedDateUTC) {
+                    const misoMatch = media.loadedDateUTC.match(/^(\d{4}-\d{2}-\d{2})/);
+                    if (misoMatch) {
+                        out.push({ iso: misoMatch[1], kind: 'media', tail: a.id, type: a.type,
+                                   location: aircraftLocationOf(a),
+                                   title: media.mediaCycle ? `Media ${cycleToDisplay(media.mediaCycle)}` : 'Media load',
+                                   sub: media.mediaSource || '' });
+                    }
+                }
             });
+
+            // --- Maintenance + Hardware: the activity records ---
+            activityEntries().forEach(act => {
+                const iso = toISODate(act.date);
+                if (!iso) return;
+                const cat = activityCategory(act.category);
+                const air = byTail[act.aircraft] || {};
+                const title = act.title || cat.label;
+                out.push({ iso, kind: cat.kind, tail: act.aircraft, type: air.type || '',
+                           location: act.location || aircraftLocationOf(air),
+                           // Don't echo the category when the title already is it.
+                           title, sub: title === cat.label ? '' : cat.label });
+            });
+
+            return out;
+        }
+
+        function renderTimeline() {
+            setText('completedDeliveriesTitle', '📅 Timeline');
+            renderTimelineKindPills();
+
+            const all = timelineActivities();
+            // The filter drives the day counts as well as the rows, so a day showing
+            // "2 activities" under Hardware means two hardware activities, not two of
+            // anything else.
+            const items = timelineKindFilter ? all.filter(x => x.kind === timelineKindFilter) : all;
+
             const groups = {};
-            sorted.forEach(a => {
-                const key = toISODate(a.completionDate) || 'unknown';
-                (groups[key] = groups[key] || []).push(a);
-            });
-            const dateKeys = Object.keys(groups).filter(k => k !== 'unknown').sort();
+            items.forEach(x => { (groups[x.iso] = groups[x.iso] || []).push(x); });
+            Object.keys(groups).forEach(k => groups[k].sort((a, b) =>
+                a.tail.localeCompare(b.tail) || a.kind.localeCompare(b.kind)));
+
+            const dateKeys = Object.keys(groups).sort();
             if (timelineSortDir === 'desc') dateKeys.reverse();
+
+            const plural = n => `${n} ${n === 1 ? 'activity' : 'activities'}`;
 
             const stripEl = document.getElementById('timelineCalendarStrip');
             if (stripEl) {
@@ -5076,55 +5785,48 @@
                     const day = d.getUTCDate();
                     const month = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
                     const monthLong = d.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
-                    const tails = groups[key].map(a => a.id).join(', ');
-                    return `<div class="cal-tile" title="Completed on ${day} ${monthLong}: ${tails}" onclick="document.getElementById('dategroup-${key}').scrollIntoView({behavior:'smooth', block:'center'})">
+                    const tails = [...new Set(groups[key].map(x => x.tail))].join(', ');
+                    return `<div class="cal-tile" title="${escAttr(`${day} ${monthLong}: ${tails}`)}" onclick="document.getElementById('dategroup-${key}').scrollIntoView({behavior:'smooth', block:'center'})">
                         <div class="cal-tile-header">${weekday}</div>
                         <div class="cal-tile-day">${day}</div>
                         <div class="cal-tile-month">${month}</div>
-                        <div class="cal-tile-count">${groups[key].length} done</div>
+                        <div class="cal-tile-count">${groups[key].length}</div>
                     </div>`;
                 }).join('');
             }
 
             const pillStyle = c => `background:${c.bg}; color:${c.fg}; border-color:${c.bd}`;
 
-            const renderRow = a => {
-                const loc = a.completionLocation || '';
-                const locColor = LOCATION_PILL_COLORS[loc] || NEUTRAL_PILL;
-                const typeColor = TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL;
-                const typeLabel = TYPE_SHORT_LABEL[a.type] || a.type;
-                const commentHtml = a.note
-                    ? `<span class="tl-comment" onclick="this.classList.toggle('expanded')" title="Click to expand">💬 ${a.note}</span>`
-                    : '';
+            const renderRow = x => {
+                const locColor = LOCATION_PILL_COLORS[x.location] || NEUTRAL_PILL;
+                const typeColor = TYPE_PILL_COLORS[x.type] || NEUTRAL_PILL;
+                const typeLabel = TYPE_SHORT_LABEL[x.type] || x.type;
                 return `<li>
                     <div class="tl-row">
-                        <span class="tl-reg">${a.id}</span>
-                        <span class="tl-pill" style="${pillStyle(typeColor)}">${typeLabel}</span>
-                        ${loc ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}">📍 ${loc}</span>` : ''}
-                        ${commentHtml}
+                        <span class="tl-reg">${escAttr(x.tail)}</span>
+                        ${typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : ''}
+                        ${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}">📍 ${escAttr(x.location)}</span>` : ''}
+                        <span class="tl-kind tl-kind-${x.kind}">${x.kind}</span>
+                        <span class="tl-title">${escAttr(x.title)}</span>
+                        ${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}
                     </div>
                 </li>`;
             };
 
-            const dayCard = (id, heading, rows) => `<li class="timeline-date-group"${id ? ` id="${id}"` : ''}>
-                <div class="timeline-date-heading">
-                    <span>${heading}</span>
-                    <span class="timeline-day-count">${rows.length} aircraft</span>
-                </div>
-                <ul class="timeline-date-items">${rows.map(renderRow).join('')}</ul>
-            </li>`;
-
-            const deliveriesList = document.getElementById('completedDeliveriesList');
-            if (deliveriesList) {
-                let html = dateKeys.map(key => {
+            const listEl = document.getElementById('completedDeliveriesList');
+            if (listEl) {
+                const html = dateKeys.map(key => {
                     const d = new Date(key + 'T00:00:00Z');
                     const heading = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
-                    return dayCard(`dategroup-${key}`, heading, groups[key]);
+                    return `<li class="timeline-date-group" id="dategroup-${key}">
+                        <div class="timeline-date-heading">
+                            <span>${heading}</span>
+                            <span class="timeline-day-count">${plural(groups[key].length)}</span>
+                        </div>
+                        <ul class="timeline-date-items">${groups[key].map(renderRow).join('')}</ul>
+                    </li>`;
                 }).join('');
-                if (groups.unknown) {
-                    html += dayCard('', 'Date TBD', groups.unknown);
-                }
-                deliveriesList.innerHTML = html || '<li style="color:#999; font-size:13px;">No completions yet</li>';
+                listEl.innerHTML = html || '<li style="color:#999; font-size:13px;">No activities recorded yet</li>';
             }
         }
 
@@ -5193,7 +5895,7 @@
 
             renderFleetOverview(active, completedStrict);
             renderStationCompletion(completedStrict);
-            renderTimeline(completedStrict);
+            renderTimeline();
             renderSysBar();     // fleet count and the open panel follow the same data
         }
 
@@ -5424,6 +6126,7 @@
             loadAuthSession();
             initSysBar();
             initScheduleAddModal();
+            initAddActivityModal();
             initAddAircraftModal();
             updateAuthUI();
             updateScheduleEditUI();

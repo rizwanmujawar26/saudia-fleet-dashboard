@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.5.0, 2026-08-17)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.6.0, 2026-08-19)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -110,6 +110,23 @@ clobber the other.
 
 ### `/editors/{uid}` — allowlist, readable only by that uid, never client-writable
 
+### `/activities/{id}` — what was actually done to an aircraft
+
+`aircraft`, `date` (DD-Mon-YYYY), `location` (free text), `category`, `title`,
+`task`, `outcome`, `notes`, `loggedAt`, and a `details` sub-object whose fields
+depend on the category (`partReplaced`/`partNumber`/`oldPart`/`newPart`,
+`softwareName`/`version`, `modemType`/`commissioningResult`).
+
+`category` is one of `hardware_rr`, `software_update`, `modem_commissioning`,
+`troubleshooting`, `maintenance`, `configuration`, `inspection`, `modification`,
+`other`. **`ACTIVITY_CATEGORIES` in the page is the one definition** — it carries
+the label and the Timeline kind together, so adding a category is one line there
+plus the regex in the rules.
+
+This is the only record of maintenance work. The aircraft history reads it and
+the Timeline derives from it — there is no Timeline collection and nothing is
+entered twice.
+
 ### `/visits` — the only world-writable node in the database
 
 `total` and `daily/{YYYY-MM-DD}`, both plain integers. **A write is accepted only
@@ -153,6 +170,30 @@ an aircraft showing "⚠ needed to count as done".
 
 ---
 
+## Timeline — derived, never stored
+
+`timelineActivities()` is the one place the three sources are folded into a
+single shape (`{ iso, kind, tail, type, location, title, sub }`):
+
+| kind | source | date it uses |
+|---|---|---|
+| Software | `/aircraft` completion fields — `Middleware {swVersion}` for retrofit, `SBC Configuration A.13` for the linefit pair when `beamcfgStatus === 'done'` | `completionDate` |
+| Media | `/aircraft/{tail}/media` | `loadedDateUTC` |
+| Maintenance | `/activities` whose category maps to `maintenance` | `date` |
+| Hardware | `/activities` with `category === 'hardware_rr'` | `date` |
+
+Category → kind lives in `ACTIVITY_CATEGORIES`: `hardware_rr` → Hardware,
+`software_update` → Software, **everything else → Maintenance**.
+
+The kind filter drives the day counts as well as the rows, so a tile reading
+"2" under Hardware means two hardware activities that day, not two of anything
+else. Default sort is **newest first**. The title carries no count.
+
+Nothing writes a Timeline record. Adding a maintenance activity makes it appear
+on the Timeline on the next `updateMetrics()`, which the save already calls.
+
+---
+
 ## Widget vocabulary
 
 - **Global widgets** — fixed 2×2 grid above the tab bar (`.global-widgets`),
@@ -183,8 +224,16 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
    Columns: `# | Aircraft | Type | Status | Media Loaded | Date UTC | Comments`.
 4. **Maintenance** — the **active** fleet only (`fleetStatus === 'active'`), the same
    set the global Maintenance card counts against, so the two cannot disagree.
-   Columns: `# | ▸ | Aircraft | Type | Retrofit Location | WiFi | Activated |
-   Maintenance | Flagged | Reason`. Two widgets only — Open Issues and
+   **Two panels, Outlook-style** (`.maint-split`): the aircraft list on the left
+   (`renderMaintList`), the selected aircraft on the right (`renderMaintDetail`)
+   — profile grid on top, activity history below, newest first. There is no
+   expandable row; `maintSelectedId` is the selection and it re-resolves to a
+   valid aircraft whenever a filter hides the current one.
+   The profile fields that are editable (retrofit location, WiFi, activated,
+   flag, reason) become inputs in Edit mode, using the same staged-then-Save
+   flow the table used — nothing that could be edited before was lost.
+   **Add New Activity** writes one `/activities` record and nothing else.
+   Two widgets only — Open Issues and
    Serviceable — and they are complements of one total, so a third card on that
    strip would just be another way of saying the same thing.
    **"Serviceable", not "Clear"** — the MRO term for an aircraft with nothing
