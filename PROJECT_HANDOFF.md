@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.12.0, 2026-08-20)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.13.0, 2026-08-21)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -151,13 +151,48 @@ This is the only record of maintenance work. The aircraft history reads it and
 the Timeline derives from it — there is no Timeline collection and nothing is
 entered twice.
 
+### `/units/{unitId}` — the unit register: one physical box, and its life
+
+**This is the single source for serial numbers and fitment history.** `/hardware`
+holds what is true of an equipment *type*; `/units` holds what is true of an
+individual box.
+
+| field | notes |
+|---|---|
+| `lruId` | catalogue id — which equipment this is |
+| `serial` | the identity. Unique **within** an `lruId`; two different LRUs may share a number |
+| `partNumber`, `altPartNumber`, `altSerial`, `revision`, `modDots`, `vendor`, `notes` | per-unit attributes. **Declared in the rules and deliberately unused** — they are where mod dots, revisions and alternates go when there is a UI for them |
+| `addedAt` | ISO stamp |
+| `fitments/{id}` | `aircraft`, `position`, `state`, `fittedDate`, `removedDate`, `removalReason`, `shopStatus`, `shopRef`, `shopFinding`, `activityId`, `notes`, `loggedAt` |
+
+A **fitment** is one box, on one aircraft, for one period. A unit fitted twice has
+two fitments, which is what makes total time on wing and change counts add up
+across airframes.
+
+**`state` (`on_wing` \| `removed`) is what says a unit came off — not the presence
+of a removal date.** That distinction is the whole point: the historical backlog is
+known by serial now and the dates are dug out later. Everything undated still
+counts, sorts last, and is listed as outstanding on the Serials tab.
+
+Derived, never stored: what is fitted at a slot (`fittedUnitAt`), days on wing
+(`fitmentDaysOnWing`, needs both ends and returns `null` rather than guessing),
+total time on wing (`unitDaysOnWing`), and change counts (`unitsAtSlot(...).length`).
+
+**Why not more fields on an activity.** An activity is an *event*; a part number,
+revision or mod dot belongs to the *box*. Storing them on the event would repeat
+them on every event for that unit and let the copies drift — and an activity cannot
+meaningfully carry a serial with no date, which is exactly what the backlog needs.
+
+`/activities` keeps its role as the event and shop log and links to a fitment by
+`activityId`. **Serials are no longer stored on an activity at all**: Add New
+Activity's Old/New part fields now write to `/units` via `unitWritesForActivity()`.
+
 ### `/hardware/{lruId}` — what belongs to the unit, not to an aircraft
 
 `swVersion`, `partNumber`, `vendor`, `notes`, and `issues/{id}`
 (`title`, `detail`, `resolution`, `status` open|resolved, `loggedAt`).
 
-**Serial numbers are deliberately NOT here.** They are derived from the on/off
-details of hardware activities in `/activities` — see the Hardware tab below.
+**Serial numbers are deliberately NOT here.** They live in `/units` — see above.
 
 ### `/visits` — the only world-writable node in the database
 
@@ -446,7 +481,7 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
 ---
 
-## Tabs (7)
+## Tabs (8)
 
 1. **Overview** — starts with the Timeline (calendar strip + grouped-by-date
    list). One divider per day, nothing between aircraft. Beware
@@ -489,11 +524,17 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 5. **Hardware** — the LRU catalogue on the left in two fit groups, the selected unit
    on the right: profile, known issues, fitment, removed units. See *Hardware tab*
    above. Serials are derived from `/activities` and never stored here.
-6. **Schedule** — standalone forward-looking plan, deliberately **not** linked
+6. **Serials** — the data-gathering surface for `/units`. One flat table, one row
+   per *fitment*, with **Record Installed** and **Record Removed** above it and CSV
+   export. Deliberately not another two-pane shell: the job is getting serials in
+   and completing dates later, not navigating a hierarchy. The date fields are
+   editable in place — that is where the backlog gets finished — and the "Dates
+   Outstanding" widget is the progress bar for it.
+7. **Schedule** — standalone forward-looking plan, deliberately **not** linked
    to completion status. Entries drop off automatically 24h past their slot
    (`SCHEDULE_GRACE_MS`); in that window they show `⚠ Overdue` so they can be
    rescheduled rather than vanishing.
-7. **Fleet** — owns the roster: add / edit / remove, incl. linefit. Removing
+8. **Fleet** — owns the roster: add / edit / remove, incl. linefit. Removing
    deletes only the `/fleet` entry; `/aircraft` history survives, so re-adding
    the registration restores it.
 
@@ -769,6 +810,13 @@ live.
 
 ### Known gaps and cleanups
 
+- **The client write path to `/units` has not been proven against the live rules
+  engine.** The migration used the admin CLI, which bypasses rules, and browser
+  testing stubbed `fetch`. The rules mirror the shapes `/activities` already uses,
+  so the risk is low and a rejection surfaces loudly in the UI rather than silently
+  — but **enter one serial first** and confirm it saves before doing a bulk run.
+  The same caveat applies to `details.recordType` from v2.12.0.
+
 - **SSID status has no home yet.** It was going in the old expandable drawer,
   which no longer exists. It now belongs either in the Maintenance right panel's
   profile grid or as an LRU on the Hardware tab. Rules first, either way.
@@ -796,6 +844,27 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.13.0 — The unit register: `/units`, removals, and the Serials tab
+**New node `/units/{unitId}`** — one physical box with a serial, per-unit attributes
+and a list of fitments. It is now the single source for serials; `hardwareFitment()`,
+`aircraftFitment()` and `hardwareRemovals()` all read it, and the three serials that
+were in `/activities` were migrated by `scripts/migrate-serials-to-units.sh`
+(alias-resolving the one legacy free-text record on the way).
+
+**Record Removed Serials** — bulk entry for units that came off and were never
+logged. Any number per aircraft and unit, with a paste box for one-per-line lists.
+**Dates and reasons are optional**: `state: 'removed'` is what marks a unit as off,
+so the backlog goes in by serial now and the dates are filled in later.
+
+**Serials tab** — one row per fitment, filters, in-place date completion, days on
+wing, change counts, CSV export.
+
+**Record Installed Serials now writes `/units`** instead of baseline activities, and
+its installed date became optional. **Add New Activity** no longer stores serials on
+the activity — `unitWritesForActivity()` sends them to the register and links back by
+`activityId`. `lruChangesFor()` and `activityMatchesLru()` were deleted with the
+activity-derived model they served.
 
 ### v2.12.0 — Bulk baseline serial entry, Installed Equipment
 **Record Installed Serials** on the Hardware tab: a grid for entering what is

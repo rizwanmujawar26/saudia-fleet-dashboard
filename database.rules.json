@@ -141,6 +141,46 @@
       }
     },
 
+    "units": {
+      ".read": true,
+
+      "$unit": {
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
+
+        "lruId":         { ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_]{1,40}$/)" },
+        "serial":        { ".validate": "newData.isString() && newData.val().length <= 60" },
+
+        "partNumber":    { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "altPartNumber": { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "altSerial":     { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "revision":      { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "modDots":       { ".validate": "newData.isString() && newData.val().length <= 120" },
+        "vendor":        { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "notes":         { ".validate": "newData.isString() && newData.val().length <= 1000" },
+        "addedAt":       { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/)" },
+
+        "fitments": {
+          "$fitment": {
+            "aircraft":      { ".validate": "newData.isString() && newData.val().length <= 12" },
+            "position":      { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "state":         { ".validate": "newData.isString() && newData.val().matches(/^(on_wing|removed)$/)" },
+            "fittedDate":    { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
+            "removedDate":   { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
+            "removalReason": { ".validate": "newData.isString() && newData.val().length <= 200" },
+            "shopStatus":    { ".validate": "newData.isString() && newData.val().matches(/^(pending|in_shop|repaired|scrap|no_fault)$/)" },
+            "shopRef":       { ".validate": "newData.isString() && newData.val().length <= 60" },
+            "shopFinding":   { ".validate": "newData.isString() && newData.val().length <= 1000" },
+            "activityId":    { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "notes":         { ".validate": "newData.isString() && newData.val().length <= 1000" },
+            "loggedAt":      { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/)" },
+            "$other":        { ".validate": false }
+          }
+        },
+
+        "$other":        { ".validate": false }
+      }
+    },
+
     "visits": {
       ".read": true,
 

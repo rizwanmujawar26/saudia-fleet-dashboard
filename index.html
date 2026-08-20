@@ -1825,6 +1825,48 @@
 
         .hw-none { color: #b3bac0; }
 
+        /* ===== Serials tab ===== */
+        .sr-state {
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            border-radius: 4px;
+            padding: 2px 7px;
+            white-space: nowrap;
+        }
+
+        .sr-state.on   { background: #e3f3ea; color: #0a5c34; }
+        .sr-state.off  { background: #fdeff0; color: #a52834; }
+
+        /* A date that has not been collected yet is the thing this tab exists to fix,
+           so it reads as an actionable blank, not as an em dash to skim past. */
+        .sr-date-missing {
+            font-size: 11px;
+            font-weight: 600;
+            color: #96631a;
+            background: #fdf3e3;
+            border-radius: 4px;
+            padding: 2px 7px;
+            border: 1px dashed #e0c48a;
+            cursor: pointer;
+        }
+
+        .sr-date-missing:hover { background: #f8e8c8; }
+
+        #srTable td { font-size: 12.5px; white-space: nowrap; }
+        #srTable .hw-serial { font-size: 12px; }
+        .sr-days { font-variant-numeric: tabular-nums; font-weight: 600; }
+        .sr-reason { white-space: normal; max-width: 260px; font-size: 11.5px; color: #6b7780; }
+
+        .sr-date-input {
+            padding: 3px 6px;
+            border: 1px solid #d7dde1;
+            border-radius: 5px;
+            font-size: 11.5px;
+            font-family: inherit;
+        }
+
         /* ===== Baseline serial entry =====
            A grid for typing what is already fitted across the whole fleet. Every
            serial saved here becomes an ordinary first-fit hardware activity, so the
@@ -2026,6 +2068,59 @@
             color: #8a939b;
             margin: 8px 2px 0;
         }
+
+
+        /* ===== Record Removed Serials ===== */
+        .rm-paste-wrap {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f6f8f9;
+            border: 1px solid #e5e9ec;
+            border-radius: 8px;
+        }
+
+        .rm-paste-wrap .add-sched-label { margin-top: 0; }
+        .rm-paste-wrap textarea { min-height: 54px; margin-bottom: 8px; }
+
+        .rm-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 6px 12px;
+            border-bottom: 1px solid #f2f5f6;
+        }
+
+        .rm-row:last-child { border-bottom: none; }
+        .rm-row input, .rm-row select { padding: 6px 9px; border: 1px solid #d7dde1; border-radius: 5px; font-size: 12px; font-family: inherit; }
+        .rm-row .rm-serial { flex: 2; min-width: 0; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace; font-weight: 600; }
+        .rm-row .rm-reason { flex: 2; min-width: 0; }
+        .rm-row .rm-date   { flex: 0 0 140px; }
+        .rm-row .rm-pos    { flex: 0 0 90px; }
+
+        .rm-del {
+            flex: 0 0 auto;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 14px;
+            opacity: 0.5;
+            padding: 2px 6px;
+        }
+
+        .rm-del:hover { opacity: 1; }
+
+        /* Already in the register for this slot — shown so the same unit is not entered
+           twice across sessions. */
+        .rm-existing {
+            padding: 8px 12px;
+            background: #f6f8f9;
+            border-bottom: 1px solid #e5e9ec;
+            font-size: 11.5px;
+            color: #6b7780;
+        }
+
+        .rm-existing b { color: #26313a; }
+        .rm-add { margin: 8px 12px 12px; }
 
         /* ===== Installed Equipment (Maintenance profile) ===== */
         .maint-equip-table { width: 100%; border-collapse: collapse; }
@@ -2944,6 +3039,7 @@
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
                 <button class="tab-button" onclick="switchTab('maintenance')">🛠️ Maintenance</button>
                 <button class="tab-button" onclick="switchTab('hardware')">🔧 Hardware</button>
+                <button class="tab-button" onclick="switchTab('serials')">🏷️ Serials</button>
                 <button class="tab-button" onclick="switchTab('schedule')">📅 Schedule</button>
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
             </div>
@@ -3183,6 +3279,7 @@
                 <div class="table-actions-row">
                     <span id="hwSignedInAs" class="signed-in-as" style="display:none;"></span>
                     <button id="hwBaselineBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed Serials</button>
+                    <button id="hwRemovalBtn" class="qf-btn" style="display:none;" onclick="openRemoval()">📤 Record Removed Serials</button>
                     <button id="hwAddIssueBtn" class="qf-btn" style="display:none;" onclick="openAddIssue()">➕ Add Known Issue</button>
                     <button id="hwEditBtn" class="qf-btn edit-btn" onclick="toggleHwEdit()">🔒 Sign in to edit</button>
                 </div>
@@ -3197,6 +3294,56 @@
                     </div>
                     <div class="maint-detail-panel" id="hwDetailPanel"></div>
                 </div>
+            </div>
+
+            <!-- Serials Tab -->
+            <!-- The data-gathering surface for the unit register. Deliberately one flat
+                 table rather than the two-pane shells the Hardware and Maintenance tabs
+                 use: the job right now is getting serials in and filling dates later,
+                 not navigating a hierarchy. Every row is one FITMENT — one box, on one
+                 aircraft, for one period — so a unit fitted twice appears twice, which
+                 is what makes the history legible as a list. -->
+            <div id="serials" class="tab-content">
+                <div class="table-actions-row">
+                    <span id="srSignedInAs" class="signed-in-as" style="display:none;"></span>
+                    <button id="srInstalledBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed</button>
+                    <button id="srRemovedBtn" class="qf-btn" style="display:none;" onclick="openRemoval()">📤 Record Removed</button>
+                    <button class="qf-btn" onclick="exportSerialsCsv()">⬇️ Export CSV</button>
+                </div>
+
+                <div class="media-widget-strip" id="srWidgets"></div>
+
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label class="filter-label">Equipment:</label>
+                        <select id="srLruFilter" onchange="setSerialFilter('lru', this.value)"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Aircraft:</label>
+                        <select id="srTailFilter" onchange="setSerialFilter('tail', this.value)"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Status:</label>
+                        <div class="quick-filters" id="srStatePills"></div>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Search serial:</label>
+                        <input id="srSearch" class="edit-text" placeholder="Serial number" autocomplete="off"
+                               oninput="setSerialFilter('q', this.value)">
+                    </div>
+                </div>
+
+                <div class="table-scroll-wrapper">
+                    <table id="srTable">
+                        <thead><tr>
+                            <th>Equipment</th><th>Serial</th><th>Aircraft</th><th>Pos</th>
+                            <th>Status</th><th>Fitted</th><th>Removed</th>
+                            <th>Days on Wing</th><th>Slot Changes</th><th>Reason / Shop</th>
+                        </tr></thead>
+                        <tbody id="srBody"></tbody>
+                    </table>
+                </div>
+                <p class="bl-hint" id="srCount" style="padding: 0 4px 16px;"></p>
             </div>
 
             <!-- Schedule Tab -->
@@ -3585,13 +3732,8 @@
 
             <div class="bl-batch">
                 <div>
-                    <label class="add-sched-label">Installed Date</label>
+                    <label class="add-sched-label">Installed Date <span style="text-transform:none; font-weight:400;">(optional — fill in later)</span></label>
                     <input type="date" id="blDate" class="add-sched-input">
-                </div>
-                <div>
-                    <label class="add-sched-label">Location</label>
-                    <input id="blLocation" class="add-sched-input" maxlength="60" autocomplete="off"
-                           placeholder="Blank = each aircraft's own location">
                 </div>
                 <div id="blEquipWrap" style="display:none;">
                     <label class="add-sched-label">Equipment</label>
@@ -3607,6 +3749,50 @@
                 <span class="bl-count" id="blCount"></span>
                 <button type="button" id="blCancel" style="padding:10px 18px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Close</button>
                 <button type="button" id="blSave" style="padding:10px 22px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save Serials</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Record Removed Serials.
+         The counterpart to the baseline tool, for units that came OFF and were never
+         logged. It differs in one way that drives the whole layout: a slot can have had
+         ANY NUMBER of units removed from it over the years — three SIM cards, two KRFUs
+         — so this is a growing list per aircraft-and-equipment, not one blank per
+         position. Dates are optional by design; the serials are known now and the
+         paperwork is dug out later from the Serials tab. -->
+    <div id="removalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="act-modal bl-modal">
+            <h3 style="color:#0a5c34; margin-bottom:6px;">Record Removed Serials</h3>
+            <p class="bl-intro">
+                Units that came off and were never recorded. Add as many as you need per aircraft —
+                each becomes a <b>removed</b> unit in the register. <b>Dates and reasons are optional</b>:
+                capture the serials now and complete them later on the Serials tab.
+            </p>
+
+            <div class="bl-batch">
+                <div>
+                    <label class="add-sched-label">Aircraft</label>
+                    <select id="rmAircraft" class="add-sched-input" onchange="onRemovalAircraftChange()"></select>
+                </div>
+                <div>
+                    <label class="add-sched-label">Equipment</label>
+                    <select id="rmEquip" class="add-sched-input" onchange="renderRemovalBody()"></select>
+                </div>
+            </div>
+
+            <div class="bl-scroll" id="rmBody"></div>
+
+            <div class="rm-paste-wrap">
+                <label class="add-sched-label">Paste several at once <span style="text-transform:none; font-weight:400;">(one serial per line)</span></label>
+                <textarea id="rmPaste" class="add-sched-input" placeholder="SN-0001&#10;SN-0002&#10;SN-0003"></textarea>
+                <button type="button" class="qf-btn" onclick="addRemovalsFromPaste()">➕ Add these to the list</button>
+            </div>
+
+            <div id="rmError" style="display:none; font-size:12.5px; color:#dc3545; margin-top:12px; font-weight:600;"></div>
+            <div class="bl-foot">
+                <span class="bl-count" id="rmCount"></span>
+                <button type="button" id="rmCancel" style="padding:10px 18px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Close</button>
+                <button type="button" id="rmSave" style="padding:10px 22px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save Removals</button>
             </div>
         </div>
     </div>
@@ -3985,17 +4171,7 @@
 
         // A hardware activity belongs to an LRU when what was typed as the replaced part
         // matches one of its aliases and the aircraft is of that LRU's fit.
-        function activityMatchesLru(act, lru, aircraft) {
-            if (act.category !== 'hardware_rr') return false;
-            if (!aircraft || fitOf(aircraft) !== lru.fit) return false;
-            const d = act.details || {};
-            // Records written by the picker carry the id, so the match is exact. The
-            // alias pass is only for records typed as free text before the picker.
-            if (d.lruId) return d.lruId === lru.id;
-            const part = normalisePart(d.partReplaced);
-            if (!part) return false;
-            return lru.aliases.some(a => a === part) || lru.aliases.some(a => part.includes(a));
-        }
+
 
         const SHOP_STATUSES = [
             { value: 'pending',  label: 'Awaiting Shop' },
@@ -4012,14 +4188,7 @@
 
         // Every change recorded for this LRU on this aircraft, newest first. When a
         // position is given, only that position's changes.
-        function lruChangesFor(lru, tailId, position) {
-            const byTail = {};
-            aircraftData.forEach(a => { byTail[a.id] = a; });
-            return activityEntries()
-                .filter(x => x.aircraft === tailId && activityMatchesLru(x, lru, byTail[x.aircraft])
-                    && (position === undefined || String((x.details || {}).position || '') === String(position)))
-                .sort((x, y) => dateSortKey(toISODate(y.date)).localeCompare(dateSortKey(toISODate(x.date))));
-        }
+
 
         // What is fitted to each aircraft for this LRU, derived from /activities — the
         // on/off details recorded on the Maintenance page. Nothing about serials is
@@ -4039,30 +4208,29 @@
                 .forEach(a => {
                     const qty = lruQtyFor(lru, a.type);
                     if (qty <= 0) return;
-                    // One row per fitted position when there is more than one of this
-                    // unit on the aircraft, otherwise a single row as before.
+                    // One row per fitted position when the aircraft carries more than
+                    // one of this unit, otherwise a single row.
                     const positions = multi
                         ? Array.from({ length: qty }, (_, i) => String(i + 1))
                         : [undefined];
 
                     positions.forEach(pos => {
-                        const mine = lruChangesFor(lru, a.id, pos);
-                        const latest = mine[0];
-                        const d = (latest && latest.details) || {};
+                        const history = unitsAtSlot(lru.id, a.id, pos);
+                        const current = history.find(x => fitmentIsOn(x.fitment));
                         rows.push({
                             aircraft: a,
                             position: pos || '',
                             qty,
-                            serial: d.newPart || '',
-                            removed: d.oldPart || '',
-                            date: latest ? latest.date : '',
-                            location: latest ? latest.location : '',
+                            serial: current ? current.unit.serial : '',
+                            date: current ? (current.fitment.fittedDate || '') : '',
                             // Count units that actually came off, not changes — a first
-                            // fit removes nothing and should not read as a removal.
-                            removals: mine.filter(x => (x.details || {}).oldPart).length,
-                            changes: mine.length,
-                            vacant: !!(latest && !d.newPart && d.oldPart),
-                            firstFit: !!(latest && d.newPart && !d.oldPart && mine.length === 1),
+                            // fit removes nothing and must not read as a removal.
+                            removals: history.filter(x => !fitmentIsOn(x.fitment)).length,
+                            changes: history.length,
+                            // Something was here and came off with nothing put back.
+                            vacant: !!(history.length && !current),
+                            firstFit: !!(current && history.length === 1),
+                            daysOnWing: current ? fitmentDaysOnWing(current.fitment) : null,
                         });
                     });
                 });
@@ -4076,22 +4244,38 @@
         function hardwareRemovals(lru) {
             const byTail = {};
             aircraftData.forEach(a => { byTail[a.id] = a; });
-            return activityEntries()
-                .filter(x => activityMatchesLru(x, lru, byTail[x.aircraft]) && (x.details || {}).oldPart)
-                .sort((x, y) => dateSortKey(toISODate(y.date)).localeCompare(dateSortKey(toISODate(x.date))))
-                .map(x => {
-                    const d = x.details || {};
-                    return {
-                        id: x.id, tail: x.aircraft, type: (byTail[x.aircraft] || {}).type || '',
-                        date: x.date, location: x.location || '',
-                        serial: d.oldPart, replacedBy: d.newPart || '',
-                        position: d.position || '',
-                        reason: d.removalReason || '',
-                        shopStatus: d.shopStatus || 'pending',
-                        shopRef: d.shopRef || '',
-                        shopFinding: d.shopFinding || '',
-                    };
+            const out = [];
+
+            unitEntries().filter(u => u.lruId === lru.id).forEach(u => {
+                unitFitments(u).filter(f => !fitmentIsOn(f)).forEach(f => {
+                    const air = byTail[f.aircraft] || {};
+                    // What went on in its place, if the slot was refilled after it left.
+                    const replacement = fittedUnitAt(lru.id, f.aircraft, f.position || undefined);
+                    out.push({
+                        unitId: u.id, fitmentId: f.id,
+                        tail: f.aircraft, type: air.type || '',
+                        date: f.removedDate || '', fittedDate: f.fittedDate || '',
+                        serial: u.serial,
+                        replacedBy: replacement ? replacement.unit.serial : '',
+                        position: f.position || '',
+                        reason: f.removalReason || '',
+                        shopStatus: f.shopStatus || 'pending',
+                        shopRef: f.shopRef || '',
+                        shopFinding: f.shopFinding || '',
+                        daysOnWing: fitmentDaysOnWing(f),
+                    });
                 });
+            });
+
+            // Newest first; undated removals last, because the backlog is entered by
+            // serial long before anyone digs out when each one came off.
+            return out.sort((a, b) => {
+                const ka = dateSortKey(toISODate(a.date)), kb = dateSortKey(toISODate(b.date));
+                if (ka && kb && ka !== kb) return kb.localeCompare(ka);
+                if (ka && !kb) return -1;
+                if (!ka && kb) return 1;
+                return String(a.serial).localeCompare(String(b.serial));
+            });
         }
 
         // A baseline record is an inventory statement — "this is what is fitted today"
@@ -4117,21 +4301,127 @@
                     : [undefined];
 
                 positions.forEach(pos => {
-                    const mine = lruChangesFor(lru, a.id, pos);
-                    const latest = mine[0];
-                    const d = (latest && latest.details) || {};
+                    const history = unitsAtSlot(lru.id, a.id, pos);
+                    const current = history.find(x => fitmentIsOn(x.fitment));
                     out.push({
                         lru, position: pos || '', qty,
-                        serial: d.newPart || '',
-                        date: latest ? latest.date : '',
-                        vacant: !!(latest && !d.newPart && d.oldPart),
-                        baseline: !!(latest && isBaselineRecord(latest)),
-                        removals: mine.filter(x => (x.details || {}).oldPart).length,
-                        changes: mine.length,
+                        serial: current ? current.unit.serial : '',
+                        date: current ? (current.fitment.fittedDate || '') : '',
+                        vacant: !!(history.length && !current),
+                        removals: history.filter(x => !fitmentIsOn(x.fitment)).length,
+                        changes: history.length,
+                        daysOnWing: current ? fitmentDaysOnWing(current.fitment) : null,
                     });
                 });
             });
             return out;
+        }
+
+        // ===== /units — the unit register =====
+        // A UNIT is one physical LRU: a serial number with a life. /hardware holds what
+        // is true of the equipment TYPE; /units holds what is true of an individual box.
+        //
+        // Why this is not just more fields on an activity: an activity is an EVENT
+        // ("this was swapped on the 14th"), while a unit's part number, revision, mod
+        // dots and alternate serial belong to the box — putting them on the event would
+        // repeat them on every event for that unit and let the copies drift. It also
+        // lets a serial be recorded with NO date, which an activity cannot meaningfully
+        // be: the historical removals being collected now are known by serial long
+        // before anyone digs out when they came off.
+        //
+        // /units is the SINGLE source for serial identity and fitment history.
+        // hardwareFitment(), aircraftFitment() and hardwareRemovals() all read it, and
+        // /activities keeps its role as the event and shop log, linked by `activityId`.
+        //
+        // Expanding it is one rules line per field: altPartNumber, altSerial, revision
+        // and modDots are already declared and simply have no UI yet.
+        let unitsLive = {};
+
+        function unitEntries() {
+            return Object.entries(unitsLive).map(([id, u]) => ({ id, ...u }));
+        }
+
+        function unitFitments(u) {
+            const f = (u && u.fitments) || {};
+            return Object.entries(f).map(([id, v]) => ({ id, ...v }));
+        }
+
+        // Fitments in the order they happened. Dates are optional while the backlog is
+        // being collected, so anything undated sorts LAST on loggedAt rather than
+        // silently jumping to the front of the unit's history.
+        function unitFitmentsSorted(u) {
+            return unitFitments(u).sort((a, b) => {
+                const ka = dateSortKey(toISODate(a.fittedDate || a.removedDate || ''));
+                const kb = dateSortKey(toISODate(b.fittedDate || b.removedDate || ''));
+                if (ka && kb && ka !== kb) return ka.localeCompare(kb);
+                if (ka && !kb) return -1;
+                if (!ka && kb) return 1;
+                return String(a.loggedAt || '').localeCompare(String(b.loggedAt || ''));
+            });
+        }
+
+        // `state` is what says a unit came off — NOT the presence of a removal date.
+        // The whole point of the bulk removal entry is that the serials are known now
+        // and the dates get filled in later.
+        function fitmentIsOn(f) {
+            return (f.state || 'on_wing') === 'on_wing';
+        }
+
+        function unitIsOnWing(u) {
+            return unitFitments(u).some(fitmentIsOn);
+        }
+
+        // Days this unit spent installed for one fitment. Needs both ends: still on wing
+        // counts to today, and a fitment missing either date counts nothing and says so
+        // rather than inventing a duration.
+        function fitmentDaysOnWing(f) {
+            const from = toISODate(f.fittedDate || '');
+            if (!from) return null;
+            const to = fitmentIsOn(f)
+                ? new Date().toISOString().slice(0, 10)
+                : toISODate(f.removedDate || '');
+            if (!to) return null;
+            const ms = Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z');
+            return isNaN(ms) ? null : Math.max(0, Math.round(ms / 86400000));
+        }
+
+        // Total time this box has spent on wing across every aircraft it has been on.
+        function unitDaysOnWing(u) {
+            let total = null;
+            unitFitments(u).forEach(f => {
+                const d = fitmentDaysOnWing(f);
+                if (d !== null) total = (total === null ? 0 : total) + d;
+            });
+            return total;
+        }
+
+        // Every unit ever recorded at one equipment slot, oldest first. Position is only
+        // compared when the LRU is fitted more than once on that aircraft.
+        function unitsAtSlot(lruId, tail, position) {
+            const out = [];
+            unitEntries().forEach(u => {
+                if (u.lruId !== lruId) return;
+                unitFitmentsSorted(u).forEach(f => {
+                    if (f.aircraft !== tail) return;
+                    if (position !== undefined && String(f.position || '') !== String(position || '')) return;
+                    out.push({ unit: u, fitment: f });
+                });
+            });
+            return out.sort((a, b) =>
+                String(a.fitment.loggedAt || '').localeCompare(String(b.fitment.loggedAt || '')));
+        }
+
+        // What is fitted at a slot right now: the one fitment there still marked on.
+        function fittedUnitAt(lruId, tail, position) {
+            return unitsAtSlot(lruId, tail, position).find(x => fitmentIsOn(x.fitment)) || null;
+        }
+
+        // A serial identifies one box WITHIN its equipment type — two different LRUs may
+        // legitimately carry the same number.
+        function unitBySerial(lruId, serial) {
+            const k = String(serial || '').trim().toLowerCase();
+            return unitEntries().find(u =>
+                u.lruId === lruId && String(u.serial || '').trim().toLowerCase() === k) || null;
         }
 
         function hardwareRecordOf(lruId) {
@@ -4156,10 +4446,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.12.0';
-        const APP_BUILD    = '2026.08.20.02';
+        const APP_VERSION  = '2.13.0';
+        const APP_BUILD    = '2026.08.21.01';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-20T18:05:00Z';
+        const APP_DEPLOYED = '2026-08-21T00:10:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -4230,6 +4520,7 @@
             if (!mediaEditMode) populateMediaTable();
             if (!maintEditMode) renderMaintenancePage();
             if (!hwEditMode) renderHardwarePage();
+            renderSerialsPage();
             populateScheduleTables();
             updateMetrics();
         }
@@ -4315,6 +4606,18 @@
                 .then(data => { hardwareLive = data || {}; renderHardwarePage(); startHardwareStream(); })
                 .catch(() => { /* the tab still lists the catalogue, just without notes */ });
 
+            fetch(`${FIREBASE_DB_URL}/units.json`)
+                .then(r => r.json())
+                .then(data => {
+                    unitsLive = data || {};
+                    markDataSync();
+                    renderHardwarePage();     // fitment is derived from units
+                    renderMaintenancePage();  // so is Installed Equipment
+                    renderSerialsPage();
+                    startUnitsStream();
+                })
+                .catch(() => { /* the tabs still render, just with no serials */ });
+
             fetch(`${FIREBASE_DB_URL}/activities.json`)
                 .then(r => r.json())
                 .then(data => {
@@ -4326,6 +4629,26 @@
                     startActivitiesStream();
                 })
                 .catch(() => { /* the tab still renders, just with no history */ });
+        }
+
+        // Whole-node re-read per event, same as /hardware and /activities: units are
+        // low-traffic and the path-patching /aircraft uses would be more machinery than
+        // this data warrants.
+        function startUnitsStream() {
+            const es = new EventSource(`${FIREBASE_DB_URL}/units.json`);
+            const onMsg = () => {
+                fetch(`${FIREBASE_DB_URL}/units.json`).then(r => r.json())
+                    .then(d => {
+                        unitsLive = d || {};
+                        markDataSync();
+                        renderHardwarePage();
+                        renderMaintenancePage();
+                        renderSerialsPage();
+                    })
+                    .catch(() => {});
+            };
+            es.addEventListener('put', onMsg);
+            es.addEventListener('patch', onMsg);
         }
 
         function startHardwareStream() {
@@ -4820,6 +5143,8 @@
                 renderMaintenancePage();
             } else if (tabName === 'hardware') {
                 renderHardwarePage();
+            } else if (tabName === 'serials') {
+                renderSerialsPage();
             } else if (tabName === 'schedule') {
                 populateScheduleTables();
             }
@@ -6300,8 +6625,8 @@
                         lruId: val('addActPart'),
                         position: document.getElementById('addActPositionWrap').style.display === 'none'
                             ? '' : val('addActPosition'),
-                        oldPart: val('addActOldPart'), newPart: val('addActNewPart'),
-                        // Only meaningful when something actually came off.
+                        // The serials themselves go to /units, not here — one place
+                        // for a serial. The reason belongs to the removal it describes.
                         removalReason: val('addActOldPart') ? val('addActRemovalReason') : '',
                     },
                     software_update: {
@@ -6340,9 +6665,28 @@
                     const data = await res.json();
                     if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                     activitiesLive[id] = entry;
+
+                    // Then the register. Root is not writable, so this cannot be folded
+                    // into the same PATCH — if it fails the activity is still saved and
+                    // the message says exactly what is missing.
+                    const unitWrites = unitWritesForActivity(id, entry, val('addActOldPart'), val('addActNewPart'));
+                    if (unitWrites) {
+                        const ures = await fetch(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
+                            method: 'PATCH', body: JSON.stringify(unitWrites),
+                        });
+                        const udata = await ures.json();
+                        if (!ures.ok || (udata && udata.error)) {
+                            throw new Error('activity saved, but the serials did not reach the register — '
+                                + ((udata && udata.error) || 'write failed'));
+                        }
+                        await fetch(`${FIREBASE_DB_URL}/units.json`).then(r => r.json())
+                            .then(d => { unitsLive = d || {}; }).catch(() => {});
+                    }
                     maintSelectedId = entry.aircraft;      // land on the aircraft just logged
                     close();
                     renderMaintenancePage();
+                    renderHardwarePage();
+                    renderSerialsPage();
                     updateMetrics();                        // the Timeline picks it up here
                     setSyncStatus('🟢 Live — synced with your team', '#28a745');
                 } catch (e) {
@@ -6521,8 +6865,8 @@
                 <div class="hw-issue-top">
                     <span class="hw-serial hw-removal-sn">${escAttr(x.serial)}</span>
                     <span class="status-badge shop-badge shop-${escAttr(x.shopStatus)}">${escAttr(shopStatusLabel(x.shopStatus))}</span>
-                    <span class="maint-act-cat">${escAttr(x.tail)}${x.position ? ` · pos ${escAttr(x.position)}` : ''}${x.type ? ' · ' + escAttr(TYPE_SHORT_LABEL[x.type] || x.type) : ''} · ${escAttr(x.date || '—')}</span>
-                    ${canEdit() ? `<button class="hw-shop-btn" onclick="openShopReport('${escAttr(x.id)}')">Shop report</button>` : ''}
+                    <span class="maint-act-cat">${escAttr(x.tail)}${x.position ? ` · pos ${escAttr(x.position)}` : ''}${x.type ? ' · ' + escAttr(TYPE_SHORT_LABEL[x.type] || x.type) : ''} · ${x.date ? escAttr(x.date) : '<span class="hw-none">removal date not recorded</span>'}${x.daysOnWing !== null ? ` · ${x.daysOnWing}d on wing` : ''}</span>
+                    ${canEdit() ? `<button class="hw-shop-btn" onclick="openShopReport('${escAttr(x.unitId)}','${escAttr(x.fitmentId)}')">Shop report</button>` : ''}
                 </div>
                 <div class="hw-removal-body">
                     ${x.reason ? `<div class="hw-issue-field"><b>Reason for removal</b>${escAttr(x.reason)}</div>` : '<div class="hw-issue-field"><b>Reason for removal</b><span class="hw-none">not recorded</span></div>'}
@@ -6579,23 +6923,22 @@
             updateHwEditUI();
         }
 
-        // ===== Baseline serial entry =====
-        // The bulk way in for equipment that was fitted before this dashboard existed:
-        // ~40 aircraft x ~10 units, none of it ever logged as an activity. Rather than
-        // invent a second place to keep serials, every entry here is written as an
-        // ordinary first-fit `hardware_rr` activity — `details.newPart` with no
-        // `oldPart` — so hardwareFitment(), aircraftFitment() and the unit history all
-        // read it through the paths they already use. `details.recordType: 'baseline'`
-        // marks it as inventory rather than a day's work, which is what keeps 400 of
-        // them off the Timeline.
+        // ===== Record Installed Serials =====
+        // The bulk way in for equipment fitted before this dashboard existed: ~40
+        // aircraft x ~10 units, none of it ever recorded. Every entry becomes a UNIT in
+        // /units with one fitment that is still on wing — the register owns serials, so
+        // there is no second place for them and nothing to keep in step.
         //
-        // The tool is deliberately ADDITIVE ONLY. A position that already has any
-        // record is shown read-only: changing a fitted serial is a swap, it needs a
-        // reason and a removed unit, and that is Add New Activity's job.
+        // The installed date is OPTIONAL. Serials are known now; when each box went on
+        // is dug out later and filled in from the Serials tab.
+        //
+        // The tool is deliberately ADDITIVE ONLY. A position that already has a serial
+        // is shown read-only: changing a fitted serial is a swap, it needs a removed
+        // unit and a reason, and that is Add New Activity's job.
         let blMode = 'aircraft';     // 'aircraft' — down one tail's units | 'equipment' — down one unit's fleet
         let blDraft = {};            // key -> serial typed, not yet saved. Survives a mode switch.
         let blOpenTails = {};        // which aircraft rows are expanded
-        let blRowCache = {};         // tail -> rows. Built on open so a keystroke never re-walks /activities.
+        let blRowCache = {};         // tail -> rows. Built on open so a keystroke never re-walks /units.
 
         function blKey(lruId, tail, pos) {
             return lruId + '|' + tail + '|' + (pos || '');
@@ -6807,7 +7150,6 @@
             }
 
             document.getElementById('blDate').value = new Date().toISOString().slice(0, 10);
-            document.getElementById('blLocation').value = '';
             const err = document.getElementById('blError');
             err.textContent = ''; err.style.display = 'none';
 
@@ -6847,9 +7189,6 @@
                 err.style.display = 'none';
 
                 const isoDate = (document.getElementById('blDate').value || '').trim();
-                const batchLoc = (document.getElementById('blLocation').value || '').trim();
-                if (!isoDate) return fail('Give the installed date these serials should be recorded against.');
-
                 const entries = Object.entries(blDraft).filter(([, v]) => v && v.trim());
                 if (!entries.length) return fail('Nothing typed yet — enter at least one serial number.');
 
@@ -6858,42 +7197,32 @@
                     return fail(`The same serial appears more than once: ${[...dupes].slice(0, 4).join(', ')}${dupes.size > 4 ? '…' : ''}. A serial belongs to one unit in one place — check them before saving.`);
                 }
 
-                const byTail = {};
-                aircraftData.forEach(a => { byTail[a.id] = a; });
                 const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
                 const payload = {};
                 const written = [];
 
                 for (const [key, raw] of entries) {
-                    const [lruId, tail, pos] = key.split('|');
-                    const a = byTail[tail];
+                    const parts = key.split('|');
+                    const lruId = parts[0], tail = parts[1], pos = parts[2];
                     const lru = lruById(lruId);
-                    if (!a || !lru) continue;
+                    if (!lru) continue;
+                    const serial = raw.trim();
 
-                    const details = { lruId, newPart: raw.trim(), recordType: 'baseline' };
-                    if (pos) details.position = pos;
+                    // A unit is one physical box: what is fitted today is a unit with a
+                    // fitment that is still on. The date is optional on purpose — the
+                    // point is to capture the serial now and complete the record later
+                    // from the Serials tab.
+                    const fitment = { aircraft: tail, state: 'on_wing', loggedAt: stamp };
+                    if (pos) fitment.position = pos;
+                    if (isoDate) fitment.fittedDate = fmtDate(isoDate);
 
-                    const entry = {
-                        aircraft: tail,
-                        date: fmtDate(isoDate),
-                        // A blank batch location falls back to where the aircraft was
-                        // actually retrofitted, rather than stamping one MRO across a
-                        // fleet that was done in several. It deliberately does NOT fall
-                        // back to completionLocation the way the Add Activity form does:
-                        // that is where the SOFTWARE load finished, and copying it onto
-                        // a few hundred fitment records would be inventing the install
-                        // location rather than leaving it blank and honest.
-                        location: batchLoc || a.retrofitLocation || '',
-                        category: 'hardware_rr',
-                        title: 'Baseline equipment record',
-                        loggedAt: stamp,
-                        details,
+                    const unitId = 'u' + Date.now().toString(36) + written.length.toString(36) + Math.random().toString(36).slice(2, 6);
+                    const fitId = 'f' + Date.now().toString(36) + written.length.toString(36) + Math.random().toString(36).slice(2, 6);
+                    payload[unitId] = {
+                        lruId, serial, addedAt: stamp,
+                        fitments: { [fitId]: fitment },
                     };
-                    if (!entry.location) delete entry.location;
-
-                    const id = 'a' + Date.now().toString(36) + written.length.toString(36) + Math.random().toString(36).slice(2, 7);
-                    payload[id] = entry;
-                    written.push([id, entry]);
+                    written.push([unitId, payload[unitId]]);
                 }
 
                 if (!Object.keys(payload).length) return fail('Nothing to save.');
@@ -6905,26 +7234,549 @@
                 try {
                     // One multi-path PATCH: 400 serials is one request, and the rules
                     // validate each child on its own.
-                    const res = await fetch(`${FIREBASE_DB_URL}/activities.json?auth=${token}`, {
+                    const res = await fetch(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
                         method: 'PATCH', body: JSON.stringify(payload),
                     });
                     const data = await res.json();
                     if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
 
-                    written.forEach(([id, entry]) => { activitiesLive[id] = entry; });
+                    written.forEach(([id, u]) => { unitsLive[id] = u; });
                     blDraft = {};
                     blBuildCache();
                     renderBaselineBody();
                     renderHardwarePage();
                     renderMaintenancePage();
+                    renderSerialsPage();
                     updateMetrics();
                     setSyncStatus(`🟢 ${written.length} serial${written.length === 1 ? '' : 's'} recorded — synced with your team`, '#28a745');
-                } catch (e) {
-                    fail(`Could not save — ${e.message}`);
+                } catch (ex) {
+                    fail(`Could not save — ${ex.message}`);
                 } finally {
                     btn.disabled = false; btn.textContent = 'Save Serials';
                 }
             });
+        }
+
+        // A logged R&R has to reach /units, or the register would not know about a swap
+        // someone entered through the Maintenance page and the two would drift. The
+        // serials themselves are NOT stored on the activity: /units is the one place a
+        // serial lives, and `activityId` links the fitment back to the event.
+        //
+        // Returns a multi-path payload for /units, or null when the activity recorded no
+        // serials at all.
+        function unitWritesForActivity(activityId, entry, oldSerial, newSerial) {
+            const d = entry.details || {};
+            const lruId = d.lruId;
+            if (!lruId || (!oldSerial && !newSerial)) return null;
+
+            const tail = entry.aircraft;
+            const pos = d.position || '';
+            const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+            const payload = {};
+            const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+            if (oldSerial) {
+                const existing = unitBySerial(lruId, oldSerial);
+                if (existing) {
+                    // The box is already known: close the fitment it is sitting in
+                    // rather than inventing a second one for the same unit.
+                    const open = unitFitments(existing).find(fitmentIsOn);
+                    if (open) {
+                        payload[`${existing.id}/fitments/${open.id}/state`] = 'removed';
+                        payload[`${existing.id}/fitments/${open.id}/removedDate`] = entry.date;
+                        payload[`${existing.id}/fitments/${open.id}/activityId`] = activityId;
+                        if (d.removalReason) {
+                            payload[`${existing.id}/fitments/${open.id}/removalReason`] = d.removalReason;
+                        }
+                    } else {
+                        const fid = uid('f');
+                        const f = { aircraft: tail, state: 'removed', removedDate: entry.date,
+                                    activityId, loggedAt: stamp };
+                        if (pos) f.position = pos;
+                        if (d.removalReason) f.removalReason = d.removalReason;
+                        payload[`${existing.id}/fitments/${fid}`] = f;
+                    }
+                } else {
+                    const f = { aircraft: tail, state: 'removed', removedDate: entry.date,
+                                activityId, loggedAt: stamp };
+                    if (pos) f.position = pos;
+                    if (d.removalReason) f.removalReason = d.removalReason;
+                    payload[uid('u')] = { lruId, serial: oldSerial, addedAt: stamp,
+                                          fitments: { [uid('f')]: f } };
+                }
+            }
+
+            if (newSerial) {
+                const existing = unitBySerial(lruId, newSerial);
+                const f = { aircraft: tail, state: 'on_wing', fittedDate: entry.date,
+                            activityId, loggedAt: stamp };
+                if (pos) f.position = pos;
+                if (existing) {
+                    // A unit coming back out of the shop onto another aircraft: a new
+                    // fitment on the same box, which is what makes its total time on
+                    // wing and its change count add up across airframes.
+                    payload[`${existing.id}/fitments/${uid('f')}`] = f;
+                } else {
+                    payload[uid('u')] = { lruId, serial: newSerial, addedAt: stamp,
+                                          fitments: { [uid('f')]: f } };
+                }
+            }
+
+            return Object.keys(payload).length ? payload : null;
+        }
+
+        // ===== Record Removed Serials =====
+        // The counterpart to the baseline tool. One thing drives the whole shape: a slot
+        // can have had ANY NUMBER of units removed from it over the years, so this is a
+        // growing list per aircraft-and-equipment rather than one blank per position.
+        //
+        // The draft is keyed by 'lruId|tail' and holds an array, so you can work down a
+        // whole aircraft — or a whole fleet — and save once at the end. Dates and reasons
+        // are optional on purpose: the serials are known now, the paperwork is dug out
+        // later from the Serials tab.
+        let rmDraft = {};
+
+        function rmKey(lruId, tail) {
+            return lruId + '|' + tail;
+        }
+
+        function rmCurrent() {
+            const tail = (document.getElementById('rmAircraft') || {}).value || '';
+            const lruId = (document.getElementById('rmEquip') || {}).value || '';
+            return { tail, lruId, lru: lruById(lruId), key: rmKey(lruId, tail) };
+        }
+
+        function rmList(key) {
+            if (!rmDraft[key]) rmDraft[key] = [];
+            return rmDraft[key];
+        }
+
+        function rmTotal() {
+            return Object.values(rmDraft).reduce((n, rows) =>
+                n + rows.filter(r => (r.serial || '').trim()).length, 0);
+        }
+
+        // The equipment list follows the aircraft, because retrofit and linefit carry
+        // different units — the same rule the Add Activity part picker uses.
+        function onRemovalAircraftChange() {
+            const tail = document.getElementById('rmAircraft').value;
+            const a = aircraftData.find(x => x.id === tail);
+            const sel = document.getElementById('rmEquip');
+            const previous = sel.value;
+            const lrus = lrusForFit(a ? fitOf(a) : 'retrofit');
+            sel.innerHTML = lrus.map(l =>
+                `<option value="${escAttr(l.id)}">${escAttr(l.label)}</option>`).join('');
+            if (lrus.some(l => l.id === previous)) sel.value = previous;
+            renderRemovalBody();
+        }
+
+        function addRemovalRow() {
+            const { key } = rmCurrent();
+            rmList(key).push({ serial: '', position: '', date: '', reason: '' });
+            renderRemovalBody();
+            // Land the caret in the row just added — this screen is used in long runs.
+            const inputs = document.querySelectorAll('#rmBody .rm-serial');
+            if (inputs.length) inputs[inputs.length - 1].focus();
+        }
+
+        function removeRemovalRow(i) {
+            const { key } = rmCurrent();
+            rmList(key).splice(i, 1);
+            renderRemovalBody();
+        }
+
+        function rmEdit(el) {
+            const { key } = rmCurrent();
+            const row = rmList(key)[Number(el.dataset.i)];
+            if (!row) return;
+            row[el.dataset.field] = el.value;
+            rmUpdateCount();
+        }
+
+        // Bulk paste: one serial per line. The fastest path for a backlog that already
+        // exists in a spreadsheet or an email.
+        function addRemovalsFromPaste() {
+            const box = document.getElementById('rmPaste');
+            const lines = (box.value || '').split(/[\r\n,;]+/).map(s => s.trim()).filter(Boolean);
+            if (!lines.length) return;
+            const { key } = rmCurrent();
+            lines.forEach(serial => rmList(key).push({ serial, position: '', date: '', reason: '' }));
+            box.value = '';
+            renderRemovalBody();
+        }
+
+        function renderRemovalBody() {
+            const body = document.getElementById('rmBody');
+            if (!body) return;
+            const { tail, lru, key } = rmCurrent();
+            if (!lru || !tail) {
+                body.innerHTML = '<div class="bl-empty">Choose an aircraft and a unit.</div>';
+                rmUpdateCount();
+                return;
+            }
+
+            const a = aircraftData.find(x => x.id === tail);
+            const qty = a ? lruQtyFor(lru, a.type) : 1;
+            const multi = lruIsMulti(lru) && qty > 1;
+
+            // What the register already holds for this slot, so the same unit is not
+            // entered twice across sessions.
+            const already = unitEntries()
+                .filter(u => u.lruId === lru.id)
+                .flatMap(u => unitFitments(u)
+                    .filter(f => f.aircraft === tail && !fitmentIsOn(f))
+                    .map(f => u.serial));
+
+            const rows = rmList(key);
+
+            const rowHtml = (r, i) => `<div class="rm-row">
+                <input class="rm-serial" placeholder="Removed serial" maxlength="60" autocomplete="off" spellcheck="false"
+                       value="${escAttr(r.serial)}" data-i="${i}" data-field="serial" oninput="rmEdit(this)">
+                ${multi ? `<select class="rm-pos" data-i="${i}" data-field="position" onchange="rmEdit(this)">
+                    <option value="">pos —</option>
+                    ${Array.from({ length: qty }, (_, n) => `<option value="${n + 1}" ${String(r.position) === String(n + 1) ? 'selected' : ''}>pos ${n + 1}</option>`).join('')}
+                </select>` : ''}
+                <input class="rm-date" type="date" title="Removal date (optional)"
+                       value="${escAttr(r.date)}" data-i="${i}" data-field="date" onchange="rmEdit(this)">
+                <input class="rm-reason" placeholder="Reason (optional)" maxlength="200"
+                       value="${escAttr(r.reason)}" data-i="${i}" data-field="reason" oninput="rmEdit(this)">
+                <button type="button" class="rm-del" title="Remove this line" onclick="removeRemovalRow(${i})">🗑</button>
+            </div>`;
+
+            body.innerHTML =
+                (already.length
+                    ? `<div class="rm-existing">Already recorded as removed from <b>${escAttr(tail)}</b>: ${already.map(s => escAttr(s)).join(', ')}</div>`
+                    : `<div class="rm-existing">No removals recorded yet for <b>${escAttr(lru.label)}</b> on <b>${escAttr(tail)}</b>.</div>`)
+                + (rows.length ? rows.map(rowHtml).join('')
+                               : '<div class="bl-empty">Nothing staged for this unit yet.</div>')
+                + `<button type="button" class="qf-btn rm-add" onclick="addRemovalRow()">➕ Add a removed serial</button>`;
+
+            rmUpdateCount();
+        }
+
+        function rmUpdateCount() {
+            const n = rmTotal();
+            const foot = document.getElementById('rmCount');
+            if (foot) {
+                foot.innerHTML = `<b>${n}</b> removed serial${n === 1 ? '' : 's'} staged`
+                    + (n ? ' across this session' : '');
+            }
+        }
+
+        function openRemoval() {
+            if (!canEdit()) { promptSignIn().then(ok => { if (ok) openRemoval(); }); return; }
+
+            rmDraft = {};
+            const acSel = document.getElementById('rmAircraft');
+            acSel.innerHTML = activeFleet().slice().sort((a, b) => a.id.localeCompare(b.id))
+                .map(a => `<option value="${escAttr(a.id)}">${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</option>`).join('');
+            if (maintSelectedId) acSel.value = maintSelectedId;
+
+            document.getElementById('rmPaste').value = '';
+            const err = document.getElementById('rmError');
+            err.textContent = ''; err.style.display = 'none';
+
+            onRemovalAircraftChange();
+            document.getElementById('removalOverlay').style.display = 'flex';
+        }
+
+        function initRemovalModal() {
+            const overlay = document.getElementById('removalOverlay');
+            if (!overlay) return;
+            const err = document.getElementById('rmError');
+            const close = () => { overlay.style.display = 'none'; };
+
+            document.getElementById('rmCancel').addEventListener('click', () => {
+                if (rmTotal() && !confirm(`Close without saving?\n\n${rmTotal()} removed serial(s) staged here will be discarded.`)) return;
+                close();
+            });
+            // Not closed by a backdrop click — a session's worth of staged serials is
+            // too much to lose to a stray click.
+
+            document.getElementById('rmSave').addEventListener('click', async () => {
+                const fail = msg => { err.textContent = msg; err.style.display = 'block'; };
+                err.style.display = 'none';
+
+                const staged = [];
+                Object.entries(rmDraft).forEach(([key, rows]) => {
+                    const parts = key.split('|');
+                    rows.forEach(r => {
+                        const serial = (r.serial || '').trim();
+                        if (serial) staged.push({ lruId: parts[0], tail: parts[1], ...r, serial });
+                    });
+                });
+                if (!staged.length) return fail('Nothing staged yet — add at least one removed serial.');
+
+                // A serial is one physical box. The same one twice in this batch, or one
+                // already in the register for that equipment, is a data-entry error.
+                const seen = {}, dupes = new Set();
+                staged.forEach(x => {
+                    const k = x.lruId + '::' + x.serial.toUpperCase();
+                    if (seen[k]) dupes.add(x.serial); else seen[k] = 1;
+                    if (unitBySerial(x.lruId, x.serial)) dupes.add(x.serial);
+                });
+                if (dupes.size) {
+                    return fail(`Already recorded, or entered twice here: ${[...dupes].slice(0, 4).join(', ')}${dupes.size > 4 ? '…' : ''}. Each serial belongs to one unit.`);
+                }
+
+                const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+                const payload = {};
+                staged.forEach((x, i) => {
+                    const fitment = { aircraft: x.tail, state: 'removed', loggedAt: stamp };
+                    if (x.position) fitment.position = String(x.position);
+                    if (x.date) fitment.removedDate = fmtDate(x.date);
+                    if ((x.reason || '').trim()) fitment.removalReason = x.reason.trim();
+
+                    const unitId = 'u' + Date.now().toString(36) + i.toString(36) + Math.random().toString(36).slice(2, 6);
+                    const fitId = 'f' + Date.now().toString(36) + i.toString(36) + Math.random().toString(36).slice(2, 6);
+                    payload[unitId] = {
+                        lruId: x.lruId, serial: x.serial, addedAt: stamp,
+                        fitments: { [fitId]: fitment },
+                    };
+                });
+
+                const token = await getIdToken();
+                if (!token) return;
+                const btn = document.getElementById('rmSave');
+                btn.disabled = true; btn.textContent = 'Saving...';
+                try {
+                    const res = await fetch(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(payload),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+
+                    Object.entries(payload).forEach(([id, u]) => { unitsLive[id] = u; });
+                    rmDraft = {};
+                    renderRemovalBody();
+                    renderHardwarePage();
+                    renderMaintenancePage();
+                    renderSerialsPage();
+                    setSyncStatus(`🟢 ${staged.length} removed serial${staged.length === 1 ? '' : 's'} recorded — synced with your team`, '#28a745');
+                } catch (ex) {
+                    fail(`Could not save — ${ex.message}`);
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Save Removals';
+                }
+            });
+        }
+
+        // ===== Serials page =====
+        // One flat row per FITMENT — one box, on one aircraft, for one period — so a
+        // unit fitted twice appears twice and the list reads as a history. Deliberately
+        // not another two-pane shell: the job right now is getting serials in and
+        // filling dates later, not navigating a hierarchy.
+        const srFilters = { lru: '', tail: '', state: '', q: '' };
+
+        function setSerialFilter(key, value) {
+            srFilters[key] = value;
+            renderSerialsPage();
+        }
+
+        // Every fitment across every unit, flattened. A unit with no fitment at all
+        // still appears — a serial recorded against no aircraft is a spare, and dropping
+        // it would hide data someone took the trouble to enter.
+        function serialRows() {
+            const byTail = {};
+            aircraftData.forEach(a => { byTail[a.id] = a; });
+            const rows = [];
+
+            unitEntries().forEach(u => {
+                const lru = lruById(u.lruId);
+                const fits = unitFitmentsSorted(u);
+                if (!fits.length) {
+                    rows.push({ unit: u, lru, fitment: null, tail: '', position: '',
+                                state: 'spare', type: '', days: null, changes: 0 });
+                    return;
+                }
+                fits.forEach(f => {
+                    rows.push({
+                        unit: u, lru, fitment: f,
+                        tail: f.aircraft || '',
+                        position: f.position || '',
+                        state: fitmentIsOn(f) ? 'on_wing' : 'removed',
+                        type: (byTail[f.aircraft] || {}).type || '',
+                        days: fitmentDaysOnWing(f),
+                        changes: unitsAtSlot(u.lruId, f.aircraft, f.position || undefined).length,
+                    });
+                });
+            });
+
+            return rows.sort((a, b) =>
+                String(a.lru ? a.lru.label : a.unit.lruId).localeCompare(String(b.lru ? b.lru.label : b.unit.lruId))
+                || String(a.tail).localeCompare(String(b.tail))
+                || String(a.position).localeCompare(String(b.position))
+                || String(a.unit.serial).localeCompare(String(b.unit.serial)));
+        }
+
+        function serialRowsFiltered() {
+            const q = srFilters.q.trim().toLowerCase();
+            return serialRows().filter(r =>
+                   (!srFilters.lru   || r.unit.lruId === srFilters.lru)
+                && (!srFilters.tail  || r.tail === srFilters.tail)
+                && (!srFilters.state || r.state === srFilters.state)
+                && (!q || String(r.unit.serial || '').toLowerCase().includes(q)));
+        }
+
+        const SR_STATES = [
+            { value: '',        label: 'All' },
+            { value: 'on_wing', label: 'On Wing' },
+            { value: 'removed', label: 'Removed' },
+            { value: 'spare',   label: 'Spare' },
+        ];
+
+        function renderSerialsPage() {
+            const body = document.getElementById('srBody');
+            if (!body) return;
+
+            // --- filters, built from the data actually present ---
+            const lruSel = document.getElementById('srLruFilter');
+            const present = [...new Set(unitEntries().map(u => u.lruId))];
+            lruSel.innerHTML = '<option value="">All equipment</option>' +
+                HARDWARE_LRUS.filter(l => present.includes(l.id)).map(l =>
+                    `<option value="${escAttr(l.id)}" ${srFilters.lru === l.id ? 'selected' : ''}>${escAttr(l.label)}${l.fit === 'linefit' ? ' (linefit)' : ''}</option>`).join('');
+
+            const tailSel = document.getElementById('srTailFilter');
+            const tails = [...new Set(unitEntries().flatMap(u => unitFitments(u).map(f => f.aircraft)).filter(Boolean))].sort();
+            tailSel.innerHTML = '<option value="">All aircraft</option>' +
+                tails.map(t => `<option value="${escAttr(t)}" ${srFilters.tail === t ? 'selected' : ''}>${escAttr(t)}</option>`).join('');
+
+            setHTML('srStatePills', SR_STATES.map(s =>
+                `<button class="qf-btn ${srFilters.state === s.value ? 'active' : ''}" onclick="setSerialFilter('state','${s.value}')">${escAttr(s.label)}</button>`).join(''));
+
+            // --- widgets: what is still missing is the point of this screen ---
+            const all = serialRows();
+            const onWing = all.filter(r => r.state === 'on_wing').length;
+            const removed = all.filter(r => r.state === 'removed').length;
+            const noDate = all.filter(r => r.fitment
+                && ((r.state === 'on_wing' && !r.fitment.fittedDate)
+                 || (r.state === 'removed' && !r.fitment.removedDate))).length;
+
+            const widget = (label, value, sub, cls) => `<div class="media-widget ${cls || ''}">
+                <div class="media-widget-label">${label}</div>
+                <div class="media-widget-row"><span class="media-widget-count">${value}</span>
+                <span class="media-widget-pct">${sub}</span></div></div>`;
+
+            setHTML('srWidgets',
+                widget('Serials Recorded', all.length, 'total')
+              + widget('On Wing', onWing, 'fitted')
+              + widget('Removed', removed, 'off wing')
+              + widget('Dates Outstanding', noDate, noDate ? 'to fill in' : 'complete',
+                       noDate ? 'media-widget-alert' : ''));
+
+            // --- the table ---
+            const rows = serialRowsFiltered();
+            const editable = canEdit();
+
+            const dateCell = (r, field) => {
+                const f = r.fitment;
+                if (!f) return '<span class="hw-none">&mdash;</span>';
+                // A removal date on a unit still on wing is not a field that applies;
+                // showing an empty box there would invite bad data.
+                const applies = field === 'fittedDate' || r.state === 'removed';
+                if (!applies) return '<span class="hw-none">&mdash;</span>';
+                const val = f[field] || '';
+                if (!editable) return val ? escAttr(val) : '<span class="hw-none">not recorded</span>';
+                return `<input type="date" class="sr-date-input" value="${escAttr(toISODate(val))}"
+                        data-unit="${escAttr(r.unit.id)}" data-fitment="${escAttr(f.id)}" data-field="${field}"
+                        onchange="saveFitmentDate(this)">`;
+            };
+
+            body.innerHTML = rows.length ? rows.map(r => `<tr>
+                <td>${escAttr(r.lru ? r.lru.label : r.unit.lruId)}</td>
+                <td><span class="hw-serial">${escAttr(r.unit.serial || '')}</span></td>
+                <td>${r.tail ? `<strong>${escAttr(r.tail)}</strong>` : '<span class="hw-none">spare</span>'}</td>
+                <td>${r.position ? `<span class="bl-pos">${escAttr(r.position)}</span>` : '<span class="hw-none">&mdash;</span>'}</td>
+                <td><span class="sr-state ${r.state === 'on_wing' ? 'on' : 'off'}">${r.state === 'on_wing' ? 'ON WING' : (r.state === 'spare' ? 'SPARE' : 'REMOVED')}</span></td>
+                <td>${dateCell(r, 'fittedDate')}</td>
+                <td>${dateCell(r, 'removedDate')}</td>
+                <td class="sr-days">${(r.days === null || r.days === undefined) ? '<span class="hw-none">&mdash;</span>' : r.days + 'd'}</td>
+                <td>${r.changes ? r.changes : '<span class="hw-none">&mdash;</span>'}</td>
+                <td class="sr-reason">${escAttr((r.fitment && r.fitment.removalReason) || '')}${
+                    (r.fitment && r.fitment.shopStatus) ? ` <span class="status-badge shop-badge shop-${escAttr(r.fitment.shopStatus)}">${escAttr(shopStatusLabel(r.fitment.shopStatus))}</span>` : ''}</td>
+            </tr>`).join('')
+            : '<tr><td colspan="10" class="maint-empty">No serials recorded yet. Use Record Installed or Record Removed to start.</td></tr>';
+
+            setText('srCount', `${rows.length} of ${all.length} ${all.length === 1 ? 'record' : 'records'} shown`
+                + (noDate ? ` · ${noDate} still missing a date` : ''));
+
+            const who = document.getElementById('srSignedInAs');
+            ['srInstalledBtn', 'srRemovedBtn'].forEach(id => {
+                const b = document.getElementById(id);
+                if (b) b.style.display = editable ? '' : 'none';
+            });
+            if (who) {
+                who.textContent = editable ? authUser.email : '';
+                who.style.display = editable ? '' : 'none';
+            }
+        }
+
+        // Filling in one date, in place — the follow-up half of the bulk entry: serials
+        // first, dates whenever the paperwork turns up.
+        async function saveFitmentDate(el) {
+            const unitId = el.dataset.unit, fitmentId = el.dataset.fitment, field = el.dataset.field;
+            const u = unitsLive[unitId];
+            const f = u && (u.fitments || {})[fitmentId];
+            if (!f) return;
+            const value = el.value ? fmtDate(el.value) : null;
+            const token = await getIdToken();
+            if (!token) return;
+            el.disabled = true;
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/units/${unitId}/fitments/${fitmentId}.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify({ [field]: value }),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                if (value === null) delete f[field]; else f[field] = value;
+                renderSerialsPage();
+                renderHardwarePage();
+                renderMaintenancePage();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not save date — ${ex.message}`, '#dc3545');
+            } finally {
+                el.disabled = false;
+            }
+        }
+
+        // The register as a spreadsheet. Data gathering happens in more places than this
+        // page, and a CSV is the honest handover format for the ones it does not cover.
+        function exportSerialsCsv() {
+            const rows = serialRowsFiltered();
+            const head = ['Equipment', 'Fit', 'Serial', 'Part Number', 'Aircraft', 'Type',
+                          'Position', 'Status', 'Fitted', 'Removed', 'Days On Wing',
+                          'Slot Changes', 'Removal Reason', 'Shop Status', 'Shop Ref', 'Shop Finding'];
+            const cell = v => {
+                const s = String(v === null || v === undefined ? '' : v);
+                return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            };
+            const body = rows.map(r => {
+                const f = r.fitment || {};
+                return [
+                    r.lru ? r.lru.label : r.unit.lruId,
+                    r.lru ? r.lru.fit : '',
+                    r.unit.serial || '',
+                    r.unit.partNumber || '',
+                    r.tail, r.type || '', r.position,
+                    r.state === 'on_wing' ? 'On Wing' : (r.state === 'spare' ? 'Spare' : 'Removed'),
+                    f.fittedDate || '', f.removedDate || '',
+                    (r.days === null || r.days === undefined) ? '' : r.days,
+                    r.changes || '',
+                    f.removalReason || '',
+                    f.shopStatus ? shopStatusLabel(f.shopStatus) : '',
+                    f.shopRef || '', f.shopFinding || '',
+                ].map(cell).join(',');
+            });
+            const csv = [head.join(','), ...body].join('\r\n');
+            const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `saudia-serials-${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         // ===== Hardware edit mode (same staged-then-Save shape as the other pages) =====
@@ -6945,6 +7797,8 @@
             if (add) add.style.display = canEdit() ? '' : 'none';
             const base = document.getElementById('hwBaselineBtn');
             if (base) base.style.display = canEdit() ? '' : 'none';
+            const rem = document.getElementById('hwRemovalBtn');
+            if (rem) rem.style.display = canEdit() ? '' : 'none';
             if (!btn) return;
             const editing = hwEditMode && canEdit();
             btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '💾 Save' : '✏️ Edit');
@@ -7097,18 +7951,21 @@
         // Updates the removal activity itself. The removal IS the record of that unit
         // coming off, so the shop's verdict belongs on it rather than in a parallel
         // collection that could drift from it.
-        let shopReportActId = '';
+        let shopReportUnitId = '';
+        let shopReportFitmentId = '';
 
-        function openShopReport(actId) {
-            const act = activitiesLive[actId];
-            if (!act) return;
-            if (!canEdit()) { promptSignIn().then(ok => { if (ok) openShopReport(actId); }); return; }
-            shopReportActId = actId;
-            const d = act.details || {};
-            setText('shopReportFor', `${d.oldPart || 'unit'} removed from ${act.aircraft} on ${act.date}`);
-            document.getElementById('shopStatus').value = d.shopStatus || 'pending';
-            document.getElementById('shopRef').value = d.shopRef || '';
-            document.getElementById('shopFinding').value = d.shopFinding || '';
+        function openShopReport(unitId, fitmentId) {
+            const u = unitsLive[unitId];
+            const f = u && (u.fitments || {})[fitmentId];
+            if (!f) return;
+            if (!canEdit()) { promptSignIn().then(ok => { if (ok) openShopReport(unitId, fitmentId); }); return; }
+            shopReportUnitId = unitId;
+            shopReportFitmentId = fitmentId;
+            setText('shopReportFor',
+                `${u.serial || 'unit'} removed from ${f.aircraft}${f.removedDate ? ' on ' + f.removedDate : ' — removal date not yet recorded'}`);
+            document.getElementById('shopStatus').value = f.shopStatus || 'pending';
+            document.getElementById('shopRef').value = f.shopRef || '';
+            document.getElementById('shopFinding').value = f.shopFinding || '';
             const err = document.getElementById('shopError');
             err.textContent = ''; err.style.display = 'none';
             document.getElementById('shopOverlay').style.display = 'flex';
@@ -7119,13 +7976,17 @@
             const overlay = document.getElementById('shopOverlay');
             if (!overlay) return;
             const err = document.getElementById('shopError');
-            const close = () => { overlay.style.display = 'none'; shopReportActId = ''; };
+            const close = () => {
+                overlay.style.display = 'none';
+                shopReportUnitId = ''; shopReportFitmentId = '';
+            };
             document.getElementById('shopCancel').addEventListener('click', close);
-            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            overlay.addEventListener('click', ev => { if (ev.target === overlay) close(); });
 
             document.getElementById('shopSave').addEventListener('click', async () => {
-                const act = activitiesLive[shopReportActId];
-                if (!act) return;
+                const u = unitsLive[shopReportUnitId];
+                const f = u && (u.fitments || {})[shopReportFitmentId];
+                if (!f) return;
                 const patch = {
                     shopStatus:  document.getElementById('shopStatus').value,
                     shopRef:     document.getElementById('shopRef').value.trim() || null,
@@ -7136,21 +7997,21 @@
                 const btn = document.getElementById('shopSave');
                 btn.disabled = true; btn.textContent = 'Saving...';
                 try {
-                    const res = await fetch(`${FIREBASE_DB_URL}/activities/${shopReportActId}/details.json?auth=${token}`, {
+                    const res = await fetch(`${FIREBASE_DB_URL}/units/${shopReportUnitId}/fitments/${shopReportFitmentId}.json?auth=${token}`, {
                         method: 'PATCH', body: JSON.stringify(patch),
                     });
                     const data = await res.json();
                     if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                    act.details = act.details || {};
                     Object.entries(patch).forEach(([k, v]) => {
-                        if (v === null) delete act.details[k]; else act.details[k] = v;
+                        if (v === null) delete f[k]; else f[k] = v;
                     });
                     close();
                     renderHardwarePage();
                     renderMaintenancePage();
+                    renderSerialsPage();
                     setSyncStatus('🟢 Live — synced with your team', '#28a745');
-                } catch (e) {
-                    err.textContent = `Could not save shop report — ${e.message}`;
+                } catch (ex) {
+                    err.textContent = `Could not save shop report — ${ex.message}`;
                     err.style.display = 'block';
                 } finally {
                     btn.disabled = false; btn.textContent = 'Save Report';
@@ -8431,6 +9292,7 @@
             initAddIssueModal();
             initShopReportModal();
             initBaselineModal();
+            initRemovalModal();
             initAddAircraftModal();
             updateAuthUI();
             updateScheduleEditUI();
