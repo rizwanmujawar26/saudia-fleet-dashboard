@@ -22,7 +22,7 @@ echo "           $DB"
 echo
 
 echo "Reachability & data"
-for n in fleet aircraft schedule activities hardware; do
+for n in fleet aircraft schedule activities hardware units; do
   c="$(code "$DB/$n.json?shallow=true")"
   if [ "$c" = "200" ]; then
     cnt="$(python3 -c "import json,sys;d=json.load(open('$TMP/body'));print(len(d) if isinstance(d,dict) else 0)" 2>/dev/null || echo '?')"
