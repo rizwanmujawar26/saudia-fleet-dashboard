@@ -161,3 +161,53 @@ The client only ever speaks REST: `GET/PUT/PATCH/DELETE` on `<base>/<path>.json`
 plus `EventSource` on the same URLs for live updates. Anything that serves that
 shape can replace it. The pieces to reimplement are the per-path validation in
 `database.rules.json` and the token exchange in `promptSignIn()` / `getIdToken()`.
+
+---
+
+## Making this private
+
+**Gating the page does not gate the data.** The database is a separate origin with
+its own URL, and that URL is in the page source. Put the site behind SSO but leave
+`.read: true` and anyone who has ever seen the URL can still read everything with
+`curl`. Private access means doing both halves.
+
+### Half 1 — the database (the part that actually matters)
+
+1. Change `.read` on every node from `true` to an auth check. Reuse `/editors`, or
+   add a broader `/viewers` list if some people should read but not write.
+2. **The app must sign in before it reads.** `connectLiveSync()` currently fires on
+   page load with no token; it would have to run after authentication, behind a
+   sign-in gate. This is the real work in the migration — not the rules change.
+3. `EventSource` cannot set headers, but Firebase REST accepts `?auth=<idToken>` in
+   the URL, so the live streams keep working. They must be re-established when the
+   token refreshes.
+4. `/visits` currently accepts anonymous writes. It either gains auth or goes.
+5. **`scripts/backup.sh` stops working**, because it reads anonymously. It would
+   need a service account. Sort this out *as part of* the migration — a period with
+   no working backup is exactly the risk this document exists to avoid.
+
+### Half 2 — the hosting
+
+| Option | Private how | Cost | Notes |
+|---|---|---|---|
+| **Cloudflare Pages + Access** | SSO / email OTP in front of the whole site — the HTML itself is unreachable | Free ≤ 50 users | Strongest. Custom domain. No app changes. |
+| **Firebase Hosting** | Page is public but shows only a login screen; privacy comes entirely from Half 1 | Free | Simplest, stays in one project |
+| **Azure Static Web Apps** | Built-in auth on the route | Free tier | Heavier setup |
+
+Recommended: **Cloudflare Access for the page + auth-required rules on the
+database.** Either alone leaves a hole; together, an outsider cannot load the page,
+and could not read the data even if they had the HTML.
+
+### A clean-slate option worth considering
+
+The current database URL is in public git history permanently. Standing up a **new
+Firebase project** gives a URL that never was, and the move is cheap because the
+scripts already take `FLEET_PROJECT`:
+
+```bash
+npx --yes firebase-tools deploy --only database --project <new-project>
+FLEET_PROJECT=<new-project> ./scripts/restore.sh <snapshot> --apply
+```
+
+Then update the two constants in `index.html` and re-add editors. Full steps under
+*Moving to another host or another Firebase project* above.
