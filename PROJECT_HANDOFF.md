@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.13.0, 2026-08-21)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.14.0, 2026-08-21)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -483,6 +483,25 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
 ## Tabs (8)
 
+**Activity, Hardware and Serials are shown only to a signed-in editor.**
+`RESTRICTED_TABS` lists them, `canViewRestricted()` is the test — currently just
+`canEdit()`, so the editor allowlist is the boundary — and `applyTabVisibility()`
+runs from `updateAuthUI()`, i.e. on every auth transition. The buttons are
+`display:none` **in the markup**, not only by script, so they never flash on screen
+for an anonymous visitor. `switchTab()` refuses a restricted tab when signed out and
+falls back to Overview, which also covers signing out while sitting on one; it now
+takes the button as an argument instead of reading the global `event`, which is what
+lets the gate redirect programmatically. A `🔓 Sign in` item sits in the strip where
+the hidden tabs would be, because that is where someone looks for them.
+
+⚠️ **This is a UI gate and nothing more.** `/activities`, `/hardware` and `/units`
+are still `.read: true`, so anyone with the database URL can still read every serial
+and every activity with one `curl`. Hiding the tabs changes who *browses* the data,
+not who *can* read it. Actually restricting it means changing `.read` in the rules
+and signing in before the first read — the migration written up under *Making this
+private* in `DISASTER-RECOVERY.md`, which also has to deal with `connectLiveSync()`
+firing before authentication and with `backup.sh` losing anonymous access.
+
 1. **Overview** — starts with the Timeline (calendar strip + grouped-by-date
    list). One divider per day, nothing between aircraft. Beware
    `.timeline-items li`: it must stay `.timeline-items > li`, or the descendant
@@ -495,7 +514,8 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
    other change needed.
 3. **Media** — monthly media loading for the main fleet only (linefit excluded).
    Columns: `# | Aircraft | Type | Status | Media Loaded | Date UTC | Comments`.
-4. **Maintenance** — the **active** fleet only (`fleetStatus === 'active'`), the same
+4. **Activity** (tab id is still `maintenance`, like Software's is still `aircraft`)
+   — the **active** fleet only (`fleetStatus === 'active'`), the same
    set the global Maintenance card counts against, so the two cannot disagree.
    **Two panels, Outlook-style** (`.maint-split`): the aircraft list on the left
    (`renderMaintList`), the selected aircraft on the right (`renderMaintDetail`)
@@ -844,6 +864,13 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.14.0 — Restricted tabs, Maintenance renamed to Activity
+Activity, Hardware and Serials are hidden from anonymous visitors and appear on
+sign-in. UI only — the data stays world-readable, see the note under *Tabs*. The
+Maintenance tab is now **Activity**; the tab id, `renderMaintenancePage()`, the
+`maintenance` flag field and the global Maintenance widget all keep their names,
+because they are about maintenance *state*, which is still the right word.
 
 ### v2.13.0 — The unit register: `/units`, removals, and the Serials tab
 **New node `/units/{unitId}`** — one physical box with a serial, per-unit attributes

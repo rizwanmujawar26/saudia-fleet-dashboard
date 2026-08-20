@@ -391,6 +391,16 @@
             letter-spacing: 0.5px;
         }
 
+        /* The signed-out placeholder for the restricted tabs. Reads as an invitation
+           rather than a tab, so it is not mistaken for a section of the dashboard. */
+        .tab-signin {
+            color: #0a5c34;
+            font-weight: 600;
+            opacity: 0.75;
+        }
+
+        .tab-signin:hover { opacity: 1; }
+
         .tab-button:hover {
             color: #0a5c34;
             background: rgba(10, 92, 52, 0.05);
@@ -3037,11 +3047,15 @@
                 <button class="tab-button active" onclick="switchTab('overview')">📊 Overview</button>
                 <button class="tab-button" onclick="switchTab('aircraft')">💿 Software</button>
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
-                <button class="tab-button" onclick="switchTab('maintenance')">🛠️ Maintenance</button>
-                <button class="tab-button" onclick="switchTab('hardware')">🔧 Hardware</button>
-                <button class="tab-button" onclick="switchTab('serials')">🏷️ Serials</button>
+                <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('maintenance')">🛠️ Activity</button>
+                <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('hardware')">🔧 Hardware</button>
+                <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('serials')">🏷️ Serials</button>
                 <button class="tab-button" onclick="switchTab('schedule')">📅 Schedule</button>
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
+                <!-- The way back in for a signed-out viewer. It sits where the hidden
+                     tabs would be, because that is where someone looks for them. -->
+                <button class="tab-button tab-signin" id="tabSignInBtn" onclick="signInForTabs()"
+                        title="Activity, Hardware and Serials are shown to signed-in users">🔓 Sign in</button>
             </div>
 
             <!-- Overview Tab -->
@@ -3722,7 +3736,7 @@
                 Type the serial numbers already fitted to each aircraft. Each one is saved as a
                 <b>first fit</b> hardware record, so it appears on the Hardware tab's fitment list and
                 on the aircraft's Installed Equipment panel. Anything already on record is shown and
-                left alone — log a replacement from <b>Maintenance → Add New Activity</b>.
+                left alone — log a replacement from <b>Activity → Add New Activity</b>.
             </p>
 
             <div class="bl-modes">
@@ -4446,10 +4460,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.13.0';
-        const APP_BUILD    = '2026.08.21.01';
+        const APP_VERSION  = '2.14.0';
+        const APP_BUILD    = '2026.08.21.02';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-21T00:10:00Z';
+        const APP_DEPLOYED = '2026-08-21T02:00:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -5041,11 +5055,55 @@
             });
         }
 
+        // ===== Restricted tabs =====
+        // Activity, Hardware and Serials are shown only to a signed-in editor. This is a
+        // UI gate and nothing more: /activities, /hardware and /units are still
+        // world-READABLE, so anyone who knows the database URL can still read them with
+        // curl. Actually restricting the data means changing `.read` in
+        // database.rules.json and signing in before the first read — the migration
+        // written up under "Making this private" in DISASTER-RECOVERY.md.
+        const RESTRICTED_TABS = ['maintenance', 'hardware', 'serials'];
+
+        // The trust boundary is the editor allowlist, the same one canEdit() uses — an
+        // account that is not on it can sign in but is not recognised, and revealing the
+        // tabs to it would be a wider grant than any other part of the page makes. If a
+        // read-only viewer tier is ever added (/viewers in the rules), this is the one
+        // function to widen.
+        function canViewRestricted() {
+            return canEdit();
+        }
+
+        function tabButtonFor(name) {
+            return document.querySelector(`.tab-button[onclick*="'${name}'"]`);
+        }
+
+        function applyTabVisibility() {
+            const allowed = canViewRestricted();
+            document.querySelectorAll('.tab-button[data-restricted]').forEach(btn => {
+                btn.style.display = allowed ? '' : 'none';
+            });
+            const signin = document.getElementById('tabSignInBtn');
+            if (signin) signin.style.display = allowed ? 'none' : '';
+
+            // Signing out while sitting on a restricted tab must not leave its content
+            // on screen — fall back to the Overview rather than a blank page.
+            if (!allowed) {
+                const open = document.querySelector('.tab-content.active');
+                if (open && RESTRICTED_TABS.includes(open.id)) switchTab('overview');
+            }
+        }
+
+        async function signInForTabs() {
+            await promptSignIn();
+            applyTabVisibility();
+        }
+
         function canEdit() {
             return !!(authUser && authUser.canEdit);
         }
 
         function updateAuthUI() {
+            applyTabVisibility();
             updateScheduleEditUI();
             updateMediaEditUI();
             updateMaintEditUI();
@@ -5109,27 +5167,37 @@
             populateAircraftTable();
         }
 
-        function switchTab(tabName) {
+        function switchTab(tabName, btn) {
+            // A restricted tab is never opened for a signed-out viewer, including by a
+            // stale click or a call from the console.
+            if (RESTRICTED_TABS.includes(tabName) && !canViewRestricted()) {
+                tabName = 'overview';
+                btn = null;
+            }
+            const el = btn
+                || (typeof event !== 'undefined' && event && event.target)
+                || tabButtonFor(tabName);
+
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
 
             // Remove active class from all buttons
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
+            document.querySelectorAll('.tab-button').forEach(b => {
+                b.classList.remove('active');
             });
 
             // Show selected tab
             document.getElementById(tabName).classList.add('active');
 
-            // Add active class to clicked button
-            event.target.classList.add('active');
-
-            // On a narrow screen the strip scrolls, so pull the chosen tab fully into
-            // view — otherwise you can select one that stays half cut off at the edge.
-            if (event.target.scrollIntoView) {
-                event.target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+            if (el) {
+                el.classList.add('active');
+                // On a narrow screen the strip scrolls, so pull the chosen tab fully
+                // into view — otherwise you can select one that stays half cut off.
+                if (el.scrollIntoView) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+                }
             }
 
             // Populate tables if needed
