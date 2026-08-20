@@ -224,6 +224,22 @@ helper, so the definition cannot drift page to page. Scope numbers are counted,
 never hardcoded: changing an aircraft's status moves every table, filter and
 percentage at once.
 
+**Timeline rows carry no repeated words.** Two rules do it:
+
+- The **kind pill is hidden under a kind filter** — every row is that kind, so the
+  pill only restates the selected filter. It returns under "All".
+- The grey subtitle is the **most specific fact**, never the category:
+  `activitySubtitle()` gives the part for a hardware job (with position when there
+  is one), software + version for a load, modem + result for a commissioning. The
+  category is the fallback only where it still varies row to row.
+  `dedupeSubtitle()` then drops it if the title already says it — substring, not
+  equality, so "Modman Replacement" swallows "MODMAN".
+
+The Add Activity form is where this is won or lost: its Title placeholder used to
+read "e.g. KRFU Replacement", which taught people to put the part in the title and
+guaranteed it read twice. It now prompts for the symptom or task per category, with
+a hint saying the part is captured separately.
+
 **The Timeline is Active-only too**, on all three of its sources. `inScope()` in
 `timelineActivities()` is the single line to relax if retrofit-in-progress work
 should ever be visible before activation.
