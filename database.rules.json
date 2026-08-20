@@ -51,7 +51,7 @@
         "type":        { ".validate": "newData.isString() && newData.val().length <= 40" },
         "station":     { ".validate": "newData.isString() && newData.val().length <= 10" },
         "fit":         { ".validate": "newData.isString() && newData.val().matches(/^(linefit|retrofit)$/)" },
-        "fleetStatus": { ".validate": "newData.isString() && newData.val().matches(/^(active|stored|retired)$/)" },
+        "fleetStatus": { ".validate": "newData.isString() && newData.val().matches(/^(Planned|In Retrofit|Installed|Commissioned|Active|Decommissioned)$/)" },
         "comments":    { ".validate": "newData.isString() && newData.val().length <= 500" },
 
         "$other":      { ".validate": false }

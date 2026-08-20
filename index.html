@@ -1305,9 +1305,16 @@
         /* ===== Fleet page ===== */
         .status-badge.fit-retrofit { background: #e3ecf5; color: #2f5f8a; }
         .status-badge.fit-linefit  { background: #efe9f7; color: #59468a; }
-        .status-badge.fleet-active  { background: #28a745; color: #fff; }
-        .status-badge.fleet-stored  { background: #f0ad4e; color: #4a3208; }
-        .status-badge.fleet-retired { background: #adb5bd; color: #fff; }
+        /* Active is the only one that reads as operational. In Retrofit is amber and
+           clearly unfinished — it must not be mistaken for a flying WiFi aircraft. */
+        .status-badge.fleet-active         { background: #28a745; color: #fff; }
+        .status-badge.fleet-in-retrofit    { background: #f0ad4e; color: #4a3208; }
+        .status-badge.fleet-installed      { background: #e6f0fb; color: #1c5b96; }
+        .status-badge.fleet-commissioned   { background: #e6f7f4; color: #10695c; }
+        .status-badge.fleet-planned        { background: #eef1f3; color: #55606a; }
+        .status-badge.fleet-decommissioned { background: #fdeff0; color: #a52834; }
+
+        .fleet-notset { color: #b3bac0; font-style: italic; }
 
         #fleetTable td:not(.col-comment) {
             white-space: nowrap;
@@ -3026,10 +3033,13 @@
                     <div class="filter-group-block">
                         <span class="filter-group-label">Status</span>
                         <div class="quick-filters">
-                            <button class="qf-btn active" onclick="setFleetStatusFilter('', this)">All Status</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('active', this)">Active</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('stored', this)">Stored</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('retired', this)">Retired</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('', this)">All</button>
+                            <button class="qf-btn active" onclick="setFleetStatusFilter('Active', this)">Active</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('In Retrofit', this)">In Retrofit</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('Installed', this)">Installed</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('Commissioned', this)">Commissioned</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('Planned', this)">Planned</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('Decommissioned', this)">Decommissioned</button>
                         </div>
                     </div>
                 </div>
@@ -3050,7 +3060,8 @@
                                 <th class="sortable-th" data-col="2" data-label="Type" onclick="sortTable('fleetTable', 2)">Type</th>
                                 <th class="sortable-th" data-col="3" data-label="Fit" onclick="sortTable('fleetTable', 3)">Fit</th>
                                 <th class="sortable-th" data-col="4" data-label="Status" onclick="sortTable('fleetTable', 4)">Status</th>
-                                <th class="sortable-th col-comment" data-col="5" data-label="Comments" onclick="sortTable('fleetTable', 5)">Comments</th>
+                                <th class="sortable-th" data-col="5" data-label="Activation Date" onclick="sortTable('fleetTable', 5)">Activation Date</th>
+                                <th class="sortable-th col-comment" data-col="6" data-label="Comments" onclick="sortTable('fleetTable', 6)">Comments</th>
                                 <th id="fleetActionsHead" style="display:none;">Actions</th>
                             </tr>
                         </thead>
@@ -3776,7 +3787,7 @@
         function setFleetRoster(data) {
             const rows = Object.entries(data || {}).map(([id, v]) => ({
                 id, type: v.type, station: v.station,
-                fit: v.fit || 'retrofit', fleetStatus: v.fleetStatus || 'active', comments: v.comments || '',
+                fit: v.fit || 'retrofit', fleetStatus: v.fleetStatus || 'Active', comments: v.comments || '',
             }));
             if (rows.length) fleetRoster = rows.sort((a, b) => a.id.localeCompare(b.id));
         }
@@ -4694,11 +4705,11 @@
                 if (!token) return;
                 try {
                     const res = await fetch(`${FIREBASE_DB_URL}/fleet/${id}.json?auth=${token}`, {
-                        method: 'PUT', body: JSON.stringify({ type, station, fit, fleetStatus: 'active' }),
+                        method: 'PUT', body: JSON.stringify({ type, station, fit, fleetStatus: 'Active' }),
                     });
                     const data = await res.json();
                     if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                    fleetRoster = fleetRoster.concat([{ id, type, station, fit, fleetStatus: 'active', comments: '' }]).sort((a, b) => a.id.localeCompare(b.id));
+                    fleetRoster = fleetRoster.concat([{ id, type, station, fit, fleetStatus: 'Active', comments: '' }]).sort((a, b) => a.id.localeCompare(b.id));
                     overlay.style.display = 'none';
                     renderAll();
                     setSyncStatus(`🟢 ${id} added to the fleet — now ${projectScope()} aircraft`, '#28a745');
@@ -4757,15 +4768,31 @@
         // The roster is the source of truth for which aircraft exist, so this page owns
         // add / edit / remove. Everything else on the dashboard reads what it produces.
         const FLEET_FITS = [{ value: 'retrofit', label: 'Retrofit' }, { value: 'linefit', label: 'Linefit' }];
+        // The canonical WiFi-programme installation statuses. Value and label are the
+        // same string because these exact words are what the database stores — no
+        // alternative spellings ("Retrofitting", "Live", "Operational") anywhere.
+        // This is the ONE status field: there is deliberately no second
+        // `installationStatus` alongside it, or the two would drift apart.
         const FLEET_STATUSES = [
-            { value: 'active', label: 'Active' },
-            { value: 'stored', label: 'Stored' },
-            { value: 'retired', label: 'Retired' },
+            { value: 'Planned',        label: 'Planned',        css: 'planned' },
+            { value: 'In Retrofit',    label: 'In Retrofit',    css: 'in-retrofit' },
+            { value: 'Installed',      label: 'Installed',      css: 'installed' },
+            { value: 'Commissioned',   label: 'Commissioned',   css: 'commissioned' },
+            { value: 'Active',         label: 'Active',         css: 'active' },
+            { value: 'Decommissioned', label: 'Decommissioned', css: 'decommissioned' },
         ];
+
+        function fleetStatusOf(a) { return a.fleetStatus || 'Active'; }
+        function fleetStatusCss(v) {
+            const s = FLEET_STATUSES.find(x => x.value === v);
+            return s ? s.css : 'active';
+        }
 
         let fleetEditMode = false;
         let pendingFleet = {};
-        let fleetTypeFilter = '', fleetFitFilter = '', fleetStatusFilter = '';
+        // Opens on the operational fleet; All and the other statuses are one click away.
+        const FLEET_DEFAULT_STATUS = 'Active';
+        let fleetTypeFilter = '', fleetFitFilter = '', fleetStatusFilter = FLEET_DEFAULT_STATUS;
 
         function fleetRowOf(id) {
             return fleetRoster.find(a => a.id === id) || {};
@@ -4782,7 +4809,13 @@
             fleetRoster.forEach((a, idx) => {
                 const staged = pendingFleet[a.id] || {};
                 const fit = staged.fit || a.fit || 'retrofit';
-                const st = staged.fleetStatus || a.fleetStatus || 'active';
+                const st = staged.fleetStatus || fleetStatusOf(a);
+                // Activation date lives on /aircraft/{tail}/activatedDate — the field the
+                // Maintenance tab already edits. Read it here rather than storing the same
+                // fact twice on the fleet record.
+                const activated = staged.activatedDate !== undefined
+                    ? staged.activatedDate
+                    : ((aircraftLive[a.id] || {}).activatedDate || '');
                 const comments = staged.comments !== undefined ? staged.comments : (a.comments || '');
 
                 const row = document.createElement('tr');
@@ -4807,7 +4840,12 @@
                     ? `<select class="edit-select" data-id="${a.id}" data-field="fleetStatus" onchange="handleFleetEdit(this)">${
                         FLEET_STATUSES.map(s => `<option value="${s.value}" ${s.value === st ? 'selected' : ''}>${s.label}</option>`).join('')
                       }</select>`
-                    : `<span class="status-badge fleet-${st}">${(FLEET_STATUSES.find(s => s.value === st) || FLEET_STATUSES[0]).label}</span>`;
+                    : `<span class="status-badge fleet-${fleetStatusCss(st)}">${escAttr(st)}</span>`;
+
+                // Never inferred — blank until someone types it.
+                const activatedCell = editing
+                    ? `<input type="date" class="edit-date" value="${toISODate(activated)}" data-id="${a.id}" data-field="activatedDate" onchange="handleFleetEdit(this)">`
+                    : (activated ? escAttr(activated) : '<span class="fleet-notset">Not set</span>');
 
                 const commentCell = editing
                     ? `<input class="edit-text comment-input" value="${escAttr(comments)}" placeholder="Add a comment" data-id="${a.id}" data-field="comments" onchange="handleFleetEdit(this)">`
@@ -4822,7 +4860,8 @@
                     <td data-sort="${a.id}"><strong>${a.id}</strong></td>
                     <td data-sort="${escAttr(a.type)}">${typeCell}</td>
                     <td data-sort="${fit}">${fitCell}</td>
-                    <td data-sort="${st}">${statusCell}</td>
+                    <td data-sort="${escAttr(st)}">${statusCell}</td>
+                    <td data-sort="${dateSortKey(toISODate(activated)) || '99999999'}">${activatedCell}</td>
                     <td class="col-comment" data-sort="${escAttr(comments)}">${commentCell}</td>
                     ${actionCell}
                 `;
@@ -4854,7 +4893,18 @@
                     <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
                 </div>`;
             };
+            // Every figure counted from the roster — nothing here is a literal.
+            const byStatus = {};
+            fleetRoster.forEach(a => {
+                const st = fleetStatusOf(a);
+                byStatus[st] = (byStatus[st] || 0) + 1;
+            });
             let html = card('Total Fleet', fleetRoster.length, 'latest');
+            html += card('Active', byStatus['Active'] || 0, 'latest');
+            html += card('In Retrofit', byStatus['In Retrofit'] || 0, 'older');
+            // Any other status only earns a card once something actually has it.
+            FLEET_STATUSES.filter(x => x.value !== 'Active' && x.value !== 'In Retrofit')
+                .forEach(x => { if (byStatus[x.value]) html += card(x.label, byStatus[x.value], 'no_media'); });
             html += card('Retrofit', retrofit, 'previous');
             html += card('Linefit', linefit, 'older');
             html += Object.keys(byType).sort().map(t => card(TYPE_SHORT_LABEL[t] || t, byType[t], 'no_media')).join('');
@@ -4885,11 +4935,15 @@
         }
 
         function resetFleetTable() {
-            fleetTypeFilter = ''; fleetFitFilter = ''; fleetStatusFilter = '';
+            fleetTypeFilter = ''; fleetFitFilter = ''; fleetStatusFilter = FLEET_DEFAULT_STATUS;
+            // Status resets to the default operational view, not to the first pill —
+            // the other groups do clear to All.
             document.querySelectorAll('#fleet .filter-groups .quick-filters').forEach(group => {
                 group.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
-                const first = group.querySelector('.qf-btn');
-                if (first) first.classList.add('active');
+                const wanted = [...group.querySelectorAll('.qf-btn')].find(b =>
+                    (b.getAttribute('onclick') || '').includes(`'${FLEET_DEFAULT_STATUS}'`));
+                const target = wanted || group.querySelector('.qf-btn');
+                if (target) target.classList.add('active');
             });
             delete lastSort['fleetTable'];
             updateSortIndicators('fleetTable');
@@ -4923,7 +4977,9 @@
         function handleFleetEdit(el) {
             const id = el.dataset.id, field = el.dataset.field;
             pendingFleet[id] = pendingFleet[id] || {};
-            pendingFleet[id][field] = field === 'comments' ? el.value.trim() : el.value;
+            pendingFleet[id][field] = field === 'comments' ? el.value.trim()
+                : field === 'activatedDate' ? (el.value ? fmtDate(el.value) : '')
+                : el.value;
             const row = fleetRowOf(id);
             if (row) row[field] = pendingFleet[id][field];
             setSyncStatus(`🟡 ${id} staged — press Save`, '#e0a800');
@@ -4938,17 +4994,36 @@
             if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
             setSyncStatus('🟡 Saving fleet...', '#e0a800');
 
-            const multi = {};
+            // activatedDate is a property of the aircraft, not of the roster entry, so it
+            // goes to /aircraft while everything else goes to /fleet. Two nodes, two
+            // writes, one Save — the same split the Hardware tab uses for SIM roaming.
+            const multi = {}, acMulti = {};
             ids.forEach(id => Object.entries(pendingFleet[id]).forEach(([f, v]) => {
+                if (f === 'activatedDate') { acMulti[`${id}/activatedDate`] = v || null; return; }
                 multi[`${id}/${f}`] = (f === 'comments' && !v) ? null : v;
             }));
 
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/fleet.json?auth=${token}`, {
-                    method: 'PATCH', body: JSON.stringify(multi),
-                });
-                const data = await res.json();
-                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                if (Object.keys(multi).length) {
+                    const res = await fetch(`${FIREBASE_DB_URL}/fleet.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(multi),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                }
+                if (Object.keys(acMulti).length) {
+                    const res2 = await fetch(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(acMulti),
+                    });
+                    const data2 = await res2.json();
+                    if (!res2.ok || (data2 && data2.error)) throw new Error((data2 && data2.error) || 'write failed');
+                    Object.keys(pendingFleet).forEach(id => {
+                        const v = pendingFleet[id].activatedDate;
+                        if (v === undefined) return;
+                        aircraftLive[id] = aircraftLive[id] || {};
+                        if (v) aircraftLive[id].activatedDate = v; else delete aircraftLive[id].activatedDate;
+                    });
+                }
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
                 pendingFleet = {};
                 fleetEditMode = false;
@@ -7180,7 +7255,9 @@
         }
 
         function activeFleet() {
-            return aircraftData.filter(a => (a.fleetStatus || 'active') === 'active');
+            // "Active" only. An aircraft mid-retrofit is in the programme but is not
+            // operational, so it is out of maintenance and hardware scope by definition.
+            return aircraftData.filter(a => fleetStatusOf(a) === 'Active');
         }
 
         function updateMetrics() {

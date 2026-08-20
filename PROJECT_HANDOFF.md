@@ -22,8 +22,9 @@ Realtime Database so the whole team sees the same data instantly.
 `gh` CLI and `firebase` CLI (via `npx firebase-tools`) are already authenticated
 on this Mac — no login needed to keep working.
 
-Live data (read from the database 2026-08-19): 42 aircraft (40 retrofit +
-2 linefit), 24 on Middleware 2.1.0, 38 with media loaded, 24 schedule entries,
+Live data (read from the database 2026-08-20): **44 aircraft — 41 Active,
+3 In Retrofit** (AQB, ASD, ASO). 42 retrofit + 2 linefit by `fit`.
+24 schedule entries,
 1 maintenance activity, 1 hardware record, 69 visits, 1 allowlisted editor.
 `/activities` and `/hardware` are new and barely populated — a Hardware fitment
 reading "no record" is a gap in the record, not a fault.
@@ -75,7 +76,7 @@ adding it to the rules first.
 | `type` | e.g. `A320-214`, `A321-253NY XLR` |
 | `station` | `JED` / `RUH` / `N/A` |
 | `fit` | `retrofit` (the 40) \| `linefit` (ASBA, ASBB) |
-| `fleetStatus` | `active` \| `stored` \| `retired` |
+| `fleetStatus` | **WiFi installation status** — one of `Planned`, `In Retrofit`, `Installed`, `Commissioned`, `Active`, `Decommissioned`. Exact strings, defined once in `FLEET_STATUSES` |
 | `comments` | free text |
 
 ### `/aircraft/{tail}` — per-aircraft state
@@ -157,6 +158,30 @@ are all rejected (12 curl cases verified). The residual exposure is that anyone
 can inflate the counter one increment per request; nothing else in the database
 is reachable this way. If that ever matters, the fix is an authenticated
 endpoint, not tighter rules here.
+
+---
+
+## Fleet status — one field, not two
+
+`fleetStatus` on `/fleet/{tail}` is the **only** status field. A request once came
+in for a separate `installationStatus` with a richer enum; rather than run two
+status fields that would drift, the existing one was widened to those exact six
+values. `FLEET_STATUSES` defines them once — value and label are the same string
+because those strings are what the database stores.
+
+`activeFleet()` is `fleetStatus === 'Active'`. **An aircraft mid-retrofit is in the
+programme but is not operational**, so it is out of Maintenance and Hardware scope
+by definition. The Fleet page opens on the Active view (`FLEET_DEFAULT_STATUS`).
+
+Note `fit: 'retrofit'` and `fleetStatus: 'In Retrofit'` mean different things and
+can both be true: `fit` is how WiFi got onto the airframe (retrofitted vs linefit
+from the factory), `fleetStatus` is where it is in the programme *right now*.
+
+**Activation date is `activatedDate` on `/aircraft/{tail}`**, not on the fleet
+record — the same field the Maintenance tab edits. The Fleet page shows it as the
+Activation Date column and can edit it there too, which is why a Fleet save writes
+to two nodes: the roster fields to `/fleet`, `activatedDate` to `/aircraft`. It is
+never inferred; blank shows as "Not set".
 
 ---
 
@@ -668,6 +693,11 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### Fleet restructure — 44 aircraft, installation statuses, activation date
+`fleetStatus` widened to the six canonical programme statuses. AQB reclassified to
+In Retrofit; ASD and ASO added. Fleet page gained an Activation Date column
+(reading the existing `activatedDate`) and status filters, opening on Active.
 
 ### Rules fix (no client change) — Software tab could not save
 `swVersion`'s validate regex was over-escaped: the engine received `\\.` (escaped
