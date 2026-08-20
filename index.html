@@ -3801,10 +3801,23 @@
 
         // Scope numbers are counted from the roster, not hardcoded, so adding aircraft
         // updates every metric card and percentage at once.
+        // ===== Fleet scopes — three populations, one definition each =====
+        //
+        // Two axes decide who counts, and both matter:
+        //   fleetStatus — only "Active" aircraft are operational. One still In Retrofit
+        //                 has no middleware and no media yet, so counting it would drag
+        //                 every percentage down against work that has not started.
+        //   fit         — the A321XLR linefit pair (ASBA/ASBB) run different software,
+        //                 carry no media and have their own hardware. They are tracked
+        //                 by SBC configuration, never mixed into the retrofit figures.
+        //
+        // So: 44 in the programme, 41 Active, of which 39 retrofit + 2 linefit.
+        // projectScope stays the whole programme because the Fleet page is the one
+        // place that legitimately reports on aircraft not yet active.
         function projectScope()    { return fleetRoster.length; }
-        function hbcScope()        { return aircraftData.filter(isLinefit).length; }
-        function middlewareScope() { return projectScope() - hbcScope(); }
-        function mediaScope()      { return middlewareScope(); }   // HBC+ pair is out of media scope
+        function hbcScope()        { return hbcFleet().length; }
+        function middlewareScope() { return swFleet().length; }
+        function mediaScope()      { return mediaFleet().length; }
 
         function renderAll() {
             if (editMode) {
@@ -4563,7 +4576,7 @@
             populateTypeFilterOptions();
 
             // Default view: alphabetical by registration (also drives the # column)
-            const mainFleet = aircraftData.filter(a => !isLinefit(a)).sort((a, b) => a.id.localeCompare(b.id));
+            const mainFleet = swFleet().sort((a, b) => a.id.localeCompare(b.id));
 
             mainFleet.forEach((aircraft, idx) => {
                 const row = document.createElement('tr');
@@ -4732,8 +4745,14 @@
 
         function latestSwVersion() { return SW_VERSIONS[SW_VERSIONS.length - 1]; }
 
+        // Active retrofit aircraft — the Software and Media population (39).
         function swFleet() {
-            return aircraftData.filter(a => !isLinefit(a));
+            return activeFleet().filter(a => !isLinefit(a));
+        }
+
+        // Active linefit aircraft — the HBC+ / SBC population (2), deliberately apart.
+        function hbcFleet() {
+            return activeFleet().filter(isLinefit);
         }
 
         function renderSwVersionWidgets() {
@@ -5063,7 +5082,7 @@
 
         // Media is tracked for the main fleet only — the HBC+ pair carries no media load.
         function mediaFleet() {
-            return aircraftData.filter(a => !isLinefit(a)).sort((a, b) => a.id.localeCompare(b.id));
+            return swFleet().sort((a, b) => a.id.localeCompare(b.id));
         }
 
         function populateMediaTable() {
@@ -6346,7 +6365,7 @@
             const tbody = document.getElementById('hbcTableBody');
             if (!tbody) return;
             tbody.innerHTML = '';
-            const hbc = aircraftData.filter(isLinefit).sort((a, b) => a.id.localeCompare(b.id));
+            const hbc = hbcFleet().sort((a, b) => a.id.localeCompare(b.id));
             hbc.forEach((aircraft, idx) => {
                 const row = document.createElement('tr');
                 const done = aircraft.beamcfgStatus === 'done';
@@ -6880,10 +6899,10 @@
 
             const TOTAL_COLORS = { bg: '#eaf6ee', bd: '#bfe3cb', fg: '#1e7e34' };
 
-            const hbcAircraft = aircraftData.filter(isLinefit);
+            const hbcAircraft = hbcFleet();
             const hbcDone = hbcAircraft.filter(a => a.beamcfgStatus === 'done');
 
-            let html = widget('Total', completedStrict.length, projectScope(), TOTAL_COLORS);
+            let html = widget('Total', completedStrict.length, middlewareScope(), TOTAL_COLORS);
             TYPE_GROUPS.forEach(g => {
                 const s = typeStats[g.key];
                 html += widget(g.label, s.completed, s.total, TYPE_PILL_COLORS[g.key] || NEUTRAL_PILL);
@@ -7021,7 +7040,13 @@
             const byTail = {};
             aircraftData.forEach(a => { byTail[a.id] = a; });
 
-            aircraftData.forEach(a => {
+            // Active aircraft only, on every source below. An aircraft still In Retrofit
+            // is in the programme but not yet in service, and showing its work here would
+            // put it on the Overview while every count deliberately excludes it.
+            // To surface retrofit work in progress, this is the one line to relax.
+            const inScope = t => fleetStatusOf(byTail[t] || {}) === 'Active';
+
+            activeFleet().forEach(a => {
                 // --- Software: the completion already recorded on the Software tab ---
                 const iso = toISODate(a.completionDate);
                 if (iso) {
@@ -7056,6 +7081,7 @@
             activityEntries().forEach(act => {
                 const iso = toISODate(act.date);
                 if (!iso) return;
+                if (!inScope(act.aircraft)) return;
                 const cat = activityCategory(act.category);
                 const air = byTail[act.aircraft] || {};
                 const title = act.title || cat.label;
@@ -7261,7 +7287,8 @@
         }
 
         function updateMetrics() {
-            const active = aircraftData.filter(a => !isLinefit(a));
+            // The Software/Media population: Active retrofit only.
+            const active = swFleet();
             const completedStrict = active.filter(isCompletedStrict);
 
             // --- Global widget 1: software loading ---
@@ -7275,7 +7302,7 @@
             setWidth('metricSwBar', swRate + '%');
 
             // --- Global widget 2: linefit / SBC configuration on the HBC+ pair ---
-            const sbcDone = aircraftData.filter(a => isLinefit(a) && a.beamcfgStatus === 'done').length;
+            const sbcDone = hbcFleet().filter(a => a.beamcfgStatus === 'done').length;
             const sbcScope = hbcScope() || 1;
             const sbcRate = Math.round((sbcDone / sbcScope) * 1000) / 10;
             setText('metricSbcValue', sbcDone);
@@ -7499,12 +7526,13 @@
             ].join(''));
 
             const latestCycle = latestMediaCycle();
-            const swOn = aircraftData.filter(a => !isLinefit(a) && swVersionOf(a) === latestSwVersion()).length;
+            const swOn = swFleet().filter(a => swVersionOf(a) === latestSwVersion()).length;
             const mediaOn = latestCycle
                 ? mediaFleet().filter(a => a.media && a.media.mediaCycle === latestCycle).length : 0;
 
             setHTML('sysInfoData', [
-                cell('Aircraft in Scope', projectScope(), `${middlewareScope()} retrofit · ${hbcScope()} linefit`),
+                cell('Aircraft in Scope', projectScope(), `${activeFleet().length} active · ${projectScope() - activeFleet().length} in retrofit`),
+                cell('Active Population', `${middlewareScope()} retrofit`, `+ ${hbcScope()} linefit (HBC+)`),
                 cell('Software Tracked', `${swOn} / ${middlewareScope()}`, `on ${latestSwVersion()}`),
                 cell('Media Tracked', `${mediaOn} / ${mediaScope()}`, latestCycle ? `on ${cycleToDisplay(latestCycle)}` : 'no cycle loaded'),
                 cell('Last Data Sync', sysRelTime(lastDataSyncAt),

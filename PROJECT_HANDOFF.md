@@ -202,9 +202,31 @@ So an editor sets **Middleware version** and **Completion Location**, and the
 Status badge, row highlight, type cards, station cards, Timeline and global
 widgets all follow. (Verified: one upgrade moves all of them 24 → 25.)
 
-Scope numbers are **counted, never hardcoded**: `projectScope()` (roster size),
-`hbcScope()` (linefit count), `middlewareScope()`, `mediaScope()`.
-Adding an aircraft moves every table, filter and percentage at once.
+### Three populations, one definition each
+
+Two axes decide who counts, and **both** matter:
+
+| | meaning |
+|---|---|
+| `fleetStatus` | only `Active` is operational. In Retrofit has no middleware and no media yet, so counting it drags every percentage down against work that has not started |
+| `fit` | the A321XLR linefit pair (ASBA/ASBB) run different software, carry no media and have their own hardware — tracked by SBC configuration, never mixed into retrofit figures |
+
+```
+projectScope()  44   whole programme  — Fleet page only
+activeFleet()   41   Active, any fit  — Maintenance, Hardware, Timeline
+swFleet()       39   Active + retrofit — Software, Media, and every widget of theirs
+hbcFleet()       2   Active + linefit  — HBC+ / SBC only
+```
+
+`middlewareScope()`, `mediaScope()` and `hbcScope()` are just the lengths of those.
+**There are no inline `isLinefit` filters left** — every caller goes through a
+helper, so the definition cannot drift page to page. Scope numbers are counted,
+never hardcoded: changing an aircraft's status moves every table, filter and
+percentage at once.
+
+**The Timeline is Active-only too**, on all three of its sources. `inScope()` in
+`timelineActivities()` is the single line to relax if retrofit-in-progress work
+should ever be visible before activation.
 
 Note the software widget counts aircraft *on the latest middleware*, while
 completion additionally requires a location — they can legitimately differ by
@@ -693,6 +715,11 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### Scope split — Active only, retrofit and linefit apart
+Software and Media now count 39 (Active retrofit), the SBC widget 2 (Active
+linefit), Maintenance 41 (Active). In Retrofit aircraft appear on the Fleet page
+and nowhere else, Timeline included.
 
 ### Fleet restructure — 44 aircraft, installation statuses, activation date
 `fleetStatus` widened to the six canonical programme statuses. AQB reclassified to
