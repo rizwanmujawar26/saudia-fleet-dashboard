@@ -524,11 +524,14 @@ when the state changes — the pinning itself is pure CSS.
 
 Full runbook: **`DISASTER-RECOVERY.md`**. In short:
 
-- `scripts/backup.sh` snapshots every readable node to `backups/<UTC date>/` with
-  a checksummed manifest and a copy of the rules. **Anonymous reads only, so it
-  needs no credentials** — nothing to expire, nothing to leak.
-- `.github/workflows/backup.yml` runs it at 02:15 UTC daily and commits the result.
-  No secrets required.
+- `scripts/backup.sh` snapshots every readable node with a checksummed manifest
+  and a copy of the rules. **Anonymous reads only, so it needs no credentials** —
+  nothing to expire, nothing to leak.
+- **Snapshots never go in this repo.** It is public, and git history is harder to
+  walk back than a live database. `backups/` is gitignored; point
+  `FLEET_BACKUP_DIR` at somewhere private. Automation options are in the runbook.
+- **Anonymous backup stops working once reads require auth** (see *Making this
+  private*). That migration has to include a service account for the backup.
 - `scripts/restore.sh` is **dry-run by default**, verifies every checksum before
   proceeding, takes a safety copy of current state into its own folder, and needs
   the project id typed to confirm. Rules are never restored implicitly.

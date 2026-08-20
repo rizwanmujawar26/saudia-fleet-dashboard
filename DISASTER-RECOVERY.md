@@ -11,7 +11,7 @@ this. Commands assume you are in the repo root.
 |---|---|---|
 | The app | `index.html`, one self-contained file | Git history |
 | Security rules | `database.rules.json` | Git history, and a copy inside every snapshot |
-| The data | Firebase Realtime Database | Daily snapshot in `backups/<UTC date>/` |
+| The data | Firebase Realtime Database | `scripts/backup.sh` -> a **private** location, gitignored |
 | Editor allowlist | `/editors` in the database | **Not backed up — see below** |
 
 A snapshot folder holds one JSON file per node, a copy of the rules, and a
@@ -36,24 +36,47 @@ uids come from Firebase Console → Authentication → Users.
 
 ## Backups
 
-Automatic: `.github/workflows/backup.yml` runs at 02:15 UTC daily and commits the
-snapshot. It uses **no secrets** — the backup reads the database anonymously, so
-there is no token to expire and no credential to leak. Trigger one by hand from
-the Actions tab, or locally:
+Snapshots contain the **entire operational dataset**. They are deliberately kept
+out of this repository: it is public, and anything committed to git history is far
+harder to walk back than a live database. `backups/` is gitignored.
+
+Take one locally at any time — no credentials needed, it reads the database
+anonymously:
 
 ```bash
 ./scripts/backup.sh
 ```
 
-Snapshots are ~60 KB each, so daily retention costs roughly **20 MB of repo per
-year**. Nothing prunes them automatically — deleting backups is your call, not a
-script's.
+Send it somewhere private with `FLEET_BACKUP_DIR`:
 
-> **Note on visibility.** This repo is public, and so is the database (public
-> read, authenticated write — see the handoff doc). The backup therefore exposes
-> nothing that was not already readable. It *does* put the data into permanent
-> git history, which is harder to walk back than a live database. If that is not
-> wanted, point the workflow at a private repo instead.
+```bash
+FLEET_BACKUP_DIR="$HOME/Documents/fleet-backups/$(date -u +%F)" ./scripts/backup.sh
+```
+
+Snapshots are ~60 KB, so a year of dailies is about 20 MB wherever they land.
+
+### Automating it privately
+
+A scheduled job needs somewhere private to write. In rough order of effort:
+
+1. **A private GitHub repo.** Create one, add a fine-grained PAT with contents
+   write on it as a secret in *this* repo, and have a workflow here push snapshots
+   there. Keeps the free scheduling without publishing anything.
+2. **A local cron job** on a machine that is reliably on:
+   ```bash
+   # crontab -e   — 02:15 daily, into a private folder
+   15 2 * * * cd /Users/rizwanmujawar/Downloads/saudia-fleet-dashboard && \
+     FLEET_BACKUP_DIR="$HOME/Documents/fleet-backups/$(date -u +\%F)" ./scripts/backup.sh
+   ```
+3. **After the move to private access** (below), anonymous reads stop working and
+   the backup will need a service account instead. Plan that as part of the move,
+   not after it.
+
+> **Already public:** snapshots were briefly committed to this public repo on
+> 2026-08-20 and removed the same day. They duplicated data the database was
+> already serving publicly, so nothing was exposed that was not already reachable
+> — but the commits remain in history until it is rewritten. See *Making this
+> private* below.
 
 ---
 

@@ -1,0 +1,4 @@
+# Snapshots hold the full operational dataset. They stay out of this repo —
+# it is public, and git history is far harder to walk back than a live database.
+# See DISASTER-RECOVERY.md for where backups should actually go.
+backups/
