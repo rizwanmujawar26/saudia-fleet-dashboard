@@ -3569,6 +3569,10 @@
             { id: 'krfu',       label: 'KRFU',       fit: 'retrofit', aliases: ['krfu'] },
             { id: 'rx_antenna', label: 'RX Antenna', fit: 'retrofit', aliases: ['rx antenna', 'rx ant', 'rx'] },
             { id: 'tx_antenna', label: 'TX Antenna', fit: 'retrofit', aliases: ['tx antenna', 'tx ant', 'tx'] },
+            // Sits in the RF chain between the KRFU and the antennas, so it is listed
+            // with them rather than at the end.
+            { id: 'waveguide_adapter', label: 'Waveguide Adapter', fit: 'retrofit',
+              aliases: ['waveguide adapter', 'waveguide', 'wg adapter'] },
             // Fitted more than once per aircraft, and a different number by type — so
             // its fitment is tracked per position rather than one serial per aircraft.
             // Types absent from qtyByType fall back to `qty`.
