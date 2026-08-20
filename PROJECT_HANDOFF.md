@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.10.0, 2026-08-19)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.11.0, 2026-08-20)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -14,7 +14,7 @@ Realtime Database so the whole team sees the same data instantly.
 - **Local path:** `/Users/rizwanmujawar/Downloads/saudia-fleet-dashboard/index.html`
 - **Firebase project:** `saudia-fleet-dashboard` (Realtime Database, us-central1)
   DB URL: `https://saudia-fleet-dashboard-default-rtdb.firebaseio.com`
-- Single file, ~7,500 lines, vanilla HTML/CSS/JS. No build step, no framework,
+- Single file, ~7,700 lines, vanilla HTML/CSS/JS. No build step, no framework,
   and **no external scripts at all** — nothing to fetch from a CDN.
 - **There is no build, lint or type tooling, deliberately.** The checks that do
   exist are in *Local dev workflow* below. Don't add a toolchain unasked.
@@ -22,11 +22,16 @@ Realtime Database so the whole team sees the same data instantly.
 `gh` CLI and `firebase` CLI (via `npx firebase-tools`) are already authenticated
 on this Mac — no login needed to keep working.
 
-Live data (read from the database 2026-08-20): **44 aircraft — 41 Active,
-3 In Retrofit** (AQB, ASD, ASO). 42 retrofit + 2 linefit by `fit`.
-24 schedule entries,
-1 maintenance activity, 1 hardware record, 69 visits, 1 allowlisted editor.
-`/activities` and `/hardware` are new and barely populated — a Hardware fitment
+Live data (read from the database 2026-08-20):
+
+- **44 aircraft** — 41 Active, 3 In Retrofit (AQB, ASD, ASO)
+- Of the 41 Active: **39 retrofit + 2 linefit** (ASBA/ASBB, the A321XLR HBC+ pair)
+- **39 is the Software and Media denominator.** 27 on Middleware 2.1.0, 35 on the
+  current media cycle
+- 24 schedule entries, 5 maintenance activities, 1 hardware record, ~125 visits,
+  1 allowlisted editor
+
+`/activities` and `/hardware` are still lightly populated — a Hardware fitment
 reading "no record" is a gap in the record, not a fault.
 
 ---
@@ -75,7 +80,7 @@ adding it to the rules first.
 |---|---|
 | `type` | e.g. `A320-214`, `A321-253NY XLR` |
 | `station` | `JED` / `RUH` / `N/A` |
-| `fit` | `retrofit` (the 40) \| `linefit` (ASBA, ASBB) |
+| `fit` | `retrofit` (42) \| `linefit` (2 — ASBA, ASBB). **How WiFi got onto the airframe, not where it is in the programme** — an aircraft can be `fit: retrofit` *and* `fleetStatus: In Retrofit` |
 | `fleetStatus` | **WiFi installation status** — one of `Planned`, `In Retrofit`, `Installed`, `Commissioned`, `Active`, `Decommissioned`. Exact strings, defined once in `FLEET_STATUSES` |
 | `comments` | free text |
 
@@ -97,9 +102,12 @@ adding it to the rules first.
 | `activatedDate` | `DD-Mon-YYYY` |
 | `simRoaming` | `active` \| `inactive` — the SIM subscription, not the card |
 
-The last three are edited on the Maintenance tab but stored at the **top level**,
-deliberately *not* under `maintenance` — clearing a flag writes `maintenance: null`,
-which would take them with it every time an aircraft was marked serviceable.
+`retrofitLocation`, `wifiVisibility`, `activatedDate` and `simRoaming` are stored
+at the **top level**, deliberately *not* under `maintenance` — clearing a flag
+writes `maintenance: null`, which would take them with it every time an aircraft
+was marked serviceable. `activatedDate` is editable on **both** the Maintenance
+profile and the Fleet page's Activation Date column; a Fleet save therefore writes
+roster fields to `/fleet` and this one to `/aircraft`.
 
 `retrofitLocation` is not `completionLocation`. Completion is where the *software*
 load finished and is constrained to Jeddah/Riyadh; retrofit location is where the
@@ -306,9 +314,14 @@ subscription state that survives a card swap. The Roaming column appears only fo
 the SIM units, and editing it writes to `/aircraft` while the LRU's own fields
 write to `/hardware` — one Save, two correctly-targeted writes.
 
-⚠️ **The linefit list is a placeholder.** It currently mirrors the retrofit set so
-the pane is usable; the real linefit equipment list has not been supplied.
-Correcting it is an edit to `HARDWARE_LRUS` and nothing else.
+⚠️ **The linefit list is a placeholder and has now diverged.** It still mirrors the
+original retrofit set (7 units), while retrofit has grown to 10 — CWAP, Waveguide
+Adapter and Coax Cable J12 were all added retrofit-only, because the real linefit
+equipment list has never been supplied. Correcting it is an edit to
+`HARDWARE_LRUS` and nothing else.
+
+Retrofit units, in RF-chain order: SIM Card, IFE Server, MODMAN, KANDU, KRFU,
+RX Antenna, TX Antenna, Waveguide Adapter, Coax Cable J12, CWAP.
 
 The two-pane shell reuses the `.maint-*` classes — they style a generic
 list/detail layout and the prefix is historical. Worth unifying under a neutral
@@ -731,6 +744,17 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.11.0 — Timeline rows, equipment list, fleet scope
+**Timeline rows carry no repeated words.** The kind pill is hidden under a kind
+filter (it only restated the filter), and the grey subtitle is now the most
+specific fact rather than the category — the part for a hardware job, software +
+version for a load. `dedupeSubtitle()` drops it when the title already says it.
+The Add Activity title placeholder was the root cause and now prompts for the
+symptom, not the part.
+
+**Equipment list** gained Waveguide Adapter and Coax Cable J12, both retrofit,
+placed in RF-chain order.
 
 ### Scope split — Active only, retrofit and linefit apart
 Software and Media now count 39 (Active retrofit), the SBC widget 2 (Active
