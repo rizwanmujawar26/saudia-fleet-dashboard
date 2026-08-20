@@ -496,6 +496,16 @@ when the state changes — the pinning itself is pure CSS.
 
 ## Conventions
 
+- **Regex escaping in `database.rules.json` is a trap that fails silently.** The
+  file is JSON, so a backslash is written `\\` and *decodes* to one backslash. To
+  match a literal dot the rule needs `\\.` in the file — `\\\\.` decodes to `\\.`,
+  which the engine reads as *escaped backslash then any character*, and it then
+  matches nothing you intended. This shipped and blocked every `swVersion` write on
+  the Software tab; nothing in the deploy reported a problem, because the rules were
+  syntactically valid. **After editing any rule containing a backslash, print the
+  decoded string and check it**, then prove it against the live engine with a
+  temporary `.write: true` test node before trusting it.
+
 - **A date column's `data-sort` must go through `dateSortKey()`.** `sortTable`
   tries `parseFloat` before falling back to a string compare, and
   `parseFloat('2026-05-19')` is `2026` — so a raw ISO key made every date within a
@@ -507,6 +517,27 @@ when the state changes — the pinning itself is pure CSS.
   day. `parseScheduleUTC()` / `toISODate()` / `fmtDate()` are the only parsers.
 - All times UTC/Zulu.
 - No external scripts. Keep it that way.
+
+---
+
+## Backups & disaster recovery
+
+Full runbook: **`DISASTER-RECOVERY.md`**. In short:
+
+- `scripts/backup.sh` snapshots every readable node to `backups/<UTC date>/` with
+  a checksummed manifest and a copy of the rules. **Anonymous reads only, so it
+  needs no credentials** — nothing to expire, nothing to leak.
+- `.github/workflows/backup.yml` runs it at 02:15 UTC daily and commits the result.
+  No secrets required.
+- `scripts/restore.sh` is **dry-run by default**, verifies every checksum before
+  proceeding, takes a safety copy of current state into its own folder, and needs
+  the project id typed to confirm. Rules are never restored implicitly.
+- **`/editors` is not in the backups** — it is not anonymously readable, by design.
+  Keep the uid list outside the repo or a restore leaves nobody able to edit.
+
+Both scripts honour `FLEET_DB_URL` / `FLEET_PROJECT`, so they work against a new
+Firebase project without edits. The app itself is host-coupled by exactly two
+constants, `FIREBASE_DB_URL` and `FIREBASE_API_KEY`.
 
 ---
 
@@ -623,6 +654,19 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### Rules fix (no client change) — Software tab could not save
+`swVersion`'s validate regex was over-escaped: the engine received `\\.` (escaped
+backslash + any char) instead of `\.`, so **no valid version string could match** and
+every Software save was rejected. Because the batch is one atomic multi-path PATCH,
+a version change took the whole save down with it. Proved with an A/B test node
+against the live engine — old pattern `401`, corrected pattern `200` — before
+touching the real rules. `wo_flags` had the same defect (permissive, so unnoticed)
+and was fixed with it.
+
+### Backups, restore and portability
+`scripts/backup.sh`, `scripts/restore.sh`, a daily GitHub Actions workflow, and
+`DISASTER-RECOVERY.md`.
 
 ### v2.10.0 — Hardware part picker, CWAP, per-position fitment
 Part Replaced became a dropdown fed by `HARDWARE_LRUS`, filtered to the aircraft's

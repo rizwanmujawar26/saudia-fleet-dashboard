@@ -1,0 +1,42 @@
+{
+  "takenAtUTC": "2026-08-20T13:18:58Z",
+  "source": "https://saudia-fleet-dashboard-default-rtdb.firebaseio.com",
+  "note": "/editors is not included: it is not anonymously readable by design.",
+  "files": {
+    "activities.json": {
+      "records": 3,
+      "bytes": 1021,
+      "sha256": "9551e7297e2dc1b941070a1261b1106f080a2345f1e667d7aa6a8f93836a5e4c"
+    },
+    "aircraft.json": {
+      "records": 42,
+      "bytes": 13321,
+      "sha256": "dcd824d6210c07032857b04129843c0a2ec5e3d56606bbfb7449651f2a59ec28"
+    },
+    "database.rules.json": {
+      "records": 1,
+      "bytes": 8916,
+      "sha256": "7fce4b9422f45c8dc359cb81a14b4d9f1aef5d770bd717319326d2d557cfb8c1"
+    },
+    "fleet.json": {
+      "records": 42,
+      "bytes": 5004,
+      "sha256": "4d7990dddad48e246163212223c3f702dc204277d3cb8d997085618f61f16636"
+    },
+    "hardware.json": {
+      "records": 1,
+      "bytes": 392,
+      "sha256": "72326d777dcd980b3e968c5aece5c44e1c8ef1257bfcaa17b9214c308a80d21f"
+    },
+    "schedule.json": {
+      "records": 24,
+      "bytes": 5167,
+      "sha256": "86dafc09b2c87de4c3235d606d544392dc20380cd148280e33c392dd9432bb4b"
+    },
+    "visits.json": {
+      "records": 2,
+      "bytes": 130,
+      "sha256": "8555c887e132ece7e2b7f0238f2a5329b312f181dfad4dfce5d84629b202c411"
+    }
+  }
+}
