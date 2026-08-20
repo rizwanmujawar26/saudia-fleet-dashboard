@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.11.0, 2026-08-20)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.12.0, 2026-08-20)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -131,6 +131,12 @@ clobber the other.
 depend on the category (`partReplaced`/`partNumber`/`oldPart`/`newPart`
 plus `removalReason`, `shopStatus`, `shopRef`, `shopFinding`;
 `softwareName`/`version`; `modemType`/`commissioningResult`).
+
+`details.recordType` is `baseline` on records written by **Record Installed
+Serials** and absent on everything else. It marks the record as *inventory* — a
+statement of what is fitted — rather than a day's work, and that is the only
+thing that keeps a few hundred of them off the Timeline. `isBaselineRecord()` is
+the one place it is read.
 
 A hardware record is the whole life-event of a unit: what came off, what went on,
 why, and — filled in later — what the shop found. The Hardware tab reads all of it.
@@ -286,6 +292,41 @@ wiring. New records store `details.lruId`, so the link to the Hardware tab is ex
 text before the picker existed. Part number is **not** asked for on the activity:
 it belongs to the unit and is defined once on the Hardware tab.
 
+**Baseline serials are entered in bulk, not one modal at a time.** Recording what
+is already fitted across ~40 aircraft x ~10 LRUs is ~400 trips through a form
+built for logging one replacement. **Record Installed Serials** on the Hardware
+tab is a grid for it, offered two ways because a baseline is collected both ways:
+
+- **By Aircraft** — a tail expands to every LRU it carries, one blank per unit,
+  position-tracked units split per position (CWAP 1/5 … 5/5).
+- **By Equipment** — one unit straight down the fleet: all the SIM cards, then
+  all the MODMANs.
+
+The draft is keyed `lru|tail|position` and **survives switching between the two**,
+so a half-finished pass is never lost. Three things are load-bearing:
+
+- **Typing must never re-render** — the field being typed into would lose focus.
+  `blType()` moves the draft, that input's own class and the counters, nothing else.
+- **Rows are built once into `blRowCache` on open.** Recomputing fitment per
+  keystroke would re-walk `/activities` for every aircraft on every character.
+- **The tool is additive only.** A position with a serial already on record is
+  read-only — changing a fitted serial is a *swap*, it needs a reason and a
+  removed unit, and that is Add New Activity's job. A record that named the part
+  but captured no serial does **not** lock the row: the position is genuinely
+  unknown and has to stay fillable. Duplicate serials — typed twice, or typed
+  against one already on record — block the save and are named, because a serial
+  is one physical unit in one place.
+
+Every entry is written as an **ordinary first-fit `hardware_rr` activity**
+(`details.newPart`, no `oldPart`), so there is still exactly one place serials
+live and `hardwareFitment()` reads them unchanged. Save is a **single multi-path
+PATCH** to `/activities`; the rules validate each child on its own.
+
+A blank batch Location falls back to `retrofitLocation` and then to nothing —
+deliberately **not** to `completionLocation` the way the Add Activity form does.
+That is where the *software* load finished, and copying it onto a few hundred
+fitment records would invent the install location instead of leaving it blank.
+
 **Fitment is derived, never stored.** `hardwareFitment(lru)` walks `/activities`
 for `hardware_rr` records whose `details.partReplaced` matches an alias and reads
 the current state from the **latest** change, not from the last serial ever
@@ -343,6 +384,11 @@ single shape (`{ iso, kind, tail, type, location, title, sub }`):
 
 Category → kind lives in `ACTIVITY_CATEGORIES`: `hardware_rr` → Hardware,
 `software_update` → Software, **everything else → Maintenance**.
+
+**Baseline serial records are excluded** (`isBaselineRecord()`). They state what
+is fitted rather than describing a day's work, and there is one per unit per
+aircraft — letting them in would bury whatever day they were entered on under a
+few hundred rows.
 
 The kind filter drives the day counts as well as the rows, so a tile reading
 "2" under Hardware means two hardware activities that day, not two of anything
@@ -426,6 +472,12 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
    flow the table used — nothing that could be edited before was lost.
    **Add New Activity** writes one `/activities` record and nothing else — the
    aircraft history and the Timeline both derive from it.
+   **Installed Equipment** sits between the profile and the history: every LRU
+   this aircraft carries with the serial currently fitted, from
+   `aircraftFitment(a)` — the same derivation `hardwareFitment()` does, pivoted
+   from one-unit-across-the-fleet to one-aircraft-across-its-units. Baseline
+   records are **folded out of that aircraft's activity history** behind a
+   "Show N" control, so ten of them cannot bury one real event.
    Two widgets only — Open Issues and Serviceable — complements of one total, so a
    third card on that strip would just restate them.
    **"Serviceable", not "Clear"** — the MRO term for an aircraft with nothing
@@ -744,6 +796,18 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.12.0 — Bulk baseline serial entry, Installed Equipment
+**Record Installed Serials** on the Hardware tab: a grid for entering what is
+already fitted, By Aircraft or By Equipment, sharing one draft. Entries are
+written as ordinary first-fit `hardware_rr` activities in a single multi-path
+PATCH, so no second home for serials was created. Additive only — a fitted
+serial is read-only and duplicates block the save.
+
+**Installed Equipment** on the Maintenance tab shows each aircraft's LRUs and
+their current serials via the new `aircraftFitment()`. `details.recordType:
+'baseline'` keeps these records off the Timeline and folded out of the activity
+history. Rules deployed ahead of the page, as a new field requires.
 
 ### v2.11.0 — Timeline rows, equipment list, fleet scope
 **Timeline rows carry no repeated words.** The kind pill is hidden under a kind
