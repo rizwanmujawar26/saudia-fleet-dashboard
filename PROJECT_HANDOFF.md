@@ -538,8 +538,19 @@ Full runbook: **`DISASTER-RECOVERY.md`**. In short:
 - **`/editors` is not in the backups** — it is not anonymously readable, by design.
   Keep the uid list outside the repo or a restore leaves nobody able to edit.
 
-Both scripts honour `FLEET_DB_URL` / `FLEET_PROJECT`, so they work against a new
-Firebase project without edits. The app itself is host-coupled by exactly two
+Four scripts, all dry-run-first where they can write:
+
+| script | does |
+|---|---|
+| `backup.sh` | snapshot public nodes — no credentials needed |
+| `backup-secrets.sh` | `/editors` + account list (no password material), private dirs only |
+| `restore.sh` | put a snapshot back, checksum-verified |
+| `migrate-project.sh` | move to a new Firebase project |
+| `verify-deployment.sh` | health + enforcement check for any project |
+
+All honour `FLEET_DB_URL` / `FLEET_PROJECT`, so they work against a new project
+without edits. **The chosen future direction is a new, private Firebase project** —
+the runbook for it is prepared and rehearsed in `DISASTER-RECOVERY.md`. The app itself is host-coupled by exactly two
 constants, `FIREBASE_DB_URL` and `FIREBASE_API_KEY`.
 
 ---

@@ -198,6 +198,52 @@ Recommended: **Cloudflare Access for the page + auth-required rules on the
 database.** Either alone leaves a hole; together, an outsider cannot load the page,
 and could not read the data even if they had the HTML.
 
+### Prepared: moving to a new Firebase project
+
+This is the chosen route. The tooling is built and rehearsed — when you are ready
+it is one command plus a short list of console steps.
+
+```bash
+# 1. Console: create the project + a Realtime Database instance. Nothing else.
+# 2. Rehearse — writes nothing, checks the target exists, shows the plan:
+./scripts/migrate-project.sh <new-project-id>
+
+# 3. Do it. Deploys rules, restores data, verifies enforcement.
+./scripts/migrate-project.sh <new-project-id> --apply
+```
+
+Then the handful of things that cannot be scripted safely — enabling
+Email/Password, creating accounts, adding the **new** uids to `/editors`, and
+updating the two constants in `index.html`. The script prints them with the exact
+commands filled in.
+
+**Passwords are not carried across, deliberately.** `firebase auth:export` can move
+hashes, but it also needs the source project's hash parameters from the console,
+and moving password material around is worse than a reset when there are only a
+few editors. Accounts are recreated; everyone sets a new password once.
+
+**uids differ between projects.** `/editors` holds uids, so the old allowlist is
+meaningless in a new project — it must be rebuilt from the new ones. Capture the
+current mapping first, so you know who is supposed to be on it:
+
+```bash
+./scripts/backup-secrets.sh ~/Documents/fleet-backups/secrets
+```
+
+That writes the allowlist and an account list **without password material**, and
+refuses to write anywhere inside this repo.
+
+### Verifying any project
+
+```bash
+./scripts/verify-deployment.sh <project-id>     # defaults to the current one
+```
+
+Checks reachability, record counts, and that enforcement holds — `/editors` and
+root not anonymously readable, anonymous writes and unknown nodes rejected. It also
+guards against the over-escaped-regex bug that once blocked every Software save, so
+it is worth running after any rules change, not just after a migration.
+
 ### A clean-slate option worth considering
 
 The current database URL is in public git history permanently. Standing up a **new
