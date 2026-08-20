@@ -107,6 +107,7 @@
           "shopStatus":          { ".validate": "newData.isString() && newData.val().matches(/^(pending|in_shop|repaired|scrap|no_fault)$/)" },
           "shopRef":             { ".validate": "newData.isString() && newData.val().length <= 60" },
           "shopFinding":         { ".validate": "newData.isString() && newData.val().length <= 1000" },
+          "recordType":          { ".validate": "newData.isString() && newData.val().matches(/^(baseline)$/)" },
           "$other":              { ".validate": false }
         },
 

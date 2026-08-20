@@ -1825,6 +1825,270 @@
 
         .hw-none { color: #b3bac0; }
 
+        /* ===== Baseline serial entry =====
+           A grid for typing what is already fitted across the whole fleet. Every
+           serial saved here becomes an ordinary first-fit hardware activity, so the
+           Hardware fitment list, the aircraft's Installed Equipment panel and the
+           unit history all read it through the paths they already use. */
+        .bl-modal { max-width: 860px; }
+
+        .bl-intro {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+
+        .bl-modes { display: flex; gap: 8px; margin-bottom: 14px; }
+
+        .bl-mode {
+            flex: 1;
+            padding: 9px 12px;
+            border: 1px solid #d7dde1;
+            background: #fff;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #4a5760;
+        }
+
+        .bl-mode.active {
+            background: #0a5c34;
+            border-color: #0a5c34;
+            color: #fff;
+        }
+
+        .bl-batch {
+            display: flex;
+            gap: 10px;
+            padding: 12px;
+            background: #f6f8f9;
+            border: 1px solid #e5e9ec;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .bl-batch > div { flex: 1; min-width: 0; }
+        .bl-batch .add-sched-label { margin-top: 0; }
+        .bl-batch .add-sched-input { margin-bottom: 0; }
+
+        /* The grid scrolls inside the modal so the batch fields and the footer
+           counter stay put while 40 aircraft go past. */
+        .bl-scroll {
+            max-height: 46vh;
+            overflow-y: auto;
+            border: 1px solid #e5e9ec;
+            border-radius: 8px;
+        }
+
+        .bl-ac {
+            border-bottom: 1px solid #eef1f3;
+        }
+
+        .bl-ac:last-child { border-bottom: none; }
+
+        .bl-ac-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            cursor: pointer;
+            background: #fff;
+        }
+
+        .bl-ac-head:hover { background: rgba(10, 92, 52, 0.03); }
+        .bl-ac.open .bl-ac-head { background: #f2f7f4; }
+
+        .bl-ac-chev {
+            font-size: 10px;
+            color: #8a939b;
+            width: 10px;
+            transition: transform 0.15s ease;
+        }
+
+        .bl-ac.open .bl-ac-chev { transform: rotate(90deg); }
+
+        .bl-ac-reg {
+            font-weight: 700;
+            font-size: 13px;
+            color: #0a5c34;
+            letter-spacing: 0.4px;
+        }
+
+        .bl-ac-type { font-size: 11.5px; color: #8a939b; }
+
+        .bl-ac-count {
+            margin-left: auto;
+            font-size: 11px;
+            font-weight: 700;
+            color: #6b7780;
+            background: #eef1f3;
+            border-radius: 10px;
+            padding: 2px 9px;
+        }
+
+        .bl-ac-count.done { background: #e3f3ea; color: #0a5c34; }
+        .bl-ac-count.part { background: #fdf3e3; color: #96631a; }
+
+        .bl-ac-body { display: none; padding: 4px 12px 12px; }
+        .bl-ac.open .bl-ac-body { display: block; }
+
+        .bl-grid { width: 100%; border-collapse: collapse; }
+
+        .bl-grid th {
+            text-align: left;
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #8a939b;
+            padding: 6px 8px;
+            border-bottom: 1px solid #e5e9ec;
+        }
+
+        .bl-grid td {
+            padding: 5px 8px;
+            border-bottom: 1px solid #f2f5f6;
+            font-size: 12.5px;
+            color: #26313a;
+            vertical-align: middle;
+        }
+
+        .bl-grid tr:last-child td { border-bottom: none; }
+        .bl-lru { font-weight: 600; white-space: nowrap; }
+
+        .bl-pos {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #6b7780;
+            background: #eef1f3;
+            border-radius: 4px;
+            padding: 1px 6px;
+            white-space: nowrap;
+        }
+
+        .bl-input {
+            width: 100%;
+            padding: 6px 9px;
+            border: 1px solid #d7dde1;
+            border-radius: 5px;
+            font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+            font-weight: 600;
+            color: #26313a;
+            box-sizing: border-box;
+        }
+
+        .bl-input:focus {
+            outline: none;
+            border-color: #0a5c34;
+            box-shadow: 0 0 0 2px rgba(10, 92, 52, 0.12);
+        }
+
+        .bl-input.filled { border-color: #7bb894; background: #fbfefc; }
+        .bl-input.dupe   { border-color: #dc3545; background: #fdf5f6; }
+
+        /* Already on record: the baseline tool never overwrites, so the row shows
+           what is fitted and sends you to Add Activity for a swap. */
+        .bl-onrecord {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bl-onrecord-tag {
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #0a5c34;
+            background: #e3f3ea;
+            border-radius: 4px;
+            padding: 2px 6px;
+            white-space: nowrap;
+        }
+
+        .bl-foot {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .bl-count { font-size: 12.5px; color: #4a5760; font-weight: 600; margin-right: auto; }
+        .bl-count b { color: #0a5c34; }
+
+        .bl-empty { padding: 22px; text-align: center; color: #8a939b; font-size: 13px; }
+
+        .bl-hint {
+            font-size: 11.5px;
+            color: #8a939b;
+            margin: 8px 2px 0;
+        }
+
+        /* ===== Installed Equipment (Maintenance profile) ===== */
+        .maint-equip-table { width: 100%; border-collapse: collapse; }
+
+        .maint-equip-table th {
+            text-align: left;
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #8a939b;
+            padding: 6px 10px;
+            border-bottom: 1px solid #e5e9ec;
+            white-space: nowrap;
+        }
+
+        .maint-equip-table td {
+            padding: 7px 10px;
+            border-bottom: 1px solid #eef1f3;
+            font-size: 12.5px;
+            color: #26313a;
+            white-space: nowrap;
+        }
+
+        .maint-equip-table tr:last-child td { border-bottom: none; }
+        .maint-equip-table tbody tr:hover { background: rgba(10, 92, 52, 0.03); }
+
+        .maint-equip-lru { font-weight: 600; }
+
+        .hw-baseline-tag {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #6b7780;
+            background: #eef1f3;
+            border-radius: 4px;
+            padding: 1px 5px;
+        }
+
+        /* Baseline records are inventory, not events — folded out of the history by
+           default so a real activity is not buried under ten of them. */
+        .maint-fold {
+            display: block;
+            width: 100%;
+            margin: 4px 0 0;
+            padding: 8px;
+            border: 1px dashed #d7dde1;
+            background: #fbfcfd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7780;
+        }
+
+        .maint-fold:hover { background: #f2f7f4; border-color: #7bb894; color: #0a5c34; }
+
+        @media (max-width: 700px) {
+            .bl-batch { flex-direction: column; }
+            .bl-modal { max-width: 96%; }
+        }
+
         /* The activity modal is taller than the others, so it scrolls internally. */
         .act-modal {
             background: #fff;
@@ -2918,6 +3182,7 @@
             <div id="hardware" class="tab-content">
                 <div class="table-actions-row">
                     <span id="hwSignedInAs" class="signed-in-as" style="display:none;"></span>
+                    <button id="hwBaselineBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed Serials</button>
                     <button id="hwAddIssueBtn" class="qf-btn" style="display:none;" onclick="openAddIssue()">➕ Add Known Issue</button>
                     <button id="hwEditBtn" class="qf-btn edit-btn" onclick="toggleHwEdit()">🔒 Sign in to edit</button>
                 </div>
@@ -3292,6 +3557,56 @@
             <div style="display:flex; gap:10px; margin-top:6px;">
                 <button id="addIssueCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="addIssueSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save Issue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Baseline serial entry.
+         The bulk way in for equipment that is already fitted: 40-odd aircraft, ten
+         units each, none of it ever recorded as an activity because it was installed
+         before this dashboard existed. Two ways through the same grid — down one
+         aircraft's units, or down one unit across the fleet — writing ordinary
+         first-fit hardware activities so nothing downstream needs to know this
+         screen exists. -->
+    <div id="baselineOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="act-modal bl-modal">
+            <h3 style="color:#0a5c34; margin-bottom:6px;">Record Installed Serials</h3>
+            <p class="bl-intro">
+                Type the serial numbers already fitted to each aircraft. Each one is saved as a
+                <b>first fit</b> hardware record, so it appears on the Hardware tab's fitment list and
+                on the aircraft's Installed Equipment panel. Anything already on record is shown and
+                left alone — log a replacement from <b>Maintenance → Add New Activity</b>.
+            </p>
+
+            <div class="bl-modes">
+                <button type="button" class="bl-mode active" id="blModeAircraft" onclick="setBaselineMode('aircraft')">By Aircraft</button>
+                <button type="button" class="bl-mode" id="blModeEquipment" onclick="setBaselineMode('equipment')">By Equipment</button>
+            </div>
+
+            <div class="bl-batch">
+                <div>
+                    <label class="add-sched-label">Installed Date</label>
+                    <input type="date" id="blDate" class="add-sched-input">
+                </div>
+                <div>
+                    <label class="add-sched-label">Location</label>
+                    <input id="blLocation" class="add-sched-input" maxlength="60" autocomplete="off"
+                           placeholder="Blank = each aircraft's own location">
+                </div>
+                <div id="blEquipWrap" style="display:none;">
+                    <label class="add-sched-label">Equipment</label>
+                    <select id="blEquip" class="add-sched-input" onchange="renderBaselineBody()"></select>
+                </div>
+            </div>
+
+            <div class="bl-scroll" id="blBody"></div>
+            <div class="bl-hint">Press <b>Enter</b> to jump to the next serial field. Entries are kept while you switch between the two views.</div>
+
+            <div id="blError" style="display:none; font-size:12.5px; color:#dc3545; margin-top:12px; font-weight:600;"></div>
+            <div class="bl-foot">
+                <span class="bl-count" id="blCount"></span>
+                <button type="button" id="blCancel" style="padding:10px 18px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Close</button>
+                <button type="button" id="blSave" style="padding:10px 22px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save Serials</button>
             </div>
         </div>
     </div>
@@ -3779,6 +4094,46 @@
                 });
         }
 
+        // A baseline record is an inventory statement — "this is what is fitted today"
+        // — not something that happened on the date it carries. It is a real hardware
+        // activity so the fitment derivation reads it unchanged, but it is kept off the
+        // Timeline and folded out of the activity history, because 40 aircraft x 10
+        // units would otherwise bury every genuine event under one day's worth of them.
+        function isBaselineRecord(act) {
+            return (act.details || {}).recordType === 'baseline';
+        }
+
+        // What is fitted to ONE aircraft, across every LRU of its fit — the same
+        // derivation hardwareFitment() does per unit, pivoted the other way so the
+        // Maintenance tab can show an aircraft's equipment in one table. Position-
+        // tracked units contribute one row per position.
+        function aircraftFitment(a) {
+            const out = [];
+            lrusForFit(fitOf(a)).forEach(lru => {
+                const qty = lruQtyFor(lru, a.type);
+                if (qty <= 0) return;
+                const positions = lruIsMulti(lru)
+                    ? Array.from({ length: qty }, (_, i) => String(i + 1))
+                    : [undefined];
+
+                positions.forEach(pos => {
+                    const mine = lruChangesFor(lru, a.id, pos);
+                    const latest = mine[0];
+                    const d = (latest && latest.details) || {};
+                    out.push({
+                        lru, position: pos || '', qty,
+                        serial: d.newPart || '',
+                        date: latest ? latest.date : '',
+                        vacant: !!(latest && !d.newPart && d.oldPart),
+                        baseline: !!(latest && isBaselineRecord(latest)),
+                        removals: mine.filter(x => (x.details || {}).oldPart).length,
+                        changes: mine.length,
+                    });
+                });
+            });
+            return out;
+        }
+
         function hardwareRecordOf(lruId) {
             const stored = hardwareLive[lruId] || {};
             const staged = pendingHw[lruId] || {};
@@ -3801,10 +4156,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.11.0';
-        const APP_BUILD    = '2026.08.20.01';
+        const APP_VERSION  = '2.12.0';
+        const APP_BUILD    = '2026.08.20.02';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-20T15:20:00Z';
+        const APP_DEPLOYED = '2026-08-20T18:05:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -5528,7 +5883,43 @@
                 cell('Reason', reasonVal),
             ].join('');
 
-            const acts = activitiesForAircraft(a.id);
+            const allActs = activitiesForAircraft(a.id);
+            // Baseline records are shown as Installed Equipment above rather than as
+            // ten near-identical cards in the history. They stay reachable — and
+            // deletable — behind the fold.
+            const baseActs = allActs.filter(isBaselineRecord);
+            const acts = allActs.filter(x => !isBaselineRecord(x));
+
+            // --- Installed Equipment: the serials currently fitted to this aircraft ---
+            const equip = aircraftFitment(a);
+            const equipFitted = equip.filter(r => r.serial).length;
+            const equipMulti = equip.some(r => r.position);
+
+            const equipRow = r => `<tr>
+                <td class="maint-equip-lru">${escAttr(r.lru.label)}</td>
+                ${equipMulti ? `<td>${r.position ? `<span class="bl-pos">${escAttr(r.position)}/${r.qty}</span>` : '<span class="hw-none">—</span>'}</td>` : ''}
+                <td>${r.vacant
+                        ? '<span class="hw-vacant">removed — none fitted</span>'
+                        : (r.serial ? `<span class="hw-serial">${escAttr(r.serial)}</span>` : '<span class="hw-none">no record</span>')}</td>
+                <td>${r.date ? escAttr(r.date) : '<span class="hw-none">—</span>'}${r.baseline ? ' <span class="hw-baseline-tag">baseline</span>' : ''}</td>
+                <td>${r.removals ? `<span class="hw-removals">${r.removals}</span>` : '<span class="hw-none">0</span>'}</td>
+            </tr>`;
+
+            const equipSection = equip.length ? `
+                <div class="maint-history-head">
+                    <span class="maint-history-title">Installed Equipment</span>
+                    <span class="timeline-day-count">${equipFitted} of ${equip.length} recorded</span>
+                    ${canEdit() ? `<button class="qf-btn" style="margin-left:auto;" onclick="openBaselineForAircraft('${escAttr(a.id)}')">➕ Record Serials</button>` : ''}
+                </div>
+                <div class="table-scroll-wrapper" style="padding: 0 16px 8px;">
+                    <table class="maint-equip-table">
+                        <thead><tr>
+                            <th>Equipment</th>${equipMulti ? '<th>Pos</th>' : ''}<th>Serial Fitted</th>
+                            <th>Installed</th><th>Removals</th>
+                        </tr></thead>
+                        <tbody>${equip.map(equipRow).join('')}</tbody>
+                    </table>
+                </div>` : '';
 
             panel.innerHTML = `
                 <div class="maint-detail-head">
@@ -5537,6 +5928,7 @@
                     <span class="status-badge maint-${rec.open ? 'open' : 'serviceable'}">${rec.open ? 'FLAGGED' : 'SERVICEABLE'}</span>
                 </div>
                 <div class="maint-profile">${profile}</div>
+                ${equipSection}
                 <div class="maint-history-head">
                     <span class="maint-history-title">Activity History</span>
                     <span class="timeline-day-count">${acts.length} ${acts.length === 1 ? 'activity' : 'activities'}</span>
@@ -5545,7 +5937,22 @@
                     acts.length
                         ? acts.map(renderActivityCard).join('')
                         : '<li class="maint-empty">No activities recorded for this aircraft yet.</li>'
+                }${
+                    baseActs.length ? `<li>
+                        <button class="maint-fold" onclick="toggleMaintBaseline()">${
+                            maintShowBaseline
+                                ? `Hide ${baseActs.length} baseline serial ${baseActs.length === 1 ? 'record' : 'records'}`
+                                : `Show ${baseActs.length} baseline serial ${baseActs.length === 1 ? 'record' : 'records'}`
+                        }</button>
+                    </li>${maintShowBaseline ? baseActs.map(renderActivityCard).join('') : ''}` : ''
                 }</ul>`;
+        }
+
+        let maintShowBaseline = false;
+
+        function toggleMaintBaseline() {
+            maintShowBaseline = !maintShowBaseline;
+            renderMaintDetail();
         }
 
         function renderActivityCard(act) {
@@ -6172,6 +6579,354 @@
             updateHwEditUI();
         }
 
+        // ===== Baseline serial entry =====
+        // The bulk way in for equipment that was fitted before this dashboard existed:
+        // ~40 aircraft x ~10 units, none of it ever logged as an activity. Rather than
+        // invent a second place to keep serials, every entry here is written as an
+        // ordinary first-fit `hardware_rr` activity — `details.newPart` with no
+        // `oldPart` — so hardwareFitment(), aircraftFitment() and the unit history all
+        // read it through the paths they already use. `details.recordType: 'baseline'`
+        // marks it as inventory rather than a day's work, which is what keeps 400 of
+        // them off the Timeline.
+        //
+        // The tool is deliberately ADDITIVE ONLY. A position that already has any
+        // record is shown read-only: changing a fitted serial is a swap, it needs a
+        // reason and a removed unit, and that is Add New Activity's job.
+        let blMode = 'aircraft';     // 'aircraft' — down one tail's units | 'equipment' — down one unit's fleet
+        let blDraft = {};            // key -> serial typed, not yet saved. Survives a mode switch.
+        let blOpenTails = {};        // which aircraft rows are expanded
+        let blRowCache = {};         // tail -> rows. Built on open so a keystroke never re-walks /activities.
+
+        function blKey(lruId, tail, pos) {
+            return lruId + '|' + tail + '|' + (pos || '');
+        }
+
+        function blFleet() {
+            return activeFleet().slice().sort((a, b) => a.id.localeCompare(b.id));
+        }
+
+        function blRowsForAircraft(a) {
+            return aircraftFitment(a).map(r => ({
+                lru: r.lru, tail: a.id, aircraft: a, position: r.position, qty: r.qty,
+                existing: r.serial, vacant: r.vacant,
+                // Locked only when the record actually says something about a serial:
+                // one is fitted (changing it is a swap, which needs a reason and a
+                // removed unit) or the position was deliberately emptied. An activity
+                // that named the part but recorded no serial leaves the position
+                // genuinely unknown, so the baseline tool must still be able to fill it.
+                hasRecord: !!(r.serial || r.vacant),
+            }));
+        }
+
+        function blBuildCache() {
+            blRowCache = {};
+            blFleet().forEach(a => { blRowCache[a.id] = blRowsForAircraft(a); });
+        }
+
+        // A serial is one physical unit, so the same one twice — whether both typed now
+        // or typed against one already on record — is a data-entry error, not a choice.
+        function blDuplicates() {
+            const seen = {}, dupes = new Set();
+            const add = v => {
+                const k = String(v || '').trim().toUpperCase();
+                if (!k) return;
+                if (seen[k]) dupes.add(k); else seen[k] = 1;
+            };
+            Object.values(blRowCache).forEach(rows => rows.forEach(r => { if (r.existing) add(r.existing); }));
+            Object.values(blDraft).forEach(add);
+            return dupes;
+        }
+
+        function blTailStats(rows) {
+            const recorded = rows.filter(r => r.hasRecord).length;
+            const typed = rows.filter(r => !r.hasRecord && blDraft[blKey(r.lru.id, r.tail, r.position)]).length;
+            return { done: recorded + typed, total: rows.length };
+        }
+
+        function blRow(r, label, multi) {
+            const key = blKey(r.lru.id, r.tail, r.position);
+            const name = label === 'lru'
+                ? escAttr(r.lru.label)
+                : escAttr(r.tail) + ' <span class="bl-ac-type">' + escAttr(TYPE_SHORT_LABEL[r.aircraft.type] || r.aircraft.type) + '</span>';
+
+            const cell = r.hasRecord
+                ? `<div class="bl-onrecord">
+                       ${r.vacant ? '<span class="hw-vacant">removed — none fitted</span>'
+                                  : `<span class="hw-serial">${escAttr(r.existing)}</span>`}
+                       <span class="bl-onrecord-tag">on record</span>
+                   </div>`
+                : `<input class="bl-input ${blDraft[key] ? 'filled' : ''}" data-blkey="${escAttr(key)}"
+                          maxlength="60" autocomplete="off" spellcheck="false" placeholder="Serial number"
+                          value="${escAttr(blDraft[key] || '')}"
+                          oninput="blType(this)" onkeydown="blKeyNav(event, this)">`;
+
+            return `<tr>
+                <td class="bl-lru">${name}</td>
+                ${multi ? `<td>${r.position ? `<span class="bl-pos">${escAttr(r.position)}/${r.qty}</span>` : ''}</td>` : ''}
+                <td>${cell}</td>
+            </tr>`;
+        }
+
+        function blGrid(rows, label) {
+            const multi = rows.some(r => r.position);
+            return `<table class="bl-grid">
+                <thead><tr>
+                    <th>${label === 'lru' ? 'Equipment' : 'Aircraft'}</th>${multi ? '<th>Pos</th>' : ''}<th>Serial Number</th>
+                </tr></thead>
+                <tbody>${rows.map(r => blRow(r, label, multi)).join('')}</tbody>
+            </table>`;
+        }
+
+        // Only an expanded aircraft renders its grid, so the DOM stays small even with
+        // the whole fleet listed.
+        function blRenderAircraftMode() {
+            const fleet = blFleet();
+            if (!fleet.length) return '<div class="bl-empty">No active aircraft.</div>';
+            return fleet.map(a => {
+                const rows = blRowCache[a.id] || [];
+                const st = blTailStats(rows);
+                const open = !!blOpenTails[a.id];
+                return `<div class="bl-ac ${open ? 'open' : ''}" id="blAc-${escAttr(a.id)}">
+                    <div class="bl-ac-head" onclick="toggleBaselineAircraft('${escAttr(a.id)}')">
+                        <span class="bl-ac-chev">▶</span>
+                        <span class="bl-ac-reg">${escAttr(a.id)}</span>
+                        <span class="bl-ac-type">${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</span>
+                        <span class="bl-ac-count ${blCountClass(st)}" id="blTail-${escAttr(a.id)}">${st.done}/${st.total}</span>
+                    </div>
+                    <div class="bl-ac-body">${open ? blGrid(rows, 'lru') : ''}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function blCountClass(st) {
+            if (!st.total) return '';
+            if (st.done >= st.total) return 'done';
+            return st.done ? 'part' : '';
+        }
+
+        // One unit, straight down the fleet — the fastest way through a single LRU,
+        // which is how a baseline is usually collected (all the SIM cards, then all the
+        // MODMANs).
+        function blRenderEquipmentMode() {
+            const sel = document.getElementById('blEquip');
+            const lru = lruById(sel ? sel.value : '');
+            if (!lru) return '<div class="bl-empty">Select a unit to record.</div>';
+            const rows = [];
+            blFleet().forEach(a => {
+                (blRowCache[a.id] || []).forEach(r => { if (r.lru.id === lru.id) rows.push(r); });
+            });
+            if (!rows.length) return '<div class="bl-empty">No active aircraft carry this unit.</div>';
+            return `<div style="padding:10px 12px;">${blGrid(rows, 'tail')}</div>`;
+        }
+
+        function renderBaselineBody() {
+            const body = document.getElementById('blBody');
+            if (!body) return;
+            body.innerHTML = blMode === 'aircraft' ? blRenderAircraftMode() : blRenderEquipmentMode();
+            blUpdateCounts();
+        }
+
+        function setBaselineMode(mode) {
+            blMode = mode;
+            const a = document.getElementById('blModeAircraft');
+            const e = document.getElementById('blModeEquipment');
+            if (a) a.classList.toggle('active', mode === 'aircraft');
+            if (e) e.classList.toggle('active', mode === 'equipment');
+            const wrap = document.getElementById('blEquipWrap');
+            if (wrap) wrap.style.display = mode === 'equipment' ? '' : 'none';
+            renderBaselineBody();
+        }
+
+        function toggleBaselineAircraft(tail) {
+            blOpenTails[tail] = !blOpenTails[tail];
+            renderBaselineBody();
+        }
+
+        // Typing must never re-render: the field being typed into would lose focus.
+        // Only the draft, this input's own class and the counters move.
+        function blType(el) {
+            const key = el.dataset.blkey;
+            const v = el.value.trim();
+            if (v) blDraft[key] = v; else delete blDraft[key];
+            el.classList.toggle('filled', !!v);
+            blUpdateCounts();
+        }
+
+        function blKeyNav(e, el) {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            const inputs = Array.from(document.querySelectorAll('#blBody .bl-input'));
+            const i = inputs.indexOf(el);
+            if (i >= 0 && i + 1 < inputs.length) { inputs[i + 1].focus(); inputs[i + 1].select(); }
+            else el.blur();
+        }
+
+        function blUpdateCounts() {
+            const entered = Object.keys(blDraft).length;
+            const dupes = blDuplicates();
+
+            document.querySelectorAll('#blBody .bl-input').forEach(el => {
+                const v = el.value.trim().toUpperCase();
+                el.classList.toggle('dupe', !!v && dupes.has(v));
+            });
+
+            blFleet().forEach(a => {
+                const el = document.getElementById('blTail-' + a.id);
+                if (!el) return;
+                const st = blTailStats(blRowCache[a.id] || []);
+                el.textContent = st.done + '/' + st.total;
+                el.className = 'bl-ac-count ' + blCountClass(st);
+            });
+
+            const foot = document.getElementById('blCount');
+            if (foot) {
+                foot.innerHTML = dupes.size
+                    ? `<b>${entered}</b> to save · <span style="color:#dc3545;">${dupes.size} duplicate serial${dupes.size === 1 ? '' : 's'}</span>`
+                    : `<b>${entered}</b> serial${entered === 1 ? '' : 's'} ready to save`;
+            }
+        }
+
+        function openBaseline() {
+            if (!canEdit()) { promptSignIn().then(ok => { if (ok) openBaseline(); }); return; }
+
+            blDraft = {};
+            blOpenTails = {};
+            blBuildCache();
+
+            const sel = document.getElementById('blEquip');
+            if (sel) {
+                // Grouped by fit, so the two MODMANs are never confused for each other.
+                const group = (fit, label) => {
+                    const l = lrusForFit(fit);
+                    return l.length ? `<optgroup label="${escAttr(label)}">` +
+                        l.map(x => `<option value="${escAttr(x.id)}">${escAttr(x.label)}</option>`).join('') +
+                        '</optgroup>' : '';
+                };
+                sel.innerHTML = group('retrofit', 'Retrofit') + group('linefit', 'Linefit');
+                sel.value = 'sim';
+            }
+
+            document.getElementById('blDate').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('blLocation').value = '';
+            const err = document.getElementById('blError');
+            err.textContent = ''; err.style.display = 'none';
+
+            setBaselineMode('aircraft');
+            document.getElementById('baselineOverlay').style.display = 'flex';
+        }
+
+        // Same screen, opened on one aircraft — the entry point from that aircraft's
+        // Installed Equipment panel on the Maintenance tab.
+        function openBaselineForAircraft(tail) {
+            openBaseline();
+            if (!canEdit()) return;
+            blOpenTails = {}; blOpenTails[tail] = true;
+            setBaselineMode('aircraft');
+            const el = document.getElementById('blAc-' + tail);
+            if (el) el.scrollIntoView({ block: 'start' });
+            const first = document.querySelector('#blAc-' + CSS.escape(tail) + ' .bl-input');
+            if (first) first.focus();
+        }
+
+        function initBaselineModal() {
+            const overlay = document.getElementById('baselineOverlay');
+            if (!overlay) return;
+            const err = document.getElementById('blError');
+            const close = () => { overlay.style.display = 'none'; };
+
+            document.getElementById('blCancel').addEventListener('click', () => {
+                if (Object.keys(blDraft).length &&
+                    !confirm(`Close without saving?\n\n${Object.keys(blDraft).length} serial(s) typed here will be discarded.`)) return;
+                close();
+            });
+            // Deliberately NOT closed by a backdrop click: the other modals hold one
+            // record, this one can hold a few hundred typed serials.
+
+            document.getElementById('blSave').addEventListener('click', async () => {
+                const fail = msg => { err.textContent = msg; err.style.display = 'block'; };
+                err.style.display = 'none';
+
+                const isoDate = (document.getElementById('blDate').value || '').trim();
+                const batchLoc = (document.getElementById('blLocation').value || '').trim();
+                if (!isoDate) return fail('Give the installed date these serials should be recorded against.');
+
+                const entries = Object.entries(blDraft).filter(([, v]) => v && v.trim());
+                if (!entries.length) return fail('Nothing typed yet — enter at least one serial number.');
+
+                const dupes = blDuplicates();
+                if (dupes.size) {
+                    return fail(`The same serial appears more than once: ${[...dupes].slice(0, 4).join(', ')}${dupes.size > 4 ? '…' : ''}. A serial belongs to one unit in one place — check them before saving.`);
+                }
+
+                const byTail = {};
+                aircraftData.forEach(a => { byTail[a.id] = a; });
+                const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+                const payload = {};
+                const written = [];
+
+                for (const [key, raw] of entries) {
+                    const [lruId, tail, pos] = key.split('|');
+                    const a = byTail[tail];
+                    const lru = lruById(lruId);
+                    if (!a || !lru) continue;
+
+                    const details = { lruId, newPart: raw.trim(), recordType: 'baseline' };
+                    if (pos) details.position = pos;
+
+                    const entry = {
+                        aircraft: tail,
+                        date: fmtDate(isoDate),
+                        // A blank batch location falls back to where the aircraft was
+                        // actually retrofitted, rather than stamping one MRO across a
+                        // fleet that was done in several. It deliberately does NOT fall
+                        // back to completionLocation the way the Add Activity form does:
+                        // that is where the SOFTWARE load finished, and copying it onto
+                        // a few hundred fitment records would be inventing the install
+                        // location rather than leaving it blank and honest.
+                        location: batchLoc || a.retrofitLocation || '',
+                        category: 'hardware_rr',
+                        title: 'Baseline equipment record',
+                        loggedAt: stamp,
+                        details,
+                    };
+                    if (!entry.location) delete entry.location;
+
+                    const id = 'a' + Date.now().toString(36) + written.length.toString(36) + Math.random().toString(36).slice(2, 7);
+                    payload[id] = entry;
+                    written.push([id, entry]);
+                }
+
+                if (!Object.keys(payload).length) return fail('Nothing to save.');
+
+                const token = await getIdToken();
+                if (!token) return;
+                const btn = document.getElementById('blSave');
+                btn.disabled = true; btn.textContent = 'Saving...';
+                try {
+                    // One multi-path PATCH: 400 serials is one request, and the rules
+                    // validate each child on its own.
+                    const res = await fetch(`${FIREBASE_DB_URL}/activities.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(payload),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+
+                    written.forEach(([id, entry]) => { activitiesLive[id] = entry; });
+                    blDraft = {};
+                    blBuildCache();
+                    renderBaselineBody();
+                    renderHardwarePage();
+                    renderMaintenancePage();
+                    updateMetrics();
+                    setSyncStatus(`🟢 ${written.length} serial${written.length === 1 ? '' : 's'} recorded — synced with your team`, '#28a745');
+                } catch (e) {
+                    fail(`Could not save — ${e.message}`);
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Save Serials';
+                }
+            });
+        }
+
         // ===== Hardware edit mode (same staged-then-Save shape as the other pages) =====
         async function toggleHwEdit() {
             if (hwEditMode) { await commitHwChanges(); return; }
@@ -6188,6 +6943,8 @@
             const who = document.getElementById('hwSignedInAs');
             const add = document.getElementById('hwAddIssueBtn');
             if (add) add.style.display = canEdit() ? '' : 'none';
+            const base = document.getElementById('hwBaselineBtn');
+            if (base) base.style.display = canEdit() ? '' : 'none';
             if (!btn) return;
             const editing = hwEditMode && canEdit();
             btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '💾 Save' : '✏️ Edit');
@@ -7139,6 +7896,10 @@
                 const iso = toISODate(act.date);
                 if (!iso) return;
                 if (!inScope(act.aircraft)) return;
+                // Baseline serial records state what is fitted, they do not describe a
+                // day's work — and there is one per unit per aircraft, so letting them
+                // in would swamp whatever day they were entered on.
+                if (isBaselineRecord(act)) return;
                 const cat = activityCategory(act.category);
                 const air = byTail[act.aircraft] || {};
                 const title = act.title || cat.label;
@@ -7669,6 +8430,7 @@
             initAddActivityModal();
             initAddIssueModal();
             initShopReportModal();
+            initBaselineModal();
             initAddAircraftModal();
             updateAuthUI();
             updateScheduleEditUI();
