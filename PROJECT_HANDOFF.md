@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.17.1, 2026-08-21)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.18.0, 2026-08-21)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -475,7 +475,20 @@ on the Timeline on the next `updateMetrics()`, which the save already calls.
   Maintenance.
 
   **Three levels, in this order:** programme chip (`.metric-fit`) → category
-  (`.metric-label`) → specific item (`.metric-sublabel`) → figures → bar. The chip
+  (`.metric-label`) → specific item (`.metric-sublabel`) → figures → bar.
+
+  **The category is the quiet one, deliberately.** `.metric-label` is 10.5px, 700,
+  +1.3px tracking, and the *same* neutral grey on all four cards — it classifies the
+  card. `.metric-sublabel` is 15px, 600, sentence case, and carries the card's own
+  colour, because it is the line that says what is actually being tracked. They used
+  to be the same size and weight, which is why they read as one block.
+
+  **The pill takes the CARD's colour, not the programme's** (`.metric-card.X
+  .fit-chip`). `Retrofit` therefore looks green on the software card and teal on
+  media — the programme is identified by the word, and the colour's job is to belong
+  to the card. A blue pill on a green card was the thing that looked bolted on. The
+  progress track is tinted the same way, so the bar reads as part of the card rather
+  than sitting on a grey wash. The chip
   row is rendered **even when empty** so the headings line up across all four cards;
   on a phone the cards are stacked with nothing to line up against, so an empty one
   collapses (`.metric-fit:empty`).
@@ -954,6 +967,13 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.18.0 — Widget typography and colour system
+"SBC Configuration A.13" became "SBC A.13". The category and the item were the same
+size and weight and read as one block; the category is now small, spaced and neutral,
+and the item is larger, sentence case and tinted to the card. Pills and progress tracks
+take the card's hue instead of a flat palette. Counts and percentages use tabular
+figures so the four cards share a rhythm, and the denominator steps back.
 
 ### v2.17.1 — Widget pills completed, and the dead space removed
 Media gained a `Retrofit` pill and Maintenance a `Fleet Wide` one, so all four cards
