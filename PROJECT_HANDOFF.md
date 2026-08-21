@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.18.0, 2026-08-21)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.19.0, 2026-08-21)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -706,6 +706,36 @@ Project Objectives list, so nothing was lost.
 
 ---
 
+## Header title fitting
+
+`fitHeaderTitles()` measures the space the titles block actually gets — the header
+minus the logo, the clock and four paddings — and scales the title and subtitle so
+each stays on **one line**. A font size per breakpoint could not do this: the space
+depends on more than the viewport, and "CONNECTIVITY FLEET STATUS" broke after the
+second word on a phone.
+
+Three things make it work and are easy to undo by accident:
+
+- **Letter-spacing on `.header h1` is in `em`, not px.** Text width then scales
+  exactly linearly with font size, so one pass lands on the answer. In px the fit
+  would need to iterate.
+- **`.header-titles` is `overflow: hidden` with `flex: 1 1 0`.** `overflow` is what
+  lets `scrollWidth` report the text's full width while the box stays the width flex
+  gave it. **Basis `0`, not `auto`** — with `auto` the block's base size is its whole
+  nowrap text width, which makes the header wrap a line the moment it overflows.
+- **It re-fits only when the available WIDTH changes.** Changing a font size changes
+  the header's height, which fires the header's own `ResizeObserver`; without that
+  guard the two drive each other.
+
+**The titles are a direct child of `.header`, not of `.header-brand`.** That is what
+lets them take a row of their own below **372px**, where the logo, the clock and 25
+characters cannot share a row without the title dropping under 13px and clipping.
+Stacking buys back ~100px of width — at 320px the title goes from a clipped 13px to
+17.7px. `flex-wrap` is set **only** inside that media query, never by default.
+
+Sizes are clamped: title 13–28px, subtitle 9–16px and never more than 0.68 of the
+title, so it cannot grow to compete with it.
+
 ## Sticky header
 
 The header is `position: sticky; top: 0` so the clock and fleet identity stay on
@@ -967,6 +997,13 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.19.0 — Header title fits its space instead of guessing
+"CONNECTIVITY FLEET STATUS" wrapped to two lines on a phone. The title and subtitle
+are now measured against the room they actually have and scaled to one line each, at
+every width. Below 372px the titles take a row of their own — which needed them moved
+out of `.header-brand` — because the logo, the clock and the title cannot share a row
+that narrow without clipping.
 
 ### v2.18.0 — Widget typography and colour system
 "SBC Configuration A.13" became "SBC A.13". The category and the item were the same
