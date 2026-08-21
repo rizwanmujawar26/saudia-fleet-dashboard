@@ -4460,10 +4460,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.14.0';
-        const APP_BUILD    = '2026.08.21.02';
+        const APP_VERSION  = '2.14.1';
+        const APP_BUILD    = '2026.08.21.03';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-21T02:00:00Z';
+        const APP_DEPLOYED = '2026-08-21T03:30:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -4615,85 +4615,108 @@
                 })
                 .catch(() => populateScheduleTables());
 
-            fetch(`${FIREBASE_DB_URL}/hardware.json`)
-                .then(r => r.json())
-                .then(data => { hardwareLive = data || {}; renderHardwarePage(); startHardwareStream(); })
-                .catch(() => { /* the tab still lists the catalogue, just without notes */ });
-
-            fetch(`${FIREBASE_DB_URL}/units.json`)
-                .then(r => r.json())
-                .then(data => {
-                    unitsLive = data || {};
-                    markDataSync();
-                    renderHardwarePage();     // fitment is derived from units
-                    renderMaintenancePage();  // so is Installed Equipment
-                    renderSerialsPage();
-                    startUnitsStream();
-                })
-                .catch(() => { /* the tabs still render, just with no serials */ });
-
-            fetch(`${FIREBASE_DB_URL}/activities.json`)
-                .then(r => r.json())
-                .then(data => {
-                    activitiesLive = data || {};
-                    markDataSync();
-                    renderMaintenancePage();
-                    renderHardwarePage();     // fitment is derived from activities
-                    updateMetrics();          // the Timeline reads activities too
-                    startActivitiesStream();
-                })
-                .catch(() => { /* the tab still renders, just with no history */ });
+            // These three are read once here and then kept fresh by ONE shared poll
+            // rather than a stream each — see startLowTrafficPoll() for why that
+            // matters to saving.
+            Promise.all(['hardware', 'units', 'activities'].map(n =>
+                fetch(`${FIREBASE_DB_URL}/${n}.json`).then(r => r.json()).catch(() => null)
+            )).then(([hw, un, ac]) => {
+                hardwareLive   = hw || {};
+                unitsLive      = un || {};
+                activitiesLive = ac || {};
+                markDataSync();
+                renderHardwarePage();      // fitment is derived from units
+                renderMaintenancePage();   // so is Installed Equipment
+                renderSerialsPage();
+                updateMetrics();           // the Timeline reads activities
+                startLowTrafficPoll();
+            });
         }
 
         // Whole-node re-read per event, same as /hardware and /activities: units are
         // low-traffic and the path-patching /aircraft uses would be more machinery than
         // this data warrants.
-        function startUnitsStream() {
-            const es = new EventSource(`${FIREBASE_DB_URL}/units.json`);
-            const onMsg = () => {
-                fetch(`${FIREBASE_DB_URL}/units.json`).then(r => r.json())
-                    .then(d => {
-                        unitsLive = d || {};
-                        markDataSync();
-                        renderHardwarePage();
-                        renderMaintenancePage();
-                        renderSerialsPage();
-                    })
-                    .catch(() => {});
-            };
-            es.addEventListener('put', onMsg);
-            es.addEventListener('patch', onMsg);
-        }
 
-        function startHardwareStream() {
-            const es = new EventSource(`${FIREBASE_DB_URL}/hardware.json`);
-            const onMsg = () => {
-                fetch(`${FIREBASE_DB_URL}/hardware.json`).then(r => r.json())
-                    .then(d => { hardwareLive = d || {}; markDataSync(); renderHardwarePage(); })
-                    .catch(() => {});
-            };
-            es.addEventListener('put', onMsg);
-            es.addEventListener('patch', onMsg);
-        }
+
+
 
         // A whole-node re-read on every event: activities are few and low-traffic, so
         // the path-patching applyLivePathUpdate does for /aircraft would be more
         // machinery than the data warrants.
-        function startActivitiesStream() {
-            const es = new EventSource(`${FIREBASE_DB_URL}/activities.json`);
-            const onMsg = () => {
-                fetch(`${FIREBASE_DB_URL}/activities.json`).then(r => r.json())
-                    .then(d => {
-                        activitiesLive = d || {};
-                        markDataSync();
-                        renderMaintenancePage();
-                        renderHardwarePage();
-                        updateMetrics();
-                    })
-                    .catch(() => {});
+
+
+        // ===== Low-traffic nodes: one poll, not three streams =====
+        // Every EventSource is a LONG-LIVED connection, and a browser allows only about
+        // six per origin over HTTP/1.1. With six streams open (aircraft, fleet, schedule,
+        // hardware, units, activities) the budget was fully spent on listening, and a
+        // save — an ordinary fetch() to the same origin — could sit queued behind them
+        // and never be sent at all. That presents as a Save button stuck on "Saving..."
+        // with no error and no record change, because nothing was ever rejected.
+        //
+        // /hardware, /units and /activities change rarely and are edited by one person at
+        // a time, so they do not need a socket held open each. One shared poll re-reads
+        // all three and re-renders only what actually changed, leaving the connection
+        // budget for the writes.
+        const LOW_TRAFFIC_POLL_MS = 25000;
+        let lowTrafficSnapshot = {};
+
+        async function pollLowTrafficNodes() {
+            const nodes = {
+                hardware:   d => { hardwareLive = d || {}; },
+                units:      d => { unitsLive = d || {}; },
+                activities: d => { activitiesLive = d || {}; },
             };
-            es.addEventListener('put', onMsg);
-            es.addEventListener('patch', onMsg);
+            let changed = false;
+
+            for (const [node, assign] of Object.entries(nodes)) {
+                try {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/${node}.json`, {}, 15000);
+                    if (!res.ok) continue;
+                    const text = await res.text();
+                    if (lowTrafficSnapshot[node] === text) continue;   // nothing moved
+                    lowTrafficSnapshot[node] = text;
+                    assign(JSON.parse(text));
+                    changed = true;
+                } catch (e) { /* a missed poll is harmless; the next one catches up */ }
+            }
+
+            if (changed) {
+                markDataSync();
+                renderHardwarePage();
+                renderMaintenancePage();
+                renderSerialsPage();
+                updateMetrics();          // the Timeline reads activities
+            }
+        }
+
+        function startLowTrafficPoll() {
+            // Seed the snapshot from what the initial load already fetched, so the first
+            // poll does not re-render everything for no reason.
+            lowTrafficSnapshot = {
+                hardware:   JSON.stringify(Object.keys(hardwareLive).length ? hardwareLive : null),
+                units:      JSON.stringify(Object.keys(unitsLive).length ? unitsLive : null),
+                activities: JSON.stringify(Object.keys(activitiesLive).length ? activitiesLive : null),
+            };
+            setInterval(pollLowTrafficNodes, LOW_TRAFFIC_POLL_MS);
+        }
+
+        // A write that hangs is worse than a write that fails: the button sits on
+        // "Saving...", nothing is reported, and the staged edits look committed when they
+        // are not. Every database call goes through this so a stall becomes a real,
+        // reportable error and Edit Mode can keep the staged changes for a retry.
+        const DB_TIMEOUT_MS = 20000;
+
+        function fetchWithTimeout(url, options, timeoutMs) {
+            const ctl = new AbortController();
+            const t = setTimeout(() => ctl.abort(), timeoutMs || DB_TIMEOUT_MS);
+            return fetch(url, { ...(options || {}), signal: ctl.signal })
+                .catch(err => {
+                    if (err && err.name === 'AbortError') {
+                        throw new Error('the database did not respond in time — nothing was saved, your changes are still here');
+                    }
+                    throw err;
+                })
+                .finally(() => clearTimeout(t));
         }
 
         function applySchedulePathUpdate(path, data) {
@@ -5137,7 +5160,7 @@
 
             if (el) el.classList.add('edit-saving');
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/aircraft/${id}.json?auth=${token}`, {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft/${id}.json?auth=${token}`, {
                     method: 'PATCH',
                     body: JSON.stringify({ [field]: value }),
                 });
@@ -5340,7 +5363,7 @@
             });
 
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
                     method: 'PATCH',
                     body: JSON.stringify(multiUpdate),
                 });
@@ -5506,7 +5529,7 @@
                 const token = await getIdToken();
                 if (!token) return;
                 try {
-                    const res = await fetch(`${FIREBASE_DB_URL}/fleet/${id}.json?auth=${token}`, {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/fleet/${id}.json?auth=${token}`, {
                         method: 'PUT', body: JSON.stringify({ type, station, fit, fleetStatus: 'Active' }),
                     });
                     const data = await res.json();
@@ -5813,14 +5836,14 @@
 
             try {
                 if (Object.keys(multi).length) {
-                    const res = await fetch(`${FIREBASE_DB_URL}/fleet.json?auth=${token}`, {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/fleet.json?auth=${token}`, {
                         method: 'PATCH', body: JSON.stringify(multi),
                     });
                     const data = await res.json();
                     if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 }
                 if (Object.keys(acMulti).length) {
-                    const res2 = await fetch(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                    const res2 = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
                         method: 'PATCH', body: JSON.stringify(acMulti),
                     });
                     const data2 = await res2.json();
@@ -5851,7 +5874,7 @@
             const token = await getIdToken();
             if (!token) return;
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/fleet/${id}.json?auth=${token}`, { method: 'DELETE' });
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/fleet/${id}.json?auth=${token}`, { method: 'DELETE' });
                 if (!res.ok) throw new Error('delete failed');
                 fleetRoster = fleetRoster.filter(a => a.id !== id);
                 delete pendingFleet[id];
@@ -6090,7 +6113,7 @@
             });
 
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
                     method: 'PATCH', body: JSON.stringify(multi),
                 });
                 const data = await res.json();
@@ -6531,7 +6554,7 @@
             });
 
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
                     method: 'PATCH', body: JSON.stringify(multi),
                 });
                 const data = await res.json();
@@ -6727,7 +6750,7 @@
                 btn.disabled = true; btn.textContent = 'Saving...';
                 const id = 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
                 try {
-                    const res = await fetch(`${FIREBASE_DB_URL}/activities/${id}.json?auth=${token}`, {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/activities/${id}.json?auth=${token}`, {
                         method: 'PUT', body: JSON.stringify(entry),
                     });
                     const data = await res.json();
@@ -6739,7 +6762,7 @@
                     // the message says exactly what is missing.
                     const unitWrites = unitWritesForActivity(id, entry, val('addActOldPart'), val('addActNewPart'));
                     if (unitWrites) {
-                        const ures = await fetch(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
+                        const ures = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
                             method: 'PATCH', body: JSON.stringify(unitWrites),
                         });
                         const udata = await ures.json();
@@ -6773,7 +6796,7 @@
             const token = await getIdToken();
             if (!token) return;
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/activities/${id}.json?auth=${token}`, { method: 'DELETE' });
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/activities/${id}.json?auth=${token}`, { method: 'DELETE' });
                 if (!res.ok) throw new Error('delete failed');
                 delete activitiesLive[id];
                 renderMaintenancePage();
@@ -7302,7 +7325,7 @@
                 try {
                     // One multi-path PATCH: 400 serials is one request, and the rules
                     // validate each child on its own.
-                    const res = await fetch(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
                         method: 'PATCH', body: JSON.stringify(payload),
                     });
                     const data = await res.json();
@@ -7608,7 +7631,7 @@
                 const btn = document.getElementById('rmSave');
                 btn.disabled = true; btn.textContent = 'Saving...';
                 try {
-                    const res = await fetch(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
                         method: 'PATCH', body: JSON.stringify(payload),
                     });
                     const data = await res.json();
@@ -7791,7 +7814,7 @@
             if (!token) return;
             el.disabled = true;
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/units/${unitId}/fitments/${fitmentId}.json?auth=${token}`, {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units/${unitId}/fitments/${fitmentId}.json?auth=${token}`, {
                     method: 'PATCH', body: JSON.stringify({ [field]: value }),
                 });
                 const data = await res.json();
@@ -7915,7 +7938,7 @@
             try {
                 // Two nodes, so two writes — each is atomic in itself.
                 if (ids.length) {
-                    const res = await fetch(`${FIREBASE_DB_URL}/hardware.json?auth=${token}`, {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/hardware.json?auth=${token}`, {
                         method: 'PATCH', body: JSON.stringify(multi),
                     });
                     const data = await res.json();
@@ -7923,7 +7946,7 @@
                     ids.forEach(id => { hardwareLive[id] = { ...(hardwareLive[id] || {}), ...pendingHw[id] }; });
                 }
                 if (tails.length) {
-                    const res2 = await fetch(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                    const res2 = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
                         method: 'PATCH', body: JSON.stringify(roamMulti),
                     });
                     const data2 = await res2.json();
@@ -7995,7 +8018,7 @@
                 btn.disabled = true; btn.textContent = 'Saving...';
                 const id = 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
                 try {
-                    const res = await fetch(`${FIREBASE_DB_URL}/hardware/${lru.id}/issues/${id}.json?auth=${token}`, {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/hardware/${lru.id}/issues/${id}.json?auth=${token}`, {
                         method: 'PUT', body: JSON.stringify(entry),
                     });
                     const data = await res.json();
@@ -8065,7 +8088,7 @@
                 const btn = document.getElementById('shopSave');
                 btn.disabled = true; btn.textContent = 'Saving...';
                 try {
-                    const res = await fetch(`${FIREBASE_DB_URL}/units/${shopReportUnitId}/fitments/${shopReportFitmentId}.json?auth=${token}`, {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units/${shopReportUnitId}/fitments/${shopReportFitmentId}.json?auth=${token}`, {
                         method: 'PATCH', body: JSON.stringify(patch),
                     });
                     const data = await res.json();
@@ -8094,7 +8117,7 @@
             const token = await getIdToken();
             if (!token) return;
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/hardware/${lruId}/issues/${issueId}.json?auth=${token}`, { method: 'DELETE' });
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/hardware/${lruId}/issues/${issueId}.json?auth=${token}`, { method: 'DELETE' });
                 if (!res.ok) throw new Error('delete failed');
                 delete hardwareLive[lruId].issues[issueId];
                 renderHardwarePage();
@@ -8339,7 +8362,7 @@
             const token = await getIdToken();
             if (!token) return false;
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/schedule/${id}.json?auth=${token}`, {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/schedule/${id}.json?auth=${token}`, {
                     method: 'PATCH',
                     body: JSON.stringify(patch),
                 });
@@ -8371,7 +8394,7 @@
             const token = await getIdToken();
             if (!token) return;
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/schedule/${id}.json?auth=${token}`, { method: 'DELETE' });
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/schedule/${id}.json?auth=${token}`, { method: 'DELETE' });
                 if (!res.ok) throw new Error('delete failed');
                 delete scheduleLive[id];
                 populateScheduleTables();
@@ -8420,7 +8443,7 @@
                 if (!token) return;
                 const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
                 try {
-                    const res = await fetch(`${FIREBASE_DB_URL}/schedule/${id}.json?auth=${token}`, {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/schedule/${id}.json?auth=${token}`, {
                         method: 'PUT',
                         body: JSON.stringify(entry),
                     });

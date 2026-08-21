@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.14.0, 2026-08-21)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.14.1, 2026-08-21)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -744,6 +744,17 @@ constants, `FIREBASE_DB_URL` and `FIREBASE_API_KEY`.
 
 ---
 
+## Connection budget — do not add a seventh stream
+
+A browser allows about **six concurrent connections per origin** over HTTP/1.1, and
+every `EventSource` holds one open for as long as the page lives. Reads at load
+happen before the streams establish, so page load looks fine — it is the *writes
+afterwards* that queue and hang, with no error, because they were never sent.
+
+The page currently holds **three** streams (`/aircraft`, `/fleet`, `/schedule`) and
+polls the rest. Keep it there. If a node needs live sync, retire a stream or fold it
+into `pollLowTrafficNodes()`.
+
 ## Local dev workflow
 
 ```bash
@@ -864,6 +875,26 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.14.1 — Saves could hang: stream budget, and write timeouts
+**A save could sit on "Saving..." forever and never write.** Every `EventSource` is
+a long-lived connection and a browser allows only ~6 per origin over HTTP/1.1. The
+page had grown to **six** streams (aircraft, fleet, schedule, hardware, units,
+activities — the sixth added with `/units` in v2.13.0), spending the whole budget on
+listening, so a save — an ordinary `fetch()` to the same origin — could queue behind
+them and never be sent. Nothing was rejected, so nothing was reported.
+
+`/hardware`, `/units` and `/activities` now share **one poll**
+(`startLowTrafficPoll`, 25s) instead of a stream each: three persistent connections
+instead of six. They are low-traffic and edited one person at a time, so the
+trade is worth it; `/aircraft`, `/fleet` and `/schedule` still stream.
+
+**Every write now goes through `fetchWithTimeout()`** (20s, 22 call sites — all the
+authenticated ones). A stall becomes a real error instead of an endless "Saving...",
+and Edit Mode keeps the staged changes so Save can simply be pressed again.
+
+⚠️ **Adding another `EventSource` puts this straight back.** If a node needs live
+sync, take one out or fold it into the poll.
 
 ### v2.14.0 — Restricted tabs, Maintenance renamed to Activity
 Activity, Hardware and Serials are hidden from anonymous visitors and appear on
