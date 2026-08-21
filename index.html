@@ -220,12 +220,12 @@
             margin-bottom: 30px;
         }
 
-        @media (max-width: 1080px) {
+        @media (max-width: 960px) {
             .dashboard-grid.global-widgets { grid-template-columns: repeat(2, 1fr); }
         }
 
-        @media (max-width: 620px) {
-            .dashboard-grid.global-widgets { grid-template-columns: 1fr; gap: 14px; }
+        @media (max-width: 440px) {
+            .dashboard-grid.global-widgets { grid-template-columns: 1fr; gap: 12px; }
         }
 
         /* A column, so the figures and the bar can be pushed to the bottom as a pair.
@@ -236,16 +236,11 @@
             flex-direction: column;
             text-align: left;
             padding: 16px 18px 18px;
-            min-height: 190px;
-        }
-
-        /* Two up, a card is 250–480px wide depending on the viewport, so a fixed height
-           would read square at one end of that range and letterbox at the other.
-           Scaling the floor with the viewport holds the proportion near 1.7–1.85 right
-           across the band. Must sit after the rule above: same specificity, so source
-           order is what decides. */
-        @media (max-width: 1080px) {
-            .global-widgets .metric-card { min-height: clamp(190px, 25vw, 260px); }
+            /* Just above what the content needs, so the card is full rather than
+               padded out. Anything taller opens a band of dead space between the
+               labels and the figures — the card stops looking square and starts
+               looking broken, which is worse than being a little wide. */
+            min-height: 166px;
         }
 
         /* Level 1 — programme. Rendered even when empty so the headings under it line
@@ -318,29 +313,44 @@
             margin-top: 0;
         }
 
-        /* Phone: the cards are stacked and full width, so the height that made them
-           square in a row is just scrolling. Trim the padding and drop the empty
-           programme row, and keep the number large enough to read at a glance. */
+        /* Phone and small tablet, two up or stacked. The card is content-sized here —
+           a floor would only add scrolling — and the type tightens just enough that
+           "SOFTWARE LOADING" still holds one line in a ~170px card. */
         @media (max-width: 620px) {
+            .dashboard-grid.global-widgets { gap: 12px; }
+
             .global-widgets .metric-card {
                 min-height: 0;
-                padding: 14px 16px 16px;
+                padding: 13px 14px 14px;
             }
 
-            .metric-fit { min-height: 0; margin-bottom: 6px; }
+            .metric-fit { min-height: 0; margin-bottom: 5px; }
             .metric-fit:empty { display: none; }
+            .fit-chip { font-size: 8.5px; padding: 2px 6px; letter-spacing: 0.3px; }
 
-            .global-widgets .metric-figures { padding-top: 10px; margin-bottom: 8px; }
-            .global-widgets .metric-value { font-size: 32px; }
+            .global-widgets .metric-label { font-size: 11.5px; letter-spacing: 0.5px; }
+            .global-widgets .metric-sublabel { font-size: 11.5px; margin-top: 3px; }
+            .global-widgets .metric-figures { padding-top: 9px; margin-bottom: 8px; }
+            .global-widgets .metric-value { font-size: 27px; }
+            .global-widgets .metric-of { font-size: 12px; }
+            .global-widgets .metric-pct { font-size: 14.5px; }
+        }
+
+        /* Stacked and full width, so the number can have its size back. */
+        @media (max-width: 440px) {
+            .global-widgets .metric-card { padding: 14px 16px 15px; }
+            .global-widgets .metric-label { font-size: 12.5px; letter-spacing: 0.8px; }
+            .global-widgets .metric-sublabel { font-size: 12.5px; }
+            .global-widgets .metric-value { font-size: 31px; }
             .global-widgets .metric-of { font-size: 13px; }
             .global-widgets .metric-pct { font-size: 16px; }
         }
 
         /* Small phone: the content column is only ~220px wide here, so the card padding
            is the only place left to give the figures room. */
-        @media (max-width: 380px) {
+        @media (max-width: 360px) {
             .global-widgets .metric-card { padding: 13px 14px 14px; }
-            .global-widgets .metric-value { font-size: 29px; }
+            .global-widgets .metric-value { font-size: 28px; }
             .global-widgets .metric-label,
             .global-widgets .metric-sublabel { font-size: 12px; }
         }
@@ -356,6 +366,9 @@
 
         .fit-chip-retrofit { background: #e3ecf5; color: #2f5f8a; }
         .fit-chip-linefit  { background: #efe9f7; color: #59468a; }
+        /* Maintenance counts every Active aircraft, both programmes — neutral, because
+           it is the absence of a programme split rather than a third one. */
+        .fit-chip-fleet    { background: #e8ecef; color: #4f5b66; }
 
         /* Linefit card: violet, matching its pill and distinct from the retrofit green */
         .metric-card.linefit {
@@ -3169,10 +3182,8 @@
                     </div>
                 </div>
 
-                <!-- No programme label applies to these two, but the row is still
-                     rendered so the headings below it line up across all four cards. -->
                 <div class="metric-card info">
-                    <div class="metric-fit"></div>
+                    <div class="metric-fit"><span class="fit-chip fit-chip-retrofit">Retrofit</span></div>
                     <div class="metric-label">Media Loading</div>
                     <div class="metric-sublabel" id="metricMediaSubLabel">—</div>
                     <div class="metric-figures">
@@ -3185,7 +3196,7 @@
                 </div>
 
                 <div class="metric-card alert">
-                    <div class="metric-fit"></div>
+                    <div class="metric-fit"><span class="fit-chip fit-chip-fleet">Fleet Wide</span></div>
                     <div class="metric-label">Maintenance</div>
                     <div class="metric-sublabel" id="metricMaintSubLabel">Open issues</div>
                     <div class="metric-figures">
@@ -4618,10 +4629,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.17.0';
-        const APP_BUILD    = '2026.08.21.06';
+        const APP_VERSION  = '2.17.1';
+        const APP_BUILD    = '2026.08.21.07';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-21T11:05:00Z';
+        const APP_DEPLOYED = '2026-08-21T11:20:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the

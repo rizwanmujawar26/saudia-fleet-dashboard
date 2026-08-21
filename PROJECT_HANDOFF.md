@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.17.0, 2026-08-21)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.17.1, 2026-08-21)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -485,11 +485,26 @@ on the Timeline on the next `updateMetrics()`, which the save already calls.
   the alignment nothing — every card's numbers and bar stay on one line without
   reserving blank space for the wrap. Verified with a 32-character media label.
 
+  **All four carry a programme pill**, because the scope differs and the reader
+  should not have to know that: `Retrofit` on Software and on **Media** (both count
+  `mediaScope()`/`swFleet()` — Active retrofit), `Linefit` on SBC, and **`Fleet Wide`**
+  on Maintenance, which counts `activeFleet()` — every Active aircraft, both
+  programmes. "Retrofit + Linefit" says the same thing in 18 characters and stops
+  reading as a subtle label on a 165px card; `Fleet Wide` is ~62px and states the
+  scope outright.
+
   **Columns follow card width, not device.** Content width is the viewport less 40
-  (body) and 60 (content), so four cards stop clearing ~230px at **1080px** and two
-  stop clearing ~250px at **620px** — the only two breakpoints. Two-up spans a
-  250–480px card range, so its height is `clamp(190px, 25vw, 260px)`, holding the
-  proportion near 1.7 across the band instead of letterboxing at the wide end.
+  (body) and 60 (content). Four cards break at **960px** — set by
+  "SOFTWARE LOADING" splitting to two lines below ~200px of card, not by the
+  figures, which hold one line far lower. Two cards break at **440px**, chosen so a
+  phone zoomed to 85% (~460 CSS px) still gets 2×2 rather than four tall cards.
+
+  **The card height is `min-height: 166px` and nothing more.** An earlier version
+  forced 190px, and `clamp(190px, 25vw, 260px)` when two-up, chasing a square
+  proportion — which opened a 40–80px band of dead space between the labels and the
+  figures, because the content only needs ~131px. A card that is full at 1.9:1 reads
+  better than one that is square with a hole in it. Ratio is now an *outcome* of the
+  column count, not a target.
 
   ⚠️ Two cascade traps here, both already bitten: the grid rules must be
   `.dashboard-grid.global-widgets` (0,2,0), because the generic `.dashboard-grid`
@@ -939,6 +954,14 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.17.1 — Widget pills completed, and the dead space removed
+Media gained a `Retrofit` pill and Maintenance a `Fleet Wide` one, so all four cards
+carry their scope. The forced card height went: it was padding the cards out well past
+what the content needs and opening a visible gap in the middle, worst on a zoomed-out
+phone. Height now follows content (`min-height: 166px`), and the column breakpoints
+moved to 960px and 440px so a phone at 85% zoom gets a compact 2×2 instead of four
+tall cards — the widget strip at ~460px went from 622px tall to 275px.
 
 ### v2.17.0 — Global widgets: four KPI cards, responsive by card width
 The 2×2 grid of wide panels became four near-square cards in a row, with a three-level
