@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.14.1, 2026-08-21)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.15.0, 2026-08-21)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -744,6 +744,40 @@ constants, `FIREBASE_DB_URL` and `FIREBASE_API_KEY`.
 
 ---
 
+## Edit buttons — one implementation, one way in
+
+`applyEditButton(btnId, editing, idleLabel, activeLabel)` renders **every** page's Edit
+button. Three states, and the difference between the second and third is the whole
+point:
+
+| state | button | |
+|---|---|---|
+| signed out | `🔒 Edit` | grey, still clickable — the click is what explains where to sign in |
+| signed in, viewing | `🔓 Edit` | green, and clicking enters Edit Mode |
+| signed in, editing | `💾 Save` (`✓ Done` where the page saves as it goes) | amber |
+
+**Signing in never opens Edit Mode.** It only unlocks the buttons; a page stays
+read-only until its own Edit is pressed. Seven pages use this — Software, Media,
+Activity, Hardware, Serials, Schedule, Fleet.
+
+**The tab bar's Sign in button is the only authentication control.** It is the sole
+caller of `promptSignIn()`; a locked page button calls `requireSignIn()`, which
+messages the status bar and pulses that button rather than opening a second door.
+`updateTabAuthButton()` keeps it visible in both states — `🔒 Sign in` when signed
+out, `🔓 Signed in` (click to sign out, with a confirm) when signed in.
+
+`signOut()` clears **every** page's Edit Mode, so a tab left mid-edit cannot come back
+showing inputs nobody can save.
+
+The markup carries `edit-locked` and `🔒` as the default, so the buttons render grey
+immediately instead of flashing the old wording before auth is applied. Geometry is
+inherited from `.qf-btn` — the same pill as the `↺ Reset` button beside it — and only
+the colour changes between states.
+
+⚠️ A new page with its own Edit button must call `applyEditButton()` and guard its
+toggle with `if (!canEdit()) { requireSignIn(); return; }`. Do not reintroduce a
+per-page `promptSignIn()`.
+
 ## Connection budget — do not add a seventh stream
 
 A browser allows about **six concurrent connections per origin** over HTTP/1.1, and
@@ -875,6 +909,17 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.15.0 — One edit-button implementation, one sign-in control
+Every page's Edit button now renders through `applyEditButton()` with three states —
+`🔒 Edit` grey when signed out, `🔓 Edit` green when signed in, `💾 Save` while
+editing — and signing in no longer makes anything editable on its own. The six
+per-page `promptSignIn()` calls are gone: the tab bar's button is the only way in, and
+a locked button calls `requireSignIn()` to point at it.
+
+The **Serials** tab gained an Edit Dates toggle; its date fields used to go live the
+moment you signed in, which was the one place that broke the rule. `signOut()` now
+clears every page's Edit Mode.
 
 ### v2.14.1 — Saves could hang: stream budget, and write timeouts
 **A save could sit on "Saving..." forever and never write.** Every `EventSource` is

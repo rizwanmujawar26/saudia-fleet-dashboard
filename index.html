@@ -401,6 +401,9 @@
 
         .tab-signin:hover { opacity: 1; }
 
+        /* Signed in: the same control, now reading as state rather than an invitation. */
+        .tab-signin-on { opacity: 1; }
+
         .tab-button:hover {
             color: #0a5c34;
             background: rgba(10, 92, 52, 0.05);
@@ -2349,6 +2352,34 @@
             background: #084a2a;
         }
 
+        /* Signed out: available but plainly unavailable. Still clickable, because the
+           click is what tells you where to sign in. Same geometry as the Reset button
+           beside it — only the colour changes between the three states. */
+        .edit-btn.edit-locked,
+        .edit-btn.edit-locked:hover {
+            background: #eef1f3;
+            color: #8a939b;
+            border-color: #dfe4e8;
+            font-weight: 600;
+            cursor: not-allowed;
+        }
+
+        /* Drawing the eye to the one sign-in control when a locked button is pressed. */
+        @keyframes signinPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(10, 92, 52, 0); }
+            30%      { box-shadow: 0 0 0 4px rgba(10, 92, 52, 0.30); }
+        }
+
+        .tab-signin.attention {
+            animation: signinPulse 0.8s ease-in-out 3;
+            border-radius: 6px;
+            opacity: 1;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .tab-signin.attention { animation: none; outline: 2px solid #0a5c34; }
+        }
+
         .edit-btn.save-active {
             background: #ffc107;
             color: #1a1a1a;
@@ -3054,8 +3085,8 @@
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
                 <!-- The way back in for a signed-out viewer. It sits where the hidden
                      tabs would be, because that is where someone looks for them. -->
-                <button class="tab-button tab-signin" id="tabSignInBtn" onclick="signInForTabs()"
-                        title="Activity, Hardware and Serials are shown to signed-in users">🔓 Sign in</button>
+                <button class="tab-button tab-signin" id="tabSignInBtn"
+                        title="Activity, Hardware and Serials are shown to signed-in users">🔒 Sign in</button>
             </div>
 
             <!-- Overview Tab -->
@@ -3132,7 +3163,7 @@
                 <div class="table-actions-row">
                     <span id="signedInAs" class="signed-in-as" style="display:none;"></span>
                     <button id="signOutBtn" class="qf-btn" style="display:none;" onclick="signOut()">Sign out</button>
-                    <button id="editModeBtn" class="qf-btn edit-btn" onclick="toggleEditMode()">🔒 Sign in to edit</button>
+                    <button id="editModeBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleEditMode()">🔒 Edit</button>
                     <button id="aircraftResetBtn" class="qf-btn" onclick="resetAircraftTable()">↺ Reset</button>
                 </div>
 
@@ -3211,7 +3242,7 @@
 
                 <div class="table-actions-row">
                     <span id="mediaSignedInAs" class="signed-in-as" style="display:none;"></span>
-                    <button id="mediaEditBtn" class="qf-btn edit-btn" onclick="toggleMediaEdit()">🔒 Sign in to edit</button>
+                    <button id="mediaEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleMediaEdit()">🔒 Edit</button>
                     <button id="mediaResetBtn" class="qf-btn" onclick="resetMediaTable()">↺ Reset</button>
                 </div>
 
@@ -3265,7 +3296,7 @@
                 <div class="table-actions-row">
                     <span id="maintSignedInAs" class="signed-in-as" style="display:none;"></span>
                     <button id="maintAddActivityBtn" class="qf-btn" style="display:none;" onclick="openAddActivity()">➕ Add New Activity</button>
-                    <button id="maintEditBtn" class="qf-btn edit-btn" onclick="toggleMaintEdit()">🔒 Sign in to edit</button>
+                    <button id="maintEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleMaintEdit()">🔒 Edit</button>
                     <button id="maintResetBtn" class="qf-btn" onclick="resetMaintenancePage()">↺ Reset</button>
                 </div>
 
@@ -3295,7 +3326,7 @@
                     <button id="hwBaselineBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed Serials</button>
                     <button id="hwRemovalBtn" class="qf-btn" style="display:none;" onclick="openRemoval()">📤 Record Removed Serials</button>
                     <button id="hwAddIssueBtn" class="qf-btn" style="display:none;" onclick="openAddIssue()">➕ Add Known Issue</button>
-                    <button id="hwEditBtn" class="qf-btn edit-btn" onclick="toggleHwEdit()">🔒 Sign in to edit</button>
+                    <button id="hwEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleHwEdit()">🔒 Edit</button>
                 </div>
 
                 <div class="maint-split">
@@ -3320,6 +3351,7 @@
             <div id="serials" class="tab-content">
                 <div class="table-actions-row">
                     <span id="srSignedInAs" class="signed-in-as" style="display:none;"></span>
+                    <button id="srEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleSerialsEdit()">🔒 Edit Dates</button>
                     <button id="srInstalledBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed</button>
                     <button id="srRemovedBtn" class="qf-btn" style="display:none;" onclick="openRemoval()">📤 Record Removed</button>
                     <button class="qf-btn" onclick="exportSerialsCsv()">⬇️ Export CSV</button>
@@ -3378,7 +3410,7 @@
                 <div class="table-actions-row">
                     <span id="scheduleSignedInAs" class="signed-in-as" style="display:none;"></span>
                     <button id="scheduleAddBtn" class="qf-btn" style="display:none;" onclick="openScheduleAdd()">➕ Add Entry</button>
-                    <button id="scheduleEditBtn" class="qf-btn edit-btn" onclick="toggleScheduleEdit()">🔒 Sign in to edit</button>
+                    <button id="scheduleEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleScheduleEdit()">🔒 Edit Schedule</button>
                 </div>
 
                 <div id="scheduleContent">
@@ -3473,7 +3505,7 @@
                 <div class="table-actions-row">
                     <span id="fleetSignedInAs" class="signed-in-as" style="display:none;"></span>
                     <button id="fleetAddBtn" class="qf-btn" style="display:none;" onclick="openAddAircraft()">➕ Add Aircraft</button>
-                    <button id="fleetEditBtn" class="qf-btn edit-btn" onclick="toggleFleetEdit()">🔒 Sign in to edit</button>
+                    <button id="fleetEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleFleetEdit()">🔒 Edit</button>
                     <button id="fleetResetBtn" class="qf-btn" onclick="resetFleetTable()">↺ Reset</button>
                 </div>
 
@@ -4460,10 +4492,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.14.1';
-        const APP_BUILD    = '2026.08.21.03';
+        const APP_VERSION  = '2.15.0';
+        const APP_BUILD    = '2026.08.21.04';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-21T03:30:00Z';
+        const APP_DEPLOYED = '2026-08-21T10:30:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -4930,14 +4962,11 @@
 
         function signOut() {
             authUser = null;
-            editMode = false;
-            scheduleEditMode = false;
-            mediaEditMode = false;
-            fleetEditMode = false;
-            pendingChanges = {};
-            pendingMedia = {};
-            pendingFleet = {};
-            try { sessionStorage.removeItem(AUTH_SESSION_KEY); } catch (e) { /* non-fatal */ }
+            sessionStorage.removeItem(AUTH_SESSION_KEY);
+            // Every page drops out of Edit Mode with the session — otherwise a tab left
+            // open in Edit Mode would still be showing inputs nobody can save.
+            editMode = scheduleEditMode = mediaEditMode = false;
+            maintEditMode = hwEditMode = fleetEditMode = serialsEditMode = false;
             updateAuthUI();
             renderAll();
         }
@@ -5078,6 +5107,48 @@
             });
         }
 
+        // ===== Edit buttons: one implementation, three states =====
+        // Six pages each carried their own copy of the same three-line dance, and each
+        // was its own way in to the sign-in modal — so authentication had six entry
+        // points and no single home. The tab bar's Sign in button is now the only one,
+        // and every page button reads the same state through here.
+        //
+        //   signed out            🔒 Edit   grey, and clicking explains where to sign in
+        //   signed in, viewing    🔓 Edit   green, and clicking enters Edit Mode
+        //   signed in, editing    💾 Save   amber, unchanged
+        //
+        // Signing in deliberately does NOT open Edit Mode anywhere: it only unlocks the
+        // button. Nothing becomes editable until that page's own Edit is pressed, so a
+        // signed-in user still reads the dashboard read-only by default.
+        function applyEditButton(btnId, editing, idleLabel, activeLabel) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            const locked = !canEdit();
+            btn.textContent = locked
+                ? `🔒 ${idleLabel}`
+                : (editing ? activeLabel : `🔓 ${idleLabel}`);
+            btn.classList.toggle('edit-locked', locked);
+            btn.classList.toggle('save-active', !locked && editing);
+            // Kept clickable on purpose — the click is what explains how to unlock it.
+            // aria-disabled marks it unavailable without dropping it from the tab order.
+            btn.setAttribute('aria-disabled', locked ? 'true' : 'false');
+            btn.title = locked ? 'Sign in from the tab bar to edit this page' : '';
+        }
+
+        // The one thing a locked Edit button does: point at the only sign-in control.
+        // It deliberately does not open the modal itself — that would quietly recreate
+        // the six entry points this replaced.
+        function requireSignIn() {
+            setSyncStatus('🔒 Sign in from the tab bar to edit — the Sign in button sits beside the tabs.', '#e0a800');
+            const btn = document.getElementById('tabSignInBtn');
+            if (!btn) return;
+            btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+            btn.classList.remove('attention');
+            void btn.offsetWidth;          // restart the animation if it is already running
+            btn.classList.add('attention');
+            setTimeout(() => btn.classList.remove('attention'), 2400);
+        }
+
         // ===== Restricted tabs =====
         // Activity, Hardware and Serials are shown only to a signed-in editor. This is a
         // UI gate and nothing more: /activities, /hardware and /units are still
@@ -5105,14 +5176,36 @@
             document.querySelectorAll('.tab-button[data-restricted]').forEach(btn => {
                 btn.style.display = allowed ? '' : 'none';
             });
-            const signin = document.getElementById('tabSignInBtn');
-            if (signin) signin.style.display = allowed ? 'none' : '';
+            updateTabAuthButton();
 
             // Signing out while sitting on a restricted tab must not leave its content
             // on screen — fall back to the Overview rather than a blank page.
             if (!allowed) {
                 const open = document.querySelector('.tab-content.active');
                 if (open && RESTRICTED_TABS.includes(open.id)) switchTab('overview');
+            }
+        }
+
+        // The one authentication control in the application. It stays in the tab bar
+        // whether or not anyone is signed in, so there is a single, always-visible
+        // answer to "am I signed in, and how do I change that". Page-level Edit buttons
+        // read this state and never offer their own way in.
+        function updateTabAuthButton() {
+            const btn = document.getElementById('tabSignInBtn');
+            if (!btn) return;
+            btn.style.display = '';
+            if (canEdit()) {
+                btn.textContent = '🔓 Signed in';
+                btn.title = `Signed in as ${authUser.email} — click to sign out`;
+                btn.classList.add('tab-signin-on');
+                btn.onclick = () => {
+                    if (confirm(`Sign out of ${authUser.email}?\n\nAny page still in Edit Mode will close, and unsaved changes are lost.`)) signOut();
+                };
+            } else {
+                btn.textContent = '🔒 Sign in';
+                btn.title = 'Sign in to edit — Activity, Hardware and Serials appear once you do';
+                btn.classList.remove('tab-signin-on');
+                btn.onclick = signInForTabs;
             }
         }
 
@@ -5132,24 +5225,16 @@
             updateMaintEditUI();
             updateHwEditUI();
             updateFleetEditUI();
-            const editBtn = document.getElementById('editModeBtn');
+            renderSerialsPage();
             const signOutBtn = document.getElementById('signOutBtn');
             const whoami = document.getElementById('signedInAs');
-            if (!editBtn) return;
 
-            if (!canEdit()) {
-                editBtn.textContent = '🔒 Sign in to edit';
-                editBtn.classList.remove('save-active');
-                if (signOutBtn) signOutBtn.style.display = 'none';
-                if (whoami) whoami.style.display = 'none';
-                return;
-            }
-            editBtn.textContent = editMode ? '💾 Save' : '✏️ Edit';
-            editBtn.classList.toggle('save-active', editMode);
-            if (signOutBtn) signOutBtn.style.display = '';
+            applyEditButton('editModeBtn', editMode && canEdit(), 'Edit', '💾 Save');
+
+            if (signOutBtn) signOutBtn.style.display = canEdit() ? '' : 'none';
             if (whoami) {
-                whoami.textContent = authUser.email;
-                whoami.style.display = '';
+                whoami.textContent = canEdit() ? authUser.email : '';
+                whoami.style.display = canEdit() ? '' : 'none';
             }
         }
 
@@ -5324,8 +5409,7 @@
                 await commitEditChanges();
                 return;
             }
-            if (!canEdit() && !(await promptSignIn())) return;
-            if (!canEdit()) return;
+            if (!canEdit()) { requireSignIn(); return; }
             editMode = true;
             pendingChanges = {};
             updateAuthUI();
@@ -5783,21 +5867,16 @@
 
         async function toggleFleetEdit() {
             if (fleetEditMode) { await commitFleetChanges(); return; }
-            if (!canEdit() && !(await promptSignIn())) return;
-            if (!canEdit()) return;
+            if (!canEdit()) { requireSignIn(); return; }
             fleetEditMode = true;
             pendingFleet = {};
             populateFleetTable();
         }
 
         function updateFleetEditUI() {
-            const btn = document.getElementById('fleetEditBtn');
             const addBtn = document.getElementById('fleetAddBtn');
             const who = document.getElementById('fleetSignedInAs');
-            if (!btn) return;
-            const editing = fleetEditMode && canEdit();
-            btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '💾 Save' : '✏️ Edit');
-            btn.classList.toggle('save-active', editing);
+            applyEditButton('fleetEditBtn', fleetEditMode && canEdit(), 'Edit', '💾 Save');
             if (addBtn) addBtn.style.display = canEdit() ? '' : 'none';
             if (who) {
                 who.textContent = canEdit() ? authUser.email : '';
@@ -6045,20 +6124,15 @@
         // ===== Media edit mode (same staged-then-Save shape as the Software table) =====
         async function toggleMediaEdit() {
             if (mediaEditMode) { await commitMediaChanges(); return; }
-            if (!canEdit() && !(await promptSignIn())) return;
-            if (!canEdit()) return;
+            if (!canEdit()) { requireSignIn(); return; }
             mediaEditMode = true;
             pendingMedia = {};
             populateMediaTable();
         }
 
         function updateMediaEditUI() {
-            const btn = document.getElementById('mediaEditBtn');
             const who = document.getElementById('mediaSignedInAs');
-            if (!btn) return;
-            const editing = mediaEditMode && canEdit();
-            btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '💾 Save' : '✏️ Edit');
-            btn.classList.toggle('save-active', editing);
+            applyEditButton('mediaEditBtn', mediaEditMode && canEdit(), 'Edit', '💾 Save');
             if (who) {
                 who.textContent = canEdit() ? authUser.email : '';
                 who.style.display = canEdit() ? '' : 'none';
@@ -6476,22 +6550,17 @@
         // ===== Maintenance edit mode (same staged-then-Save shape as Media and Fleet) =====
         async function toggleMaintEdit() {
             if (maintEditMode) { await commitMaintChanges(); return; }
-            if (!canEdit() && !(await promptSignIn())) return;
-            if (!canEdit()) return;
+            if (!canEdit()) { requireSignIn(); return; }
             maintEditMode = true;
             pendingMaint = {};
             renderMaintenancePage();
         }
 
         function updateMaintEditUI() {
-            const btn = document.getElementById('maintEditBtn');
             const who = document.getElementById('maintSignedInAs');
             const addBtn = document.getElementById('maintAddActivityBtn');
             if (addBtn) addBtn.style.display = canEdit() ? '' : 'none';
-            if (!btn) return;
-            const editing = maintEditMode && canEdit();
-            btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '💾 Save' : '✏️ Edit');
-            btn.classList.toggle('save-active', editing);
+            applyEditButton('maintEditBtn', maintEditMode && canEdit(), 'Edit', '💾 Save');
             if (who) {
                 who.textContent = canEdit() ? authUser.email : '';
                 who.style.display = canEdit() ? '' : 'none';
@@ -6643,7 +6712,7 @@
         }
 
         function openAddActivity() {
-            if (!canEdit()) { promptSignIn().then(ok => { if (ok) openAddActivity(); }); return; }
+            if (!canEdit()) { requireSignIn(); return; }
 
             const acSel = document.getElementById('addActAircraft');
             acSel.innerHTML = maintenanceFleet()
@@ -7221,7 +7290,7 @@
         }
 
         function openBaseline() {
-            if (!canEdit()) { promptSignIn().then(ok => { if (ok) openBaseline(); }); return; }
+            if (!canEdit()) { requireSignIn(); return; }
 
             blDraft = {};
             blOpenTails = {};
@@ -7555,7 +7624,7 @@
         }
 
         function openRemoval() {
-            if (!canEdit()) { promptSignIn().then(ok => { if (ok) openRemoval(); }); return; }
+            if (!canEdit()) { requireSignIn(); return; }
 
             rmDraft = {};
             const acSel = document.getElementById('rmAircraft');
@@ -7658,6 +7727,13 @@
         // not another two-pane shell: the job right now is getting serials in and
         // filling dates later, not navigating a hierarchy.
         const srFilters = { lru: '', tail: '', state: '', q: '' };
+        let serialsEditMode = false;
+
+        function toggleSerialsEdit() {
+            if (!canEdit()) { requireSignIn(); return; }
+            serialsEditMode = !serialsEditMode;
+            renderSerialsPage();
+        }
 
         function setSerialFilter(key, value) {
             srFilters[key] = value;
@@ -7757,7 +7833,7 @@
 
             // --- the table ---
             const rows = serialRowsFiltered();
-            const editable = canEdit();
+            const editable = serialsEditMode && canEdit();
 
             const dateCell = (r, field) => {
                 const f = r.fitment;
@@ -7791,14 +7867,17 @@
             setText('srCount', `${rows.length} of ${all.length} ${all.length === 1 ? 'record' : 'records'} shown`
                 + (noDate ? ` · ${noDate} still missing a date` : ''));
 
+            // The two Record buttons are actions rather than field editing, so they
+            // follow sign-in like Add New Activity does, not Edit Mode.
             const who = document.getElementById('srSignedInAs');
             ['srInstalledBtn', 'srRemovedBtn'].forEach(id => {
                 const b = document.getElementById(id);
-                if (b) b.style.display = editable ? '' : 'none';
+                if (b) b.style.display = canEdit() ? '' : 'none';
             });
+            applyEditButton('srEditBtn', editable, 'Edit Dates', '✓ Done');
             if (who) {
-                who.textContent = editable ? authUser.email : '';
-                who.style.display = editable ? '' : 'none';
+                who.textContent = canEdit() ? authUser.email : '';
+                who.style.display = canEdit() ? '' : 'none';
             }
         }
 
@@ -7873,8 +7952,7 @@
         // ===== Hardware edit mode (same staged-then-Save shape as the other pages) =====
         async function toggleHwEdit() {
             if (hwEditMode) { await commitHwChanges(); return; }
-            if (!canEdit() && !(await promptSignIn())) return;
-            if (!canEdit()) return;
+            if (!canEdit()) { requireSignIn(); return; }
             hwEditMode = true;
             pendingHw = {};
             pendingRoaming = {};
@@ -7882,18 +7960,12 @@
         }
 
         function updateHwEditUI() {
-            const btn = document.getElementById('hwEditBtn');
             const who = document.getElementById('hwSignedInAs');
-            const add = document.getElementById('hwAddIssueBtn');
-            if (add) add.style.display = canEdit() ? '' : 'none';
-            const base = document.getElementById('hwBaselineBtn');
-            if (base) base.style.display = canEdit() ? '' : 'none';
-            const rem = document.getElementById('hwRemovalBtn');
-            if (rem) rem.style.display = canEdit() ? '' : 'none';
-            if (!btn) return;
-            const editing = hwEditMode && canEdit();
-            btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '💾 Save' : '✏️ Edit');
-            btn.classList.toggle('save-active', editing);
+            ['hwAddIssueBtn', 'hwBaselineBtn', 'hwRemovalBtn'].forEach(id => {
+                const b = document.getElementById(id);
+                if (b) b.style.display = canEdit() ? '' : 'none';
+            });
+            applyEditButton('hwEditBtn', hwEditMode && canEdit(), 'Edit', '💾 Save');
             if (who) {
                 who.textContent = canEdit() ? authUser.email : '';
                 who.style.display = canEdit() ? '' : 'none';
@@ -7973,7 +8045,7 @@
 
         // ===== Known issues =====
         function openAddIssue() {
-            if (!canEdit()) { promptSignIn().then(ok => { if (ok) openAddIssue(); }); return; }
+            if (!canEdit()) { requireSignIn(); return; }
             const lru = lruById(hwSelectedId);
             if (!lru) return;
             setText('addIssueFor', `${lru.label} — ${lru.fit === 'linefit' ? 'Linefit' : 'Retrofit'}`);
@@ -8049,7 +8121,7 @@
             const u = unitsLive[unitId];
             const f = u && (u.fitments || {})[fitmentId];
             if (!f) return;
-            if (!canEdit()) { promptSignIn().then(ok => { if (ok) openShopReport(unitId, fitmentId); }); return; }
+            if (!canEdit()) { requireSignIn(); return; }
             shopReportUnitId = unitId;
             shopReportFitmentId = fitmentId;
             setText('shopReportFor',
@@ -8330,8 +8402,7 @@
                 populateScheduleTables();
                 return;
             }
-            if (!canEdit() && !(await promptSignIn())) return;
-            if (!canEdit()) return;
+            if (!canEdit()) { requireSignIn(); return; }
             scheduleEditMode = true;
             populateScheduleTables();
         }
@@ -8343,8 +8414,7 @@
             if (!btn) return;
 
             const editing = scheduleEditMode && canEdit();
-            btn.textContent = !canEdit() ? '🔒 Sign in to edit' : (editing ? '✓ Done' : '✏️ Edit Schedule');
-            btn.classList.toggle('save-active', editing);
+            applyEditButton('scheduleEditBtn', editing, 'Edit Schedule', '✓ Done');
             if (addBtn) addBtn.style.display = editing ? '' : 'none';
             if (who) {
                 who.textContent = canEdit() ? authUser.email : '';
