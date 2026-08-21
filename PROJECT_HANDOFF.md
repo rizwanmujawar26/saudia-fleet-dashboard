@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.16.0, 2026-08-21)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.17.0, 2026-08-21)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -469,10 +469,33 @@ on the Timeline on the next `updateMetrics()`, which the save already calls.
 
 ## Widget vocabulary
 
-- **Global widgets** — fixed 2×2 grid above the tab bar (`.global-widgets`),
-  fleet-wide, on every tab. Top row: Software Loading Progress ×2, pilled
-  `Retrofit` (Middleware, the 40) and `Linefit` (SBC Configuration A.13, the
-  HBC+ pair). Bottom row: Media Loading Progress, Maintenance.
+- **Global widgets** — four KPI cards above the tab bar (`.global-widgets`),
+  fleet-wide, on every tab: Software Loading ×2 — `Retrofit` (Middleware) and
+  `Linefit` (SBC Configuration A.13, the HBC+ pair) — then Media Loading and
+  Maintenance.
+
+  **Three levels, in this order:** programme chip (`.metric-fit`) → category
+  (`.metric-label`) → specific item (`.metric-sublabel`) → figures → bar. The chip
+  row is rendered **even when empty** so the headings line up across all four cards;
+  on a phone the cards are stacked with nothing to line up against, so an empty one
+  collapses (`.metric-fit:empty`).
+
+  **`margin: auto 0 9px` on `.metric-figures` is load-bearing.** It pins the figures
+  and the bar to the bottom of the card, so a heading that wraps to two lines costs
+  the alignment nothing — every card's numbers and bar stay on one line without
+  reserving blank space for the wrap. Verified with a 32-character media label.
+
+  **Columns follow card width, not device.** Content width is the viewport less 40
+  (body) and 60 (content), so four cards stop clearing ~230px at **1080px** and two
+  stop clearing ~250px at **620px** — the only two breakpoints. Two-up spans a
+  250–480px card range, so its height is `clamp(190px, 25vw, 260px)`, holding the
+  proportion near 1.7 across the band instead of letterboxing at the wide end.
+
+  ⚠️ Two cascade traps here, both already bitten: the grid rules must be
+  `.dashboard-grid.global-widgets` (0,2,0), because the generic `.dashboard-grid`
+  collapses to one column at 768px later in the sheet and would win at equal
+  specificity; and the two-up `min-height` override must sit **after** the base
+  `.global-widgets .metric-card` rule, for the same reason.
 - **Local widgets** — `.media-widget-strip` rows inside a tab, showing that
   tab's own breakdown. All strips scroll sideways in one row; they never wrap.
 
@@ -916,6 +939,14 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.17.0 — Global widgets: four KPI cards, responsive by card width
+The 2×2 grid of wide panels became four near-square cards in a row, with a three-level
+hierarchy (programme → category → item) above the figures. 4 / 2 / 1 columns at 1080px
+and 620px, chosen from the card width the content actually needs rather than device
+sizes. Card heights, figure baselines and bar positions stay aligned across all four
+cards even when a label wraps. Markup restructured only — all 19 metric element ids
+are unchanged, so `updateMetrics()` was not touched.
 
 ### v2.16.0 — Authentication leaves the pages entirely
 The per-page `Sign out` button on Software and all seven `signed-in-as` email labels
