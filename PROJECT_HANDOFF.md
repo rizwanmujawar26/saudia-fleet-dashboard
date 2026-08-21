@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.15.0, 2026-08-21)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.16.0, 2026-08-21)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -760,11 +760,18 @@ point:
 read-only until its own Edit is pressed. Seven pages use this — Software, Media,
 Activity, Hardware, Serials, Schedule, Fleet.
 
-**The tab bar's Sign in button is the only authentication control.** It is the sole
-caller of `promptSignIn()`; a locked page button calls `requireSignIn()`, which
-messages the status bar and pulses that button rather than opening a second door.
-`updateTabAuthButton()` keeps it visible in both states — `🔒 Sign in` when signed
-out, `🔓 Signed in` (click to sign out, with a confirm) when signed in.
+**Authentication lives in exactly two places, neither of them a page:**
+
+| | |
+|---|---|
+| tab bar button | the **control** — `🔒 Sign in` / `🔓 Signed in`, the sole caller of `promptSignIn()` and the only way to sign out |
+| status bar chip | the **readout** — `updateSysUserChip()` shows the signed-in address on every tab |
+
+**No page has an authentication control or an identity label.** The per-page
+`Sign out` button and all seven `signed-in-as` spans were removed in v2.16.0; a page
+knows only whether its Edit button is unlocked. A locked page button calls
+`requireSignIn()`, which messages the status bar and pulses the tab-bar button rather
+than opening a second door.
 
 `signOut()` clears **every** page's Edit Mode, so a tab left mid-edit cannot come back
 showing inputs nobody can save.
@@ -909,6 +916,15 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.16.0 — Authentication leaves the pages entirely
+The per-page `Sign out` button on Software and all seven `signed-in-as` email labels
+are gone. The tab bar's button is the only auth **control**; a new status bar chip is
+the only identity **readout**, and it shows on every tab. `updateAuthUI()` no longer
+touches any page-level auth element, and each `update*EditUI()` now does exactly one
+job — its page's Edit button. `.table-actions-row` is `justify-content: flex-end`, so
+removing the spans (which carried `margin-right: auto`) left the button alignment
+unchanged.
 
 ### v2.15.0 — One edit-button implementation, one sign-in control
 Every page's Edit button now renders through `applyEditButton()` with three states —

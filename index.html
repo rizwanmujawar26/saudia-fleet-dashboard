@@ -2336,12 +2336,6 @@
             margin-bottom: 16px;
         }
 
-        .signed-in-as {
-            font-size: 12px;
-            color: #888;
-            margin-right: auto;
-        }
-
         .edit-btn {
             background: #0a5c34;
             color: white;
@@ -2658,6 +2652,13 @@
         }
 
         /* The header's stripe, mirrored. Faint here so it reads as a seam. */
+        .sys-chip-user .sys-val {
+            max-width: 190px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .sysbar::before {
             content: '';
             position: absolute;
@@ -3161,8 +3162,6 @@
                 </div>
 
                 <div class="table-actions-row">
-                    <span id="signedInAs" class="signed-in-as" style="display:none;"></span>
-                    <button id="signOutBtn" class="qf-btn" style="display:none;" onclick="signOut()">Sign out</button>
                     <button id="editModeBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleEditMode()">🔒 Edit</button>
                     <button id="aircraftResetBtn" class="qf-btn" onclick="resetAircraftTable()">↺ Reset</button>
                 </div>
@@ -3241,7 +3240,6 @@
                 </div>
 
                 <div class="table-actions-row">
-                    <span id="mediaSignedInAs" class="signed-in-as" style="display:none;"></span>
                     <button id="mediaEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleMediaEdit()">🔒 Edit</button>
                     <button id="mediaResetBtn" class="qf-btn" onclick="resetMediaTable()">↺ Reset</button>
                 </div>
@@ -3294,7 +3292,6 @@
                 </div>
 
                 <div class="table-actions-row">
-                    <span id="maintSignedInAs" class="signed-in-as" style="display:none;"></span>
                     <button id="maintAddActivityBtn" class="qf-btn" style="display:none;" onclick="openAddActivity()">➕ Add New Activity</button>
                     <button id="maintEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleMaintEdit()">🔒 Edit</button>
                     <button id="maintResetBtn" class="qf-btn" onclick="resetMaintenancePage()">↺ Reset</button>
@@ -3322,7 +3319,6 @@
                  list/detail layout and the prefix is historical. -->
             <div id="hardware" class="tab-content">
                 <div class="table-actions-row">
-                    <span id="hwSignedInAs" class="signed-in-as" style="display:none;"></span>
                     <button id="hwBaselineBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed Serials</button>
                     <button id="hwRemovalBtn" class="qf-btn" style="display:none;" onclick="openRemoval()">📤 Record Removed Serials</button>
                     <button id="hwAddIssueBtn" class="qf-btn" style="display:none;" onclick="openAddIssue()">➕ Add Known Issue</button>
@@ -3350,7 +3346,6 @@
                  is what makes the history legible as a list. -->
             <div id="serials" class="tab-content">
                 <div class="table-actions-row">
-                    <span id="srSignedInAs" class="signed-in-as" style="display:none;"></span>
                     <button id="srEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleSerialsEdit()">🔒 Edit Dates</button>
                     <button id="srInstalledBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed</button>
                     <button id="srRemovedBtn" class="qf-btn" style="display:none;" onclick="openRemoval()">📤 Record Removed</button>
@@ -3408,7 +3403,6 @@
                 </div>
 
                 <div class="table-actions-row">
-                    <span id="scheduleSignedInAs" class="signed-in-as" style="display:none;"></span>
                     <button id="scheduleAddBtn" class="qf-btn" style="display:none;" onclick="openScheduleAdd()">➕ Add Entry</button>
                     <button id="scheduleEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleScheduleEdit()">🔒 Edit Schedule</button>
                 </div>
@@ -3503,7 +3497,6 @@
                 </div>
 
                 <div class="table-actions-row">
-                    <span id="fleetSignedInAs" class="signed-in-as" style="display:none;"></span>
                     <button id="fleetAddBtn" class="qf-btn" style="display:none;" onclick="openAddAircraft()">➕ Add Aircraft</button>
                     <button id="fleetEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleFleetEdit()">🔒 Edit</button>
                     <button id="fleetResetBtn" class="qf-btn" onclick="resetFleetTable()">↺ Reset</button>
@@ -3574,6 +3567,15 @@
                 </button>
 
                 <span class="sys-sep"></span>
+
+                <!-- Who is signed in, in the one place that is on every tab. The tab
+                     bar's button is the control; this is the readout. -->
+                <button type="button" class="sys-chip sys-chip-user" id="sysUserChip" style="display:none;" onclick="openSysInfo()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span class="sys-val" id="sysUser">—</span>
+                </button>
+
+                <span class="sys-sep" id="sysUserSep" style="display:none;"></span>
 
                 <button type="button" class="sys-chip sys-chip-env" onclick="openSysInfo()">
                     <span class="sys-env-text" id="sysEnv">—</span>
@@ -4492,10 +4494,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.15.0';
-        const APP_BUILD    = '2026.08.21.04';
+        const APP_VERSION  = '2.16.0';
+        const APP_BUILD    = '2026.08.21.05';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-21T10:30:00Z';
+        const APP_DEPLOYED = '2026-08-21T10:45:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -5219,23 +5221,31 @@
         }
 
         function updateAuthUI() {
+            // Authentication lives in exactly two places: the tab bar's button, which is
+            // the control, and the status bar chip, which is the readout. No page has an
+            // auth control or an identity label of its own — a page only knows whether
+            // its Edit button is unlocked.
             applyTabVisibility();
+            updateSysUserChip();
+            applyEditButton('editModeBtn', editMode && canEdit(), 'Edit', '💾 Save');
             updateScheduleEditUI();
             updateMediaEditUI();
             updateMaintEditUI();
             updateHwEditUI();
             updateFleetEditUI();
             renderSerialsPage();
-            const signOutBtn = document.getElementById('signOutBtn');
-            const whoami = document.getElementById('signedInAs');
+        }
 
-            applyEditButton('editModeBtn', editMode && canEdit(), 'Edit', '💾 Save');
-
-            if (signOutBtn) signOutBtn.style.display = canEdit() ? '' : 'none';
-            if (whoami) {
-                whoami.textContent = canEdit() ? authUser.email : '';
-                whoami.style.display = canEdit() ? '' : 'none';
+        function updateSysUserChip() {
+            const chip = document.getElementById('sysUserChip');
+            const sep = document.getElementById('sysUserSep');
+            const on = canEdit();
+            if (chip) {
+                chip.style.display = on ? '' : 'none';
+                chip.title = on ? `Signed in as ${authUser.email}` : '';
             }
+            if (sep) sep.style.display = on ? '' : 'none';
+            if (on) setText('sysUser', authUser.email);
         }
 
         // ===== Live editing (writes are authenticated; rules enforce who may write) =====
@@ -5875,13 +5885,8 @@
 
         function updateFleetEditUI() {
             const addBtn = document.getElementById('fleetAddBtn');
-            const who = document.getElementById('fleetSignedInAs');
             applyEditButton('fleetEditBtn', fleetEditMode && canEdit(), 'Edit', '💾 Save');
             if (addBtn) addBtn.style.display = canEdit() ? '' : 'none';
-            if (who) {
-                who.textContent = canEdit() ? authUser.email : '';
-                who.style.display = canEdit() ? '' : 'none';
-            }
         }
 
         function handleFleetEdit(el) {
@@ -6131,12 +6136,7 @@
         }
 
         function updateMediaEditUI() {
-            const who = document.getElementById('mediaSignedInAs');
             applyEditButton('mediaEditBtn', mediaEditMode && canEdit(), 'Edit', '💾 Save');
-            if (who) {
-                who.textContent = canEdit() ? authUser.email : '';
-                who.style.display = canEdit() ? '' : 'none';
-            }
         }
 
         function handleMediaEdit(el) {
@@ -6557,14 +6557,9 @@
         }
 
         function updateMaintEditUI() {
-            const who = document.getElementById('maintSignedInAs');
             const addBtn = document.getElementById('maintAddActivityBtn');
             if (addBtn) addBtn.style.display = canEdit() ? '' : 'none';
             applyEditButton('maintEditBtn', maintEditMode && canEdit(), 'Edit', '💾 Save');
-            if (who) {
-                who.textContent = canEdit() ? authUser.email : '';
-                who.style.display = canEdit() ? '' : 'none';
-            }
         }
 
         function handleMaintEdit(el) {
@@ -7869,16 +7864,11 @@
 
             // The two Record buttons are actions rather than field editing, so they
             // follow sign-in like Add New Activity does, not Edit Mode.
-            const who = document.getElementById('srSignedInAs');
             ['srInstalledBtn', 'srRemovedBtn'].forEach(id => {
                 const b = document.getElementById(id);
                 if (b) b.style.display = canEdit() ? '' : 'none';
             });
             applyEditButton('srEditBtn', editable, 'Edit Dates', '✓ Done');
-            if (who) {
-                who.textContent = canEdit() ? authUser.email : '';
-                who.style.display = canEdit() ? '' : 'none';
-            }
         }
 
         // Filling in one date, in place — the follow-up half of the bulk entry: serials
@@ -7960,16 +7950,11 @@
         }
 
         function updateHwEditUI() {
-            const who = document.getElementById('hwSignedInAs');
             ['hwAddIssueBtn', 'hwBaselineBtn', 'hwRemovalBtn'].forEach(id => {
                 const b = document.getElementById(id);
                 if (b) b.style.display = canEdit() ? '' : 'none';
             });
             applyEditButton('hwEditBtn', hwEditMode && canEdit(), 'Edit', '💾 Save');
-            if (who) {
-                who.textContent = canEdit() ? authUser.email : '';
-                who.style.display = canEdit() ? '' : 'none';
-            }
         }
 
         // Roaming lives on the aircraft, so it is staged apart from the LRU's own
@@ -8410,16 +8395,11 @@
         function updateScheduleEditUI() {
             const btn = document.getElementById('scheduleEditBtn');
             const addBtn = document.getElementById('scheduleAddBtn');
-            const who = document.getElementById('scheduleSignedInAs');
             if (!btn) return;
 
             const editing = scheduleEditMode && canEdit();
             applyEditButton('scheduleEditBtn', editing, 'Edit Schedule', '✓ Done');
             if (addBtn) addBtn.style.display = editing ? '' : 'none';
-            if (who) {
-                who.textContent = canEdit() ? authUser.email : '';
-                who.style.display = canEdit() ? '' : 'none';
-            }
 
             // Edit mode swaps the read-only countdown column for the station picker.
             document.querySelectorAll('#scheduleContent thead tr').forEach(tr => {
