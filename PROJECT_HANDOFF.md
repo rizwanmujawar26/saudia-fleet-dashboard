@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.19.0, 2026-08-21)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.19.1, 2026-08-21)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -866,6 +866,35 @@ the colour changes between states.
 toggle with `if (!canEdit()) { requireSignIn(); return; }`. Do not reintroduce a
 per-page `promptSignIn()`.
 
+## Live streams — `put` and `patch` are different events
+
+Firebase REST streaming sends two event types and they do **not** mean the same thing:
+
+| event | meaning |
+|---|---|
+| `put` | **replace** whatever is at `path` with `data` |
+| `patch` | **merge** the entries of `data` into `path` — and **each key is itself a path** |
+
+Both used to be routed through one handler that replaced the whole node whenever the
+path was `/`. **A Save is exactly a root patch**: `commitEditChanges()` and four other
+save paths send a multi-path `PATCH /aircraft.json` with keys like
+`"ASI/completionDate"`, so Firebase echoed back `path: "/"` with those keys — and the
+handler replaced all 42 aircraft with the two fields that had just changed, stored
+under literal slash-bearing keys. `rebuildAircraftData()` then found no aircraft and
+every figure on the page read **zero** until someone reloaded by hand.
+
+`applyStreamEvent(store, type, path, data)` is now the one implementation, used by
+both `/aircraft` and `/schedule`: a `patch` applies each key as its own path, a `put`
+replaces at the path, and `null` deletes rather than storing null.
+
+**`aircraftStoreLooksBroken()` is the backstop.** If a stream event ever leaves the
+store empty while the roster has aircraft, or holding a key containing `/`, the node
+is re-read instead of rendering zeros. A genuinely empty collection just comes back
+empty and costs one request.
+
+⚠️ Five save paths depend on this — Software, Media, Activity, Fleet, Hardware roaming.
+Any new handler must take the event **type**, not just the path.
+
 ## Connection budget — do not add a seventh stream
 
 A browser allows about **six concurrent connections per origin** over HTTP/1.1, and
@@ -997,6 +1026,13 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.19.1 — Saving emptied the page (put vs patch)
+Every Save blanked the dashboard until a manual reload. The live-stream handler treated
+`patch` like `put`, so the root patch that a multi-path save echoes back replaced the
+whole aircraft collection with the two changed fields. Fixed by implementing the two
+events properly, with a self-healing re-read as a backstop. No auto-refresh was added —
+with the protocol handled correctly the stream already delivers the new values.
 
 ### v2.19.0 — Header title fits its space instead of guessing
 "CONNECTIVITY FLEET STATUS" wrapped to two lines on a phone. The title and subtitle

@@ -4708,10 +4708,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.19.0';
-        const APP_BUILD    = '2026.08.21.09';
+        const APP_VERSION  = '2.19.1';
+        const APP_BUILD    = '2026.08.21.10';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-21T16:10:00Z';
+        const APP_DEPLOYED = '2026-08-21T17:05:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -4787,32 +4787,75 @@
             updateMetrics();
         }
 
-        function applyLivePathUpdate(path, data) {
-            const parts = path.split('/').filter(Boolean);
-            if (parts.length === 0) {
-                aircraftLive = data || {};
-            } else {
-                const id = parts[0];
-                if (parts.length === 1) {
-                    if (data === null) {
-                        delete aircraftLive[id];
-                    } else {
-                        aircraftLive[id] = { ...(aircraftLive[id] || {}), ...data };
-                    }
-                } else {
-                    aircraftLive[id] = aircraftLive[id] || {};
-                    let obj = aircraftLive[id];
-                    for (let i = 1; i < parts.length - 1; i++) {
-                        obj[parts[i]] = obj[parts[i]] || {};
-                        obj = obj[parts[i]];
-                    }
-                    if (data === null) {
-                        delete obj[parts[parts.length - 1]];
-                    } else {
-                        obj[parts[parts.length - 1]] = data;
-                    }
-                }
+        // ===== Firebase REST streaming: put and patch are NOT the same event =====
+        //   put   — REPLACE whatever is at `path` with `data`
+        //   patch — MERGE the entries in `data` into `path`, and each KEY is itself a
+        //           path, because a multi-path update arrives as
+        //           {"ASI/completionDate": "...", "AS62/completionDate": "..."} at path "/"
+        //
+        // Both events used to be routed through one handler that replaced the whole node
+        // whenever the path was root. A save IS a root patch — every Save button sends a
+        // multi-path PATCH to /aircraft.json — so saving replaced the entire aircraft
+        // collection with just the two fields that had changed, under literal keys like
+        // "ASI/completionDate". rebuildAircraftData() then found no aircraft at all and
+        // every figure on the page read zero until the page was reloaded by hand.
+        //
+        // Five save paths hit this: Software, Media, Activity, Fleet and Hardware roaming.
+        function livePutAt(store, parts, value) {
+            // Root: the value replaces the node outright.
+            if (!parts.length) return (value === null || value === undefined) ? {} : value;
+
+            let obj = store;
+            for (let i = 0; i < parts.length - 1; i++) {
+                if (!obj[parts[i]] || typeof obj[parts[i]] !== 'object') obj[parts[i]] = {};
+                obj = obj[parts[i]];
             }
+            const last = parts[parts.length - 1];
+            if (value === null || value === undefined) delete obj[last];
+            else obj[last] = value;
+            return store;
+        }
+
+        function applyStreamEvent(store, type, path, data) {
+            const base = String(path == null ? '/' : path).split('/').filter(Boolean);
+            if (type !== 'patch') return livePutAt(store, base, data);
+
+            let next = store;
+            Object.entries(data || {}).forEach(([key, value]) => {
+                next = livePutAt(next, base.concat(String(key).split('/').filter(Boolean)), value);
+            });
+            return next;
+        }
+
+        // Belt and braces for the class of fault above. If a stream event ever leaves the
+        // store empty, or holding a key that is really a path, the protocol handling is
+        // wrong somewhere — re-read the node rather than render a screen full of zeros.
+        // A genuinely empty collection simply comes back empty and costs one request.
+        let aircraftReloadPending = false;
+
+        function aircraftStoreLooksBroken() {
+            const keys = Object.keys(aircraftLive);
+            if (keys.some(k => k.includes('/'))) return true;
+            return keys.length === 0 && Object.keys(fleetRoster || {}).length > 0;
+        }
+
+        function reloadAircraftStore(reason) {
+            if (aircraftReloadPending) return;
+            aircraftReloadPending = true;
+            fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json`, {}, 15000)
+                .then(r => r.json())
+                .then(d => {
+                    aircraftLive = d || {};
+                    markDataSync();
+                    renderAll();
+                })
+                .catch(() => {})
+                .finally(() => { aircraftReloadPending = false; });
+        }
+
+        function applyLivePathUpdate(type, path, data) {
+            aircraftLive = applyStreamEvent(aircraftLive, type, path, data);
+            if (aircraftStoreLooksBroken()) { reloadAircraftStore(); return; }
             renderAll();
         }
 
@@ -4967,22 +5010,9 @@
                 .finally(() => clearTimeout(t));
         }
 
-        function applySchedulePathUpdate(path, data) {
-            const parts = path.split('/').filter(Boolean);
-            if (parts.length === 0) {
-                scheduleLive = data || {};
-            } else {
-                const id = parts[0];
-                if (parts.length === 1) {
-                    if (data === null) delete scheduleLive[id];
-                    else scheduleLive[id] = { ...(scheduleLive[id] || {}), ...data };
-                } else {
-                    scheduleLive[id] = scheduleLive[id] || {};
-                    if (data === null) delete scheduleLive[id][parts[1]];
-                    else scheduleLive[id][parts[1]] = data;
-                }
-            }
-            // Don't yank the inputs out from under someone mid-edit.
+        function applySchedulePathUpdate(type, path, data) {
+            scheduleLive = applyStreamEvent(scheduleLive, type, path, data);
+            // Do not yank the inputs out from under someone mid-edit.
             if (!scheduleEditMode) populateScheduleTables();
         }
 
@@ -5006,18 +5036,14 @@
 
         function startLiveStream() {
             const es = new EventSource(`${FIREBASE_DB_URL}/aircraft.json`);
-            es.addEventListener('put', e => {
+            const onEvent = type => e => {
                 const msg = JSON.parse(e.data);
-                applyLivePathUpdate(msg.path, msg.data);
+                applyLivePathUpdate(type, msg.path, msg.data);
                 markDataSync();
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
-            });
-            es.addEventListener('patch', e => {
-                const msg = JSON.parse(e.data);
-                applyLivePathUpdate(msg.path, msg.data);
-                markDataSync();
-                setSyncStatus('🟢 Live — synced with your team', '#28a745');
-            });
+            };
+            es.addEventListener('put', onEvent('put'));
+            es.addEventListener('patch', onEvent('patch'));
             es.onopen = () => setSyncStatus('🟢 Live — synced with your team', '#28a745');
             es.onerror = () => setSyncStatus('🟡 Reconnecting to live data...', '#e0a800');
         }
