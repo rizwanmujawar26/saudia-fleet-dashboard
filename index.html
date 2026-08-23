@@ -3892,7 +3892,7 @@
                                 <th class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortTable('fleetTable', 2)">Aircraft</th>
                                 <th class="sortable-th" data-col="3" data-label="Type" onclick="sortTable('fleetTable', 3)">Type</th>
                                 <th class="sortable-th" data-col="4" data-label="Fit" onclick="sortTable('fleetTable', 4)">Fit</th>
-                                <th class="sortable-th" data-col="5" data-label="Location" onclick="sortTable('fleetTable', 5)">Location</th>
+                                <th class="sortable-th" data-col="5" data-label="Install Site" onclick="sortTable('fleetTable', 5)">Install Site</th>
                                 <th class="sortable-th" data-col="6" data-label="Status" onclick="sortTable('fleetTable', 6)">Status</th>
                                 <th class="sortable-th" data-col="7" data-label="SaudiaWiFi" onclick="sortTable('fleetTable', 7)">SaudiaWiFi</th>
                                 <th class="sortable-th col-comment" data-col="8" data-label="Comments" onclick="sortTable('fleetTable', 8)">Comments</th>
@@ -4877,10 +4877,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.28.2';
-        const APP_BUILD    = '2026.08.23.12';
+        const APP_VERSION  = '2.29.0';
+        const APP_BUILD    = '2026.08.23.13';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T15:35:00Z';
+        const APP_DEPLOYED = '2026-08-23T15:50:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -7013,7 +7013,7 @@
             const profile = [
                 cell('Aircraft Type', escAttr(a.type)),
                 cell('Base Station', a.station && a.station !== 'N/A' ? escAttr(a.station) : ''),
-                cell('Retrofit Location', locVal),
+                cell('Install Site', locVal),
                 linefit
                     ? cell('SBC Config A.13', a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
                     : cell('Middleware', swVersionOf(a)),

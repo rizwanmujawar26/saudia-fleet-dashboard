@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.28.2, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.29.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -97,7 +97,7 @@ adding it to the rules first.
 | `note` | Software-page comment |
 | `media` | `{ mediaCycle, mediaDisplay, mediaSource, loadedDateUTC, comments }` |
 | `maintenance` | `{ open, reason, flaggedAt }` — see the Maintenance tab |
-| `retrofitLocation` | free text ≤ 60: the city or MRO where the retrofit was done (Doha, Malta, Jeddah…). Shown as the Fleet tab's **Location** column |
+| `retrofitLocation` | free text ≤ 60: where the equipment was installed (Jeddah, Malta, Airbus…). Labelled **Install Site** on both the Fleet column and the Activity profile — the field name is historical, the label covers linefit too |
 | `retrofitStart` / `retrofitEnd` | `DD-Mon-YYYY` — the grounding window for that modification. **Stored but given no column**; they surface as the Location cell's tooltip |
 | `wifiVisibility` | `public` \| `hidden` |
 | `activatedDate` | `DD-Mon-YYYY` |
