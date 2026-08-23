@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.22.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.23.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -237,6 +237,19 @@ by definition. The Fleet page opens on the Active view (`FLEET_DEFAULT_STATUS`).
 Note `fit: 'retrofit'` and `fleetStatus: 'In Retrofit'` mean different things and
 can both be true: `fit` is how WiFi got onto the airframe (retrofitted vs linefit
 from the factory), `fleetStatus` is where it is in the programme *right now*.
+
+**The Fleet page opens on everything.** `FLEET_DEFAULT_STATUS` is `''` — no status is
+preselected, because this page is the whole roster rather than an operational view.
+`FLEET_DEFAULT_SORT` orders it by **Activation Date, oldest first**; that column is
+second, right after `#`. Undated aircraft sort to the end (`dateSortKey` gives them
+`99999999`).
+
+⚠️ **`sortTable()` is now the click handler only.** `applyTableSort(tableId, col, dir)`
+does the work without touching the recorded direction, and `populateFleetTable()`
+re-applies `lastSort['fleetTable']` on every rebuild. Without that, a live update
+rebuilt the rows in roster order while the header kept showing its arrow — which is
+what happened to the default sort the first time, and had been silently happening to
+any user sort on any table.
 
 **Activation date is `activatedDate` on `/aircraft/{tail}`**, not on the fleet
 record — the same field the Maintenance tab edits. The Fleet page shows it as the
@@ -481,6 +494,11 @@ on the Timeline on the next `updateMetrics()`, which the save already calls.
 
 ## Widget vocabulary
 
+- **Fleet widgets** — Active Fleet, In Retrofit, and **SSID Visibility**: a single
+  track split between public (from the left) and hidden (from the right), the two
+  shares always filling it, because it shows a composition rather than progress
+  towards anything. It counts the **Active** fleet only — an aircraft still in retrofit
+  has no SSID on air to be public or hidden.
 - **Global widgets** — four KPI cards above the tab bar (`.global-widgets`),
   fleet-wide, on every tab: Software Loading ×2 — `Retrofit` (Middleware) and
   `Linefit` (SBC Configuration A.13, the HBC+ pair) — then Media Loading and
@@ -1073,6 +1091,12 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.23.0 — Fleet tab: activation-first ordering and a new widget row
+Activation Date moved to the second column and is the default sort, oldest first. No
+status filter is preselected any more. The widget row was replaced with Active Fleet,
+In Retrofit and a split SSID Visibility bar (38 public / 3 hidden of the 41 active).
+Fixed alongside it: a table rebuild silently dropped whatever sort was applied.
 
 ### v2.22.0 — SaudiaWiFi column on the Fleet tab
 `wifiVisibility` set across the whole roster — public everywhere except AQA, AQJ and
