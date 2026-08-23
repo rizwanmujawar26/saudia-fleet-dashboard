@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.20.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.21.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -101,6 +101,15 @@ adding it to the rules first.
 | `wifiVisibility` | `public` \| `hidden` |
 | `activatedDate` | `DD-Mon-YYYY` |
 | `simRoaming` | `active` \| `inactive` — the SIM subscription, not the card |
+| `ugoVersion` | e.g. `6.3.1`. **Absent = not installed** |
+| `tilesVersion` | e.g. `2.0`. **Absent = not installed** |
+
+`ugoVersion` and `tilesVersion` are shown on the **Media** tab but stored at the top
+level, *not* under `media`: clearing an aircraft's media writes `media: null`, which
+would take them with it every time. They are software on the aircraft, not a property
+of one month's load. `UGO_LATEST` / `TILES_LATEST` in the page decide the badge —
+green on the latest build, amber when behind, and *Not installed* when the field is
+absent, which is the state to leave an aircraft in when it has no tiles at all.
 
 `retrofitLocation`, `wifiVisibility`, `activatedDate` and `simRoaming` are stored
 at the **top level**, deliberately *not* under `maintenance` — clearing a flag
@@ -564,7 +573,11 @@ firing before authentication and with `backup.sh` losing anonymous access.
    an edit option, retitles the global card and demotes the previous one. No
    other change needed.
 3. **Media** — monthly media loading for the main fleet only (linefit excluded).
-   Columns: `# | Aircraft | Type | Status | Media Loaded | Date UTC | Comments`.
+   Columns: `# | Aircraft | Type | Status | Media Loaded | Date UTC | UGO | TILES | Comments`.
+   UGO and TILES are editable in the tab's Edit mode; an empty box clears the field,
+   which is how an aircraft is marked as not having it at all. A value that does not
+   match the rules' pattern is refused at the input and never staged, so it cannot take
+   the atomic save down with it.
 4. **Activity** (tab id is still `maintenance`, like Software's is still `aircraft`)
    — the **active** fleet only (`fleetStatus === 'active'`), the same
    set the global Maintenance card counts against, so the two cannot disagree.
@@ -1037,6 +1050,13 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.21.0 — UGO and TILES columns; September greyed until it lands
+The Media table gained UGO and TILES version columns, seeded to 6.3.1 and 2.0 across
+the 39 aircraft it covers, editable per aircraft, with *Not installed* for an absent
+value. July's size pill was removed (no published figure), and the announced-but-not-
+loaded September cycle is now grey and recessed rather than violet, so it cannot be
+mistaken for progress.
 
 ### v2.20.0 — Media load sizes, and announcing next month's cycle
 Each media cycle widget carries its load size as a pill (July and August 791 GB,

@@ -1441,6 +1441,36 @@
 
         /* One row that scrolls sideways instead of wrapping, same treatment as the
            tab strip — a wrapped second row of widgets pushed the table off a phone. */
+        .ver-badge {
+            display: inline-block;
+            font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 11.5px;
+            font-weight: 700;
+            border-radius: 5px;
+            padding: 2px 8px;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+
+        /* On the latest build. */
+        .ver-current { background: #e6f4ec; color: #1b6b3a; border-color: #c2e2ce; }
+        /* Installed, but not the latest — the state the fleet is worked through. */
+        .ver-behind  { background: #fdf3e3; color: #8a5a12; border-color: #efd9ae; }
+
+        .ver-none {
+            font-size: 11.5px;
+            color: #a2abb3;
+            font-style: italic;
+            white-space: nowrap;
+        }
+
+        .ver-input { max-width: 92px; }
+
+        .input-invalid {
+            border-color: #dc3545 !important;
+            background: #fdf5f6;
+        }
+
         .media-widget-strip {
             display: flex;
             flex-wrap: nowrap;
@@ -1486,7 +1516,7 @@
         .media-widget-latest   .media-size-pill { background: rgba(30, 126, 52, 0.10); color: #1e7e34; border-color: rgba(30, 126, 52, 0.20); }
         .media-widget-previous .media-size-pill { background: rgba(20, 100, 158, 0.10); color: #14649e; border-color: rgba(20, 100, 158, 0.20); }
         .media-widget-older    .media-size-pill { background: rgba(138, 90, 18, 0.10); color: #8a5a12; border-color: rgba(138, 90, 18, 0.20); }
-        .media-widget-upcoming .media-size-pill { background: rgba(87, 66, 127, 0.10); color: #57427f; border-color: rgba(87, 66, 127, 0.22); }
+        .media-widget-upcoming .media-size-pill { background: rgba(15, 32, 45, 0.05); color: #7b858e; border-color: rgba(15, 32, 45, 0.09); }
 
         .media-widget-label {
             font-size: 12px;
@@ -1541,11 +1571,22 @@
         .media-widget-older    .media-widget-pct  { color: #8a5a12; }
         .media-widget-older    .media-widget-fill { background: #f0ad4e; }
 
-        /* Declared for an upcoming month but not loaded anywhere yet: pending, not
-           stale, so it must not borrow the amber that means "out of date". */
-        .media-widget-upcoming { background: #f4f2fb; border-color: #ddd6f0; border-left-color: #8b6fc4; }
-        .media-widget-upcoming .media-widget-pct  { color: #57427f; }
-        .media-widget-upcoming .media-widget-fill { background: #8b6fc4; }
+        /* Declared for an upcoming month but not loaded anywhere yet. Deliberately the
+           quietest card on the strip: it is an announcement, not progress, and it must
+           not compete with the month the fleet is actually on. It also must not borrow
+           the amber that means "out of date" — nothing is late about it yet. */
+        .media-widget-upcoming {
+            background: #f6f7f8;
+            border-color: #e3e6e9;
+            border-left-color: #c2c8ce;
+            opacity: 0.72;
+        }
+
+        .media-widget-upcoming .media-widget-label { color: #7b858e; }
+        .media-widget-upcoming .media-widget-count { color: #8a939c; }
+        .media-widget-upcoming .media-widget-of,
+        .media-widget-upcoming .media-widget-pct  { color: #97a0a8; }
+        .media-widget-upcoming .media-widget-fill { background: #c2c8ce; }
 
         .media-widget-no_media { background: #f1f3f5; border-color: #dde1e5; border-left-color: #adb5bd; }
         .media-widget-no_media .media-widget-pct  { color: #5a6169; }
@@ -3499,7 +3540,9 @@
                                 <th class="sortable-th" data-col="3" data-label="Status" onclick="sortTable('mediaTable', 3)">Status</th>
                                 <th class="sortable-th" data-col="4" data-label="Media Loaded" onclick="sortTable('mediaTable', 4)">Media Loaded</th>
                                 <th class="sortable-th" data-col="5" data-label="Date UTC" onclick="sortTable('mediaTable', 5)">Date UTC</th>
-                                <th class="sortable-th col-comment" data-col="6" data-label="Comments" onclick="sortTable('mediaTable', 6)">Comments</th>
+                                <th class="sortable-th" data-col="6" data-label="UGO" onclick="sortTable('mediaTable', 6)">UGO</th>
+                                <th class="sortable-th" data-col="7" data-label="TILES" onclick="sortTable('mediaTable', 7)">TILES</th>
+                                <th class="sortable-th col-comment" data-col="8" data-label="Comments" onclick="sortTable('mediaTable', 8)">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="mediaTableBody">
@@ -4739,10 +4782,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.20.0';
-        const APP_BUILD    = '2026.08.23.01';
+        const APP_VERSION  = '2.21.0';
+        const APP_BUILD    = '2026.08.23.02';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T00:20:00Z';
+        const APP_DEPLOYED = '2026-08-23T00:35:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6252,6 +6295,51 @@
             return swFleet().sort((a, b) => a.id.localeCompare(b.id));
         }
 
+        // ===== UGO and TILES versions =====
+        // Both live at the TOP LEVEL of /aircraft/{tail}, deliberately not under
+        // `media`: clearing an aircraft's media writes `media: null`, which would take
+        // them with it every time. They are software on the aircraft, not a property of
+        // one month's load — the same lesson retrofitLocation records.
+        //
+        // Absent means NOT INSTALLED. That is the state to leave an aircraft in when it
+        // has no tiles at all, rather than inventing a "none" string.
+        const UGO_LATEST   = '6.3.1';
+        const TILES_LATEST = '2.0';
+
+        // Same shape the rules accept, so a bad value is caught here rather than taking
+        // the whole atomic save down with it.
+        const VERSION_RE = /^[0-9A-Za-z][0-9A-Za-z.-]{0,19}$/;
+
+        function versionStateOf(value, latest) {
+            if (!value) return 'none';
+            return value === latest ? 'current' : 'behind';
+        }
+
+        function versionCell(value, latest) {
+            const state = versionStateOf(value, latest);
+            if (state === 'none') return '<span class="ver-none">Not installed</span>';
+            return `<span class="ver-badge ver-${state}">${escAttr(value)}</span>`;
+        }
+
+        // Staged like every other media edit: nothing reaches Firebase until Save.
+        function handleVersionEdit(el) {
+            const id = el.dataset.id;
+            const field = el.dataset.field;
+            const raw = (el.value || '').trim();
+            const ok = raw === '' || VERSION_RE.test(raw);
+            el.classList.toggle('input-invalid', !ok);
+            if (!ok) {
+                setSyncStatus(`🔴 ${id}: "${raw}" is not a valid version — letters, digits, dots and dashes only`, '#dc3545');
+                return;
+            }
+            const entry = pendingMedia[id] || { raw: null, parsed: null };
+            // Empty clears the field, which is how an aircraft is marked as not having
+            // it installed at all.
+            entry[field] = raw === '' ? null : raw;
+            pendingMedia[id] = entry;
+            setSyncStatus(`🟡 ${id}: ${field === 'ugoVersion' ? 'UGO' : 'TILES'} staged — press Save`, '#e0a800');
+        }
+
         function populateMediaTable() {
             const tbody = document.getElementById('mediaTableBody');
             if (!tbody) return;
@@ -6280,6 +6368,18 @@
 
                 const dateCell = `<span class="view-text">${fmtMediaDate(effective.loadedDateUTC) || '—'}</span>`;
 
+                const verInput = (field, value, latest) => `<input class="edit-text ver-input" value="${escAttr(value || '')}"
+                        placeholder="${escAttr(latest)}" maxlength="20" data-id="${aircraft.id}" data-field="${field}"
+                        onchange="handleVersionEdit(this)">`;
+
+                const ugoValue   = staged && staged.ugoVersion   !== undefined ? staged.ugoVersion   : aircraft.ugoVersion;
+                const tilesValue = staged && staged.tilesVersion !== undefined ? staged.tilesVersion : aircraft.tilesVersion;
+
+                const ugoCell   = editing ? verInput('ugoVersion', ugoValue, UGO_LATEST)
+                                          : versionCell(ugoValue, UGO_LATEST);
+                const tilesCell = editing ? verInput('tilesVersion', tilesValue, TILES_LATEST)
+                                          : versionCell(tilesValue, TILES_LATEST);
+
                 const commentCell = editing
                     ? `<input class="edit-text comment-input" value="${escAttr(media.comments || '')}" placeholder="Add a comment" data-id="${aircraft.id}" onchange="handleMediaComment(this)">`
                     : `<span class="comment-text">${media.comments ? escAttr(media.comments) : '—'}</span>`;
@@ -6291,6 +6391,8 @@
                     <td data-sort="${cycleSortKey(effective.mediaCycle)}">${statusCell}</td>
                     <td data-sort="${escAttr(effective.mediaSource || '')}">${loadedCell}</td>
                     <td data-sort="${dateSortKey(effective.loadedDateUTC)}">${dateCell}</td>
+                    <td data-sort="${escAttr(ugoValue || '')}">${ugoCell}</td>
+                    <td data-sort="${escAttr(tilesValue || '')}">${tilesCell}</td>
                     <td class="col-comment" data-sort="${escAttr(media.comments || '')}">${commentCell}</td>
                 `;
                 tbody.appendChild(row);
@@ -6317,7 +6419,6 @@
         // actually loaded, or declaring September would mark the whole August fleet as a
         // month behind. Adding next month is one line.
         const MEDIA_CYCLE_SIZES = {
-            '0726': '791 GB',
             '0826': '791 GB',
             '0926': '884 GB',
         };
@@ -6493,6 +6594,9 @@
                     });
                 }
                 if (e.comments !== undefined) multi[`${id}/media/comments`] = e.comments || null;
+                // Top level, not under media/ — see the note on UGO_LATEST.
+                if (e.ugoVersion   !== undefined) multi[`${id}/ugoVersion`]   = e.ugoVersion;
+                if (e.tilesVersion !== undefined) multi[`${id}/tilesVersion`] = e.tilesVersion;
             });
 
             try {
