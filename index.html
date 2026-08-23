@@ -3800,7 +3800,8 @@
                                 <th class="sortable-th" data-col="3" data-label="Fit" onclick="sortTable('fleetTable', 3)">Fit</th>
                                 <th class="sortable-th" data-col="4" data-label="Status" onclick="sortTable('fleetTable', 4)">Status</th>
                                 <th class="sortable-th" data-col="5" data-label="Activation Date" onclick="sortTable('fleetTable', 5)">Activation Date</th>
-                                <th class="sortable-th col-comment" data-col="6" data-label="Comments" onclick="sortTable('fleetTable', 6)">Comments</th>
+                                <th class="sortable-th" data-col="6" data-label="SaudiaWiFi" onclick="sortTable('fleetTable', 6)">SaudiaWiFi</th>
+                                <th class="sortable-th col-comment" data-col="7" data-label="Comments" onclick="sortTable('fleetTable', 7)">Comments</th>
                                 <th id="fleetActionsHead" style="display:none;">Actions</th>
                             </tr>
                         </thead>
@@ -4782,10 +4783,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.21.1';
-        const APP_BUILD    = '2026.08.23.03';
+        const APP_VERSION  = '2.22.0';
+        const APP_BUILD    = '2026.08.23.04';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T12:55:00Z';
+        const APP_DEPLOYED = '2026-08-23T13:25:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6057,6 +6058,12 @@
                     ? staged.activatedDate
                     : ((aircraftLive[a.id] || {}).activatedDate || '');
                 const comments = staged.comments !== undefined ? staged.comments : (a.comments || '');
+                // SSID visibility is a property of the aircraft, not of the roster entry,
+                // so it reads from /aircraft alongside activatedDate. The Maintenance
+                // profile edits the same field — one fact, two places to change it.
+                const wifi = staged.wifiVisibility !== undefined
+                    ? staged.wifiVisibility
+                    : ((aircraftLive[a.id] || {}).wifiVisibility || '');
 
                 const row = document.createElement('tr');
                 row.dataset.type = a.type;
@@ -6087,6 +6094,17 @@
                     ? `<input type="date" class="edit-date" value="${toISODate(activated)}" data-id="${a.id}" data-field="activatedDate" onchange="handleFleetEdit(this)">`
                     : (activated ? escAttr(activated) : '<span class="fleet-notset">Not set</span>');
 
+                // Two options, per the field. The blank appears only when nothing is set
+                // yet, so a select can never silently claim "Public" for an aircraft
+                // nobody has decided about.
+                const wifiCell = editing
+                    ? `<select class="edit-select" data-id="${a.id}" data-field="wifiVisibility" onchange="handleFleetEdit(this)">${
+                        (wifi ? '' : '<option value="" selected>— Not set —</option>') +
+                        WIFI_OPTIONS.map(o => `<option value="${o.value}" ${o.value === wifi ? 'selected' : ''}>${o.label}</option>`).join('')
+                      }</select>`
+                    : (wifi ? `<span class="status-badge wifi-${wifi}">${escAttr(wifiLabel(wifi).toUpperCase())}</span>`
+                            : '<span class="fleet-notset">Not set</span>');
+
                 const commentCell = editing
                     ? `<input class="edit-text comment-input" value="${escAttr(comments)}" placeholder="Add a comment" data-id="${a.id}" data-field="comments" onchange="handleFleetEdit(this)">`
                     : `<span class="comment-text">${comments ? escAttr(comments) : '—'}</span>`;
@@ -6102,6 +6120,7 @@
                     <td data-sort="${fit}">${fitCell}</td>
                     <td data-sort="${escAttr(st)}">${statusCell}</td>
                     <td data-sort="${dateSortKey(toISODate(activated)) || '99999999'}">${activatedCell}</td>
+                    <td data-sort="${escAttr(wifi)}">${wifiCell}</td>
                     <td class="col-comment" data-sort="${escAttr(comments)}">${commentCell}</td>
                     ${actionCell}
                 `;
@@ -6230,7 +6249,7 @@
             // writes, one Save — the same split the Hardware tab uses for SIM roaming.
             const multi = {}, acMulti = {};
             ids.forEach(id => Object.entries(pendingFleet[id]).forEach(([f, v]) => {
-                if (f === 'activatedDate') { acMulti[`${id}/activatedDate`] = v || null; return; }
+                if (f === 'activatedDate' || f === 'wifiVisibility') { acMulti[`${id}/${f}`] = v || null; return; }
                 multi[`${id}/${f}`] = (f === 'comments' && !v) ? null : v;
             }));
 
@@ -6249,10 +6268,12 @@
                     const data2 = await res2.json();
                     if (!res2.ok || (data2 && data2.error)) throw new Error((data2 && data2.error) || 'write failed');
                     Object.keys(pendingFleet).forEach(id => {
-                        const v = pendingFleet[id].activatedDate;
-                        if (v === undefined) return;
-                        aircraftLive[id] = aircraftLive[id] || {};
-                        if (v) aircraftLive[id].activatedDate = v; else delete aircraftLive[id].activatedDate;
+                        ['activatedDate', 'wifiVisibility'].forEach(f => {
+                            const v = pendingFleet[id][f];
+                            if (v === undefined) return;
+                            aircraftLive[id] = aircraftLive[id] || {};
+                            if (v) aircraftLive[id][f] = v; else delete aircraftLive[id][f];
+                        });
                     });
                 }
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');

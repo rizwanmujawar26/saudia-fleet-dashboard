@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.21.1, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.22.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -110,6 +110,9 @@ would take them with it every time. They are software on the aircraft, not a pro
 of one month's load. `UGO_LATEST` / `TILES_LATEST` in the page decide the badge —
 green on the latest build, amber when behind, and *Not installed* when the field is
 absent, which is the state to leave an aircraft in when it has no tiles at all.
+
+Fleet-wide as of 2026-08-23: `wifiVisibility` is `public` on all 44 aircraft except
+**AQA, AQJ and AS51**, which are `hidden`.
 
 `retrofitLocation`, `wifiVisibility`, `activatedDate` and `simRoaming` are stored
 at the **top level**, deliberately *not* under `maintenance` — clearing a flag
@@ -618,7 +621,14 @@ firing before authentication and with `backup.sh` losing anonymous access.
    to completion status. Entries drop off automatically 24h past their slot
    (`SCHEDULE_GRACE_MS`); in that window they show `⚠ Overdue` so they can be
    rescheduled rather than vanishing.
-8. **Fleet** — owns the roster: add / edit / remove, incl. linefit. Removing
+8. **Fleet** — owns the roster: add / edit / remove, incl. linefit. The
+   **SaudiaWiFi** column shows `wifiVisibility` (Public / Hidden) and edits it, so a
+   Fleet save now writes **three** kinds of field: roster fields to `/fleet`, and
+   `activatedDate` *and* `wifiVisibility` to `/aircraft`. The Maintenance profile edits
+   the same `wifiVisibility` — one fact, two places to change it, one place stored.
+   The select offers only Public and Hidden; a blank option appears **only** when
+   nothing is set yet, so it can never silently claim Public for an aircraft nobody has
+   decided about. Removing
    deletes only the `/fleet` entry; `/aircraft` history survives, so re-adding
    the registration restores it.
 
@@ -1063,6 +1073,11 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.22.0 — SaudiaWiFi column on the Fleet tab
+`wifiVisibility` set across the whole roster — public everywhere except AQA, AQJ and
+AS51 — and surfaced as a **SaudiaWiFi** column on the Fleet tab, editable with the two
+options. It saves to `/aircraft` alongside `activatedDate`, not to the roster record.
 
 ### v2.21.1 — The `#` column counts visible rows
 It used to keep the row's index in the unfiltered table, so a filtered Software list
