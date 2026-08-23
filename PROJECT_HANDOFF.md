@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.19.1, 2026-08-21)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.20.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -628,6 +628,17 @@ staged.
 - Widgets and month filter pills are built from cycles actually present, newest
   first. A new cycle creates its own widget and pill with no code change
   (verified with a simulated September).
+- **`MEDIA_CYCLE_SIZES`** maps a cycle (MMYY) to its load size — `'0926': '884 GB'` —
+  and is the one place to add next month. It does two jobs: it puts the size in a pill
+  on that cycle's widget, and **a cycle listed there gets a widget before any aircraft
+  carries it**, so a prepared load shows at 0/39 while it is being deployed. Sizes are
+  optional; a cycle with no entry simply has no pill.
+- ⚠️ **It must never feed `latestMediaCycle()`.** That stays derived from what is
+  actually loaded — declaring September otherwise marks the whole August fleet a month
+  behind, and `mediaStatus` is relative to the newest cycle *in the fleet*. An
+  undelivered cycle renders as `upcoming` (violet), deliberately not `older` (amber),
+  is left out of the month filter pills (it could only filter to an empty table), and
+  flips to `latest` on its own once the first aircraft takes it.
 
 ---
 
@@ -1026,6 +1037,13 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.20.0 — Media load sizes, and announcing next month's cycle
+Each media cycle widget carries its load size as a pill (July and August 791 GB,
+September 884 GB), and September now appears at 0/39 ahead of deployment. Both come
+from one map, `MEDIA_CYCLE_SIZES`. The declared cycle is styled `upcoming` rather than
+`older` and does not touch `latestMediaCycle()`, so August stays the fleet's current
+media until September is actually loaded.
 
 ### v2.19.1 — Saving emptied the page (put vs patch)
 Every Save blanked the dashboard until a manual reload. The live-stream handler treated
