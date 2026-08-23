@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.35.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.35.1, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -622,6 +622,34 @@ Two call shapes:
   table pages' `apply*Filters()` are now three lines each.
 - `fbMatch(barId, filterId, value)` — one filter against a value, for the
   Activity tab, which filters the model rather than DOM rows.
+
+### Popovers are placed in the VISUAL viewport, not the layout one
+
+⚠️ **This is the trap that broke the menu on a pinch-zoomed phone.** `position: fixed`
+and `window.innerWidth`/`innerHeight` all resolve against the **layout** viewport,
+which does not change when you pinch-zoom — the *visual* viewport shrinks to a window
+into it. So a `bottom: 0` sheet sat at the bottom of the whole page, off-screen, while
+the backdrop (also fixed, covering the layout viewport) still dimmed: the user saw a
+flash and no menu, and the next tap hit the backdrop and dismissed it.
+
+`fbVisualRect()` returns `window.visualViewport`'s offset and size (falling back to
+the layout viewport where it is unsupported), and `fbPosition()` places everything in
+those coordinates. Three things it must do, all of which were found by testing:
+
+- **Set the sheet's `left`/`width`/`top` explicitly** and `right: auto`, or the CSS's
+  `left: 0; right: 0` fights the width.
+- **Override `min-width`.** `.fb-pop` has `min-width: 216px`, which held the sheet
+  wider than the visible area at a deep zoom. `.fb-sheet` sets `min-width: 0`.
+- **Cap `max-height` from the visual height before reading `offsetHeight`.** The
+  panel's own cap is in `vh`, which is the layout viewport, so it can exceed what is
+  visible; and reading the height before applying the cap gives a stale number.
+
+**A viewport change repositions the menu, it does not dismiss it.** `window.resize`
+used to call `fbClose()` — which also meant a mobile browser showing or hiding its URL
+bar closed the panel the instant it opened. `resize` and `visualViewport`'s
+`resize`/`scroll` all call `fbReposition()` now. Document scroll still closes an
+*anchored* popover, because it would otherwise float away from its trigger; the sheet
+is anchored to nothing and just follows.
 
 ### Responsive: one row at every width
 
@@ -1363,6 +1391,16 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.35.1 — Filter menus were unusable when pinch-zoomed
+Tapping a filter button on a zoomed-in phone flashed the backdrop and showed no menu.
+`position: fixed` resolves against the layout viewport, which pinch-zoom does not
+change, so the bottom sheet was rendering at the bottom of the full page — outside the
+visible area — and the next tap hit the backdrop and closed it. Popovers are now placed
+in `visualViewport` coordinates, with the sheet's min-width and max-height overridden
+so it can fit a small visible area. Separately, `window.resize` no longer closes an
+open menu (it repositions), which also fixes it closing when a mobile browser shows or
+hides its URL bar.
 
 ### v2.35.0 — Timeline controls: one field, four width steps
 The Overview's kind filter and sort direction now share a single field instead of

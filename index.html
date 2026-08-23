@@ -3110,6 +3110,10 @@
                 bottom: 0;
                 top: auto;
                 max-width: none;
+                /* The base .fb-pop min-width would hold the sheet wider than the
+                   visible area when pinch-zoomed in far enough. JS sets the real
+                   width from the visual viewport. */
+                min-width: 0;
                 max-height: 72vh;
                 border-radius: 14px 14px 0 0;
                 padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
@@ -5241,10 +5245,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.35.0';
+        const APP_VERSION  = '2.35.1';
         const APP_BUILD    = '2026.08.23.22';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T22:38:52Z';
+        const APP_DEPLOYED = '2026-08-23T22:51:29Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6130,6 +6134,8 @@
 
         const fbState = {};        // fbState[barId][filterId] -> Set of values
         let fbOpenKey = null;      // '<barId>' (compact) or '<barId>:<filterId>'
+        let fbOpenBtn = null;      // the trigger the open popover belongs to
+        let fbOpenCompact = false; // whether that popover is the collapsed/sheet one
 
         function fbSel(barId, filterId) {
             if (!fbState[barId]) fbState[barId] = {};
@@ -6245,6 +6251,8 @@
                 t.setAttribute('aria-expanded', 'false');
             });
             fbOpenKey = null;
+            fbOpenBtn = null;
+            fbOpenCompact = false;
             // Only the open trigger was kept in step while the panel was up; repaint
             // the bar now so the rest (and the collapsed/expanded twin) agree.
             if (barId) fbRender(barId);
@@ -6255,6 +6263,8 @@
             if (fbOpenKey === key) { fbClose(); return; }
             fbClose();
             fbOpenKey = key;
+            fbOpenBtn = btn;
+            fbOpenCompact = !filterId;
             btn.classList.add('is-open');
             btn.setAttribute('aria-expanded', 'true');
 
@@ -6317,18 +6327,66 @@
         // Anchored under its trigger, then nudged back inside the viewport —
         // the last trigger in a bar sits near the right edge and a 216px panel
         // hanging off its left corner would otherwise overflow the page.
+        // The part of the page the user can actually SEE. Pinch-zoom splits the two
+        // viewports: `position: fixed` and window.innerWidth both resolve against the
+        // LAYOUT viewport, which stays the full page width, while the visible area
+        // shrinks to a window into it. Positioning against the layout viewport put the
+        // bottom sheet at the bottom of the whole page — off-screen when zoomed in, so
+        // a tap dimmed the backdrop and showed no menu. Everything below is placed in
+        // visual-viewport coordinates instead.
+        function fbVisualRect() {
+            const vv = window.visualViewport;
+            if (!vv) return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+            return { left: vv.offsetLeft, top: vv.offsetTop, width: vv.width, height: vv.height };
+        }
+
+        // Is this popover being shown as the bottom sheet? The class is set whenever the
+        // collapsed trigger opens it, but the sheet CSS only applies under 700px.
+        function fbIsSheet(pop, compact) {
+            return !!compact && window.matchMedia('(max-width: 700px)').matches;
+        }
+
         function fbPosition(pop, btn, compact) {
-            if (compact && window.matchMedia('(max-width: 700px)').matches) return;
+            const v = fbVisualRect();
+
+            if (fbIsSheet(pop, compact)) {
+                // Pin to the bottom of what is VISIBLE, not the bottom of the layout
+                // viewport. `right: auto` is needed or the CSS's right:0 fights the
+                // explicit width. Cap the height first — the panel's own max-height is
+                // in vh, which is the layout viewport and can exceed the visible area
+                // when zoomed — then read offsetHeight, or the read is stale.
+                pop.style.maxHeight = Math.max(140, Math.round(v.height - 8)) + 'px';
+                const h = pop.offsetHeight;
+                pop.style.left = Math.round(v.left) + 'px';
+                pop.style.right = 'auto';
+                pop.style.width = Math.round(v.width) + 'px';
+                pop.style.top = Math.round(Math.max(v.top, v.top + v.height - h)) + 'px';
+                pop.style.bottom = 'auto';
+                return;
+            }
+
+            // Same cap for the anchored popover, and the same reason.
+            pop.style.maxHeight = Math.min(380, Math.max(140, Math.round(v.height - 20))) + 'px';
             const r = btn.getBoundingClientRect();
             const w = pop.offsetWidth;
+            const rightEdge = v.left + v.width - 10;
             let left = r.left;
-            if (left + w > window.innerWidth - 10) left = Math.max(10, window.innerWidth - w - 10);
-            pop.style.left = left + 'px';
-            pop.style.top = (r.bottom + 6) + 'px';
+            if (left + w > rightEdge) left = Math.max(v.left + 10, rightEdge - w);
+            pop.style.left = Math.round(left) + 'px';
+            pop.style.top = Math.round(r.bottom + 6) + 'px';
             const h = pop.offsetHeight;
-            if (r.bottom + 6 + h > window.innerHeight - 10) {
-                pop.style.top = Math.max(10, r.top - h - 6) + 'px';
+            if (r.bottom + 6 + h > v.top + v.height - 10) {
+                pop.style.top = Math.round(Math.max(v.top + 10, r.top - h - 6)) + 'px';
             }
+        }
+
+        // Re-run the placement for whatever is open. Used instead of closing when the
+        // viewport changes under it — pinch-zooming or panning should move the menu,
+        // not dismiss it.
+        function fbReposition() {
+            const pop = document.querySelector('.fb-pop');
+            if (!pop || !fbOpenBtn) return;
+            fbPosition(pop, fbOpenBtn, fbOpenCompact);
         }
 
         // Update an open popover in place after a pick. Deliberately NOT an
@@ -6443,7 +6501,17 @@
             fbClose();
         });
         document.addEventListener('keydown', e => { if (e.key === 'Escape') fbClose(); });
-        window.addEventListener('resize', fbClose);
+
+        // A viewport change REPOSITIONS the menu; it does not dismiss it. This used to
+        // call fbClose, which meant a pinch-zoom — or a mobile browser showing or
+        // hiding its URL bar, which fires resize — closed the panel the moment it
+        // opened. visualViewport fires on pinch-zoom and on panning while zoomed;
+        // window.resize covers the rest.
+        window.addEventListener('resize', fbReposition);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', fbReposition);
+            window.visualViewport.addEventListener('scroll', fbReposition);
+        }
         // An anchored popover is positioned in viewport coordinates, so it would
         // float away from its trigger on scroll rather than follow it. The mobile
         // sheet is pinned to the bottom of the viewport and anchored to nothing,
@@ -6452,8 +6520,9 @@
         window.addEventListener('scroll', () => {
             if (!fbOpenKey) return;
             const pop = document.querySelector('.fb-pop');
-            if (pop && pop.classList.contains('fb-sheet') &&
-                window.matchMedia('(max-width: 700px)').matches) return;
+            // The sheet is pinned to the visible area and anchored to nothing, so it
+            // follows the page rather than being dismissed by it.
+            if (fbIsSheet(pop, fbOpenCompact)) { fbReposition(); return; }
             fbClose();
         }, true);
 
