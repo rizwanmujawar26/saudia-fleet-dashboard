@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.21.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.21.1, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -788,6 +788,19 @@ when the state changes — the pinning itself is pure CSS.
 
 ---
 
+## The `#` column counts visible rows
+
+`renumberVisibleRows(tableId)` rewrites the first cell of every **visible** row as
+1..N. The number is a position in the list, not an identifier tied to an aircraft —
+filtering the Software table to four aircraft numbers them 1-4 rather than leaving the
+11, 24, 25, 33 they happened to occupy unfiltered, and sorting renumbers top to bottom
+for the same reason.
+
+Four tables have a `#` column: `aircraftTable`, `hbcTable`, `mediaTable`, `fleetTable`.
+**Anything that changes which rows are visible, or their order, has to call it** — the
+three `apply*Filters()` and `sortTable()` do. A row whose first cell has `colspan` is
+skipped, so an empty-state row is never numbered.
+
 ## Conventions
 
 - **Regex escaping in `database.rules.json` is a trap that fails silently.** The
@@ -1050,6 +1063,11 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.21.1 — The `#` column counts visible rows
+It used to keep the row's index in the unfiltered table, so a filtered Software list
+read 11, 24, 25, 33. It now reads 1, 2, 3, 4 — and renumbers on sort as well as on
+filter, across all four numbered tables.
 
 ### v2.21.0 — UGO and TILES columns; September greyed until it lands
 The Media table gained UGO and TILES version columns, seeded to 6.3.1 and 2.0 across

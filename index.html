@@ -4782,10 +4782,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.21.0';
-        const APP_BUILD    = '2026.08.23.02';
+        const APP_VERSION  = '2.21.1';
+        const APP_BUILD    = '2026.08.23.03';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T00:35:00Z';
+        const APP_DEPLOYED = '2026-08-23T12:55:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -5703,6 +5703,7 @@
                 const locOk = currentLocationFilter === '' || row.dataset.location === currentLocationFilter;
                 row.style.display = (statusOk && typeOk && locOk) ? '' : 'none';
             });
+            renumberVisibleRows('aircraftTable');
         }
 
         function resetAircraftTable() {
@@ -6171,6 +6172,7 @@
                     && (fleetStatusFilter === '' || row.dataset.fstatus === fleetStatusFilter);
                 row.style.display = ok ? '' : 'none';
             });
+            renumberVisibleRows('fleetTable');
         }
 
         function resetFleetTable() {
@@ -6522,6 +6524,7 @@
                 const statusOk = mediaStatusFilter === '' || row.dataset.mstatus === mediaStatusFilter;
                 row.style.display = (typeOk && monthOk && statusOk) ? '' : 'none';
             });
+            renumberVisibleRows('mediaTable');
         }
 
         function resetMediaTable() {
@@ -8636,6 +8639,7 @@
                 `;
                 tbody.appendChild(row);
             });
+            renumberVisibleRows('hbcTable');
             updateSortIndicators('hbcTable');
         }
 
@@ -8949,6 +8953,27 @@
         }
 
         let lastSort = {};
+        // The # column counts the rows you can SEE. It is a position in the list, not
+        // an identifier bound to an aircraft — so filtering to four rows numbers them
+        // 1-4 rather than leaving the 11, 24, 25, 33 they happened to occupy in the
+        // unfiltered table, and sorting renumbers top to bottom for the same reason.
+        //
+        // Every table with a # column has to call this after anything that changes
+        // which rows are visible or what order they are in: the three apply*Filters()
+        // and sortTable() below.
+        function renumberVisibleRows(tableId) {
+            const tbody = document.querySelector(`#${tableId} tbody`);
+            if (!tbody) return;
+            let n = 0;
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return;
+                const cell = row.cells[0];
+                // An empty-state row spans the table and is not a line item.
+                if (!cell || cell.hasAttribute('colspan')) return;
+                cell.textContent = ++n;
+            });
+        }
+
         function sortTable(tableId, columnIndex) {
             const table = document.getElementById(tableId);
             const tbody = table.querySelector('tbody');
@@ -8989,6 +9014,7 @@
             tbody.innerHTML = '';
             rows.forEach(row => tbody.appendChild(row));
 
+            renumberVisibleRows(tableId);
             updateSortIndicators(tableId);
         }
 
