@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.26.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.27.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -97,7 +97,8 @@ adding it to the rules first.
 | `note` | Software-page comment |
 | `media` | `{ mediaCycle, mediaDisplay, mediaSource, loadedDateUTC, comments }` |
 | `maintenance` | `{ open, reason, flaggedAt }` — see the Maintenance tab |
-| `retrofitLocation` | free text ≤ 60: the city or MRO where the retrofit was done (Doha, Malta, Jeddah…) |
+| `retrofitLocation` | free text ≤ 60: the city or MRO where the retrofit was done (Doha, Malta, Jeddah…). Shown as the Fleet tab's **Location** column |
+| `retrofitStart` / `retrofitEnd` | `DD-Mon-YYYY` — the grounding window for that modification. **Stored but given no column**; they surface as the Location cell's tooltip |
 | `wifiVisibility` | `public` \| `hidden` |
 | `activatedDate` | `DD-Mon-YYYY` |
 | `simRoaming` | `active` \| `inactive` — the SIM subscription, not the card |
@@ -113,6 +114,12 @@ absent, which is the state to leave an aircraft in when it has no tiles at all.
 
 Fleet-wide as of 2026-08-23: `wifiVisibility` is `public` on all 44 aircraft except
 **AQA, AQJ and AS51**, which are `hidden`.
+
+`retrofitLocation` is `Jeddah` on the 37 retrofit aircraft done at base, with five
+outstation: **AS60 Malta, AS59 Jordan, AS67 Qatar, AS61 Qatar, AQL Malta** — those five
+also carry `retrofitStart`/`retrofitEnd`. **ASBA and ASBB are deliberately blank**: they
+are linefit, so they were never retrofitted anywhere and a location would be inventing
+a fact. Start/end dates for the Jeddah aircraft are still to come.
 
 `retrofitLocation`, `wifiVisibility`, `activatedDate` and `simRoaming` are stored
 at the **top level**, deliberately *not* under `maintenance` — clearing a flag
@@ -1140,6 +1147,12 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.27.0 — Location column, and the retrofit grounding window
+The Fleet tab shows where each aircraft was modified, reusing the existing
+`retrofitLocation` rather than adding a field. New `retrofitStart`/`retrofitEnd` store
+the grounding window per aircraft; they have no column and appear in the Location
+tooltip. Seeded Jeddah for 37, five outstation with dates, linefit left blank.
 
 ### v2.26.0 — In Retrofit and Inactive in the columns, not just the filters
 The Fit column now shows a third value, `IN RETROFIT`, and the Status column collapses

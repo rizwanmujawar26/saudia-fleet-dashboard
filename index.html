@@ -1658,6 +1658,17 @@
 
         .fleet-date { white-space: nowrap; }
 
+        .fleet-loc { white-space: nowrap; }
+
+        /* A dotted underline is the standard "more on hover" cue — here the grounding
+           dates, which are stored but do not earn a column of their own. */
+        .fleet-loc.has-dates {
+            border-bottom: 1px dotted #a2abb3;
+            cursor: help;
+        }
+
+        .loc-input { max-width: 110px; }
+
         .age-pill {
             display: inline-block;
             margin-left: 7px;
@@ -3867,9 +3878,10 @@
                                 <th class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortTable('fleetTable', 2)">Aircraft</th>
                                 <th class="sortable-th" data-col="3" data-label="Type" onclick="sortTable('fleetTable', 3)">Type</th>
                                 <th class="sortable-th" data-col="4" data-label="Fit" onclick="sortTable('fleetTable', 4)">Fit</th>
-                                <th class="sortable-th" data-col="5" data-label="Status" onclick="sortTable('fleetTable', 5)">Status</th>
-                                <th class="sortable-th" data-col="6" data-label="SaudiaWiFi" onclick="sortTable('fleetTable', 6)">SaudiaWiFi</th>
-                                <th class="sortable-th col-comment" data-col="7" data-label="Comments" onclick="sortTable('fleetTable', 7)">Comments</th>
+                                <th class="sortable-th" data-col="5" data-label="Location" onclick="sortTable('fleetTable', 5)">Location</th>
+                                <th class="sortable-th" data-col="6" data-label="Status" onclick="sortTable('fleetTable', 6)">Status</th>
+                                <th class="sortable-th" data-col="7" data-label="SaudiaWiFi" onclick="sortTable('fleetTable', 7)">SaudiaWiFi</th>
+                                <th class="sortable-th col-comment" data-col="8" data-label="Comments" onclick="sortTable('fleetTable', 8)">Comments</th>
                                 <th id="fleetActionsHead" style="display:none;">Actions</th>
                             </tr>
                         </thead>
@@ -4851,10 +4863,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.26.0';
-        const APP_BUILD    = '2026.08.23.08';
+        const APP_VERSION  = '2.27.0';
+        const APP_BUILD    = '2026.08.23.09';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T14:45:00Z';
+        const APP_DEPLOYED = '2026-08-23T15:00:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6158,6 +6170,16 @@
                 // SSID visibility is a property of the aircraft, not of the roster entry,
                 // so it reads from /aircraft alongside activatedDate. The Maintenance
                 // profile edits the same field — one fact, two places to change it.
+                // Where the retrofit was physically done. The grounding dates that go
+                // with it are stored per aircraft but deliberately not given a column —
+                // this one answers "where", and the tooltip carries "when" for the few
+                // aircraft that have it.
+                const loc = staged.retrofitLocation !== undefined
+                    ? staged.retrofitLocation
+                    : ((aircraftLive[a.id] || {}).retrofitLocation || '');
+                const rStart = (aircraftLive[a.id] || {}).retrofitStart || '';
+                const rEnd   = (aircraftLive[a.id] || {}).retrofitEnd || '';
+
                 const wifi = staged.wifiVisibility !== undefined
                     ? staged.wifiVisibility
                     : ((aircraftLive[a.id] || {}).wifiVisibility || '');
@@ -6212,6 +6234,14 @@
                     : (wifi ? `<span class="status-badge wifi-${wifi}">${escAttr(wifiLabel(wifi).toUpperCase())}</span>`
                             : '<span class="fleet-notset">Not set</span>');
 
+                const locTitle = (rStart && rEnd) ? `Grounded ${rStart} to ${rEnd}`
+                               : (rStart ? `Grounded from ${rStart}` : '');
+                const locCell = editing
+                    ? `<input class="edit-text loc-input" value="${escAttr(loc)}" maxlength="60" placeholder="Jeddah" data-id="${a.id}" data-field="retrofitLocation" onchange="handleFleetEdit(this)">`
+                    : (loc
+                        ? `<span class="fleet-loc${locTitle ? ' has-dates' : ''}"${locTitle ? ` title="${escAttr(locTitle)}"` : ''}>${escAttr(loc)}</span>`
+                        : '<span class="fleet-notset">—</span>');
+
                 const commentCell = editing
                     ? `<input class="edit-text comment-input" value="${escAttr(comments)}" placeholder="Add a comment" data-id="${a.id}" data-field="comments" onchange="handleFleetEdit(this)">`
                     : `<span class="comment-text">${comments ? escAttr(comments) : '—'}</span>`;
@@ -6226,6 +6256,7 @@
                     <td data-sort="${a.id}"><strong>${a.id}</strong></td>
                     <td data-sort="${escAttr(a.type)}">${typeCell}</td>
                     <td data-sort="${st === 'In Retrofit' ? 'in retrofit' : fit}">${fitCell}</td>
+                    <td data-sort="${escAttr(loc)}">${locCell}</td>
                     <td data-sort="${st === 'Active' ? 'active' : 'inactive'}">${statusCell}</td>
                     <td data-sort="${escAttr(wifi)}">${wifiCell}</td>
                     <td class="col-comment" data-sort="${escAttr(comments)}">${commentCell}</td>
@@ -6391,7 +6422,9 @@
             // writes, one Save — the same split the Hardware tab uses for SIM roaming.
             const multi = {}, acMulti = {};
             ids.forEach(id => Object.entries(pendingFleet[id]).forEach(([f, v]) => {
-                if (f === 'activatedDate' || f === 'wifiVisibility') { acMulti[`${id}/${f}`] = v || null; return; }
+                if (f === 'activatedDate' || f === 'wifiVisibility' || f === 'retrofitLocation') {
+                    acMulti[`${id}/${f}`] = v || null; return;
+                }
                 multi[`${id}/${f}`] = (f === 'comments' && !v) ? null : v;
             }));
 
@@ -6410,7 +6443,7 @@
                     const data2 = await res2.json();
                     if (!res2.ok || (data2 && data2.error)) throw new Error((data2 && data2.error) || 'write failed');
                     Object.keys(pendingFleet).forEach(id => {
-                        ['activatedDate', 'wifiVisibility'].forEach(f => {
+                        ['activatedDate', 'wifiVisibility', 'retrofitLocation'].forEach(f => {
                             const v = pendingFleet[id][f];
                             if (v === undefined) return;
                             aircraftLive[id] = aircraftLive[id] || {};
