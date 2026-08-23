@@ -1615,6 +1615,24 @@
         .sw-fill-behind { background: linear-gradient(90deg, #f3bf6a, #f0ad4e); }
         .sw-fill-latest, .sw-fill-behind { transition: width 0.5s ease; }
 
+        /* Each version sits under the share of the bar it accounts for, in that
+           share's colour — so the bar is read without either figure above it having to
+           carry a version string. */
+        .sw-versions {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 5px;
+            font-size: 11.5px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .sw-ver-latest { color: #1e7e34; }
+        .sw-ver-behind { color: #8a5a12; }
+
         .sw-behind-list { margin-top: 8px; }
 
         /* The station code sat at the label's size and inherited its uppercase, so
@@ -4911,10 +4929,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.30.0';
-        const APP_BUILD    = '2026.08.23.14';
+        const APP_VERSION  = '2.30.1';
+        const APP_BUILD    = '2026.08.23.15';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T16:10:00Z';
+        const APP_DEPLOYED = '2026-08-23T16:30:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6130,20 +6148,22 @@
             const behindLabel = behindVersions.length === 1 ? behindVersions[0]
                               : behindVersions.length ? 'older' : '—';
 
-            const pct = Math.round((onLatest.length / scope) * 1000) / 10;
-
             grid.innerHTML = `<div class="media-widget sw-split">
                 <div class="media-widget-head">
                     <span class="media-widget-label">Middleware</span>
-                    <span class="media-size-pill">${fleet.length} aircraft · ${pct}%</span>
+                    <span class="media-size-pill">${fleet.length} aircraft</span>
                 </div>
                 <div class="ssid-figures">
-                    <span class="ssid-side sw-on-latest"><b>${onLatest.length}</b> on ${escAttr(latest)}</span>
-                    <span class="ssid-side sw-behind">${escAttr(behindLabel)} <b>${behind.length}</b></span>
+                    <span class="ssid-side sw-on-latest"><b>${onLatest.length}</b> Completed</span>
+                    <span class="ssid-side sw-behind">Pending <b>${behind.length}</b></span>
                 </div>
-                <div class="ssid-track" role="img" aria-label="${onLatest.length} on ${escAttr(latest)}, ${behind.length} behind">
+                <div class="ssid-track" role="img" aria-label="${onLatest.length} on ${escAttr(latest)}, ${behind.length} on ${escAttr(behindLabel)}">
                     <div class="sw-fill-latest" style="width:${(onLatest.length / scope) * 100}%"></div>
                     <div class="sw-fill-behind" style="width:${(behind.length / scope) * 100}%"></div>
+                </div>
+                <div class="sw-versions">
+                    <span class="sw-ver-latest">${escAttr(latest)}</span>
+                    <span class="sw-ver-behind">${escAttr(behindLabel)}</span>
                 </div>
                 <div class="sw-behind-list">${
                     behind.length

@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.30.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.30.1, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -651,8 +651,10 @@ firing before authentication and with `backup.sh` losing anonymous access.
    `.timeline-items li`: it must stay `.timeline-items > li`, or the descendant
    match hits nested per-aircraft `<li>`s and double rules return.
 2. **Software** (tab id is still `aircraft`) — **one** widget row of three cards:
-   a Middleware split (on the latest build left, behind right, the two shares filling
-   the track — the same shape as the Fleet tab's SSID card) plus Jeddah and Riyadh.
+   a Middleware split (Completed left, Pending right, the two shares filling the track
+   — the same shape as the Fleet tab's SSID card) plus Jeddah and Riyadh. The version
+   each side accounts for sits **under** the bar in that share's colour, so neither
+   figure has to carry a version string beside it.
    The split card lists the registrations still behind, which is the actionable part
    and also matches the station cards' height. **Completion by Aircraft Type was
    removed** (2026-08-23) — six cards restating what the table below already says.
@@ -1161,6 +1163,10 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.30.1 — Middleware card wording
+Pill drops the percentage. The figures read Completed and Pending, and the two version
+numbers moved under the bar, each in its own share's colour.
 
 ### v2.30.0 — Software tab: one widget row
 Completion by Aircraft Type removed. Middleware's per-version cards became a single
