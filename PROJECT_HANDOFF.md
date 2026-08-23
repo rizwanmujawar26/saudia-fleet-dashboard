@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.25.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.26.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -250,6 +250,23 @@ second, right after `#`. Undated aircraft sort to the end (`dateSortKey` gives t
 |---|---|---|
 | FIT | All Fit / Retrofit / Linefit / **In Retrofit** | `fit`, except `status:In Retrofit` → `fleetStatus` |
 | STATUS | All / Active / **Inactive** / Hidden / Public | `fleetStatus`, except `ssid:*` → `wifiVisibility` |
+
+**The Fit and Status columns are VIEWS, like the Software tab's Status column.**
+
+| column | shows | derived from |
+|---|---|---|
+| Fit | `RETROFIT` / `LINEFIT` / **`IN RETROFIT`** | `fleetStatus === 'In Retrofit'` wins, else `fit` |
+| Status | `ACTIVE` / **`INACTIVE`** | `fleetStatus === 'Active'` |
+
+The exact stored status is in the Inactive badge's tooltip. Each row carries
+`data-fitview` — what its Fit cell actually says — and the Fit pills match **that**, so
+a filter always selects exactly the rows whose cell reads the same label. The three
+fits therefore sum to the roster: 39 + 2 + 3 = 44.
+
+**Edit mode still shows the real fields**: Fit is `Retrofit`/`Linefit` and Status is the
+full `FLEET_STATUSES` enum. Set an aircraft to `In Retrofit` there and its Fit column
+switches on its own — and switches back when it goes Active, because `fit` never
+changed. Nothing to remember.
 
 ⚠️ **`fit` is still only ever `retrofit` or `linefit` in the data.** The In Retrofit
 button filters on `fleetStatus` rather than making "In Retrofit" a third fit. That was
@@ -1123,6 +1140,12 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.26.0 — In Retrofit and Inactive in the columns, not just the filters
+The Fit column now shows a third value, `IN RETROFIT`, and the Status column collapses
+to `ACTIVE` / `INACTIVE`. Both are derived at render time; `fit` and `fleetStatus` are
+untouched in the database and in edit mode. The Fit filter matches the displayed value,
+so the three fits sum to 44.
 
 ### v2.25.0 — In Retrofit on the FIT row, Inactive on the Status row
 FIT gained an In Retrofit button and Status swapped In Retrofit for Inactive. Both are

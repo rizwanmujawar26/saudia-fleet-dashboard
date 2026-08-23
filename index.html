@@ -1642,9 +1642,14 @@
         /* ===== Fleet page ===== */
         .status-badge.fit-retrofit { background: #e3ecf5; color: #2f5f8a; }
         .status-badge.fit-linefit  { background: #efe9f7; color: #59468a; }
+        /* Shown in the Fit column while an aircraft is being retrofitted. Amber, to
+           match the In Retrofit widget — it is a stage, not an installation method. */
+        .status-badge.fit-in-retrofit { background: #fdf3e3; color: #8a5a12; }
         /* Active is the only one that reads as operational. In Retrofit is amber and
            clearly unfinished — it must not be mistaken for a flying WiFi aircraft. */
         .status-badge.fleet-active         { background: #28a745; color: #fff; }
+        /* Everything that is not in service. The exact stored status is in the tooltip. */
+        .status-badge.fleet-inactive       { background: #eef1f3; color: #55606a; }
         .status-badge.fleet-in-retrofit    { background: #f0ad4e; color: #4a3208; }
         .status-badge.fleet-installed      { background: #e6f0fb; color: #1c5b96; }
         .status-badge.fleet-commissioned   { background: #e6f7f4; color: #10695c; }
@@ -3832,7 +3837,7 @@
                             <button class="qf-btn active" onclick="setFleetFitFilter('', this)">All Fit</button>
                             <button class="qf-btn" onclick="setFleetFitFilter('retrofit', this)">Retrofit</button>
                             <button class="qf-btn" onclick="setFleetFitFilter('linefit', this)">Linefit</button>
-                            <button class="qf-btn" onclick="setFleetFitFilter('status:In Retrofit', this)">In Retrofit</button>
+                            <button class="qf-btn" onclick="setFleetFitFilter('in-retrofit', this)">In Retrofit</button>
                         </div>
                     </div>
                     <div class="filter-group-block">
@@ -4846,10 +4851,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.25.0';
-        const APP_BUILD    = '2026.08.23.07';
+        const APP_VERSION  = '2.26.0';
+        const APP_BUILD    = '2026.08.23.08';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T14:25:00Z';
+        const APP_DEPLOYED = '2026-08-23T14:45:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6160,6 +6165,8 @@
                 const row = document.createElement('tr');
                 row.dataset.type = a.type;
                 row.dataset.fit = fit;
+                // What the Fit column actually shows, which is what its filter matches.
+                row.dataset.fitview = st === 'In Retrofit' ? 'in-retrofit' : fit;
                 row.dataset.fstatus = st;
                 row.dataset.wifi = wifi;
 
@@ -6174,13 +6181,17 @@
                     ? `<select class="edit-select" data-id="${a.id}" data-field="fit" onchange="handleFleetEdit(this)">${
                         FLEET_FITS.map(f => `<option value="${f.value}" ${f.value === fit ? 'selected' : ''}>${f.label}</option>`).join('')
                       }</select>`
-                    : `<span class="status-badge fit-${fit}">${fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>`;
+                    : (st === 'In Retrofit'
+                        ? '<span class="status-badge fit-in-retrofit" title="Being retrofitted — fit on record is Retrofit">IN RETROFIT</span>'
+                        : `<span class="status-badge fit-${fit}">${fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>`);
 
                 const statusCell = editing
                     ? `<select class="edit-select" data-id="${a.id}" data-field="fleetStatus" onchange="handleFleetEdit(this)">${
                         FLEET_STATUSES.map(s => `<option value="${s.value}" ${s.value === st ? 'selected' : ''}>${s.label}</option>`).join('')
                       }</select>`
-                    : `<span class="status-badge fleet-${fleetStatusCss(st)}">${escAttr(st)}</span>`;
+                    : (st === 'Active'
+                        ? '<span class="status-badge fleet-active">ACTIVE</span>'
+                        : `<span class="status-badge fleet-inactive" title="${escAttr(st)}">INACTIVE</span>`);
 
                 // Never inferred — blank until someone types it.
                 const age = activationAge(activated);
@@ -6214,8 +6225,8 @@
                     <td data-sort="${dateSortKey(toISODate(activated)) || '99999999'}">${activatedCell}</td>
                     <td data-sort="${a.id}"><strong>${a.id}</strong></td>
                     <td data-sort="${escAttr(a.type)}">${typeCell}</td>
-                    <td data-sort="${fit}">${fitCell}</td>
-                    <td data-sort="${escAttr(st)}">${statusCell}</td>
+                    <td data-sort="${st === 'In Retrofit' ? 'in retrofit' : fit}">${fitCell}</td>
+                    <td data-sort="${st === 'Active' ? 'active' : 'inactive'}">${statusCell}</td>
                     <td data-sort="${escAttr(wifi)}">${wifiCell}</td>
                     <td class="col-comment" data-sort="${escAttr(comments)}">${commentCell}</td>
                     ${actionCell}
@@ -6308,19 +6319,15 @@
         function setFleetStatusFilter(s, btn) { fleetStatusFilter = s; setActiveInGroup(btn); applyFleetFilters(); }
 
         function applyFleetFilters() {
-            // Both pill rows carry more than one axis, so each value says which axis it
-            // belongs to. `fit` is still only ever retrofit or linefit in the DATA — the
-            // In Retrofit button is a convenience that filters on fleetStatus, so an
-            // aircraft being retrofitted is not turned into a third kind of fit.
-            const fitStatus = fleetFitFilter.startsWith('status:') ? fleetFitFilter.slice(7) : '';
-            const ssid      = fleetStatusFilter.startsWith('ssid:') ? fleetStatusFilter.slice(5) : '';
+            // Each row carries what its Fit and Status COLUMNS display, and the filters
+            // match those — so a pill always selects exactly the rows whose cell reads
+            // the same thing. The stored `fit` and `fleetStatus` are untouched; these
+            // are views, like the Software tab's Status column.
+            const ssid = fleetStatusFilter.startsWith('ssid:') ? fleetStatusFilter.slice(5) : '';
 
             document.querySelectorAll('#fleetTableBody tr').forEach(row => {
-                const fitOk = fleetFitFilter === '' ? true
-                    : (fitStatus ? row.dataset.fstatus === fitStatus : row.dataset.fit === fleetFitFilter);
+                const fitOk = fleetFitFilter === '' || row.dataset.fitview === fleetFitFilter;
 
-                // Inactive is anything not in service — derived, so a status that is
-                // settable but unused today still lands in the right bucket.
                 const statusOk = fleetStatusFilter === '' ? true
                     : ssid ? row.dataset.wifi === ssid
                     : fleetStatusFilter === 'inactive' ? row.dataset.fstatus !== 'Active'
