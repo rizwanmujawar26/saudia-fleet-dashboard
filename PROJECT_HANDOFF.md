@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.24.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.25.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -243,6 +243,25 @@ preselected, because this page is the whole roster rather than an operational vi
 `FLEET_DEFAULT_SORT` orders it by **Activation Date, oldest first**; that column is
 second, right after `#`. Undated aircraft sort to the end (`dateSortKey` gives them
 `99999999`).
+
+**Both Fleet pill rows filter more than one axis, and the values say which.**
+
+| row | pills | resolves to |
+|---|---|---|
+| FIT | All Fit / Retrofit / Linefit / **In Retrofit** | `fit`, except `status:In Retrofit` → `fleetStatus` |
+| STATUS | All / Active / **Inactive** / Hidden / Public | `fleetStatus`, except `ssid:*` → `wifiVisibility` |
+
+⚠️ **`fit` is still only ever `retrofit` or `linefit` in the data.** The In Retrofit
+button filters on `fleetStatus` rather than making "In Retrofit" a third fit. That was
+a deliberate call (2026-08-23): an aircraft being retrofitted *is* a retrofit
+aircraft, so a third fit value would turn `fit` from a permanent fact into a progress
+field somebody has to advance by hand — and, because `fitOf()` treats anything
+non-linefit as retrofit, forgetting would break nothing visibly. Keeping it as-is also
+keeps **FIT → Retrofit answering 42**, the in-progress aircraft included.
+
+`Inactive` is derived as `fleetStatus !== 'Active'`, not a stored value, so the four
+statuses nobody uses today still land in the right bucket. `FLEET_STATUSES` is
+untouched — all six remain settable from the edit dropdown.
 
 **The Status pill row filters two axes.** `All / Active / In Retrofit / Hidden / Public`
 — the first two are `fleetStatus`, the last two are `wifiVisibility`, namespaced as
@@ -1104,6 +1123,12 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.25.0 — In Retrofit on the FIT row, Inactive on the Status row
+FIT gained an In Retrofit button and Status swapped In Retrofit for Inactive. Both are
+filter-level only: `fit` stays `retrofit`/`linefit` in the data and `Inactive` is
+derived, so no migration and no rules change. See the note above for why "In Retrofit"
+was kept out of the `fit` field itself.
 
 ### v2.24.0 — Activation age pill, SSID filters, hidden goes red
 Each activation date carries a quiet `1y 326d` pill. The Status filter row is now

@@ -3832,6 +3832,7 @@
                             <button class="qf-btn active" onclick="setFleetFitFilter('', this)">All Fit</button>
                             <button class="qf-btn" onclick="setFleetFitFilter('retrofit', this)">Retrofit</button>
                             <button class="qf-btn" onclick="setFleetFitFilter('linefit', this)">Linefit</button>
+                            <button class="qf-btn" onclick="setFleetFitFilter('status:In Retrofit', this)">In Retrofit</button>
                         </div>
                     </div>
                     <div class="filter-group-block">
@@ -3839,7 +3840,7 @@
                         <div class="quick-filters">
                             <button class="qf-btn active" onclick="setFleetStatusFilter('', this)">All</button>
                             <button class="qf-btn" onclick="setFleetStatusFilter('Active', this)">Active</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('In Retrofit', this)">In Retrofit</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('inactive', this)">Inactive</button>
                             <button class="qf-btn" onclick="setFleetStatusFilter('ssid:hidden', this)">Hidden</button>
                             <button class="qf-btn" onclick="setFleetStatusFilter('ssid:public', this)">Public</button>
                         </div>
@@ -4845,10 +4846,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.24.0';
-        const APP_BUILD    = '2026.08.23.06';
+        const APP_VERSION  = '2.25.0';
+        const APP_BUILD    = '2026.08.23.07';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T14:15:00Z';
+        const APP_DEPLOYED = '2026-08-23T14:25:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6307,16 +6308,26 @@
         function setFleetStatusFilter(s, btn) { fleetStatusFilter = s; setActiveInGroup(btn); applyFleetFilters(); }
 
         function applyFleetFilters() {
-            // One pill row, two axes: the plain values are fleet statuses, `ssid:` ones
-            // are SSID visibility. Namespacing keeps them in a single filter without
-            // 'Active' and 'public' ever being mistaken for each other.
-            const ssid = fleetStatusFilter.startsWith('ssid:') ? fleetStatusFilter.slice(5) : '';
+            // Both pill rows carry more than one axis, so each value says which axis it
+            // belongs to. `fit` is still only ever retrofit or linefit in the DATA — the
+            // In Retrofit button is a convenience that filters on fleetStatus, so an
+            // aircraft being retrofitted is not turned into a third kind of fit.
+            const fitStatus = fleetFitFilter.startsWith('status:') ? fleetFitFilter.slice(7) : '';
+            const ssid      = fleetStatusFilter.startsWith('ssid:') ? fleetStatusFilter.slice(5) : '';
+
             document.querySelectorAll('#fleetTableBody tr').forEach(row => {
+                const fitOk = fleetFitFilter === '' ? true
+                    : (fitStatus ? row.dataset.fstatus === fitStatus : row.dataset.fit === fleetFitFilter);
+
+                // Inactive is anything not in service — derived, so a status that is
+                // settable but unused today still lands in the right bucket.
                 const statusOk = fleetStatusFilter === '' ? true
-                    : (ssid ? row.dataset.wifi === ssid : row.dataset.fstatus === fleetStatusFilter);
+                    : ssid ? row.dataset.wifi === ssid
+                    : fleetStatusFilter === 'inactive' ? row.dataset.fstatus !== 'Active'
+                    : row.dataset.fstatus === fleetStatusFilter;
+
                 const ok = (fleetTypeFilter === '' || row.dataset.type === fleetTypeFilter)
-                    && (fleetFitFilter === '' || row.dataset.fit === fleetFitFilter)
-                    && statusOk;
+                    && fitOk && statusOk;
                 row.style.display = ok ? '' : 'none';
             });
             renumberVisibleRows('fleetTable');
