@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.27.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.28.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -115,11 +115,18 @@ absent, which is the state to leave an aircraft in when it has no tiles at all.
 Fleet-wide as of 2026-08-23: `wifiVisibility` is `public` on all 44 aircraft except
 **AQA, AQJ and AS51**, which are `hidden`.
 
-`retrofitLocation` is `Jeddah` on the 37 retrofit aircraft done at base, with five
-outstation: **AS60 Malta, AS59 Jordan, AS67 Qatar, AS61 Qatar, AQL Malta** — those five
-also carry `retrofitStart`/`retrofitEnd`. **ASBA and ASBB are deliberately blank**: they
-are linefit, so they were never retrofitted anywhere and a location would be inventing
-a fact. Start/end dates for the Jeddah aircraft are still to come.
+`retrofitLocation` is `Jeddah` on the 37 retrofit aircraft done at base, `Airbus` on
+the linefit pair, and five outstation: **AS60 Malta, AS59 Jordan, AS67 Qatar,
+AS61 Qatar, AQL Malta** — those five also carry `retrofitStart`/`retrofitEnd`.
+Start/end dates for the Jeddah aircraft are still to come.
+
+**`LOCATION_FLAGS` maps a location to its flag**, so the cell needs only one word —
+never "Doha, Qatar". Unlisted locations still render, with a 📍. **`LOCATION_HOME`
+decides what is unremarkable**: a Saudi base, or `Airbus` for the linefit pair, because
+that is where the work would be expected. `isOutstation()` is everything else, and it
+is what makes a cell bold amber — the aircraft was flown away for the modification.
+The Location column also sorts away-first, so the exceptions group instead of
+scattering alphabetically among 37 Jeddahs.
 
 `retrofitLocation`, `wifiVisibility`, `activatedDate` and `simRoaming` are stored
 at the **top level**, deliberately *not* under `maintenance` — clearing a flag
@@ -1147,6 +1154,11 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.28.0 — Flags on Location, and outstation stands out
+Each location carries its country flag and the five flown-away aircraft render bold
+amber. Jeddah and Airbus stay plain — both are where the work belongs, so emphasising
+them would have made the linefit pair look like exceptions.
 
 ### v2.27.0 — Location column, and the retrofit grounding window
 The Fleet tab shows where each aircraft was modified, reusing the existing
