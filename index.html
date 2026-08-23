@@ -2800,6 +2800,226 @@
             margin-bottom: 16px;
         }
 
+        /* ===== Filter bar =================================================
+           One row directly above the table: multi-select dropdowns on the
+           left, the page's own action buttons on the right. It replaces the
+           old .filter-groups block, which stacked one wrapping pill row per
+           axis and cost 218px — a third of a phone screen — before any data.
+
+           Below 700px the individual triggers collapse behind a single
+           Filters button carrying a count, so the bar is ONE row at every
+           width rather than reflowing into a stack. */
+        .filterbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            margin-bottom: 12px;
+            background: #f8f9fa;
+            border: 1px solid #e8ebee;
+            border-radius: 10px;
+        }
+
+        /* min-width:0 lets the trigger row shrink and scroll instead of
+           pushing the actions off the right edge. */
+        .fb-filters {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            flex: 1 1 auto;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .fb-filters::-webkit-scrollbar { display: none; }
+
+        .fb-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+            margin-left: auto;
+        }
+
+        /* Geometry is deliberately the same pill as .qf-btn, so the triggers
+           and the Edit/Reset buttons beside them read as one control set. */
+        .fb-trigger {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex: 0 0 auto;
+            max-width: 210px;
+            border: 1px solid #ccc;
+            background: #fff;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+        .fb-trigger:hover { background: #f0f0f0; }
+        .fb-trigger.is-open {
+            border-color: #0a5c34;
+            box-shadow: 0 0 0 3px rgba(10, 92, 52, 0.12);
+        }
+        .fb-trigger.has-value {
+            background: #0a5c34;
+            border-color: #0a5c34;
+            color: #fff;
+        }
+        .fb-trigger.has-value:hover { background: #084a2a; }
+
+        .fb-trigger-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .fb-caret {
+            font-size: 8px;
+            opacity: 0.65;
+            flex: 0 0 auto;
+        }
+        /* The count on the collapsed mobile trigger. */
+        .fb-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 17px;
+            height: 17px;
+            padding: 0 5px;
+            border-radius: 9px;
+            background: #0a5c34;
+            color: #fff;
+            font-size: 10.5px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .fb-trigger.has-value .fb-badge { background: rgba(255, 255, 255, 0.26); }
+
+        /* ---- popover ---- */
+        .fb-pop {
+            position: fixed;
+            z-index: 1200;
+            min-width: 216px;
+            max-width: min(320px, calc(100vw - 24px));
+            max-height: min(60vh, 380px);
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid #dfe3e6;
+            border-radius: 12px;
+            box-shadow: 0 12px 34px rgba(0, 0, 0, 0.16);
+            padding: 6px;
+        }
+        .fb-pop-group + .fb-pop-group { margin-top: 4px; }
+        .fb-pop-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #8a9199;
+            padding: 8px 9px 5px;
+        }
+        .fb-opt {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 7px 9px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #333;
+            user-select: none;
+        }
+        .fb-opt:hover { background: #f1f4f6; }
+        .fb-opt input {
+            accent-color: #0a5c34;
+            width: 15px;
+            height: 15px;
+            flex: 0 0 auto;
+            margin: 0;
+            cursor: pointer;
+        }
+        .fb-opt-label { flex: 1 1 auto; }
+        .fb-opt-count {
+            font-size: 11px;
+            color: #98a0a8;
+            font-variant-numeric: tabular-nums;
+        }
+        /* "All" is a clear, not another value — the rule separates it from the
+           list so it does not read as a checkbox that competes with them. */
+        .fb-opt-all {
+            font-weight: 700;
+            border-bottom: 1px solid #eef1f3;
+            border-radius: 7px 7px 0 0;
+            margin-bottom: 3px;
+        }
+        .fb-pop-foot {
+            display: flex;
+            gap: 6px;
+            padding: 6px 4px 2px;
+            border-top: 1px solid #eef1f3;
+            margin-top: 4px;
+        }
+        .fb-pop-btn {
+            flex: 1 1 0;
+            border: 1px solid #d7dbdf;
+            background: #fff;
+            border-radius: 7px;
+            padding: 6px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .fb-pop-btn:hover { background: #f2f5f7; }
+        .fb-pop-btn.primary {
+            background: #0a5c34;
+            border-color: #0a5c34;
+            color: #fff;
+        }
+        .fb-pop-btn.primary:hover { background: #084a2a; }
+
+        /* Both sets exist at every width and CSS picks one, so there is no resize
+           listener to keep in step. display:contents keeps the triggers direct flex
+           children of .fb-filters — it must live HERE and not as an inline style, or
+           it outranks the media query below and both sets render at once. */
+        .fb-groups { display: contents; }
+        .fb-compact { display: none; }
+
+        @media (max-width: 700px) {
+            .fb-groups { display: none; }
+            .fb-compact { display: inline-flex; }
+            .filterbar {
+                padding: 7px 8px;
+                gap: 6px;
+                margin-bottom: 10px;
+            }
+            /* On a phone the popover is a bottom sheet — a 216px panel anchored
+               to a trigger near the right edge would be half off-screen. */
+            .fb-pop.fb-sheet {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                top: auto;
+                max-width: none;
+                max-height: 72vh;
+                border-radius: 14px 14px 0 0;
+                padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+                box-shadow: 0 -10px 34px rgba(0, 0, 0, 0.2);
+            }
+            .fb-backdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 1199;
+                background: rgba(0, 0, 0, 0.32);
+            }
+        }
+
         .edit-btn {
             background: #0a5c34;
             color: white;
@@ -3599,34 +3819,12 @@
                     </div>
                 </div>
 
-                <div class="filter-groups">
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Aircraft Type</span>
-                        <div class="quick-filters" id="typeFilterPills">
-                            <button class="qf-btn active" onclick="setTypeFilter('', this)">All</button>
-                        </div>
+                <div class="filterbar">
+                    <div class="fb-filters" data-bar="aircraft"></div>
+                    <div class="fb-actions">
+                        <button id="editModeBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleEditMode()">🔒 Edit</button>
+                        <button id="aircraftResetBtn" class="qf-btn" onclick="resetAircraftTable()">↺ Reset</button>
                     </div>
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Location</span>
-                        <div class="quick-filters">
-                            <button class="qf-btn active" onclick="setLocationFilter('', this)">All Locations</button>
-                            <button class="qf-btn" onclick="setLocationFilter('Jeddah', this)">Jeddah</button>
-                            <button class="qf-btn" onclick="setLocationFilter('Riyadh', this)">Riyadh</button>
-                        </div>
-                    </div>
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Status</span>
-                        <div class="quick-filters">
-                            <button class="qf-btn active" onclick="setStatusFilter('', this)">All Status</button>
-                            <button class="qf-btn" onclick="setStatusFilter('scheduled', this)">Scheduled</button>
-                            <button class="qf-btn" onclick="setStatusFilter('completed', this)">Completed</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="table-actions-row">
-                    <button id="editModeBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleEditMode()">🔒 Edit</button>
-                    <button id="aircraftResetBtn" class="qf-btn" onclick="resetAircraftTable()">↺ Reset</button>
                 </div>
 
                 <div class="table-scroll-wrapper">
@@ -3678,33 +3876,12 @@
                     <div class="media-widget-strip" id="mediaWidgets"></div>
                 </div>
 
-                <div class="filter-groups">
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Aircraft Type</span>
-                        <div class="quick-filters" id="mediaTypeFilterPills">
-                            <button class="qf-btn active" onclick="setMediaTypeFilter('', this)">All</button>
-                        </div>
+                <div class="filterbar">
+                    <div class="fb-filters" data-bar="media"></div>
+                    <div class="fb-actions">
+                        <button id="mediaEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleMediaEdit()">🔒 Edit</button>
+                        <button id="mediaResetBtn" class="qf-btn" onclick="resetMediaTable()">↺ Reset</button>
                     </div>
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Media Month</span>
-                        <!-- Built from whatever cycles exist in the data — see renderMediaMonthFilter -->
-                        <div class="quick-filters" id="mediaMonthFilterPills"></div>
-                    </div>
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Status</span>
-                        <div class="quick-filters">
-                            <button class="qf-btn active" onclick="setMediaStatusFilter('', this)">All Status</button>
-                            <button class="qf-btn" onclick="setMediaStatusFilter('latest', this)">Latest Media</button>
-                            <button class="qf-btn" onclick="setMediaStatusFilter('previous', this)">Previous Media</button>
-                            <button class="qf-btn" onclick="setMediaStatusFilter('older', this)">Older Media</button>
-                            <button class="qf-btn" onclick="setMediaStatusFilter('no_media', this)">No Media</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="table-actions-row">
-                    <button id="mediaEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleMediaEdit()">🔒 Edit</button>
-                    <button id="mediaResetBtn" class="qf-btn" onclick="resetMediaTable()">↺ Reset</button>
                 </div>
 
                 <div class="table-scroll-wrapper">
@@ -3741,25 +3918,13 @@
                     <div class="media-widget-strip" id="maintenanceWidgets"></div>
                 </div>
 
-                <div class="filter-groups">
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Aircraft Type</span>
-                        <div class="quick-filters" id="maintTypeFilterPills"></div>
+                <div class="filterbar">
+                    <div class="fb-filters" data-bar="maintenance"></div>
+                    <div class="fb-actions">
+                        <button id="maintAddActivityBtn" class="qf-btn" style="display:none;" onclick="openAddActivity()">➕ Add New Activity</button>
+                        <button id="maintEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleMaintEdit()">🔒 Edit</button>
+                        <button id="maintResetBtn" class="qf-btn" onclick="resetMaintenancePage()">↺ Reset</button>
                     </div>
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Maintenance</span>
-                        <div class="quick-filters">
-                            <button class="qf-btn active" onclick="setMaintFlagFilter('', this)">All</button>
-                            <button class="qf-btn" onclick="setMaintFlagFilter('open', this)">Flagged</button>
-                            <button class="qf-btn" onclick="setMaintFlagFilter('serviceable', this)">Serviceable</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="table-actions-row">
-                    <button id="maintAddActivityBtn" class="qf-btn" style="display:none;" onclick="openAddActivity()">➕ Add New Activity</button>
-                    <button id="maintEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleMaintEdit()">🔒 Edit</button>
-                    <button id="maintResetBtn" class="qf-btn" onclick="resetMaintenancePage()">↺ Reset</button>
                 </div>
 
                 <div class="maint-split">
@@ -3932,38 +4097,13 @@
                     <div class="media-widget-strip" id="fleetWidgets"></div>
                 </div>
 
-                <div class="filter-groups">
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Aircraft Type</span>
-                        <div class="quick-filters" id="fleetTypeFilterPills">
-                            <button class="qf-btn active" onclick="setFleetTypeFilter('', this)">All</button>
-                        </div>
+                <div class="filterbar">
+                    <div class="fb-filters" data-bar="fleet"></div>
+                    <div class="fb-actions">
+                        <button id="fleetAddBtn" class="qf-btn" style="display:none;" onclick="openAddAircraft()">➕ Add Aircraft</button>
+                        <button id="fleetEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleFleetEdit()">🔒 Edit</button>
+                        <button id="fleetResetBtn" class="qf-btn" onclick="resetFleetTable()">↺ Reset</button>
                     </div>
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Fit</span>
-                        <div class="quick-filters">
-                            <button class="qf-btn active" onclick="setFleetFitFilter('', this)">All Fit</button>
-                            <button class="qf-btn" onclick="setFleetFitFilter('retrofit', this)">Retrofit</button>
-                            <button class="qf-btn" onclick="setFleetFitFilter('linefit', this)">Linefit</button>
-                            <button class="qf-btn" onclick="setFleetFitFilter('in-retrofit', this)">In Retrofit</button>
-                        </div>
-                    </div>
-                    <div class="filter-group-block">
-                        <span class="filter-group-label">Status</span>
-                        <div class="quick-filters">
-                            <button class="qf-btn active" onclick="setFleetStatusFilter('', this)">All</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('Active', this)">Active</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('inactive', this)">Inactive</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('ssid:hidden', this)">Hidden</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('ssid:public', this)">Public</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="table-actions-row">
-                    <button id="fleetAddBtn" class="qf-btn" style="display:none;" onclick="openAddAircraft()">➕ Add Aircraft</button>
-                    <button id="fleetEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleFleetEdit()">🔒 Edit</button>
-                    <button id="fleetResetBtn" class="qf-btn" onclick="resetFleetTable()">↺ Reset</button>
                 </div>
 
                 <div class="table-scroll-wrapper">
@@ -4987,10 +5127,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.31.0';
+        const APP_VERSION  = '2.32.0';
         const APP_BUILD    = '2026.08.23.21';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T21:06:18Z';
+        const APP_DEPLOYED = '2026-08-23T21:52:45Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -5855,25 +5995,419 @@
             }
         }
 
-        let currentStatusFilter = '';
-        let currentTypeFilter = '';
-        let currentLocationFilter = '';
         let editMode = false;
         let pendingChanges = {}; // { aircraftId: { field: value, ... } } staged during Edit Mode
 
-        function populateTypeFilterOptions() {
-            const container = document.getElementById('typeFilterPills');
-            if (!container || container.dataset.populated) return;
-            const types = [...new Set(aircraftStatic.map(a => a.type))].sort();
-            types.forEach(t => {
-                const btn = document.createElement('button');
-                btn.className = 'qf-btn';
-                btn.textContent = TYPE_SHORT_LABEL[t] || t;
-                btn.onclick = () => setTypeFilter(t, btn);
-                container.appendChild(btn);
-            });
-            container.dataset.populated = '1';
+        // ===== Filter bar ==================================================
+        // One row above each table: multi-select dropdowns left, that page's
+        // action buttons right. It replaced .filter-groups, which stacked a
+        // wrapping pill row per axis and cost 218px before any data showed.
+        //
+        // A filter is DECLARED here and nowhere else. Give it an id, a short
+        // label, where its options come from and how to read a row's value,
+        // and the bar renders itself, filters, counts, summarises and resets.
+        // That is the whole point: a new filter is one entry in FILTER_BARS,
+        // not a pill row in markup plus a setter plus a branch in reset.
+        //
+        // Selection is a SET per filter, and an EMPTY set means All. Encoding
+        // All as "nothing selected" rather than a magic '' value is what lets
+        // the same code answer "is this filtered?" for the badge and the
+        // has-value styling without knowing anything about the filter.
+
+        const fbState = {};        // fbState[barId][filterId] -> Set of values
+        let fbOpenKey = null;      // '<barId>' (compact) or '<barId>:<filterId>'
+
+        function fbSel(barId, filterId) {
+            if (!fbState[barId]) fbState[barId] = {};
+            if (!fbState[barId][filterId]) fbState[barId][filterId] = new Set();
+            return fbState[barId][filterId];
         }
+
+        // The one question every filter answers. An empty set matches
+        // everything, so "All" needs no special case at any call site.
+        function fbMatch(barId, filterId, value) {
+            const sel = fbSel(barId, filterId);
+            return sel.size === 0 || sel.has(String(value == null ? '' : value));
+        }
+
+        // Row-level match across every filter on a bar, used by the table
+        // pages. `rowValue` defaults to the dataset key named by the filter id.
+        function fbRowMatch(barId, row) {
+            const bar = FILTER_BARS[barId];
+            if (!bar) return true;
+            return bar.filters.every(f => {
+                const sel = fbSel(barId, f.id);
+                if (sel.size === 0) return true;
+                return sel.has(String(f.rowValue ? f.rowValue(row) : (row.dataset[f.id] || '')));
+            });
+        }
+
+        function fbActiveCount(barId) {
+            const bar = FILTER_BARS[barId];
+            if (!bar) return 0;
+            return bar.filters.reduce((n, f) => n + (fbSel(barId, f.id).size ? 1 : 0), 0);
+        }
+
+        function fbClear(barId) {
+            const bar = FILTER_BARS[barId];
+            if (!bar) return;
+            bar.filters.forEach(f => fbSel(barId, f.id).clear());
+        }
+
+        function fbOptionsOf(filter) {
+            const o = typeof filter.options === 'function' ? filter.options() : filter.options;
+            return (o || []).filter(Boolean);
+        }
+
+        // What the trigger says. Naming the filter when nothing is chosen and
+        // the VALUE when something is keeps the bar readable at a glance —
+        // "Type" tells you the axis, "Type: A320 +1" tells you the answer.
+        function fbTriggerText(barId, filter) {
+            const sel = fbSel(barId, filter.id);
+            if (sel.size === 0) return escAttr(filter.label);
+            const opts = fbOptionsOf(filter);
+            const first = opts.find(o => sel.has(o.v));
+            const name = first ? first.l : [...sel][0];
+            return escAttr(filter.label) + ': ' + escAttr(name) +
+                (sel.size > 1 ? ' <span class="fb-badge">+' + (sel.size - 1) + '</span>' : '');
+        }
+
+        function fbRenderTrigger(barId, filter) {
+            const on = fbSel(barId, filter.id).size > 0;
+            return `<button type="button" class="fb-trigger ${on ? 'has-value' : ''}"
+                data-fbkey="${escAttr(barId)}:${escAttr(filter.id)}"
+                aria-haspopup="true" aria-expanded="false"
+                onclick="fbToggle('${escAttr(barId)}', '${escAttr(filter.id)}', this)">
+                <span class="fb-trigger-text">${fbTriggerText(barId, filter)}</span>
+                <span class="fb-caret">▼</span>
+            </button>`;
+        }
+
+        function fbRender(barId) {
+            const host = document.querySelector(`.fb-filters[data-bar="${barId}"]`);
+            const bar = FILTER_BARS[barId];
+            if (!host || !bar) return;
+            // Re-rendering while a popover is open would tear it off its
+            // trigger mid-interaction; the popover repaints itself instead.
+            if (fbOpenKey && fbOpenKey.split(':')[0] === barId) { fbSyncTrigger(barId); return; }
+
+            const n = fbActiveCount(barId);
+            host.innerHTML =
+                `<span class="fb-groups">` +
+                    bar.filters.map(f => fbRenderTrigger(barId, f)).join('') +
+                `</span>` +
+                `<button type="button" class="fb-trigger fb-compact ${n ? 'has-value' : ''}"
+                    data-fbkey="${escAttr(barId)}"
+                    aria-haspopup="true" aria-expanded="false"
+                    onclick="fbToggle('${escAttr(barId)}', null, this)">
+                    <span class="fb-trigger-text">Filters</span>
+                    ${n ? `<span class="fb-badge">${n}</span>` : '<span class="fb-caret">▼</span>'}
+                </button>`;
+        }
+
+        function fbRenderAll() {
+            Object.keys(FILTER_BARS).forEach(fbRender);
+        }
+
+        // ---- popover ----------------------------------------------------
+
+        function fbClose() {
+            const barId = fbOpenKey ? fbOpenKey.split(':')[0] : null;
+            document.querySelectorAll('.fb-pop, .fb-backdrop').forEach(el => el.remove());
+            document.querySelectorAll('.fb-trigger.is-open').forEach(t => {
+                t.classList.remove('is-open');
+                t.setAttribute('aria-expanded', 'false');
+            });
+            fbOpenKey = null;
+            // Only the open trigger was kept in step while the panel was up; repaint
+            // the bar now so the rest (and the collapsed/expanded twin) agree.
+            if (barId) fbRender(barId);
+        }
+
+        function fbToggle(barId, filterId, btn) {
+            const key = filterId ? barId + ':' + filterId : barId;
+            if (fbOpenKey === key) { fbClose(); return; }
+            fbClose();
+            fbOpenKey = key;
+            btn.classList.add('is-open');
+            btn.setAttribute('aria-expanded', 'true');
+
+            const compact = !filterId;
+            const bar = FILTER_BARS[barId];
+            const groups = compact ? bar.filters : [bar.filters.find(f => f.id === filterId)];
+
+            const pop = document.createElement('div');
+            pop.className = 'fb-pop' + (compact ? ' fb-sheet' : '');
+            pop.dataset.bar = barId;
+            pop.innerHTML = fbPopHTML(barId, groups, compact);
+            document.body.appendChild(pop);
+
+            if (compact) {
+                const back = document.createElement('div');
+                back.className = 'fb-backdrop';
+                back.onclick = fbClose;
+                document.body.insertBefore(back, pop);
+            }
+            fbPosition(pop, btn, compact);
+        }
+
+        function fbPopHTML(barId, groups, compact) {
+            const body = groups.map(f => {
+                const sel = fbSel(barId, f.id);
+                const opts = fbOptionsOf(f);
+                const rows = opts.map(o => `
+                    <label class="fb-opt">
+                        <input type="checkbox" ${sel.has(o.v) ? 'checked' : ''}
+                            onchange="fbPick('${escAttr(barId)}','${escAttr(f.id)}','${escAttr(o.v)}',this.checked)">
+                        <span class="fb-opt-label">${escAttr(o.l)}</span>
+                        ${o.n === undefined ? '' : `<span class="fb-opt-count">${o.n}</span>`}
+                    </label>`).join('');
+                return `<div class="fb-pop-group" data-fbgroup="${escAttr(f.id)}">
+                    ${compact ? `<div class="fb-pop-title">${escAttr(f.label)}</div>` : ''}
+                    <label class="fb-opt fb-opt-all">
+                        <input type="checkbox" ${sel.size === 0 ? 'checked' : ''}
+                            onchange="fbPickAll('${escAttr(barId)}','${escAttr(f.id)}')">
+                        <span class="fb-opt-label">All</span>
+                    </label>
+                    ${rows || '<div class="fb-pop-title">No options</div>'}
+                </div>`;
+            }).join('');
+
+            const foot = compact
+                ? `<div class="fb-pop-foot">
+                       <button type="button" class="fb-pop-btn" onclick="fbClearBar('${escAttr(barId)}')">Clear all</button>
+                       <button type="button" class="fb-pop-btn primary" onclick="fbClose()">Done</button>
+                   </div>`
+                : '';
+            return body + foot;
+        }
+
+        // Anchored under its trigger, then nudged back inside the viewport —
+        // the last trigger in a bar sits near the right edge and a 216px panel
+        // hanging off its left corner would otherwise overflow the page.
+        function fbPosition(pop, btn, compact) {
+            if (compact && window.matchMedia('(max-width: 700px)').matches) return;
+            const r = btn.getBoundingClientRect();
+            const w = pop.offsetWidth;
+            let left = r.left;
+            if (left + w > window.innerWidth - 10) left = Math.max(10, window.innerWidth - w - 10);
+            pop.style.left = left + 'px';
+            pop.style.top = (r.bottom + 6) + 'px';
+            const h = pop.offsetHeight;
+            if (r.bottom + 6 + h > window.innerHeight - 10) {
+                pop.style.top = Math.max(10, r.top - h - 6) + 'px';
+            }
+        }
+
+        // Update an open popover in place after a pick. Deliberately NOT an
+        // innerHTML rebuild: that detaches every other checkbox in the panel, so
+        // a second click landed on a node no longer in the document, and it threw
+        // away the scroll position of a long list (the Aircraft filter is 44 rows).
+        // Only the two things that actually changed are touched — the group's All
+        // box, and the trigger behind the panel.
+        // barId is passed in rather than read back off fbOpenKey, so a pick made
+        // with no panel open (a programmatic call) still repaints the bar instead
+        // of silently leaving the triggers disagreeing with the rows.
+        function fbSyncOpen(barId, changedFilterId) {
+            if (!fbOpenKey) { fbRender(barId); return; }
+            const pop = document.querySelector('.fb-pop');
+            if (pop && changedFilterId) {
+                const group = pop.querySelector(`.fb-pop-group[data-fbgroup="${changedFilterId}"]`);
+                const all = group && group.querySelector('.fb-opt-all input');
+                if (all) all.checked = fbSel(barId, changedFilterId).size === 0;
+            } else if (pop) {
+                // Clear all: every group's boxes go back to All.
+                pop.querySelectorAll('.fb-pop-group').forEach(g => {
+                    const id = g.dataset.fbgroup;
+                    g.querySelectorAll('.fb-opt input').forEach(cb => { cb.checked = false; });
+                    const all = g.querySelector('.fb-opt-all input');
+                    if (all) all.checked = fbSel(barId, id).size === 0;
+                });
+            }
+            fbSyncTrigger(barId);
+        }
+
+        // The trigger behind an open popover, repainted without rebuilding the bar.
+        function fbSyncTrigger(barId) {
+            const filterId = fbOpenKey && fbOpenKey.indexOf(':') > -1 ? fbOpenKey.split(':')[1] : null;
+            const btn = document.querySelector(`.fb-trigger[data-fbkey="${fbOpenKey}"]`);
+            if (!btn) return;
+            const bar = FILTER_BARS[barId];
+            const n = fbActiveCount(barId);
+            if (!filterId) {
+                btn.classList.toggle('has-value', n > 0);
+                const tail = btn.querySelector('.fb-badge, .fb-caret');
+                if (tail) {
+                    tail.outerHTML = n
+                        ? `<span class="fb-badge">${n}</span>`
+                        : '<span class="fb-caret">▼</span>';
+                }
+                return;
+            }
+            const f = bar.filters.find(x => x.id === filterId);
+            btn.classList.toggle('has-value', fbSel(barId, filterId).size > 0);
+            btn.querySelector('.fb-trigger-text').innerHTML = fbTriggerText(barId, f);
+        }
+
+        function fbApply(barId) {
+            const bar = FILTER_BARS[barId];
+            if (bar && bar.apply) bar.apply();
+        }
+
+        function fbPick(barId, filterId, value, on) {
+            const sel = fbSel(barId, filterId);
+            if (on) sel.add(value); else sel.delete(value);
+            fbApply(barId);
+            fbSyncOpen(barId, filterId);
+        }
+
+        function fbPickAll(barId, filterId) {
+            const sel = fbSel(barId, filterId);
+            sel.clear();
+            const pop = document.querySelector('.fb-pop');
+            const group = pop && pop.querySelector(`.fb-pop-group[data-fbgroup="${filterId}"]`);
+            // Unticking the values is the visible half of "All" — without it the
+            // boxes stay ticked under an All that is also ticked.
+            if (group) group.querySelectorAll('.fb-opt:not(.fb-opt-all) input').forEach(cb => { cb.checked = false; });
+            fbApply(barId);
+            fbSyncOpen(barId, filterId);
+        }
+
+        function fbClearBar(barId) {
+            fbClear(barId);
+            fbApply(barId);
+            fbSyncOpen(barId, null);
+        }
+
+        // Options helper: the aircraft-type list every page shares, in the
+        // roster's own order, labelled with the short name the tables use.
+        function fbTypeOptions(list) {
+            // Guarded because the scope helpers are a mix of arrays and COUNTS —
+            // projectScope() returns a number, and passing one here silently threw
+            // inside the popover build, which left the trigger looking open with
+            // nothing under it. Fail to an empty list instead.
+            if (!Array.isArray(list)) return [];
+            const seen = [];
+            list.forEach(a => { if (a && a.type && seen.indexOf(a.type) === -1) seen.push(a.type); });
+            return seen.map(t => ({ v: t, l: TYPE_SHORT_LABEL[t] || t }));
+        }
+
+        document.addEventListener('click', e => {
+            if (!fbOpenKey) return;
+            if (e.target.closest('.fb-pop') || e.target.closest('.fb-trigger')) return;
+            fbClose();
+        });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') fbClose(); });
+        window.addEventListener('resize', fbClose);
+        // An anchored popover is positioned in viewport coordinates, so it would
+        // float away from its trigger on scroll rather than follow it. The mobile
+        // sheet is pinned to the bottom of the viewport and anchored to nothing,
+        // so it stays put — dismissing it on a stray scroll would be a bug, not a
+        // safeguard.
+        window.addEventListener('scroll', () => {
+            if (!fbOpenKey) return;
+            const pop = document.querySelector('.fb-pop');
+            if (pop && pop.classList.contains('fb-sheet') &&
+                window.matchMedia('(max-width: 700px)').matches) return;
+            fbClose();
+        }, true);
+
+        // ---- the bars -----------------------------------------------------
+        // Every filter in the app is declared here. `options` may be a static
+        // array or a function evaluated at render time (types and media cycles
+        // come from the data). `rowValue` is only needed where the value being
+        // matched is not simply the row's data-<id> attribute.
+
+        const FILTER_BARS = {
+            aircraft: {
+                apply: () => applyAircraftFilters(),
+                filters: [
+                    { id: 'type', label: 'Type', options: () => fbTypeOptions(swFleet()) },
+                    { id: 'location', label: 'Location', options: [
+                        { v: 'Jeddah', l: 'Jeddah' },
+                        { v: 'Riyadh', l: 'Riyadh' },
+                    ] },
+                    // The table stores only 'completed'; everything else is
+                    // pending, so the row value is normalised to two states
+                    // rather than the filter listing every other string.
+                    { id: 'status', label: 'Status',
+                      rowValue: row => row.dataset.status === 'completed' ? 'completed' : 'pending',
+                      options: [
+                        { v: 'completed', l: 'Completed' },
+                        { v: 'pending', l: 'Scheduled' },
+                      ] },
+                ],
+            },
+
+            media: {
+                apply: () => applyMediaFilters(),
+                filters: [
+                    { id: 'type', label: 'Type', options: () => fbTypeOptions(mediaFleet()) },
+                    // Built from the cycles actually loaded, newest first, plus the
+                    // "No Media" bucket — the same set the old pill row derived.
+                    { id: 'cycle', label: 'Month', options: () => {
+                        const present = {};
+                        let none = false;
+                        mediaFleet().forEach(a => {
+                            const c = a.media && a.media.mediaCycle;
+                            if (c) present[c] = true; else none = true;
+                        });
+                        const out = Object.keys(present)
+                            .sort((x, y) => cycleSortKey(y) - cycleSortKey(x))
+                            .map(c => ({ v: c, l: cycleToDisplay(c) }));
+                        if (none) out.push({ v: 'none', l: 'No Media' });
+                        return out;
+                    } },
+                    { id: 'mstatus', label: 'Status', options: [
+                        { v: 'latest', l: 'Latest Media' },
+                        { v: 'previous', l: 'Previous Media' },
+                        { v: 'older', l: 'Older Media' },
+                        { v: 'no_media', l: 'No Media' },
+                    ] },
+                ],
+            },
+
+            fleet: {
+                apply: () => applyFleetFilters(),
+                filters: [
+                    // fleetRoster, not projectScope() — that returns the COUNT, and this
+                    // page lists the whole roster rather than an operational subset.
+                    { id: 'type', label: 'Type', options: () => fbTypeOptions(fleetRoster) },
+                    // Matches the Fit COLUMN, not the stored `fit` — the three
+                    // displayed values sum to the roster. See the handoff.
+                    { id: 'fitview', label: 'Fit', options: [
+                        { v: 'retrofit', l: 'Retrofit' },
+                        { v: 'linefit', l: 'Linefit' },
+                        { v: 'in-retrofit', l: 'In Retrofit' },
+                    ] },
+                    { id: 'fstatus', label: 'Status',
+                      rowValue: row => row.dataset.fstatus === 'Active' ? 'Active' : 'inactive',
+                      options: [
+                        { v: 'Active', l: 'Active' },
+                        { v: 'inactive', l: 'Inactive' },
+                      ] },
+                    // SSID was folded into the Status pill row as ssid:* to keep
+                    // one variable. With a set per filter it can be its own axis,
+                    // which is what it always was.
+                    { id: 'wifi', label: 'SaudiaWiFi', options: [
+                        { v: 'public', l: 'Public' },
+                        { v: 'hidden', l: 'Hidden' },
+                    ] },
+                ],
+            },
+
+            maintenance: {
+                apply: () => renderMaintenancePage(),
+                filters: [
+                    { id: 'type', label: 'Type', options: () => fbTypeOptions(activeFleet()) },
+                    { id: 'mflag', label: 'Maintenance', options: [
+                        { v: 'open', l: 'Flagged' },
+                        { v: 'serviceable', l: 'Serviceable' },
+                    ] },
+                ],
+            },
+
+        };
 
         function setActiveInGroup(btnEl) {
             if (!btnEl) return;
@@ -5882,44 +6416,16 @@
             btnEl.classList.add('active');
         }
 
-        function setStatusFilter(status, btnEl) {
-            currentStatusFilter = status;
-            setActiveInGroup(btnEl);
-            applyAircraftFilters();
-        }
-
-        function setTypeFilter(type, btnEl) {
-            currentTypeFilter = type;
-            setActiveInGroup(btnEl);
-            applyAircraftFilters();
-        }
-
-        function setLocationFilter(location, btnEl) {
-            currentLocationFilter = location;
-            setActiveInGroup(btnEl);
-            applyAircraftFilters();
-        }
-
         function applyAircraftFilters() {
             document.querySelectorAll('#aircraftTableBody tr').forEach(row => {
-                const statusOk = currentStatusFilter === '' ||
-                    (currentStatusFilter === 'completed' ? row.dataset.status === 'completed' : row.dataset.status !== 'completed');
-                const typeOk = currentTypeFilter === '' || row.dataset.type === currentTypeFilter;
-                const locOk = currentLocationFilter === '' || row.dataset.location === currentLocationFilter;
-                row.style.display = (statusOk && typeOk && locOk) ? '' : 'none';
+                row.style.display = fbRowMatch('aircraft', row) ? '' : 'none';
             });
             renumberVisibleRows('aircraftTable');
         }
 
         function resetAircraftTable() {
-            currentStatusFilter = '';
-            currentTypeFilter = '';
-            currentLocationFilter = '';
-            document.querySelectorAll('#aircraft .filter-groups .quick-filters').forEach(group => {
-                group.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
-                const first = group.querySelector('.qf-btn');
-                if (first) first.classList.add('active');
-            });
+            fbClear('aircraft');
+            fbRender('aircraft');
             delete lastSort['aircraftTable'];
             updateSortIndicators('aircraftTable');
             populateAircraftTable();
@@ -5999,7 +6505,7 @@
         function populateAircraftTable() {
             const tbody = document.getElementById('aircraftTableBody');
             tbody.innerHTML = '';
-            populateTypeFilterOptions();
+            fbRender('aircraft');
 
             // Default view: alphabetical by registration (also drives the # column)
             const mainFleet = swFleet().sort((a, b) => a.id.localeCompare(b.id));
@@ -6264,7 +6770,6 @@
         // 99999999) rather than crowding the top.
         const FLEET_DEFAULT_STATUS = '';
         const FLEET_DEFAULT_SORT = { col: 1, dir: 1 };
-        let fleetTypeFilter = '', fleetFitFilter = '', fleetStatusFilter = FLEET_DEFAULT_STATUS;
 
         function fleetRowOf(id) {
             return fleetRoster.find(a => a.id === id) || {};
@@ -6446,7 +6951,7 @@
             });
 
             renderFleetWidgets();
-            populateFleetTypeFilter();
+            fbRender('fleet');
             applyFleetFilters();
             // Oldest activation first until someone picks another column, and re-applied
             // on every rebuild — this runs again on every live update, which would
@@ -6515,50 +7020,20 @@
                 + ssid;
         }
 
-        function populateFleetTypeFilter() {
-            const box = document.getElementById('fleetTypeFilterPills');
-            if (!box) return;
-            const types = [...new Set(fleetRoster.map(a => a.type))].sort();
-            if (box.dataset.types === types.join('|')) return;   // rebuild only when the set changes
-            box.innerHTML = `<button class="qf-btn ${fleetTypeFilter === '' ? 'active' : ''}" onclick="setFleetTypeFilter('', this)">All</button>` +
-                types.map(t => `<button class="qf-btn ${fleetTypeFilter === t ? 'active' : ''}" onclick="setFleetTypeFilter('${escAttr(t)}', this)">${TYPE_SHORT_LABEL[t] || t}</button>`).join('');
-            box.dataset.types = types.join('|');
-        }
-
-        function setFleetTypeFilter(t, btn) { fleetTypeFilter = t; setActiveInGroup(btn); applyFleetFilters(); }
-        function setFleetFitFilter(f, btn) { fleetFitFilter = f; setActiveInGroup(btn); applyFleetFilters(); }
-        function setFleetStatusFilter(s, btn) { fleetStatusFilter = s; setActiveInGroup(btn); applyFleetFilters(); }
-
         function applyFleetFilters() {
             // Each row carries what its Fit and Status COLUMNS display, and the filters
             // match those — so a pill always selects exactly the rows whose cell reads
             // the same thing. The stored `fit` and `fleetStatus` are untouched; these
             // are views, like the Software tab's Status column.
-            const ssid = fleetStatusFilter.startsWith('ssid:') ? fleetStatusFilter.slice(5) : '';
-
             document.querySelectorAll('#fleetTableBody tr').forEach(row => {
-                const fitOk = fleetFitFilter === '' || row.dataset.fitview === fleetFitFilter;
-
-                const statusOk = fleetStatusFilter === '' ? true
-                    : ssid ? row.dataset.wifi === ssid
-                    : fleetStatusFilter === 'inactive' ? row.dataset.fstatus !== 'Active'
-                    : row.dataset.fstatus === fleetStatusFilter;
-
-                const ok = (fleetTypeFilter === '' || row.dataset.type === fleetTypeFilter)
-                    && fitOk && statusOk;
-                row.style.display = ok ? '' : 'none';
+                row.style.display = fbRowMatch('fleet', row) ? '' : 'none';
             });
             renumberVisibleRows('fleetTable');
         }
 
         function resetFleetTable() {
-            fleetTypeFilter = ''; fleetFitFilter = ''; fleetStatusFilter = FLEET_DEFAULT_STATUS;
-            // Every group clears to its first pill, which is All in all three.
-            document.querySelectorAll('#fleet .filter-groups .quick-filters').forEach(group => {
-                group.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
-                const first = group.querySelector('.qf-btn');
-                if (first) first.classList.add('active');
-            });
+            fbClear('fleet');
+            fbRender('fleet');
             delete lastSort['fleetTable'];
             populateFleetTable();
         }
@@ -6664,9 +7139,6 @@
         // ===== Media page =====
         let mediaEditMode = false;
         let pendingMedia = {};          // { tail: {raw, parsed} } staged until Save
-        let mediaTypeFilter = '';
-        let mediaMonthFilter = '';      // '' = all, a cycle like '0826', or 'none'
-        let mediaStatusFilter = '';
 
         // Media is tracked for the main fleet only — the HBC+ pair carries no media load.
         function mediaFleet() {
@@ -6777,8 +7249,7 @@
             });
 
             renderMediaWidgets(latest);
-            renderMediaMonthFilter();
-            populateMediaTypeFilter();
+            fbRender('media');
             applyMediaFilters();
             updateSortIndicators('mediaTable');
             updateMediaEditUI();
@@ -6855,61 +7326,16 @@
             grid.innerHTML = html || '<div class="media-widget media-widget-no_media"><div class="media-widget-head"><span class="media-widget-label">No Media Data</span></div></div>';
         }
 
-        function renderMediaMonthFilter() {
-            const box = document.getElementById('mediaMonthFilterPills');
-            if (!box) return;
-            const present = {};
-            let none = false;
-            mediaFleet().forEach(a => {
-                const c = a.media && a.media.mediaCycle;
-                if (c) present[c] = true; else none = true;
-            });
-            const cycles = Object.keys(present).sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
-
-            let html = `<button class="qf-btn ${mediaMonthFilter === '' ? 'active' : ''}" onclick="setMediaMonthFilter('', this)">All Media</button>`;
-            html += cycles.map(c =>
-                `<button class="qf-btn ${mediaMonthFilter === c ? 'active' : ''}" onclick="setMediaMonthFilter('${c}', this)">${cycleToDisplay(c)}</button>`
-            ).join('');
-            if (none) {
-                html += `<button class="qf-btn ${mediaMonthFilter === 'none' ? 'active' : ''}" onclick="setMediaMonthFilter('none', this)">No Media</button>`;
-            }
-            box.innerHTML = html;
-        }
-
-        function populateMediaTypeFilter() {
-            const box = document.getElementById('mediaTypeFilterPills');
-            if (!box || box.dataset.populated) return;
-            [...new Set(aircraftStatic.map(a => a.type))].sort().forEach(t => {
-                const btn = document.createElement('button');
-                btn.className = 'qf-btn';
-                btn.textContent = TYPE_SHORT_LABEL[t] || t;
-                btn.onclick = () => setMediaTypeFilter(t, btn);
-                box.appendChild(btn);
-            });
-            box.dataset.populated = '1';
-        }
-
-        function setMediaTypeFilter(t, btn) { mediaTypeFilter = t; setActiveInGroup(btn); applyMediaFilters(); }
-        function setMediaMonthFilter(c, btn) { mediaMonthFilter = c; setActiveInGroup(btn); applyMediaFilters(); }
-        function setMediaStatusFilter(s, btn) { mediaStatusFilter = s; setActiveInGroup(btn); applyMediaFilters(); }
-
         function applyMediaFilters() {
             document.querySelectorAll('#mediaTableBody tr').forEach(row => {
-                const typeOk = mediaTypeFilter === '' || row.dataset.type === mediaTypeFilter;
-                const monthOk = mediaMonthFilter === '' || row.dataset.cycle === mediaMonthFilter;
-                const statusOk = mediaStatusFilter === '' || row.dataset.mstatus === mediaStatusFilter;
-                row.style.display = (typeOk && monthOk && statusOk) ? '' : 'none';
+                row.style.display = fbRowMatch('media', row) ? '' : 'none';
             });
             renumberVisibleRows('mediaTable');
         }
 
         function resetMediaTable() {
-            mediaTypeFilter = ''; mediaMonthFilter = ''; mediaStatusFilter = '';
-            document.querySelectorAll('#media .filter-groups .quick-filters').forEach(group => {
-                group.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
-                const first = group.querySelector('.qf-btn');
-                if (first) first.classList.add('active');
-            });
+            fbClear('media');
+            fbRender('media');
             delete lastSort['mediaTable'];
             updateSortIndicators('mediaTable');
             populateMediaTable();
@@ -7008,7 +7434,6 @@
         // written at all.
         let maintEditMode = false;
         let pendingMaint = {};      // { tail: { open, reason, retrofitLocation, ... } } staged until Save
-        let maintTypeFilter = '', maintFlagFilter = '';
         let maintSelectedId = '';   // which aircraft the right panel is showing
 
         const WIFI_OPTIONS = [
@@ -7051,8 +7476,8 @@
             return maintenanceFleet().filter(a => {
                 const rec = maintRecordOf(a);
                 const flag = rec.open ? 'open' : 'serviceable';
-                return (maintTypeFilter === '' || a.type === maintTypeFilter)
-                    && (maintFlagFilter === '' || flag === maintFlagFilter);
+                return fbMatch('maintenance', 'type', a.type)
+                    && fbMatch('maintenance', 'mflag', flag);
             });
         }
 
@@ -7279,7 +7704,7 @@
         // are always redrawn together so they cannot disagree.
         function renderMaintenancePage() {
             renderMaintenanceWidgets();
-            populateMaintFilterPills();
+            fbRender('maintenance');
             renderMaintDetail();     // resolves the selection first
             renderMaintList();
             updateMaintEditUI();
@@ -7311,31 +7736,10 @@
             grid.innerHTML = html;
         }
 
-        function populateMaintFilterPills() {
-            const fleet = maintenanceFleet();
-
-            const typeBox = document.getElementById('maintTypeFilterPills');
-            if (typeBox) {
-                const types = [...new Set(fleet.map(a => a.type))].sort();
-                if (typeBox.dataset.types !== types.join('|')) {   // rebuild only when the set changes
-                    typeBox.innerHTML = `<button class="qf-btn ${maintTypeFilter === '' ? 'active' : ''}" onclick="setMaintTypeFilter('', this)">All</button>` +
-                        types.map(t => `<button class="qf-btn ${maintTypeFilter === t ? 'active' : ''}" onclick="setMaintTypeFilter('${escAttr(t)}', this)">${TYPE_SHORT_LABEL[t] || t}</button>`).join('');
-                    typeBox.dataset.types = types.join('|');
-                }
-            }
-        }
-
-        function setMaintTypeFilter(t, btn) { maintTypeFilter = t; setActiveInGroup(btn); renderMaintenancePage(); }
-        function setMaintFlagFilter(f, btn) { maintFlagFilter = f; setActiveInGroup(btn); renderMaintenancePage(); }
-
         function resetMaintenancePage() {
-            maintTypeFilter = ''; maintFlagFilter = '';
+            fbClear('maintenance');
+            fbRender('maintenance');
             maintSelectedId = '';
-            document.querySelectorAll('#maintenance .filter-groups .quick-filters').forEach(group => {
-                group.querySelectorAll('.qf-btn').forEach(b => b.classList.remove('active'));
-                const first = group.querySelector('.qf-btn');
-                if (first) first.classList.add('active');
-            });
             renderMaintenancePage();
         }
 

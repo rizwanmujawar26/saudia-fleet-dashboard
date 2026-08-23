@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.31.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.32.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -568,6 +568,115 @@ on the Timeline on the next `updateMetrics()`, which the save already calls.
 
 ---
 
+## Filter bar — the one way to build a filter
+
+**Every filter in the app is declared in `FILTER_BARS` and rendered by one
+component.** Hand-writing a pill row in markup is not a thing any more. This is
+the pattern for current and future filters, at the user's explicit instruction
+(2026-08-23).
+
+The old shape was a `.filter-groups` block — one wrapping row of `.qf-btn` pills
+per axis — sitting above a separate `.table-actions-row` for Edit/Reset. On a
+phone that came to **218px of filters plus 30px of actions before a single row of
+data**, about a third of the screen. It is now **one 46px row** carrying both:
+filters on the left, that page's actions on the right.
+
+```
+[Type ▾] [Fit ▾] [Status ▾] [SaudiaWiFi ▾] ········· [🔒 Edit] [↺ Reset]
+```
+
+### Declaring one
+
+```js
+{ id: 'fitview', label: 'Fit', options: [
+    { v: 'retrofit', l: 'Retrofit' },
+    { v: 'linefit',  l: 'Linefit' },
+] },
+```
+
+- `id` — doubles as the row's `data-<id>` attribute, which is where the value is
+  read from unless `rowValue` says otherwise.
+- `label` — the short word on the trigger. Keep it short; it shares a row.
+- `options` — an array, **or a function** evaluated at render time. Aircraft
+  types and media cycles are functions, so they follow the data with no wiring.
+- `rowValue(row)` — only where the matched value is not the dataset attribute.
+  Software's Status uses it to collapse "anything not completed" to `pending`.
+
+That one entry gets you the trigger, the popover, the filtering, the trigger
+summary, the mobile count badge and the Reset behaviour. Before, each filter cost
+a pill row in markup **plus** a `set*Filter()` **plus** a state variable **plus** a
+branch in `apply*Filters()` **plus** a branch in `reset*()` — five places to keep
+in step, which is why the axes had started to drift into each other.
+
+### Selection is a Set, and empty means All
+
+`fbSel(bar, id)` returns a `Set`. **Empty = All.** Encoding "no filter" as an
+empty set rather than a magic `''` value is what lets `fbActiveCount()`, the
+`has-value` styling and the badge all work without knowing anything about a
+particular filter. Multi-select falls out of it for free — which is the feature
+that was asked for.
+
+Two call shapes:
+
+- `fbRowMatch(barId, row)` — every filter on the bar against a table row. The
+  table pages' `apply*Filters()` are now three lines each.
+- `fbMatch(barId, filterId, value)` — one filter against a value, for the
+  Activity tab, which filters the model rather than DOM rows.
+
+### Responsive: one row at every width
+
+Both control sets are always in the DOM and **CSS picks one**, so there is no
+resize listener to keep in step. Below **700px** `.fb-groups` is hidden and a
+single `Filters` trigger with a count badge shows instead; its popover renders as
+a bottom sheet with every group stacked and a Clear all / Done footer.
+
+⚠️ **`display: contents` on `.fb-groups` must stay in the stylesheet, not inline
+on the element.** It was inline first, which outranked the media query, and both
+the individual triggers and the collapsed one rendered at once.
+
+### Things that are load-bearing
+
+- **A pick updates the popover in place; it never rebuilds it.** An `innerHTML`
+  rebuild detaches every other checkbox in the panel — a second click then lands
+  on a node no longer in the document and does nothing — and it throws away the
+  scroll position of a long list. `fbSyncOpen()` touches only the group's All box
+  and the trigger behind the panel.
+- **`fbClose()` repaints the whole bar.** Only the open trigger is kept current
+  while a panel is up, so the others (and the collapsed/expanded twin) are stale
+  until it closes.
+- **`fbRender()` under an open panel repaints the trigger only.** Calling the
+  full sync there would take the clear-all branch and untick the panel the user
+  is standing in.
+- **The mobile sheet is exempt from close-on-scroll.** An anchored popover is
+  positioned in viewport coordinates and must close when the page moves under it;
+  the sheet is pinned to the bottom and anchored to nothing, so dismissing it on
+  a stray scroll would be a bug.
+- **`fbTypeOptions()` guards against a non-array.** The scope helpers are a mix:
+  `swFleet()`/`activeFleet()` return arrays but **`projectScope()` returns a
+  COUNT**. Passing the number in threw inside the popover build, which left the
+  trigger looking open with nothing under it. The Fleet bar uses `fleetRoster`.
+
+### What is not converted
+
+- **Serials and Schedule** still use native `<select>`s and a search input. They
+  were never part of the space problem, and Schedule filters whole station
+  *sections* rather than table rows, so it needs its own match. Bringing them onto
+  the component is the obvious next step.
+- **The Overview's Timeline kind pills stay pills.** That is a segmented control
+  for one exclusive choice, not a table filter; a dropdown would hide the options
+  behind a click for no gain. `setActiveInGroup()` survives for it and for the
+  Serials state pills.
+
+### Fleet gained an axis
+
+SSID visibility used to be smuggled into the Fleet Status pill row as
+`ssid:hidden` / `ssid:public`, because one variable had to carry two axes. With a
+set per filter that is unnecessary: **SaudiaWiFi is its own dropdown**, and Status
+and SSID can now be combined (Active *and* Hidden), which the old row could not
+express.
+
+---
+
 ## Widget vocabulary
 
 - **Fleet widgets** — Active Fleet, In Retrofit, and **SSID Visibility**: a single
@@ -753,9 +862,9 @@ staged.
   fleet, so a stored value goes stale the moment a newer cycle lands.
   `mediaStatusType()` derives it: latest (green), one month back (blue), older
   (amber), none (grey).
-- Widgets and month filter pills are built from cycles actually present, newest
-  first. A new cycle creates its own widget and pill with no code change
-  (verified with a simulated September).
+- Widgets are built from cycles actually present, newest first, and so is the Month
+  filter's option list. A new cycle creates its own widget and filter option with no
+  code change (verified with a simulated September).
 - **`MEDIA_CYCLE_SIZES`** maps a cycle (MMYY) to its load size — `'0926': '884 GB'` —
   and is the one place to add next month. It does two jobs: it puts the size in a pill
   on that cycle's widget, and **a cycle listed there gets a widget before any aircraft
@@ -765,7 +874,7 @@ staged.
   actually loaded — declaring September otherwise marks the whole August fleet a month
   behind, and `mediaStatus` is relative to the newest cycle *in the fleet*. An
   undelivered cycle renders as `upcoming` (violet), deliberately not `older` (amber),
-  is left out of the month filter pills (it could only filter to an empty table), and
+  is left out of the Month filter's options (it could only filter to an empty table), and
   flips to `latest` on its own once the first aircraft takes it.
 
 ---
@@ -1202,6 +1311,20 @@ and confirm it saves before a bulk run**.
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.32.0 — Filters: one declared component, one row, multi-select
+The per-axis pill rows are gone. Every filter is now an entry in `FILTER_BARS`,
+rendered as a multi-select dropdown in a single bar that also carries the page's Edit
+and Reset buttons, directly above the table. On a phone the dropdowns collapse behind
+one Filters button with a count, so the bar is one row at every width: the Software
+tab went from 248px (31% of the screen, ~4 data rows visible) to 46px (6%, 12 rows).
+
+Selection is a Set per filter with empty meaning All, which is where multi-select comes
+from. 11 setter functions, 5 pill builders and 10 state variables were deleted; the four
+`apply*Filters()` are three lines each. Fleet's SSID filter, previously namespaced into
+the Status row as `ssid:*`, became its own axis and can now be combined with Status.
+
+Serials and Schedule keep their native selects for now — see the section above.
+
 ### v2.31.0 — CWAP quantities: a family rule, and linefit carries them too
 Every A320-family narrow body carries three CWAPs and the A330 five, whichever way the
 WiFi got on board. `qtyByType`'s two exact subtypes became `qtyByFamily` behind a new
@@ -1498,7 +1621,7 @@ WiFi visibility, activation date, and "Serviceable" replacing "Clear".
 
 A working portal under active extension. Expect targeted asks — new modules, data
 updates, UI polish — rather than rebuilds. **Do not rebuild from scratch; reuse the
-existing table framework, filter pills, widget strips, status badges, the two-pane
+existing table framework, the FILTER_BARS filter bar, widget strips, status badges, the two-pane
 shell and the auth-gated edit flow.**
 
 Two working agreements from the user:
