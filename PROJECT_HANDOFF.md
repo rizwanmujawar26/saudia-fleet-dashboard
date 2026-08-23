@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.34.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.35.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -656,16 +656,27 @@ the individual triggers and the collapsed one rendered at once.
   COUNT**. Passing the number in threw inside the popover build, which left the
   trigger looking open with nothing under it. The Fleet bar uses `fleetRoster`.
 
+### Single-select filters
+
+A filter declared `single: true` is an exclusive choice: the popover renders
+**radios**, and a pick REPLACES the set instead of adding to it. The set is still
+the state — size 0 is All, size 1 is the answer — so the trigger text, the badge
+and `fbMatch()` need no special case.
+
+⚠️ **A radio never reports `on: false`** — the browser just moves the dot — so
+`fbPick()` cannot treat a single-select pick as a toggle. It clears and adds.
+
+**A bar with exactly one filter names it on the collapsed trigger.** `Filters ▾`
+with a count is right when there are several axes to summarise; with one there is
+nothing to summarise, so `fbCompactLabel()` returns that filter's own trigger text
+instead — `Show`, then `Show: Media`.
+
 ### What is not converted
 
 - **Serials and Schedule** still use native `<select>`s and a search input. They
   were never part of the space problem, and Schedule filters whole station
   *sections* rather than table rows, so it needs its own match. Bringing them onto
   the component is the obvious next step.
-- **The Overview's Timeline kind pills stay pills.** That is a segmented control
-  for one exclusive choice, not a table filter; a dropdown would hide the options
-  behind a click for no gain. `setActiveInGroup()` survives for it and for the
-  Serials state pills.
 
 ### Fleet gained an axis
 
@@ -774,6 +785,23 @@ firing before authentication and with `backup.sh` losing anonymous access.
    list). One divider per day, nothing between aircraft. Beware
    `.timeline-items li`: it must stay `.timeline-items > li`, or the descendant
    match hits nested per-aircraft `<li>`s and double rules return.
+   **The kind filter and the sort direction share one field** (`.tl-controls`),
+   styled as the tables' `.filterbar` so the two read as one component. They were
+   two stacked rows, and on a phone the sort pair alone wrapped to a full row —
+   108px of chrome above the calendar, now 90px, and far less visually heavy.
+   **The row sheds width in four steps instead of wrapping**, each a media query:
+   `Oldest First` → `Oldest` → `Old` → a bare arrow in a circle, and at the last
+   step the four kind pills give way to the dropdown.
+   ⚠️ **Those breakpoints are MEASURED, not device sizes.** The row is
+   `viewport - 100`, the pill set is a fixed 312px, and the steps need
+   582 / 516 / 483 / 428px including padding, gap and divider — so each query
+   fires exactly where the level above stops fitting. **Changing a label or adding
+   a pill invalidates them: re-measure, do not nudge.** Verified with no clipping
+   at 700 / 660 / 600 / 560 / 500 / 348px.
+   **The pills and the dropdown are two views of one value.** `setTimelineKind()`
+   and `applyTimelineKindFromBar()` each write `timelineKindFilter` and repaint the
+   other, and `renderTimeline()` renders both whatever the width — nothing is
+   rebuilt on resize, so the hidden one has to be correct already.
 2. **Software** (tab id is still `aircraft`) — **one** widget row of three cards:
    a Middleware split (Completed left, Pending right, the two shares filling the track
    — the same shape as the Fleet tab's SSID card) plus Jeddah and Riyadh. The version
@@ -1335,6 +1363,19 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.35.0 — Timeline controls: one field, four width steps
+The Overview's kind filter and sort direction now share a single field instead of
+occupying two stacked rows, and the sort buttons shed text in steps as the row
+narrows — `Oldest First` → `Oldest` → `Old` → an arrow in a circle — with the pills
+giving way to a dropdown at the last step. On a phone the block went from 108px to
+90px, and the two oversized sort buttons that dominated the view are now a pair of
+30px circles.
+
+The shared filter component gained `single: true` (radio semantics, a pick replaces
+rather than adds) so the Timeline's exclusive four-way choice could reuse it, and a
+one-filter bar now names that filter on its collapsed trigger rather than saying
+"Filters".
 
 ### v2.34.0 — Media table opens on Loading Date
 Date UTC renamed **Loading Date**, moved from sixth to second, default sort oldest

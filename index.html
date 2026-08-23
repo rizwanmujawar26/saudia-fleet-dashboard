@@ -1212,14 +1212,123 @@
             margin-bottom: 0;
         }
 
-        .timeline-sort-toggle {
+        /* ===== Timeline controls =========================================
+           Kind filter and sort direction in one field, styled as the table
+           pages' .filterbar so the two read as the same component. They used
+           to be two stacked rows, and on a phone the sort pair alone wrapped
+           to a full row of its own — 88px of chrome above the calendar.
+
+           The row sheds width in FOUR steps rather than wrapping. Each step
+           is a media query below, in descending order:
+
+             >=690px   ↑ Oldest First    ↓ Newest First     pills
+             <690px    ↑ Oldest          ↓ Newest           pills
+             <620px    ↑ Old             ↓ New              pills
+             <590px    ↑ (circle)        ↓ (circle)         pills
+             <535px    ↑ (circle)        ↓ (circle)         dropdown
+
+           ⚠️ The breakpoints are MEASURED, not picked off device sizes. The row
+           is `viewport - 100`, the pill set is a fixed 312px, and each step
+           needs 582 / 516 / 483 / 428px including padding, gap and divider —
+           so each query fires exactly where the level above stops fitting,
+           plus a few px of margin for font rendering. Changing a label or
+           adding a pill invalidates them: re-measure, do not nudge. */
+        .tl-controls {
             display: flex;
-            gap: 6px;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 10px;
+            margin-bottom: 12px;
+            background: #f8f9fa;
+            border: 1px solid #e8ebee;
+            border-radius: 10px;
         }
 
-        .timeline-sort-toggle .qf-btn {
+        /* min-width:0 lets the pills scroll inside their share rather than
+           pushing the sort group off the right edge. */
+        .tl-controls .tl-kind-pills {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1 1 auto;
+            min-width: 0;
+            margin-bottom: 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .tl-controls .tl-kind-pills::-webkit-scrollbar { display: none; }
+        .tl-controls .tl-kind-pills .qf-btn { flex: 0 0 auto; }
+
+        /* The dropdown twin. The shared component renders both an expanded set
+           and a collapsed trigger and switches them at 700px; this row wants
+           neither of those defaults, so both are overridden at (0,2,0) —
+           higher than the component's own (0,1,0) rules, whatever the order. */
+        .tl-controls .tl-kind-menu {
+            display: none;
+            flex: 0 0 auto;
+            overflow: visible;
+        }
+        .tl-controls .fb-groups { display: none; }
+        .tl-controls .fb-compact { display: none; }
+
+        .tl-sort {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 0 0 auto;
+            margin-left: auto;
+            padding-left: 10px;
+            /* Separates the two jobs without a heavier divider element. */
+            border-left: 1px solid #e2e6ea;
+        }
+
+        .tl-sort-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
             padding: 5px 12px;
             font-size: 12px;
+            white-space: nowrap;
+        }
+        .tl-arrow { font-size: 12px; line-height: 1; }
+
+        /* One label per step. Only .tl-lab-lg shows by default; each query
+           below swaps which single span is visible. */
+        .tl-lab-md, .tl-lab-sm { display: none; }
+
+        @media (max-width: 689px) {
+            .tl-lab-lg { display: none; }
+            .tl-lab-md { display: inline; }
+        }
+
+        @media (max-width: 619px) {
+            .tl-lab-md { display: none; }
+            .tl-lab-sm { display: inline; }
+        }
+
+        /* Arrow only, in a circle. A fixed square with the label gone is what
+           makes it a circle rather than a squashed pill. */
+        @media (max-width: 589px) {
+            .tl-lab-sm { display: none; }
+            .tl-sort-btn {
+                width: 30px;
+                height: 30px;
+                padding: 0;
+                gap: 0;
+                border-radius: 50%;
+                justify-content: center;
+            }
+            .tl-arrow { font-size: 13px; }
+            .tl-controls { gap: 8px; padding: 6px 8px; }
+            .tl-sort { padding-left: 8px; }
+        }
+
+        /* Last step: the pills give way to the dropdown. The four pills are a
+           fixed 312px and stop fitting beside the arrows below ~535px. */
+        @media (max-width: 534px) {
+            .tl-controls .tl-kind-pills { display: none; }
+            .tl-controls .tl-kind-menu { display: flex; }
+            .tl-controls .fb-compact { display: inline-flex; }
         }
 
         /* Timeline tag pills */
@@ -1830,12 +1939,6 @@
             font-size: 11.5px;
             color: #7a838c;
         }
-
-        .timeline-filter-row {
-            margin-bottom: 12px;
-        }
-
-        .timeline-filter-row .quick-filters { margin-bottom: 0; }
 
         /* ===== Maintenance page: two-panel (list + detail) ===== */
         .maint-split {
@@ -3786,15 +3889,26 @@
                     <div class="timeline-section completed">
                         <div class="timeline-title-row">
                             <div class="timeline-title" id="completedDeliveriesTitle">📅 Timeline</div>
-                            <div class="timeline-sort-toggle">
-                                <button id="sortOldestBtn" class="qf-btn" onclick="setTimelineSort('asc')">↑ Oldest First</button>
-                                <button id="sortLatestBtn" class="qf-btn active" onclick="setTimelineSort('desc')">↓ Newest First</button>
-                            </div>
                         </div>
-                        <!-- Activity kinds. Built in JS from TIMELINE_KINDS so the set
-                             has exactly one definition. -->
-                        <div class="timeline-filter-row">
-                            <div class="quick-filters" id="timelineKindPills"></div>
+                        <!-- Kind filter and sort share one field. Both shed width in
+                             steps as the row narrows: the sort labels go
+                             "Oldest First" -> "Oldest" -> "Old" -> a bare arrow, and at
+                             the last step the pills give way to the dropdown. Activity
+                             kinds are built in JS from TIMELINE_KINDS, which is still
+                             the one definition of the set. -->
+                        <div class="tl-controls">
+                            <div class="quick-filters tl-kind-pills" id="timelineKindPills"></div>
+                            <div class="fb-filters tl-kind-menu" data-bar="timeline"></div>
+                            <div class="tl-sort">
+                                <button id="sortOldestBtn" class="qf-btn tl-sort-btn" onclick="setTimelineSort('asc')"
+                                        title="Oldest first" aria-label="Sort oldest first">
+                                    <span class="tl-arrow">↑</span><span class="tl-lab tl-lab-lg">Oldest First</span><span class="tl-lab tl-lab-md">Oldest</span><span class="tl-lab tl-lab-sm">Old</span>
+                                </button>
+                                <button id="sortLatestBtn" class="qf-btn tl-sort-btn active" onclick="setTimelineSort('desc')"
+                                        title="Newest first" aria-label="Sort newest first">
+                                    <span class="tl-arrow">↓</span><span class="tl-lab tl-lab-lg">Newest First</span><span class="tl-lab tl-lab-md">Newest</span><span class="tl-lab tl-lab-sm">New</span>
+                                </button>
+                            </div>
                         </div>
                         <div class="cal-strip" id="timelineCalendarStrip"></div>
                         <ul class="timeline-items" id="completedDeliveriesList"></ul>
@@ -5127,10 +5241,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.34.0';
+        const APP_VERSION  = '2.35.0';
         const APP_BUILD    = '2026.08.23.22';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T22:18:18Z';
+        const APP_DEPLOYED = '2026-08-23T22:38:52Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6083,6 +6197,17 @@
             </button>`;
         }
 
+        // What the collapsed trigger says. A bar with several filters needs the
+        // generic word plus a count; a bar with exactly one has nothing to summarise,
+        // so it reads like that filter's own trigger — "Show", then "Show: Media".
+        function fbCompactLabel(barId) {
+            const bar = FILTER_BARS[barId];
+            if (bar && bar.filters.length === 1) {
+                return { html: fbTriggerText(barId, bar.filters[0]), count: 0 };
+            }
+            return { html: 'Filters', count: fbActiveCount(barId) };
+        }
+
         function fbRender(barId) {
             const host = document.querySelector(`.fb-filters[data-bar="${barId}"]`);
             const bar = FILTER_BARS[barId];
@@ -6092,6 +6217,7 @@
             if (fbOpenKey && fbOpenKey.split(':')[0] === barId) { fbSyncTrigger(barId); return; }
 
             const n = fbActiveCount(barId);
+            const cl = fbCompactLabel(barId);
             host.innerHTML =
                 `<span class="fb-groups">` +
                     bar.filters.map(f => fbRenderTrigger(barId, f)).join('') +
@@ -6100,8 +6226,8 @@
                     data-fbkey="${escAttr(barId)}"
                     aria-haspopup="true" aria-expanded="false"
                     onclick="fbToggle('${escAttr(barId)}', null, this)">
-                    <span class="fb-trigger-text">Filters</span>
-                    ${n ? `<span class="fb-badge">${n}</span>` : '<span class="fb-caret">▼</span>'}
+                    <span class="fb-trigger-text">${cl.html}</span>
+                    ${cl.count ? `<span class="fb-badge">${cl.count}</span>` : '<span class="fb-caret">▼</span>'}
                 </button>`;
         }
 
@@ -6155,9 +6281,15 @@
             const body = groups.map(f => {
                 const sel = fbSel(barId, f.id);
                 const opts = fbOptionsOf(f);
+                // A `single` filter is an exclusive choice, so it renders radios and a
+                // pick REPLACES the set rather than adding to it. The set is still the
+                // state — size 0 is All, size 1 is the choice — so the trigger text,
+                // the badge and fbMatch() all work unchanged.
+                const inputType = f.single ? 'radio' : 'checkbox';
+                const groupName = `fb-${barId}-${f.id}`;
                 const rows = opts.map(o => `
                     <label class="fb-opt">
-                        <input type="checkbox" ${sel.has(o.v) ? 'checked' : ''}
+                        <input type="${inputType}" name="${escAttr(groupName)}" ${sel.has(o.v) ? 'checked' : ''}
                             onchange="fbPick('${escAttr(barId)}','${escAttr(f.id)}','${escAttr(o.v)}',this.checked)">
                         <span class="fb-opt-label">${escAttr(o.l)}</span>
                         ${o.n === undefined ? '' : `<span class="fb-opt-count">${o.n}</span>`}
@@ -6165,7 +6297,7 @@
                 return `<div class="fb-pop-group" data-fbgroup="${escAttr(f.id)}">
                     ${compact ? `<div class="fb-pop-title">${escAttr(f.label)}</div>` : ''}
                     <label class="fb-opt fb-opt-all">
-                        <input type="checkbox" ${sel.size === 0 ? 'checked' : ''}
+                        <input type="${inputType}" name="${escAttr(groupName)}" ${sel.size === 0 ? 'checked' : ''}
                             onchange="fbPickAll('${escAttr(barId)}','${escAttr(f.id)}')">
                         <span class="fb-opt-label">All</span>
                     </label>
@@ -6235,11 +6367,13 @@
             const bar = FILTER_BARS[barId];
             const n = fbActiveCount(barId);
             if (!filterId) {
+                const cl = fbCompactLabel(barId);
                 btn.classList.toggle('has-value', n > 0);
+                btn.querySelector('.fb-trigger-text').innerHTML = cl.html;
                 const tail = btn.querySelector('.fb-badge, .fb-caret');
                 if (tail) {
-                    tail.outerHTML = n
-                        ? `<span class="fb-badge">${n}</span>`
+                    tail.outerHTML = cl.count
+                        ? `<span class="fb-badge">${cl.count}</span>`
                         : '<span class="fb-caret">▼</span>';
                 }
                 return;
@@ -6255,8 +6389,19 @@
         }
 
         function fbPick(barId, filterId, value, on) {
+            const bar = FILTER_BARS[barId];
+            const f = bar && bar.filters.find(x => x.id === filterId);
             const sel = fbSel(barId, filterId);
-            if (on) sel.add(value); else sel.delete(value);
+            if (f && f.single) {
+                // Radios never report `on: false` — the browser just moves the dot —
+                // so a single-select pick is always a replace.
+                sel.clear();
+                sel.add(value);
+            } else if (on) {
+                sel.add(value);
+            } else {
+                sel.delete(value);
+            }
             fbApply(barId);
             fbSyncOpen(barId, filterId);
         }
@@ -6393,6 +6538,18 @@
                         { v: 'public', l: 'Public' },
                         { v: 'hidden', l: 'Hidden' },
                     ] },
+                ],
+            },
+
+            // The Overview timeline's kind filter. It is PILLS at most widths — an
+            // exclusive four-way choice reads better as a segmented row than as a menu
+            // — and collapses to this dropdown only when the control row runs out of
+            // room. Both surfaces drive the one `timelineKindFilter`.
+            timeline: {
+                apply: () => applyTimelineKindFromBar(),
+                filters: [
+                    { id: 'kind', label: 'Show', single: true,
+                      options: () => TIMELINE_KINDS.filter(k => k.value).map(k => ({ v: k.value, l: k.label })) },
                 ],
             },
 
@@ -10051,19 +10208,36 @@
             updateMetrics();
         }
 
-        function setTimelineKind(kind, btn) {
+        // The pills and the collapsed dropdown are two views of ONE value. Each writes
+        // timelineKindFilter and then repaints the other, so whichever is on screen at
+        // the time is correct and the hidden one is already right when the window is
+        // resized across the breakpoint.
+        function setTimelineKind(kind) {
             timelineKindFilter = kind;
-            setActiveInGroup(btn);
+            const sel = fbSel('timeline', 'kind');
+            sel.clear();
+            if (kind) sel.add(kind);
+            fbRender('timeline');
+            renderTimelineKindPills();
             updateMetrics();
         }
 
+        // Called by the filter bar when the choice is made in the dropdown.
+        function applyTimelineKindFromBar() {
+            const chosen = [...fbSel('timeline', 'kind')];
+            timelineKindFilter = chosen.length ? chosen[0] : '';
+            renderTimelineKindPills();
+            updateMetrics();
+        }
+
+        // Rebuilt every time rather than once: it has to reflect a choice that may have
+        // been made in the dropdown, and four buttons cost nothing.
         function renderTimelineKindPills() {
             const box = document.getElementById('timelineKindPills');
-            if (!box || box.dataset.built) return;
+            if (!box) return;
             box.innerHTML = TIMELINE_KINDS.map(k =>
-                `<button class="qf-btn ${k.value === timelineKindFilter ? 'active' : ''}" onclick="setTimelineKind('${k.value}', this)">${k.label}</button>`
+                `<button class="qf-btn ${k.value === timelineKindFilter ? 'active' : ''}" onclick="setTimelineKind('${escAttr(k.value)}')">${escAttr(k.label)}</button>`
             ).join('');
-            box.dataset.built = '1';
         }
 
         // Where an activity happened, best available. Software carries its own
@@ -10184,6 +10358,10 @@
         function renderTimeline() {
             setText('completedDeliveriesTitle', '📅 Timeline');
             renderTimelineKindPills();
+            // The collapsed twin. Rendered whatever the width, because a resize
+            // across the breakpoint only changes which one CSS shows — neither is
+            // rebuilt on resize, so both have to be current already.
+            fbRender('timeline');
 
             const all = timelineActivities();
             // The filter drives the day counts as well as the rows, so a day showing
