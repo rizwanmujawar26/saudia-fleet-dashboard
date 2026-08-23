@@ -1654,7 +1654,12 @@
            than three cards of different heights. */
         .sw-strip { align-items: stretch; }
         .sw-strip .media-widget { display: flex; flex-direction: column; }
-        .sw-strip .stat-list { margin-top: auto; }
+        .sw-strip .stat-list {
+            margin-top: auto;
+            font-size: 12px;
+            line-height: 1.55;
+            color: #4a555f;
+        }
 
         .station-widget { min-width: 300px; max-width: 460px; }
 
@@ -4929,10 +4934,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.30.1';
-        const APP_BUILD    = '2026.08.23.15';
+        const APP_VERSION  = '2.30.2';
+        const APP_BUILD    = '2026.08.23.16';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T16:30:00Z';
+        const APP_DEPLOYED = '2026-08-23T16:45:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the

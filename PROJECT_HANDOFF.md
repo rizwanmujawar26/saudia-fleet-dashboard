@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.30.1, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.30.2, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1163,6 +1163,11 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.30.2 — Registration lists sized
+The tail lists in the Software row had no size of their own — `.stat-list` is styled
+only inside `.simple-stat-card` — so they inherited the 16px body default and read
+larger than the figures above them. Now 12px, level with the rest of the card.
 
 ### v2.30.1 — Middleware card wording
 Pill drops the percentage. The figures read Completed and Pending, and the two version
