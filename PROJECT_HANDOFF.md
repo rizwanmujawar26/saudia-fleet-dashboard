@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.30.2, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.30.3, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1163,6 +1163,12 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.30.3 — Equal widths in the Software row
+All three cards fixed at 320px. The station cards were sizing to their registration
+lists and running to their 460px cap. The lists clamp to three lines with the
+click-to-expand `statList()` already wires up, so a long one cannot set the row's
+height.
 
 ### v2.30.2 — Registration lists sized
 The tail lists in the Software row had no size of their own — `.stat-list` is styled

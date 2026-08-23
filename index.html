@@ -1653,7 +1653,33 @@
         /* All three cards stretch to the tallest, so the row reads as one band rather
            than three cards of different heights. */
         .sw-strip { align-items: stretch; }
-        .sw-strip .media-widget { display: flex; flex-direction: column; }
+
+        .sw-strip .media-widget {
+            display: flex;
+            flex-direction: column;
+            /* One width for all three, overriding each card's own min/max — the station
+               cards would otherwise size to their registration lists and run to their
+               cap while the Middleware card sat at its floor. */
+            flex: 0 0 320px;
+            min-width: 320px;
+            max-width: 320px;
+        }
+
+        /* At that width Jeddah's twenty-odd tails would run to five lines and set the
+           height of the whole row. Three lines, and the click that statList() already
+           wires up now actually does something — the full list is in the title too. */
+        .sw-strip .stat-list.clickable {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .sw-strip .stat-list.clickable.expanded {
+            -webkit-line-clamp: unset;
+            overflow: visible;
+        }
         .sw-strip .stat-list {
             margin-top: auto;
             font-size: 12px;
@@ -4934,10 +4960,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.30.2';
-        const APP_BUILD    = '2026.08.23.16';
+        const APP_VERSION  = '2.30.3';
+        const APP_BUILD    = '2026.08.23.17';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T16:45:00Z';
+        const APP_DEPLOYED = '2026-08-23T17:00:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
