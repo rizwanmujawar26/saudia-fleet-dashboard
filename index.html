@@ -3832,13 +3832,13 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortTable('aircraftTable', 1)">Aircraft</th>
-                                <th class="sortable-th" data-col="2" data-label="Type" onclick="sortTable('aircraftTable', 2)">Type</th>
-                                <th class="sortable-th" data-col="3" data-label="Status" onclick="sortTable('aircraftTable', 3)">Status</th>
-                                <th class="sortable-th" data-col="4" data-label="Middleware" onclick="sortTable('aircraftTable', 4)">Middleware</th>
-                                <th class="sortable-th" data-col="5" data-label="IPHO Mode" onclick="sortTable('aircraftTable', 5)">IPHO Mode</th>
-                                <th class="sortable-th" data-col="6" data-label="SES Migration" onclick="sortTable('aircraftTable', 6)">SES Migration</th>
-                                <th class="sortable-th" data-col="7" data-label="Date" onclick="sortTable('aircraftTable', 7)">Date</th>
+                                <th class="sortable-th" data-col="1" data-label="Installation Date" onclick="sortTable('aircraftTable', 1)">Installation Date</th>
+                                <th class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortTable('aircraftTable', 2)">Aircraft</th>
+                                <th class="sortable-th" data-col="3" data-label="Type" onclick="sortTable('aircraftTable', 3)">Type</th>
+                                <th class="sortable-th" data-col="4" data-label="Status" onclick="sortTable('aircraftTable', 4)">Status</th>
+                                <th class="sortable-th" data-col="5" data-label="Middleware" onclick="sortTable('aircraftTable', 5)">Middleware</th>
+                                <th class="sortable-th" data-col="6" data-label="IPHO Mode" onclick="sortTable('aircraftTable', 6)">IPHO Mode</th>
+                                <th class="sortable-th" data-col="7" data-label="SES Migration" onclick="sortTable('aircraftTable', 7)">SES Migration</th>
                                 <th class="sortable-th" data-col="8" data-label="Base" onclick="sortTable('aircraftTable', 8)">Base</th>
                                 <th class="sortable-th col-comment" data-col="9" data-label="Comments" onclick="sortTable('aircraftTable', 9)">Comments</th>
                             </tr>
@@ -5127,10 +5127,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.32.0';
-        const APP_BUILD    = '2026.08.23.21';
+        const APP_VERSION  = '2.33.0';
+        const APP_BUILD    = '2026.08.23.22';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T21:52:45Z';
+        const APP_DEPLOYED = '2026-08-23T22:09:35Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6507,7 +6507,8 @@
             tbody.innerHTML = '';
             fbRender('aircraft');
 
-            // Default view: alphabetical by registration (also drives the # column)
+            // Built in registration order; the table is then sorted by installation
+            // date below, which is what the # column ends up numbering.
             const mainFleet = swFleet().sort((a, b) => a.id.localeCompare(b.id));
 
             mainFleet.forEach((aircraft, idx) => {
@@ -6578,7 +6579,15 @@
                         <button type="button" class="date-quick-btn" onclick="setQuickDate(this, -1)">Yest.</button>
                     </div>`;
                 } else {
-                    dateCell = `<span class="view-text">${fmtDate(aircraft.completionDate) || '—'}</span>`;
+                    // Same shape as the Fleet tab's Activation Date: the date, then a
+                    // quiet pill saying how long ago. activationAge() is calendar aware
+                    // and returns '' for a blank or future date, so no pill is drawn
+                    // rather than one reading "-3d".
+                    const shown = fmtDate(aircraft.completionDate);
+                    const age = activationAge(aircraft.completionDate);
+                    dateCell = shown
+                        ? `<span class="fleet-date">${escAttr(shown)}</span>${age ? `<span class="age-pill" title="Time since installation">${age}</span>` : ''}`
+                        : '<span class="fleet-notset">Not set</span>';
                 }
 
                 const loc = aircraft.completionLocation || '';
@@ -6596,13 +6605,13 @@
 
                 row.innerHTML = `
                     <td>${idx + 1}</td>
+                    <td data-sort="${dateSort}">${dateCell}</td>
                     <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong></td>
                     <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
                     <td data-sort="${statusSort}">${statusCell}</td>
                     <td data-sort="${ver}">${middlewareCell}</td>
                     <td data-sort="${iphoSort}">${iphoCell}</td>
                     <td data-sort="${mg101Sort}">${mg101Cell}</td>
-                    <td data-sort="${dateSort}">${dateCell}</td>
                     <td data-sort="${loc}">${locCell}</td>
                     <td class="col-comment" data-sort="${escAttr(aircraft.note || '')}">${commentCell}</td>
                 `;
@@ -6610,6 +6619,13 @@
             });
 
             applyAircraftFilters();
+            // Oldest installation first until someone picks another column, and
+            // re-applied on every rebuild — this runs again on every live update,
+            // which would otherwise hand the rows back in registration order under an
+            // unchanged arrow. Same pattern as the Fleet table.
+            const as = lastSort['aircraftTable'] || SW_DEFAULT_SORT;
+            lastSort['aircraftTable'] = as;
+            applyTableSort('aircraftTable', as.col, as.dir);
             updateSortIndicators('aircraftTable');
             renderSwVersionWidgets();
             populateHbcTable();
@@ -6668,6 +6684,12 @@
         // Ordered oldest first; the last entry is the current target. Add a version here
         // and it gains its own widget and edit option with no other change.
         const SW_VERSIONS = ['2.0.0', '2.1.0'];
+
+        // Installation Date is column 1 and the Software table opens on it, oldest
+        // first — the same shape the Fleet table uses for Activation Date. Undated
+        // aircraft carry a 99999999 sort key, so they land at the end rather than
+        // the front.
+        const SW_DEFAULT_SORT = { col: 1, dir: 1 };
 
         function swVersionOf(a) { return a.swVersion || SW_VERSIONS[0]; }
 

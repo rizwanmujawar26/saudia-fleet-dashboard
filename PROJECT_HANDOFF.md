@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.32.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.33.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -789,6 +789,17 @@ firing before authentication and with `backup.sh` losing anonymous access.
    the **last entry is "latest"** — add a version there and it gains a widget,
    an edit option, retitles the global card and demotes the previous one. No
    other change needed.
+   **Installation Date is column 2 and the default sort**, oldest first
+   (`SW_DEFAULT_SORT`), with a `25d` age pill from the same `activationAge()` the
+   Fleet tab uses — deliberately the identical treatment, so the two tables read the
+   same way. The field behind it is **`completionDate`**, unchanged; only the column's
+   label and position moved. Undated aircraft sort to the end on `99999999` and read
+   *Not set*, which today is exactly the four still behind on middleware.
+   ⚠️ **The label says "Installation" but the field is the software COMPLETION date.**
+   On this tab that reads correctly — it is when the middleware was installed — but do
+   not confuse it with the Fleet tab's **Install Site** (`retrofitLocation`, where the
+   physical equipment went on) or with `retrofitStart`/`retrofitEnd`, the grounding
+   window. Three different facts; only this one is about software.
 3. **Media** — monthly media loading for the main fleet only (linefit excluded).
    Columns: `# | Aircraft | Type | Status | Media Loaded | Date UTC | UGO | TILES | Comments`.
    UGO and TILES are editable in the tab's Edit mode; an empty box clears the field,
@@ -1310,6 +1321,14 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.33.0 — Software table opens on Installation Date
+The Date column was renamed **Installation Date**, moved from eighth to second, and
+became the default sort, oldest first, with the same `activationAge()` pill the Fleet
+tab's Activation Date carries. Presentation only: the stored field is still
+`completionDate` and nothing about the completion maths changed. `SW_DEFAULT_SORT` is
+re-applied on every rebuild, the way the Fleet table does it, so a live update cannot
+hand the rows back in registration order under an unchanged arrow.
 
 ### v2.32.0 — Filters: one declared component, one row, multi-select
 The per-axis pill rows are gone. Every filter is now an entry in `FILTER_BARS`,
