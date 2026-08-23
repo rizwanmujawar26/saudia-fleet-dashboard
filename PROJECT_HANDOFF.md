@@ -22,17 +22,21 @@ Realtime Database so the whole team sees the same data instantly.
 `gh` CLI and `firebase` CLI (via `npx firebase-tools`) are already authenticated
 on this Mac — no login needed to keep working.
 
-Live data (read from the database 2026-08-20):
+Live data (read from the database **2026-08-23**, verified at session close):
 
 - **44 aircraft** — 41 Active, 3 In Retrofit (AQB, ASD, ASO)
 - Of the 41 Active: **39 retrofit + 2 linefit** (ASBA/ASBB, the A321XLR HBC+ pair)
-- **39 is the Software and Media denominator.** 27 on Middleware 2.1.0, 35 on the
-  current media cycle
-- 24 schedule entries, 5 maintenance activities, 1 hardware record, ~125 visits,
-  1 allowlisted editor
+- **39 is the Software and Media denominator.** 35 on Middleware 2.1.0 — behind:
+  **AS59, AS76, ASAB, ASJ**. 35 on the August 2026 media cycle
+- `ugoVersion` 6.3.1 and `tilesVersion` 2.0 on all 39
+- `wifiVisibility`: 38 public, 6 hidden (AQA, AQJ, AS51 + the three In Retrofit)
+- `retrofitLocation`: 37 Jeddah, 2 Malta, 2 Qatar, 1 Jordan, 2 Airbus (linefit).
+  `retrofitStart`/`retrofitEnd` set on the five outstation only
+- 24 schedule entries, 9 activities, 1 hardware record, **5 units**, 1 allowlisted editor
 
-`/activities` and `/hardware` are still lightly populated — a Hardware fitment
-reading "no record" is a gap in the record, not a fault.
+`/activities`, `/hardware` and `/units` are still lightly populated — a Hardware
+fitment reading "no record" is a gap in the record, not a fault. The serial backlog
+is the main data-entry job outstanding.
 
 ---
 
@@ -1106,6 +1110,19 @@ live.
   stub `window.fetch` to capture write payloads without touching live data.
 - **`read_console_messages` keeps a tab's whole history.** An error fixed ten
   minutes ago still shows. Open a fresh tab to confirm a clean load.
+- **Scripted edits to `index.html` must be guarded.** Two separate near-misses this
+  session, both silent:
+  - A block replacement built from two `s.index()` calls came out **negative-length**,
+    so the "old" string was empty and `str.replace('')` inserted between every
+    character — a **17-million-line file** from one edit. Assert `end > start`, and
+    assert the needle is non-empty and unique before every replace.
+  - A brace-matching "replace this whole function" helper treated the apostrophe in
+    `// Don't yank...` as opening a string, ran past the function end and **deleted 19
+    functions**. Any such scanner must skip `//` and `/* */` comments before it looks
+    at quotes.
+  Both were caught by checking the line count and diffing the function list against
+  `git show HEAD:index.html` immediately after writing. Do that every time.
+
 - **Back up before bulk edits.** `cp index.html` to a scratch path before any
   scripted multi-block deletion; a section-comment-based removal once cut 3,256
   lines instead of ~600 and the backup was the only thing that made it a
@@ -1126,6 +1143,18 @@ live.
 - **What should drive the maintenance flag.** Today it is a manual editor toggle.
   Deriving it from SSID and the other checks — the way completion derives from
   version + location — is the better shape, but the criteria have not been agreed.
+- **Retrofit start/end dates for the 37 Jeddah aircraft.** The user said these would
+  follow. `retrofitStart`/`retrofitEnd` already exist and are already surfaced in the
+  Install Site tooltip, so this is a data write only.
+- **The serial backlog itself.** Record Installed / Record Removed are built and the
+  `/units` register is live with 5 units; the fleet's installed and removed serials
+  have not been entered yet.
+
+⚠️ **Unproven: the CLIENT write path to `/units` and `details.recordType`.** Every
+`/units` write so far went through the admin CLI, which bypasses rules, and browser
+testing stubbed `fetch`. The rules mirror shapes `/activities` already uses and a
+rejection surfaces loudly rather than silently — but **enter one serial through the UI
+and confirm it saves before a bulk run**.
 
 ### Known gaps and cleanups
 
