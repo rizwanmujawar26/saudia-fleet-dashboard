@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.28.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.28.2, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -122,9 +122,9 @@ Start/end dates for the Jeddah aircraft are still to come.
 
 **`LOCATION_FLAGS` maps a location to its flag**, so the cell needs only one word —
 never "Doha, Qatar". Unlisted locations still render, with a 📍. **`LOCATION_HOME`
-decides what is unremarkable**: a Saudi base, or `Airbus` for the linefit pair, because
-that is where the work would be expected. `isOutstation()` is everything else, and it
-is what makes a cell bold amber — the aircraft was flown away for the modification.
+decides what is unremarkable**, and is a Saudi base only. Everything else — an
+outstation MRO *and* the `Airbus` line — reads bold amber via `isOutstation()`, because
+neither happened at base. `ksa` is kept as a synonym so that value still resolves.
 The Location column also sorts away-first, so the exceptions group instead of
 scattering alphabetically among 37 Jeddahs.
 
