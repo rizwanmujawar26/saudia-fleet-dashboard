@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.35.1, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.36.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1065,6 +1065,25 @@ Stacking buys back ~100px of width — at 320px the title goes from a clipped 13
 Sizes are clamped: title 13–28px, subtitle 9–16px and never more than 0.68 of the
 title, so it cannot grow to compete with it.
 
+## Full bleed on a phone
+
+The dashboard is a rounded white card floating on the green gradient — `body`
+padding 20, `.container` radius 12 and a drop shadow, `.content` padding 30. That is
+the intended look on a laptop. On a phone it cost **100px of a 375px screen (27%)**,
+leaving 275px of usable width.
+
+**Below 768px the frame is dropped entirely**: body padding 0, container radius and
+shadow off, `.header` and `.sysbar` square, `.content` padding 30 → 12. Usable width
+goes **275px → 351px (+28%)**, and 20px comes back at the top.
+
+- **`.container` gets `min-height: 100vh` there.** The gradient behind it is no longer
+  part of the design, so the white has to reach the bottom of a short page itself.
+- **Scoped to phones deliberately.** Above 768px the frame costs the same 100px, but
+  that is a small share of the width and the card-on-gradient *is* the design. A phone
+  in landscape is ~812px and keeps it.
+- The 768px cut matches the media query the mobile layout already uses; there is one
+  block, not two.
+
 ## Sticky header
 
 The header is `position: sticky; top: 0` so the clock and fleet identity stay on
@@ -1391,6 +1410,14 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.36.0 — Full bleed on a phone
+The rounded card and its green surround cost 100px of a 375px screen — 27%, leaving
+275px of usable width. Below 768px the frame is gone: no body padding, square corners,
+no shadow, and `.content` padding down from 30px to 12px. Usable width 275px → 351px
+(+28%), plus 20px back at the top. Desktop is untouched. Dead `.filter-groups` and
+`.filter-group-block` rules, orphaned since v2.32.0, were removed at the same time —
+`.filter-group-label` stays, it still labels the widget strips.
 
 ### v2.35.1 — Filter menus were unusable when pinch-zoomed
 Tapping a filter button on a zoomed-in phone flashed the backdrop and showed no menu.

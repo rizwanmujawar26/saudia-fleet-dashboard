@@ -2871,22 +2871,6 @@
             margin-top: 3px;
         }
 
-        .filter-groups {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin-bottom: 14px;
-            padding: 14px 16px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        .filter-group-block {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
         .filter-group-label {
             font-size: 11px;
             font-weight: 700;
@@ -3327,6 +3311,36 @@
         /* Legend */
         /* Responsive */
         @media (max-width: 768px) {
+            /* ===== Full bleed on a phone =====================================
+               The rounded card floating on the green gradient is the right look
+               on a laptop, but on a phone the frame cost 100px of a 375px
+               screen — 27% — leaving 275px of usable width. Body padding goes,
+               the corners square off, the shadow goes (it has nothing to cast
+               onto), and .content drops from 30px to 12px. Usable width goes
+               275px -> 351px, and 20px comes back at the top as well.
+
+               Deliberately scoped to phones: above 768px the frame costs the
+               same 100px but that is a small share of the width, and the card
+               on the gradient is what the dashboard is meant to look like. */
+            body {
+                padding: 0;
+            }
+
+            .container {
+                border-radius: 0;
+                box-shadow: none;
+                /* The gradient behind is no longer part of the design here, so
+                   the white has to reach the bottom of a short page itself. */
+                min-height: 100vh;
+            }
+
+            .header { border-radius: 0; }
+            .sysbar { border-radius: 0; }
+
+            .content {
+                padding: 12px;
+            }
+
             .dashboard-grid {
                 grid-template-columns: 1fr;
             }
@@ -3379,22 +3393,9 @@
             .hc-weekday, .hc-month { font-size: 8.5px; }
             .hc-time { font-size: 10px; }
 
-            /* The filter block was eating a large slice of a phone screen: oversized
-               group labels, generous padding and pills wrapping over several rows. */
-            .filter-groups {
-                gap: 12px;
-                padding: 10px 12px;
-                margin-bottom: 12px;
-            }
-
             .filter-group-label {
                 font-size: 9.5px;
                 letter-spacing: 0.3px;
-            }
-
-            .filter-group-block {
-                gap: 4px;
-                width: 100%;
             }
 
             .quick-filters {
@@ -5245,10 +5246,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.35.1';
-        const APP_BUILD    = '2026.08.23.22';
+        const APP_VERSION  = '2.36.0';
+        const APP_BUILD    = '2026.08.23.23';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T22:51:29Z';
+        const APP_DEPLOYED = '2026-08-23T23:00:25Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
