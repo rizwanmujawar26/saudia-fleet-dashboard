@@ -1456,12 +1456,37 @@
         /* Tinted, not white: on the white page the cards had no discernible shape. */
         .media-widget {
             flex: 0 0 auto;
-            min-width: 168px;
+            min-width: 196px;
             border: 1px solid;
             border-left-width: 4px;
             border-radius: 8px;
             padding: 12px 14px;
         }
+
+        /* Month on the left, load size on the right, on one row above the figures. */
+        .media-widget-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .media-size-pill {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            border-radius: 5px;
+            padding: 2px 7px;
+            background: rgba(15, 32, 45, 0.07);
+            color: #55606a;
+            border: 1px solid rgba(15, 32, 45, 0.10);
+        }
+
+        .media-widget-latest   .media-size-pill { background: rgba(30, 126, 52, 0.10); color: #1e7e34; border-color: rgba(30, 126, 52, 0.20); }
+        .media-widget-previous .media-size-pill { background: rgba(20, 100, 158, 0.10); color: #14649e; border-color: rgba(20, 100, 158, 0.20); }
+        .media-widget-older    .media-size-pill { background: rgba(138, 90, 18, 0.10); color: #8a5a12; border-color: rgba(138, 90, 18, 0.20); }
+        .media-widget-upcoming .media-size-pill { background: rgba(87, 66, 127, 0.10); color: #57427f; border-color: rgba(87, 66, 127, 0.22); }
 
         .media-widget-label {
             font-size: 12px;
@@ -1515,6 +1540,12 @@
         .media-widget-older    { background: #fdf4e6; border-color: #f3ddb4; border-left-color: #f0ad4e; }
         .media-widget-older    .media-widget-pct  { color: #8a5a12; }
         .media-widget-older    .media-widget-fill { background: #f0ad4e; }
+
+        /* Declared for an upcoming month but not loaded anywhere yet: pending, not
+           stale, so it must not borrow the amber that means "out of date". */
+        .media-widget-upcoming { background: #f4f2fb; border-color: #ddd6f0; border-left-color: #8b6fc4; }
+        .media-widget-upcoming .media-widget-pct  { color: #57427f; }
+        .media-widget-upcoming .media-widget-fill { background: #8b6fc4; }
 
         .media-widget-no_media { background: #f1f3f5; border-color: #dde1e5; border-left-color: #adb5bd; }
         .media-widget-no_media .media-widget-pct  { color: #5a6169; }
@@ -4708,10 +4739,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.19.1';
-        const APP_BUILD    = '2026.08.21.10';
+        const APP_VERSION  = '2.20.0';
+        const APP_BUILD    = '2026.08.23.01';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-21T17:05:00Z';
+        const APP_DEPLOYED = '2026-08-23T00:20:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6275,6 +6306,33 @@
 
         // Widgets are one per cycle actually present, newest first, plus No Media last.
         // Nothing here is hardcoded, so a new cycle appears on its own.
+        // ===== Media cycle sizes =====
+        // How big each month's media load is, keyed by cycle (MMYY). Code rather than
+        // data: it is one line a month and there is no editor UI that would own it —
+        // the same call as SW_VERSIONS.
+        //
+        // A cycle listed here also gets a WIDGET before any aircraft carries it, which
+        // is how next month's load shows at 0/39 while it is being prepared. It
+        // deliberately does NOT feed latestMediaCycle(): that stays derived from what is
+        // actually loaded, or declaring September would mark the whole August fleet as a
+        // month behind. Adding next month is one line.
+        const MEDIA_CYCLE_SIZES = {
+            '0726': '791 GB',
+            '0826': '791 GB',
+            '0926': '884 GB',
+        };
+
+        function mediaCycleSize(cycle) {
+            return MEDIA_CYCLE_SIZES[cycle] || '';
+        }
+
+        // Cycles that have been declared but that nothing carries yet. Kept separate
+        // from the loaded ones so they can be styled as pending rather than stale.
+        function upcomingMediaCycles(latest) {
+            return Object.keys(MEDIA_CYCLE_SIZES)
+                .filter(c => cycleSortKey(c) > cycleSortKey(latest || ''));
+        }
+
         function renderMediaWidgets(latest) {
             const grid = document.getElementById('mediaWidgets');
             if (!grid) return;
@@ -6287,24 +6345,35 @@
             });
 
             const scope = mediaScope() || 1;
-            const card = (label, count, type) => {
+            const card = (label, count, type, size) => {
                 const pct = Math.round((count / scope) * 1000) / 10;
                 return `<div class="media-widget media-widget-${type}">
-                    <div class="media-widget-label">${label}</div>
+                    <div class="media-widget-head">
+                        <span class="media-widget-label">${label}</span>
+                        ${size ? `<span class="media-size-pill">${escAttr(size)}</span>` : ''}
+                    </div>
                     <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${scope}</span><span class="media-widget-pct">${pct}%</span></div>
                     <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
                 </div>`;
             };
 
-            const cycles = Object.keys(counts).sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
-            let html = cycles.map(c => card(
-                cycleToDisplay(c),
-                counts[c],
-                c === latest ? 'latest' : (c === previousCycle(latest) ? 'previous' : 'older')
-            )).join('');
+            // Declared-but-not-yet-loaded cycles join the loaded ones, so a prepared
+            // load is visible at 0/39 before the first aircraft takes it.
+            const loaded = Object.keys(counts);
+            const cycles = [...new Set(loaded.concat(upcomingMediaCycles(latest)))]
+                .sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
 
-            if (none) html += card('No Media', none, 'no_media');
-            grid.innerHTML = html || '<div class="media-widget media-widget-no_media"><div class="media-widget-label">No Media Data</div></div>';
+            const typeOf = c => {
+                if (c === latest) return 'latest';
+                if (cycleSortKey(c) > cycleSortKey(latest || '')) return 'upcoming';
+                return c === previousCycle(latest) ? 'previous' : 'older';
+            };
+
+            let html = cycles.map(c =>
+                card(cycleToDisplay(c), counts[c] || 0, typeOf(c), mediaCycleSize(c))).join('');
+
+            if (none) html += card('No Media', none, 'no_media', '');
+            grid.innerHTML = html || '<div class="media-widget media-widget-no_media"><div class="media-widget-head"><span class="media-widget-label">No Media Data</span></div></div>';
         }
 
         function renderMediaMonthFilter() {
