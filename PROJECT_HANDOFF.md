@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.29.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.30.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -650,8 +650,15 @@ firing before authentication and with `backup.sh` losing anonymous access.
    list). One divider per day, nothing between aircraft. Beware
    `.timeline-items li`: it must stay `.timeline-items > li`, or the descendant
    match hits nested per-aircraft `<li>`s and double rules return.
-2. **Software** (tab id is still `aircraft`) — local widgets: Middleware
-   Version Progress, Completion by Aircraft Type, Completed by Station.
+2. **Software** (tab id is still `aircraft`) — **one** widget row of three cards:
+   a Middleware split (on the latest build left, behind right, the two shares filling
+   the track — the same shape as the Fleet tab's SSID card) plus Jeddah and Riyadh.
+   The split card lists the registrations still behind, which is the actionable part
+   and also matches the station cards' height. **Completion by Aircraft Type was
+   removed** (2026-08-23) — six cards restating what the table below already says.
+   ⚠️ The strip holds two wrapper spans set to `display: contents`, because the version
+   card and the station cards come from different render functions; that is what makes
+   all three direct flex children so they size as one row.
    Main table (40) + HBC+ table (2). `SW_VERSIONS` is ordered oldest-first and
    the **last entry is "latest"** — add a version there and it gains a widget,
    an edit option, retitles the global card and demotes the previous one. No
@@ -1154,6 +1161,15 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.30.0 — Software tab: one widget row
+Completion by Aircraft Type removed. Middleware's per-version cards became a single
+split card, now sharing one row with Jeddah and Riyadh at equal height. The station
+ICAO/IATA code became a small pill instead of running on at the label's size.
+
+### v2.29.0 — Install Site
+The Fleet tab's Location column and the Activity profile's "Retrofit Location" both
+became **Install Site** — one name for one field, and one that covers the linefit pair.
 
 ### v2.28.0 — Flags on Location, and outstation stands out
 Each location carries its country flag and the five flown-away aircraft render bold

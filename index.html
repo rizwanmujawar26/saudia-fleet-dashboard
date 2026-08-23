@@ -1591,12 +1591,53 @@
 
         .media-widget-fill { height: 100%; border-radius: 10px; }
 
-        /* Type widgets carry their tint inline (from TYPE_PILL_COLORS) so the strip
-           matches the Timeline pills; they only need sizing here. */
-        .type-widget { min-width: 150px; }
-
         /* Station cards keep their registration list, so they need more room than a
            plain figure widget — and the list is clamped by .stat-list already. */
+        /* ===== Software tab: one row of three =====
+           The strip holds two containers rather than the cards directly, because the
+           version widget and the two station widgets are rendered by separate functions.
+           `display: contents` makes those wrappers vanish from layout so all three cards
+           are direct flex children and size as one row. */
+        .sw-strip-part { display: contents; }
+
+        .sw-split {
+            min-width: 320px;
+            max-width: 460px;
+            background: #f4f8f5;
+            border-color: #cfe3d6;
+            border-left-color: #28a745;
+        }
+
+        .sw-on-latest { color: #1e7e34; }
+        .sw-behind    { color: #8a5a12; }
+
+        .sw-fill-latest { background: linear-gradient(90deg, #45c16a, #28a745); }
+        .sw-fill-behind { background: linear-gradient(90deg, #f3bf6a, #f0ad4e); }
+        .sw-fill-latest, .sw-fill-behind { transition: width 0.5s ease; }
+
+        .sw-behind-list { margin-top: 8px; }
+
+        /* The station code sat at the label's size and inherited its uppercase, so
+           "JEDDAH OEJN / JED" read as one long shout. Small, quiet, and set apart. */
+        .station-code {
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #6b7780;
+            background: rgba(15, 32, 45, 0.06);
+            border: 1px solid rgba(15, 32, 45, 0.09);
+            border-radius: 5px;
+            padding: 2px 7px;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* All three cards stretch to the tallest, so the row reads as one band rather
+           than three cards of different heights. */
+        .sw-strip { align-items: stretch; }
+        .sw-strip .media-widget { display: flex; flex-direction: column; }
+        .sw-strip .stat-list { margin-top: auto; }
+
         .station-widget { min-width: 300px; max-width: 460px; }
 
         .station-widget .stat-list { margin-top: 4px; }
@@ -3502,18 +3543,11 @@
             <!-- Aircraft Status Tab -->
             <div id="aircraft" class="tab-content">
                 <div class="media-widget-section">
-                    <span class="filter-group-label">Middleware Version Progress</span>
-                    <div class="media-widget-strip" id="swVersionWidgets"></div>
-                </div>
-
-                <div class="media-widget-section">
-                    <span class="filter-group-label">Completion by Aircraft Type</span>
-                    <div class="media-widget-strip" id="fleetOverviewGrid"></div>
-                </div>
-
-                <div class="media-widget-section">
-                    <span class="filter-group-label">Completed by Station</span>
-                    <div class="media-widget-strip" id="stationCompletionGrid"></div>
+                    <span class="filter-group-label">Middleware &amp; Completion by Station</span>
+                    <div class="media-widget-strip sw-strip">
+                        <span id="swVersionWidgets" class="sw-strip-part"></span>
+                        <span id="stationCompletionGrid" class="sw-strip-part"></span>
+                    </div>
                 </div>
 
                 <div class="filter-groups">
@@ -4877,10 +4911,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.29.0';
-        const APP_BUILD    = '2026.08.23.13';
+        const APP_VERSION  = '2.30.0';
+        const APP_BUILD    = '2026.08.23.14';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T15:50:00Z';
+        const APP_DEPLOYED = '2026-08-23T16:10:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6071,32 +6105,52 @@
             return activeFleet().filter(isLinefit);
         }
 
+        // One card for the whole middleware picture: on the latest build to the left, on
+        // anything older to the right, the two shares filling the track between them.
+        // It replaces one card per version, which said the same thing across several
+        // cards and grew a card every time a version was added.
+        //
+        // The extra room over a plain figure goes to the registrations still on an older
+        // build — the only actionable part, and it also matches the station cards'
+        // height so the three sit on one line.
         function renderSwVersionWidgets() {
             const grid = document.getElementById('swVersionWidgets');
             if (!grid) return;
             const fleet = swFleet();
             const scope = fleet.length || 1;
-            const counts = {};
-            fleet.forEach(a => {
-                const v = swVersionOf(a);
-                counts[v] = (counts[v] || 0) + 1;
-            });
-            // Newest first, and include any version present in the data even if it is
-            // not yet listed in SW_VERSIONS.
-            const versions = [...new Set([...Object.keys(counts), ...SW_VERSIONS])]
-                .filter(v => counts[v])
-                .sort((a, b) => SW_VERSIONS.indexOf(b) - SW_VERSIONS.indexOf(a) || b.localeCompare(a));
+            const latest = latestSwVersion();
 
-            grid.innerHTML = versions.map(v => {
-                const n = counts[v] || 0;
-                const pct = Math.round((n / scope) * 1000) / 10;
-                const kind = v === latestSwVersion() ? 'latest' : 'older';
-                return `<div class="media-widget media-widget-${kind}">
-                    <div class="media-widget-label">Middleware ${v}</div>
-                    <div class="media-widget-figures"><span class="media-widget-count">${n}</span><span class="media-widget-of">/${scope}</span><span class="media-widget-pct">${pct}%</span></div>
-                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
-                </div>`;
-            }).join('');
+            const onLatest = fleet.filter(a => swVersionOf(a) === latest);
+            const behind   = fleet.filter(a => swVersionOf(a) !== latest);
+
+            // Named only when there is exactly one older build in the fleet; with more
+            // than one, "older" is the honest label.
+            const behindVersions = [...new Set(behind.map(swVersionOf))]
+                .sort((a, b) => SW_VERSIONS.indexOf(b) - SW_VERSIONS.indexOf(a));
+            const behindLabel = behindVersions.length === 1 ? behindVersions[0]
+                              : behindVersions.length ? 'older' : '—';
+
+            const pct = Math.round((onLatest.length / scope) * 1000) / 10;
+
+            grid.innerHTML = `<div class="media-widget sw-split">
+                <div class="media-widget-head">
+                    <span class="media-widget-label">Middleware</span>
+                    <span class="media-size-pill">${fleet.length} aircraft · ${pct}%</span>
+                </div>
+                <div class="ssid-figures">
+                    <span class="ssid-side sw-on-latest"><b>${onLatest.length}</b> on ${escAttr(latest)}</span>
+                    <span class="ssid-side sw-behind">${escAttr(behindLabel)} <b>${behind.length}</b></span>
+                </div>
+                <div class="ssid-track" role="img" aria-label="${onLatest.length} on ${escAttr(latest)}, ${behind.length} behind">
+                    <div class="sw-fill-latest" style="width:${(onLatest.length / scope) * 100}%"></div>
+                    <div class="sw-fill-behind" style="width:${(behind.length / scope) * 100}%"></div>
+                </div>
+                <div class="sw-behind-list">${
+                    behind.length
+                        ? statList(behind.map(a => a.id).sort())
+                        : '<div class="stat-list">Whole fleet on the latest build</div>'
+                }</div>
+            </div>`;
         }
 
         // ===== Fleet page =====
@@ -9369,55 +9423,7 @@
             return `<div class="stat-list clickable" title="${escAttr(text)}" onclick="this.classList.toggle('expanded')">${text}</div>`;
         }
 
-        function renderFleetOverview(active, completedStrict) {
-            const grid = document.getElementById('fleetOverviewGrid');
-            if (!grid) return;
 
-            const typeStats = {};
-            TYPE_GROUPS.forEach(g => typeStats[g.key] = { completed: 0, total: 0, ids: [] });
-            active.forEach(a => {
-                if (typeStats[a.type]) {
-                    typeStats[a.type].total++;
-                    if (isCompletedStrict(a)) {
-                        typeStats[a.type].completed++;
-                        typeStats[a.type].ids.push(a.id);
-                    }
-                }
-            });
-
-            // Same anatomy as the Middleware widgets, tinted with the type colours the
-            // Timeline pills already use — on a white page the old white cards had no
-            // visible edge at all. The registration lists are dropped: they made every
-            // card a different height and the tables below carry the same detail.
-            const tintStyle = c => `background:${c.bg}; border-color:${c.bd}; border-left-color:${c.fg}`;
-
-            const widget = (label, done, total, colors) => {
-                const pct = total ? Math.round((done / total) * 1000) / 10 : 0;
-                return `<div class="media-widget type-widget" style="${tintStyle(colors)}">
-                    <div class="media-widget-label" style="color:${colors.fg}">${label}</div>
-                    <div class="media-widget-figures">
-                        <span class="media-widget-count">${done}</span>
-                        <span class="media-widget-of">/${total}</span>
-                        <span class="media-widget-pct" style="color:${colors.fg}">${pct}%</span>
-                    </div>
-                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%; background:${colors.fg}"></div></div>
-                </div>`;
-            };
-
-            const TOTAL_COLORS = { bg: '#eaf6ee', bd: '#bfe3cb', fg: '#1e7e34' };
-
-            const hbcAircraft = hbcFleet();
-            const hbcDone = hbcAircraft.filter(a => a.beamcfgStatus === 'done');
-
-            let html = widget('Total', completedStrict.length, middlewareScope(), TOTAL_COLORS);
-            TYPE_GROUPS.forEach(g => {
-                const s = typeStats[g.key];
-                html += widget(g.label, s.completed, s.total, TYPE_PILL_COLORS[g.key] || NEUTRAL_PILL);
-            });
-            html += widget('A321XLR · SBC', hbcDone.length, hbcScope(), TYPE_PILL_COLORS['A321-253NY XLR'] || NEUTRAL_PILL);
-
-            grid.innerHTML = html;
-        }
 
         function renderStationCompletion(completedStrict) {
             const grid = document.getElementById('stationCompletionGrid');
@@ -9428,7 +9434,7 @@
             // so the cards only need to name the station.
             const stCard = (name, code, list, c) => `
                 <div class="media-widget station-widget" style="background:${c.bg}; border-color:${c.bd}; border-left-color:${c.fg}">
-                    <div class="media-widget-label" style="color:${c.fg}">${name} <span class="stat-code">${code}</span></div>
+                    <div class="media-widget-head"><span class="media-widget-label" style="color:${c.fg}">${name}</span><span class="station-code">${code}</span></div>
                     <div class="media-widget-figures"><span class="media-widget-count">${list.length}</span><span class="media-widget-of">/${completedStrict.length || 0} completed</span></div>
                     ${statList(list.map(a => a.id))}
                 </div>`;
@@ -9847,7 +9853,6 @@
             const maintCard = document.getElementById('metricMaintValue');
             if (maintCard) maintCard.closest('.metric-card').classList.toggle('alert-clear', maintCount === 0);
 
-            renderFleetOverview(active, completedStrict);
             renderStationCompletion(completedStrict);
             renderTimeline();
             renderSysBar();     // fleet count and the open panel follow the same data
