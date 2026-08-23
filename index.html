@@ -1501,7 +1501,7 @@
         }
 
         .ssid-public { color: #2f5f8a; }
-        .ssid-hidden { color: #574b78; }
+        .ssid-hidden { color: #a52834; }
 
         .ssid-track {
             display: flex;
@@ -1512,7 +1512,7 @@
         }
 
         .ssid-fill-public { background: linear-gradient(90deg, #4a86b8, #2f5f8a); }
-        .ssid-fill-hidden { background: linear-gradient(90deg, #6f5f9e, #574b78); }
+        .ssid-fill-hidden { background: linear-gradient(90deg, #e4606d, #dc3545); }
         .ssid-fill-public, .ssid-fill-hidden { transition: width 0.5s ease; }
 
         .media-widget-strip {
@@ -1650,6 +1650,24 @@
         .status-badge.fleet-commissioned   { background: #e6f7f4; color: #10695c; }
         .status-badge.fleet-planned        { background: #eef1f3; color: #55606a; }
         .status-badge.fleet-decommissioned { background: #fdeff0; color: #a52834; }
+
+        .fleet-date { white-space: nowrap; }
+
+        .age-pill {
+            display: inline-block;
+            margin-left: 7px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            color: #7b858e;
+            background: rgba(15, 32, 45, 0.055);
+            border: 1px solid rgba(15, 32, 45, 0.08);
+            border-radius: 5px;
+            padding: 1px 6px;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+            vertical-align: 1px;
+        }
 
         .fleet-notset { color: #b3bac0; font-style: italic; }
 
@@ -2571,7 +2589,9 @@
         /* Public vs Hidden is a configuration fact, not a health signal — tinted, not
            red/green, so it cannot be misread as something needing attention. */
         .status-badge.wifi-public { background: #e3ecf5; color: #2f5f8a; }
-        .status-badge.wifi-hidden { background: #eceaf2; color: #574b78; }
+        /* Hidden is the exception state, so it takes the Maintenance card's red
+           rather than a colour of its own. */
+        .status-badge.wifi-hidden { background: #fdeff0; color: #a52834; }
 
         .maint-loc-input { min-width: 130px; }
 
@@ -3820,10 +3840,8 @@
                             <button class="qf-btn active" onclick="setFleetStatusFilter('', this)">All</button>
                             <button class="qf-btn" onclick="setFleetStatusFilter('Active', this)">Active</button>
                             <button class="qf-btn" onclick="setFleetStatusFilter('In Retrofit', this)">In Retrofit</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('Installed', this)">Installed</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('Commissioned', this)">Commissioned</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('Planned', this)">Planned</button>
-                            <button class="qf-btn" onclick="setFleetStatusFilter('Decommissioned', this)">Decommissioned</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('ssid:hidden', this)">Hidden</button>
+                            <button class="qf-btn" onclick="setFleetStatusFilter('ssid:public', this)">Public</button>
                         </div>
                     </div>
                 </div>
@@ -4827,10 +4845,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.23.0';
-        const APP_BUILD    = '2026.08.23.05';
+        const APP_VERSION  = '2.24.0';
+        const APP_BUILD    = '2026.08.23.06';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T14:00:00Z';
+        const APP_DEPLOYED = '2026-08-23T14:15:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6088,6 +6106,30 @@
             return fleetRoster.find(a => a.id === id) || {};
         }
 
+        // Time since activation, as "1y 26d". Calendar-aware rather than days/365: the
+        // years count is whole anniversaries passed, and the remainder is days since the
+        // last one, so an aircraft activated on 1 Oct reads 1y 0d on 1 Oct, not 1y 5d.
+        // Returns '' when there is no date, or the date is in the future — nothing
+        // sensible to say in either case, and a pill reading "-3d" would be noise.
+        function activationAge(displayDate) {
+            const iso = toISODate(displayDate);
+            if (!iso) return '';
+            const from = new Date(iso + 'T00:00:00Z');
+            if (isNaN(from)) return '';
+            const now = new Date();
+            const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+            if (from > today) return '';
+
+            let years = today.getUTCFullYear() - from.getUTCFullYear();
+            const anniversary = new Date(Date.UTC(from.getUTCFullYear() + years, from.getUTCMonth(), from.getUTCDate()));
+            if (anniversary > today) {
+                years -= 1;
+                anniversary.setUTCFullYear(anniversary.getUTCFullYear() - 1);
+            }
+            const days = Math.round((today - anniversary) / 86400000);
+            return years > 0 ? `${years}y ${days}d` : `${days}d`;
+        }
+
         function populateFleetTable() {
             const tbody = document.getElementById('fleetTableBody');
             if (!tbody) return;
@@ -6118,6 +6160,7 @@
                 row.dataset.type = a.type;
                 row.dataset.fit = fit;
                 row.dataset.fstatus = st;
+                row.dataset.wifi = wifi;
 
                 const typeCell = editing
                     ? `<select class="edit-select" data-id="${a.id}" data-field="type" onchange="handleFleetEdit(this)">${
@@ -6139,9 +6182,12 @@
                     : `<span class="status-badge fleet-${fleetStatusCss(st)}">${escAttr(st)}</span>`;
 
                 // Never inferred — blank until someone types it.
+                const age = activationAge(activated);
                 const activatedCell = editing
                     ? `<input type="date" class="edit-date" value="${toISODate(activated)}" data-id="${a.id}" data-field="activatedDate" onchange="handleFleetEdit(this)">`
-                    : (activated ? escAttr(activated) : '<span class="fleet-notset">Not set</span>');
+                    : (activated
+                        ? `<span class="fleet-date">${escAttr(activated)}</span>${age ? `<span class="age-pill" title="Time since activation">${age}</span>` : ''}`
+                        : '<span class="fleet-notset">Not set</span>');
 
                 // Two options, per the field. The blank appears only when nothing is set
                 // yet, so a select can never silently claim "Public" for an aircraft
@@ -6261,10 +6307,16 @@
         function setFleetStatusFilter(s, btn) { fleetStatusFilter = s; setActiveInGroup(btn); applyFleetFilters(); }
 
         function applyFleetFilters() {
+            // One pill row, two axes: the plain values are fleet statuses, `ssid:` ones
+            // are SSID visibility. Namespacing keeps them in a single filter without
+            // 'Active' and 'public' ever being mistaken for each other.
+            const ssid = fleetStatusFilter.startsWith('ssid:') ? fleetStatusFilter.slice(5) : '';
             document.querySelectorAll('#fleetTableBody tr').forEach(row => {
+                const statusOk = fleetStatusFilter === '' ? true
+                    : (ssid ? row.dataset.wifi === ssid : row.dataset.fstatus === fleetStatusFilter);
                 const ok = (fleetTypeFilter === '' || row.dataset.type === fleetTypeFilter)
                     && (fleetFitFilter === '' || row.dataset.fit === fleetFitFilter)
-                    && (fleetStatusFilter === '' || row.dataset.fstatus === fleetStatusFilter);
+                    && statusOk;
                 row.style.display = ok ? '' : 'none';
             });
             renumberVisibleRows('fleetTable');

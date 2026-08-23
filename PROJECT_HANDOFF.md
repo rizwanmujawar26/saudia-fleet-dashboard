@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.23.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.24.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -243,6 +243,17 @@ preselected, because this page is the whole roster rather than an operational vi
 `FLEET_DEFAULT_SORT` orders it by **Activation Date, oldest first**; that column is
 second, right after `#`. Undated aircraft sort to the end (`dateSortKey` gives them
 `99999999`).
+
+**The Status pill row filters two axes.** `All / Active / In Retrofit / Hidden / Public`
+— the first two are `fleetStatus`, the last two are `wifiVisibility`, namespaced as
+`ssid:hidden` / `ssid:public` so one filter variable can carry both without `Active`
+and `public` ever being mistaken for each other. `FLEET_STATUSES` still defines all six
+statuses for the **edit dropdown**; only the filter row was trimmed.
+
+**`activationAge()`** renders the `1y 26d` pill beside each activation date. Calendar
+aware — whole anniversaries, then days since the last one — not days/365, so an
+aircraft activated on 1 Oct reads `1y 0d` on 1 Oct. It returns `''` for no date or a
+future date, so no pill is drawn rather than one reading `-3d`.
 
 ⚠️ **`sortTable()` is now the click handler only.** `applyTableSort(tableId, col, dir)`
 does the work without touching the recorded direction, and `populateFleetTable()`
@@ -497,7 +508,9 @@ on the Timeline on the next `updateMetrics()`, which the save already calls.
 - **Fleet widgets** — Active Fleet, In Retrofit, and **SSID Visibility**: a single
   track split between public (from the left) and hidden (from the right), the two
   shares always filling it, because it shows a composition rather than progress
-  towards anything. It counts the **Active** fleet only — an aircraft still in retrofit
+  towards anything. Hidden takes the **Maintenance card's red** everywhere it appears —
+  the split bar, its figure, and the `wifi-hidden` badge on both the Fleet table and
+  the Activity profile — because it is an exception state, not a category of its own. It counts the **Active** fleet only — an aircraft still in retrofit
   has no SSID on air to be public or hidden.
 - **Global widgets** — four KPI cards above the tab bar (`.global-widgets`),
   fleet-wide, on every tab: Software Loading ×2 — `Retrofit` (Middleware) and
@@ -1091,6 +1104,11 @@ live.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.24.0 — Activation age pill, SSID filters, hidden goes red
+Each activation date carries a quiet `1y 326d` pill. The Status filter row is now
+All / Active / In Retrofit / Hidden / Public, mixing fleet status and SSID visibility
+in one row. Hidden switched from violet to the Maintenance red wherever it appears.
 
 ### v2.23.0 — Fleet tab: activation-first ordering and a new widget row
 Activation Date moved to the second column and is the default sort, oldest first. No
