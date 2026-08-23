@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.30.3, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.31.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -400,14 +400,23 @@ are different units with their own serials and their own issues. The MODMAN is t
 clearest case. The two lists can share alias spellings without colliding, because
 the *aircraft's* fit decides which list a match belongs to.
 
-**Quantity varies by aircraft type.** `lruQtyFor(lru, type)` reads `qtyByType`
-falling back to `qty` (default 1). CWAP is the case that introduced it: three on an
-A320, five on an A330. Any LRU fitted more than once anywhere in its fleet becomes
+**Quantity varies by aircraft FAMILY, not by subtype.** `lruQtyFor(lru, type)` tries
+exact `qtyByType` first, then `qtyByFamily` keyed on `typeFamily(type)`, then `qty`
+(default 1). Any LRU fitted more than once anywhere in its fleet becomes
 **position-tracked** — the fitment list shows one row per aircraft *per position*
 and the activity carries `details.position`.
 
-⚠️ CWAP quantities for the **A321 and A321neo were never specified** and currently
-fall back to 1. Fix them in `qtyByType`.
+**CWAP is three on every A320-family narrow body and five on the A330** (user,
+2026-08-23), and that holds **regardless of fit** — the linefit A321 XLR pair carry
+three like everything else in the family, so `lf_cwap` exists as well as `cwap`.
+
+`typeFamily()` maps `A318/A319/A320/A321` → `A320_FAMILY` and `A33x` → `A330`.
+⚠️ **It is deliberately a family rule and not a list of subtypes.** The fleet runs five
+type strings today (`A320-214`, `A321-211`, `A321-251NX`, `A321-253NY XLR`, `A330-343`);
+enumerating them is exactly what left the two A321 variants silently falling back to 1,
+and a sixth variant would have done it again. Anything outside the two families still
+falls back to `qty` — an A350 reads 1, obviously wrong rather than plausibly wrong.
+`qtyByType` still wins where one subtype genuinely differs.
 
 **The part is picked, not typed.** The Add Activity form's Part dropdown is built
 from `HARDWARE_LRUS`, filtered to the selected aircraft's fit and rebuilt when the
@@ -480,11 +489,13 @@ subscription state that survives a card swap. The Roaming column appears only fo
 the SIM units, and editing it writes to `/aircraft` while the LRU's own fields
 write to `/hardware` — one Save, two correctly-targeted writes.
 
-⚠️ **The linefit list is a placeholder and has now diverged.** It still mirrors the
-original retrofit set (7 units), while retrofit has grown to 10 — CWAP, Waveguide
-Adapter and Coax Cable J12 were all added retrofit-only, because the real linefit
-equipment list has never been supplied. Correcting it is an edit to
-`HARDWARE_LRUS` and nothing else.
+⚠️ **The linefit list is still mostly a placeholder.** Seven of its eight entries
+mirror the original retrofit set because the real linefit equipment list has never been
+supplied. **`lf_cwap` is the one confirmed entry** — the user stated the A32x rule
+covers linefit — and is commented as such in the array so a later pass does not sweep
+it away with the guesses. Retrofit has 10 units to linefit's 8: Waveguide Adapter and
+Coax Cable J12 stay retrofit-only, unconfirmed either way. Correcting the rest is an
+edit to `HARDWARE_LRUS` and nothing else.
 
 Retrofit units, in RF-chain order: SIM Card, IFE Server, MODMAN, KANDU, KRFU,
 RX Antenna, TX Antenna, Waveguide Adapter, Coax Cable J12, CWAP.
@@ -1134,12 +1145,10 @@ live.
 
 ### Waiting on the user — ask, don't guess
 
-- **The linefit equipment list is a placeholder.** `HARDWARE_LRUS` currently
-  mirrors the retrofit set for linefit so the pane is usable. The real list has
-  never been supplied. One-array fix.
-- **CWAP quantities for A321 and A321neo** were never given and fall back to 1.
-  Stated so far: A320 ×3, A330 ×5, retrofit only. Whether linefit carries CWAP at
-  all is also unanswered.
+- **The linefit equipment list is still a placeholder** — 7 of its 8 entries. CWAP
+  is now confirmed (`lf_cwap`, ×3); the other seven mirror the retrofit set so the
+  pane is usable. Whether the linefit pair carry a Waveguide Adapter or Coax Cable
+  J12 is also unanswered — those two stay retrofit-only. One-array fix.
 - **What should drive the maintenance flag.** Today it is a manual editor toggle.
   Deriving it from SSID and the other checks — the way completion derives from
   version + location — is the better shape, but the criteria have not been agreed.
@@ -1192,6 +1201,14 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.31.0 — CWAP quantities: a family rule, and linefit carries them too
+Every A320-family narrow body carries three CWAPs and the A330 five, whichever way the
+WiFi got on board. `qtyByType`'s two exact subtypes became `qtyByFamily` behind a new
+`typeFamily()`, fixing the 14 A321s and A321neos that had been silently falling back to
+1, and `lf_cwap` was added so the linefit XLR pair get three as well. CWAP position rows
+went 41 → 129 on retrofit and 0 → 6 on linefit. No data migration: no CWAP serial had
+been recorded yet, so no position label changed under anyone.
 
 ### v2.30.3 — Equal widths in the Software row
 All three cards fixed at 320px. The station cards were sizing to their registration

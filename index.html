@@ -4593,13 +4593,18 @@
               aliases: ['coax cable j12', 'coax j12', 'j12'] },
             // Fitted more than once per aircraft, and a different number by type — so
             // its fitment is tracked per position rather than one serial per aircraft.
-            // Types absent from qtyByType fall back to `qty`.
+            // Quantity is a property of the airframe FAMILY, not of the exact subtype:
+            // every A32x narrow body carries three, the A330 widebody five. Listing
+            // subtypes instead would silently fall back to `qty` the day a new A321
+            // variant joined the roster. `qtyByType` still wins where a single
+            // subtype genuinely differs; types matching neither fall back to `qty`.
             { id: 'cwap', label: 'CWAP', fit: 'retrofit', aliases: ['cwap', 'wap'],
-              qty: 1, qtyByType: { 'A320-214': 3, 'A330-343': 5 } },
+              qty: 1, qtyByFamily: { A320_FAMILY: 3, A330: 5 } },
 
-            // PLACEHOLDER SET — mirrors the retrofit list so the pane is usable today.
-            // The real linefit equipment list has not been given yet; correcting it is
-            // an edit to this array and nothing else.
+            // MOSTLY PLACEHOLDER — the seven below mirror the retrofit list so the pane
+            // is usable today; the real linefit equipment list has not been given yet.
+            // lf_cwap at the end is the one CONFIRMED entry. Correcting the rest is an
+            // edit to this array and nothing else.
             { id: 'lf_sim',        label: 'SIM Card',   fit: 'linefit', aliases: ['sim', 'sim card', 'simcard'] },
             { id: 'lf_ife_server', label: 'IFE Server', fit: 'linefit', aliases: ['ife server', 'ifeserver', 'ife'] },
             { id: 'lf_modman',     label: 'MODMAN',     fit: 'linefit', aliases: ['modman', 'mod man'] },
@@ -4607,6 +4612,10 @@
             { id: 'lf_krfu',       label: 'KRFU',       fit: 'linefit', aliases: ['krfu'] },
             { id: 'lf_rx_antenna', label: 'RX Antenna', fit: 'linefit', aliases: ['rx antenna', 'rx ant', 'rx'] },
             { id: 'lf_tx_antenna', label: 'TX Antenna', fit: 'linefit', aliases: ['tx antenna', 'tx ant', 'tx'] },
+            // CONFIRMED, unlike the seven above it: the linefit pair are A321 XLRs and
+            // carry three CWAPs like every other A32x. Same family rule as retrofit.
+            { id: 'lf_cwap', label: 'CWAP', fit: 'linefit', aliases: ['cwap', 'wap'],
+              qty: 1, qtyByFamily: { A320_FAMILY: 3, A330: 5 } },
         ];
 
         let hardwareLive = {};      // /hardware/{lruId} — swVersion, partNumber, vendor, notes, issues
@@ -4623,11 +4632,29 @@
             return isLinefit(aircraft) ? 'linefit' : 'retrofit';
         }
 
+        // Airframe family from a type string. Fitment counts follow the family rather
+        // than the subtype — an A321-211 and an A321-251NX carry the same equipment —
+        // so this is what keeps a newly added variant correct on arrival instead of
+        // quietly falling back to one.
+        function typeFamily(type) {
+            const t = String(type || '').toUpperCase();
+            // The whole A320 family — A318/A319/A320/A321 — is narrow body and counts
+            // alike. A322 is reserved for the stretch if it is ever ordered.
+            if (/^A3(1[89]|2\d)/.test(t)) return 'A320_FAMILY';
+            if (/^A33\d/.test(t)) return 'A330';
+            return '';
+        }
+
         // How many of this unit a given aircraft carries. Most are one; CWAP is three on
-        // an A320 and five on an A330, so anything above one is tracked per position.
+        // every A32x narrow body and five on an A330, so anything above one is tracked
+        // per position. Exact `qtyByType` wins over the family rule, for the case where
+        // one subtype really is different.
         function lruQtyFor(lru, type) {
             const byType = lru.qtyByType || {};
             if (byType[type] !== undefined) return byType[type];
+            const byFamily = lru.qtyByFamily || {};
+            const fam = typeFamily(type);
+            if (fam && byFamily[fam] !== undefined) return byFamily[fam];
             return lru.qty === undefined ? 1 : lru.qty;
         }
 
@@ -4960,10 +4987,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.30.3';
-        const APP_BUILD    = '2026.08.23.17';
+        const APP_VERSION  = '2.31.0';
+        const APP_BUILD    = '2026.08.23.21';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T17:00:00Z';
+        const APP_DEPLOYED = '2026-08-23T21:06:18Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
