@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.33.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.34.0, 2026-08-23)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -801,7 +801,21 @@ firing before authentication and with `backup.sh` losing anonymous access.
    physical equipment went on) or with `retrofitStart`/`retrofitEnd`, the grounding
    window. Three different facts; only this one is about software.
 3. **Media** — monthly media loading for the main fleet only (linefit excluded).
-   Columns: `# | Aircraft | Type | Status | Media Loaded | Date UTC | UGO | TILES | Comments`.
+   Columns: `# | Loading Date | Aircraft | Type | Status | Media Loaded | UGO | TILES | Comments`.
+   **Loading Date is column 2 and the default sort**, oldest first
+   (`MEDIA_DEFAULT_SORT`), with the same `activationAge()` pill the Software and Fleet
+   date columns carry. The field is `media.loadedDateUTC`, unchanged.
+   ⚠️ **Two traps here that the other two date columns do not have**, both because this
+   value is a full timestamp rather than `DD-Mon-YYYY`:
+   `activationAge()` parses only `DD-Mon-YYYY` or `YYYY-MM-DD` and returns `''` for
+   anything else, so the stamp is **sliced to its first 10 characters** before being
+   passed — without that the pill silently never renders. And the undated sentinel is
+   **fourteen** nines, not eight: `dateSortKey()` turns a real value into a 14-digit
+   number like `20260808123319`, so a shorter sentinel would sort aircraft with no
+   media to the FRONT instead of the end.
+   The cell keeps its `YYYY-MM-DD HH:MM UTC` format rather than the `DD-Mon-YYYY` used
+   everywhere else — the load time is operationally meaningful here, and that predates
+   this change.
    UGO and TILES are editable in the tab's Edit mode; an empty box clears the field,
    which is how an aircraft is marked as not having it at all. A value that does not
    match the rules' pattern is refused at the input and never staged, so it cannot take
@@ -1321,6 +1335,14 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.34.0 — Media table opens on Loading Date
+Date UTC renamed **Loading Date**, moved from sixth to second, default sort oldest
+first, with the same age pill as the Software and Fleet tables — all three date columns
+now read identically. Presentation only; `media.loadedDateUTC` is untouched. Two things
+differ under the hood because this field is a full timestamp: the value is sliced to
+its date part before `activationAge()` sees it, and the undated sort sentinel is 14
+nines rather than 8. See the Media tab notes above.
 
 ### v2.33.0 — Software table opens on Installation Date
 The Date column was renamed **Installation Date**, moved from eighth to second, and

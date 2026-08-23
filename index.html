@@ -3889,11 +3889,11 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortTable('mediaTable', 1)">Aircraft</th>
-                                <th class="sortable-th" data-col="2" data-label="Type" onclick="sortTable('mediaTable', 2)">Type</th>
-                                <th class="sortable-th" data-col="3" data-label="Status" onclick="sortTable('mediaTable', 3)">Status</th>
-                                <th class="sortable-th" data-col="4" data-label="Media Loaded" onclick="sortTable('mediaTable', 4)">Media Loaded</th>
-                                <th class="sortable-th" data-col="5" data-label="Date UTC" onclick="sortTable('mediaTable', 5)">Date UTC</th>
+                                <th class="sortable-th" data-col="1" data-label="Loading Date" onclick="sortTable('mediaTable', 1)">Loading Date</th>
+                                <th class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortTable('mediaTable', 2)">Aircraft</th>
+                                <th class="sortable-th" data-col="3" data-label="Type" onclick="sortTable('mediaTable', 3)">Type</th>
+                                <th class="sortable-th" data-col="4" data-label="Status" onclick="sortTable('mediaTable', 4)">Status</th>
+                                <th class="sortable-th" data-col="5" data-label="Media Loaded" onclick="sortTable('mediaTable', 5)">Media Loaded</th>
                                 <th class="sortable-th" data-col="6" data-label="UGO" onclick="sortTable('mediaTable', 6)">UGO</th>
                                 <th class="sortable-th" data-col="7" data-label="TILES" onclick="sortTable('mediaTable', 7)">TILES</th>
                                 <th class="sortable-th col-comment" data-col="8" data-label="Comments" onclick="sortTable('mediaTable', 8)">Comments</th>
@@ -5127,10 +5127,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.33.0';
+        const APP_VERSION  = '2.34.0';
         const APP_BUILD    = '2026.08.23.22';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T22:09:35Z';
+        const APP_DEPLOYED = '2026-08-23T22:18:18Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -7238,7 +7238,19 @@
                     ? `<input class="edit-text media-input" value="${escAttr(staged ? staged.raw : mediaToInputString(media))}" placeholder="2026-08-16 04:22:00 (ME-SVA-UGO-0826)" data-id="${aircraft.id}" onchange="handleMediaEdit(this)">`
                     : `<span class="media-source">${effective.mediaSource ? escAttr(effective.mediaSource) : '—'}</span>`;
 
-                const dateCell = `<span class="view-text">${fmtMediaDate(effective.loadedDateUTC) || '—'}</span>`;
+                // Same treatment as the Software and Fleet date columns. activationAge()
+                // parses DD-Mon-YYYY or YYYY-MM-DD and returns '' for anything else, so
+                // the full timestamp has to be trimmed to its date part or the pill would
+                // silently never render.
+                const loadedISO = (effective.loadedDateUTC || '').slice(0, 10);
+                const loadedAge = activationAge(loadedISO);
+                const shownDate = fmtMediaDate(effective.loadedDateUTC);
+                const dateCell = shownDate
+                    ? `<span class="fleet-date">${escAttr(shownDate)}</span>${loadedAge ? `<span class="age-pill" title="Time since media load">${loadedAge}</span>` : ''}`
+                    : '<span class="fleet-notset">Not set</span>';
+                // 14 nines, not eight: a real key is a full timestamp (20260808123319),
+                // so a shorter sentinel would sort undated rows to the FRONT.
+                const dateSort = dateSortKey(effective.loadedDateUTC) || '99999999999999';
 
                 const verInput = (field, value, latest) => `<input class="edit-text ver-input" value="${escAttr(value || '')}"
                         placeholder="${escAttr(latest)}" maxlength="20" data-id="${aircraft.id}" data-field="${field}"
@@ -7258,11 +7270,11 @@
 
                 row.innerHTML = `
                     <td>${idx + 1}</td>
+                    <td data-sort="${dateSort}">${dateCell}</td>
                     <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong></td>
                     <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
                     <td data-sort="${cycleSortKey(effective.mediaCycle)}">${statusCell}</td>
                     <td data-sort="${escAttr(effective.mediaSource || '')}">${loadedCell}</td>
-                    <td data-sort="${dateSortKey(effective.loadedDateUTC)}">${dateCell}</td>
                     <td data-sort="${escAttr(ugoValue || '')}">${ugoCell}</td>
                     <td data-sort="${escAttr(tilesValue || '')}">${tilesCell}</td>
                     <td class="col-comment" data-sort="${escAttr(media.comments || '')}">${commentCell}</td>
@@ -7273,6 +7285,13 @@
             renderMediaWidgets(latest);
             fbRender('media');
             applyMediaFilters();
+            // Oldest load first until someone picks another column, re-applied on every
+            // rebuild — same reason as the Software and Fleet tables: this runs again on
+            // every live update and would otherwise hand the rows back in registration
+            // order under an unchanged arrow.
+            const ms = lastSort['mediaTable'] || MEDIA_DEFAULT_SORT;
+            lastSort['mediaTable'] = ms;
+            applyTableSort('mediaTable', ms.col, ms.dir);
             updateSortIndicators('mediaTable');
             updateMediaEditUI();
         }
@@ -7289,6 +7308,11 @@
         // deliberately does NOT feed latestMediaCycle(): that stays derived from what is
         // actually loaded, or declaring September would mark the whole August fleet as a
         // month behind. Adding next month is one line.
+        // Loading Date is column 1 and the Media table opens on it, oldest first —
+        // the same shape the Software and Fleet tables use. Aircraft with no load
+        // carry a 14-nine sort key, so they land at the end.
+        const MEDIA_DEFAULT_SORT = { col: 1, dir: 1 };
+
         const MEDIA_CYCLE_SIZES = {
             '0826': '791 GB',
             '0926': '884 GB',
