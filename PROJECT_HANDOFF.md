@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.42.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.43.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -829,43 +829,55 @@ One row per SIM **card**, derived from `/units` where `lruId` is `sim` or `lf_si
 for a serial and its fitment history, and a second home for the same cards would drift
 from it exactly the way the old duplicated status fields did.
 
-Columns: `# | Installation Date | Removal Date | SIM Card # | Aircraft | Type | Fit |
-Status | Roaming | Comments`. Installation Date is column 2 and the default sort,
-oldest first, like the other tables; every column sorts, so the register can be read by
-card or by aircraft.
+Columns: `# | Installation Date | SIM Card # | Roaming | Aircraft | Type | Status |
+Removal Date | Comments`. Two of those placements are deliberate: **Removal Date sits
+beside Status**, so `REMOVED` and the day it came off read as one fact, and **Roaming
+sits with the card number**, because the plan belongs to the card rather than to the
+airframe. Installation Date is column 2 and the default sort, oldest first, like the
+other tables; every column sorts, so the register reads by card or by aircraft.
 
-**`SIM_STATUSES` is the one definition** — it drives the badges, the edit dropdown and
-the filter together. Three of the four are DERIVED from fitments; **`retired` is the
-one that is stored** (`lifecycle: 'retired'` on the unit), because "the subscription
-was cancelled" is a decision about the card, not something its fitment history can
-say. Retired **overrides** the derived value: a retired card is retired whether it is
-still on an aircraft or in a drawer.
+Installation Date carries the same `activationAge()` pill the Fleet, Software and Media
+date columns carry. **The removal date does not** — a pill there would count days since
+the card came *off*, which is not a service life.
+
+**There is no Fit column.** Every aircraft in this programme is retrofit by default, so
+the column and its filter said nothing.
+
+**`SIM_STATUSES` is the one definition** — badges, edit dropdown and filter together.
+**All three are DERIVED from fitments; nothing about a card's status is stored**, so it
+cannot go stale against its own history.
 
 | status | condition | Aircraft column |
 |---|---|---|
 | Active | latest fitment is `on_wing` | the registration |
 | Spare | no fitment at all — never flown, in hand with the team | *Not fitted* |
 | Removed | latest fitment is `removed` | **`ex-ASV`** — where it came off |
-| Retired | `lifecycle: 'retired'` — unsubscribed, whatever the fitment says | as above |
 
-Widgets are Active Cards / Spares in Hand / Removed / Retired, in the shared
-`.media-widget` markup and variants the Fleet and Media strips use, so the three pages
-read as one system. **The four sum to the register** — that is why Retired has a card
-of its own rather than being a status with nowhere to be counted.
+Widgets are Active Cards / Spares in Hand / Removed, in the shared `.media-widget`
+markup and variants the Fleet and Media strips use, so the three pages read as one
+system. The three sum to the register.
+
+⚠️ **A `Retired` status was added in v2.42.0 and removed again in v2.43.0** at the
+user's request — status is just Active and Removed for a fitted card now. The
+`lifecycle` field is still declared in `database.rules.json` and nothing writes it; no
+record ever carried it, so the rule is inert rather than orphaning data. Drop it from
+the rules whenever, or reuse it if the idea comes back.
 
 **Edit mode covers both dates, Status, Roaming and Comments.** Status is two writes
 wearing one control, and `handleSimEdit()` is where that is resolved:
 
-- **Retired** writes `lifecycle` on the CARD and leaves the fitment alone.
-- **Active / Removed** write the FITMENT's `state` and clear `lifecycle`.
-- Choosing one always clears the other, or a card could read Retired in the register
-  and `on_wing` in its fitment at the same time.
-- **Only reachable states are offered.** A fitted card gets Active/Removed/Retired; a
-  spare gets Spare/Retired, because Active and Removed are fitment states and it has
-  no fitment. Going back to Spare would mean deleting history, which is Record
-  Removed's job.
+- **Status IS the fitment's `state`** — there is nothing else to write.
+- **Only reachable states are offered.** A fitted card gets Active/Removed; a spare's
+  status is read-only, because Spare means "no fitment" and going back to it would mean
+  deleting history, which is Record Removed's job.
 - **A spare's date cells are not editable** and say why on hover — dates belong to a
   fitment, and it has none.
+
+**Add SIM adds a card either way.** Choosing *Spare* writes a bare unit with no
+fitment; choosing *Active* asks for an aircraft and an installation date and writes a
+fitment in the same shape Record Installed uses, so the card reads identically on the
+Serials and Hardware tabs. The aircraft picker is the whole roster, not just the active
+fleet — a SIM often goes in while the aircraft is still in retrofit.
 
 ⚠️ **All 41 SIM installation dates were cleared on 2026-08-25 at the user's request.**
 39 of them read `24-Aug-2026` and 2 read `16-Aug-2026`: they were the timestamp of the
@@ -1601,6 +1613,16 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.43.0 — SIM register: column order, days pill, Add SIM status
+Removal Date moved beside Status so the two read together, Roaming moved next to the
+card number, and the Fit column and filter are gone — every aircraft here is retrofit,
+so it said nothing. Installation Date gained the same days-since pill the Fleet and
+Media date columns carry; the removal date deliberately does not.
+
+Status is back to the two states a fitted card moves between, Active and Removed —
+Retired was dropped. Add SIM now sets status: a Spare with no fitment, or Active with
+an aircraft and installation date, written in the same shape Record Installed uses.
 
 ### v2.42.0 — SIM register: removal dates, Retired, and editable status
 Installation dates cleared — they were all the bulk-entry timestamp rather than real
