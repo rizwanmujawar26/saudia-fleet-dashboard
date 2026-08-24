@@ -842,6 +842,20 @@
             overflow-x: auto;
             padding: 4px 2px 16px;
             margin-bottom: 6px;
+            /* Pins directly beneath .tl-controls. Being a horizontal scroll container
+               does not stop the strip ITSELF from sticking — that only governs where
+               its own descendants would anchor. */
+            position: sticky;
+            top: calc(var(--sticky-top) + var(--tlctrl-h, 42px));
+            z-index: 299;
+            /* Opaque, or the timeline rows show through as they pass behind. The
+               strip has no background of its own otherwise. */
+            background: #fff;
+            /* A soft edge under the pinned block, so a row disappearing behind it
+               reads as passing underneath rather than being clipped. Drawn as a
+               shadow rather than a border: a border would sit on the layout at rest
+               too, adding a line the design never had. */
+            box-shadow: 0 6px 8px -6px rgba(15, 32, 45, 0.16);
         }
 
         /* A column, so the count band can be pinned to the bottom. The strip stretches
@@ -1242,6 +1256,12 @@
             background: #f8f9fa;
             border: 1px solid #e8ebee;
             border-radius: 10px;
+            /* Pinned under the tab strip, with the calendar pinned under it, so both
+               the filter and the date navigation stay reachable while the timeline
+               runs behind them. Under the tabs (400), over the timeline. */
+            position: sticky;
+            top: var(--sticky-top);
+            z-index: 300;
         }
 
         /* min-width:0 lets the pills scroll inside their share rather than
@@ -5394,10 +5414,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.39.0';
-        const APP_BUILD    = '2026.08.24.19';
+        const APP_VERSION  = '2.40.0';
+        const APP_BUILD    = '2026.08.24.21';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-24T19:27:26Z';
+        const APP_DEPLOYED = '2026-08-24T21:25:40Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -11214,6 +11234,13 @@
             const bar = Array.from(document.querySelectorAll('.filterbar'))
                 .find(b => b.getBoundingClientRect().height > 0);
             if (bar) root.setProperty('--filterbar-h', Math.round(bar.getBoundingClientRect().height) + 'px');
+            // The Overview's own control row, which the calendar strip pins beneath.
+            // Same rule as the filter bar: it measures 0 while its tab is hidden, so
+            // the last known value stands rather than stacking the strip over it.
+            const tl = document.querySelector('.tl-controls');
+            if (tl && tl.getBoundingClientRect().height > 0) {
+                root.setProperty('--tlctrl-h', Math.round(tl.getBoundingClientRect().height) + 'px');
+            }
         }
 
         // A frozen table head needs the wrapper NOT to be a scroll container, and a

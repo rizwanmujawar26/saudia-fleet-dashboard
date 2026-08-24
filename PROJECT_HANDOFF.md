@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.39.0, 2026-08-24)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.40.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1157,10 +1157,33 @@ opaque base the page showed through the strip once it was pinned.
 `initStickyHeader()` otherwise only toggles `.is-stuck` for the shadow, and only
 when the state changes — the pinning itself is pure CSS.
 
-### Three pinned layers, and a frozen table head
+### Pinned layers
 
-The stack is **header → tab strip → filter bar → table head**, each pinned under the
-one above. Every offset below the first is a SUM, so `publishStickyHeights()` measures
+There are two stacks, sharing the first two layers:
+
+| page | stack |
+|---|---|
+| tables | header → tab strip → **filter bar** → table head |
+| Overview | header → tab strip → **`.tl-controls`** → **`.cal-strip`** |
+
+On the Overview the kind filter, the sort and the calendar all stay put and the
+timeline runs behind them, so the date navigation is reachable from anywhere in the
+list. `--tlctrl-h` is published for the offset the strip pins at, the same way
+`--filterbar-h` is.
+
+- **The strip needs its own opaque background** (`#fff`) — it had none, and rows
+  showed through it as they passed behind.
+- **The separation is a `box-shadow`, not a border.** A border would sit on the
+  layout at rest as well, adding a line the design never had.
+- **A horizontal scroll container can still be sticky itself.** `.cal-strip` scrolls
+  sideways; that only governs where its own *descendants* would anchor, not whether
+  the strip sticks.
+- ⚠️ It costs **38% of a phone viewport** with the header and tabs (305px of 812px,
+  leaving ~507px of list). That is the deliberate trade — the calendar is the
+  navigation, so it earns the room.
+
+The table stack is **header → tab strip → filter bar → table head**, each pinned under
+the one above. Every offset below the first is a SUM, so `publishStickyHeights()` measures
 and publishes `--header-h`, `--tabs-h` and `--filterbar-h`, and `--sticky-top` adds the
 first two. **It runs on every tab switch as well as on resize**: at load the Overview
 tab is active and every `.filterbar` is `display:none`, so a measurement then finds
@@ -1504,6 +1527,14 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.40.0 — Overview filters and calendar stay put
+The kind filter, the sort and the calendar strip now pin under the tab strip and the
+timeline scrolls behind them, so a date can be picked from anywhere in the list rather
+than only from the top. Most useful on a phone, where reaching the calendar meant
+scrolling all the way back up. The strip gained an opaque background — rows were
+showing through it — and a soft shadow so a row passing underneath reads as passing
+rather than being clipped. It stays fully interactive while pinned.
 
 ### v2.39.0 — Activation is a Timeline milestone
 Putting an aircraft into service is the milestone the whole programme works towards and
