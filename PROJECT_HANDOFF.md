@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.38.0, 2026-08-24)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.38.1, 2026-08-24)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1163,6 +1163,23 @@ section begins.
 **A sticky `th` drops out of border collapsing**, so rows show through a hairline at
 its foot. The rule draws that line with a `::after` strip instead.
 
+**A table too wide to fit gets a floating copy of its head instead.** There is no CSS
+that pins a head inside a horizontal scroll container, so `syncFrozenHeads()` holds a
+copy of the live `<thead>` at the pin line, clipped to the wrapper and slid sideways by
+`-wrapper.scrollLeft` so the columns stay over their data. That is what gives a phone a
+frozen head on a 1055px table in a 351px window.
+
+- **The copy is made from the live `<thead>`**, so its sort arrows and `onclick`
+  attributes are the real ones — clicking the copy sorts the table it belongs to, and
+  the arrow updates.
+- **Each `th` is given the live head's measured width and the copy is
+  `table-layout: fixed`**, or it would size to its own content and drift.
+- ⚠️ **Do not force `white-space: nowrap` on it.** With the widths copied, the copy has
+  to wrap exactly as the original does; forcing one line pushed "INSTALLATION DATE"
+  straight through the next column.
+- It is rebuilt only when the head's markup or widths change — a scroll must reposition
+  it, never rebuild it — and the work is batched into a frame.
+
 ---
 
 ## The `#` column counts visible rows
@@ -1463,6 +1480,13 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.38.1 — Frozen head on a phone too
+v2.38.0 froze the head only where the table fits, which left a phone — the case that
+needs it most — with a scrolling head. A table that must scroll sideways now gets a
+floating copy of its head held at the pin line and slid in step with the columns
+beneath it. Verified aligned to within 0.8px at every horizontal scroll position, and
+the copy sorts the real table because it *is* the real head, cloned.
 
 ### v2.38.0 — The filter bar and table head stay put
 Scrolling a long table lost the column headers. The filter bar now pins under the tab

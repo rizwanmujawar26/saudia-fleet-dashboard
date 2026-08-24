@@ -1523,6 +1523,30 @@
             z-index: 200;
         }
 
+        /* The floating head for a table too wide to fit — see syncFrozenHeads().
+           A real sticky head is impossible there: the wrapper has to stay a
+           horizontal scroll container, and that makes it the scrollport a
+           sticky `thead` would anchor to. This is a copy of the head, held at
+           the pin line and slid sideways in step with the table under it. */
+        .fz-head {
+            position: fixed;
+            overflow: hidden;
+            z-index: 200;
+            /* Clipped to the wrapper's box, so it cannot spill past the table
+               edge when the page is scrolled sideways. */
+            pointer-events: auto;
+        }
+        .fz-head table {
+            margin: 0;
+            /* Widths are copied cell by cell from the live head, so the copy
+               has to honour them rather than re-sizing to its own content. */
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+        /* No white-space override here. The copy is given the live head's exact
+           column widths, so it has to wrap exactly as the original does — forcing
+           one line pushed "INSTALLATION DATE" straight through the next column. */
+
         /* A sticky th keeps its background but drops out of border collapsing,
            so rows would show through a hairline at its foot. */
         .table-freeze:not(.is-overflowing) thead th::after {
@@ -5340,10 +5364,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.38.0';
-        const APP_BUILD    = '2026.08.24.08';
+        const APP_VERSION  = '2.38.1';
+        const APP_BUILD    = '2026.08.24.09';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-24T08:19:12Z';
+        const APP_DEPLOYED = '2026-08-24T09:01:32Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -11161,7 +11185,104 @@
                 if (!w.clientWidth) return;
                 w.classList.toggle('is-overflowing', t.scrollWidth > w.clientWidth + 1);
             });
+            scheduleFrozenHeads();
         }
+
+        // ===== Floating head for tables that must scroll sideways ===========
+        // A table narrower than its wrapper gets a real `position: sticky` head
+        // (see .table-freeze above). A wider one cannot: the wrapper has to stay
+        // a horizontal scroll container, and CSS makes that the scrollport a
+        // sticky `thead` anchors to, so the head just scrolls away with the page.
+        //
+        // This holds a COPY of the head at the pin line instead, clipped to the
+        // wrapper and slid sideways in step with the table under it. The copy is
+        // made from the live `<thead>`, so its sort arrows and click handlers are
+        // the real ones — clicking it sorts the table it belongs to.
+        const fzHeads = new Map();   // table id -> { host, sig }
+
+        function fzPinTop() {
+            const cs = getComputedStyle(document.documentElement);
+            const px = n => parseInt(cs.getPropertyValue(n), 10) || 0;
+            return px('--header-h') + px('--tabs-h') + px('--filterbar-h');
+        }
+
+        function fzRemove(id) {
+            const rec = fzHeads.get(id);
+            if (rec) { rec.host.remove(); fzHeads.delete(id); }
+        }
+
+        function syncFrozenHeads() {
+            const pin = fzPinTop();
+
+            document.querySelectorAll('.table-freeze').forEach(wrap => {
+                const table = wrap.querySelector('table');
+                if (!table) return;
+                const id = table.id || (table.id = 'fz' + Math.random().toString(36).slice(2, 8));
+                const head = table.querySelector('thead');
+
+                // Only overflowing tables need this; the rest have a real sticky
+                // head. A hidden tab measures zero and gets nothing.
+                if (!head || !wrap.classList.contains('is-overflowing') || !wrap.clientWidth) {
+                    fzRemove(id); return;
+                }
+
+                const tRect = table.getBoundingClientRect();
+                const wRect = wrap.getBoundingClientRect();
+                const headH = head.getBoundingClientRect().height;
+
+                // Show it only while the real head has scrolled above the pin line
+                // and there is still table below to label.
+                if (tRect.top >= pin || tRect.bottom <= pin + headH) { fzRemove(id); return; }
+
+                let rec = fzHeads.get(id);
+                if (!rec) {
+                    const host = document.createElement('div');
+                    host.className = 'fz-head';
+                    document.body.appendChild(host);
+                    rec = { host, sig: '' };
+                    fzHeads.set(id, rec);
+                }
+
+                // Rebuild only when the head itself changed — the sort arrows are
+                // part of its markup, so a sort has to reach the copy, but a
+                // scroll must not rebuild anything.
+                const widths = Array.from(head.querySelectorAll('th'))
+                    .map(th => Math.round(th.getBoundingClientRect().width));
+                const sig = widths.join(',') + '|' + head.innerHTML;
+                if (sig !== rec.sig) {
+                    rec.sig = sig;
+                    const copy = document.createElement('table');
+                    copy.className = table.className;
+                    copy.style.width = Math.round(table.scrollWidth) + 'px';
+                    copy.appendChild(head.cloneNode(true));
+                    Array.from(copy.querySelectorAll('th')).forEach((th, i) => {
+                        th.style.width = widths[i] + 'px';
+                    });
+                    rec.host.innerHTML = '';
+                    rec.host.appendChild(copy);
+                }
+
+                rec.host.style.top = pin + 'px';
+                rec.host.style.left = Math.round(wRect.left) + 'px';
+                rec.host.style.width = Math.round(wrap.clientWidth) + 'px';
+                rec.host.style.height = Math.round(headH) + 'px';
+                // The copy sits in a clipped box; sliding it by the wrapper's own
+                // scroll offset is what keeps the columns over their data.
+                rec.host.firstChild.style.marginLeft = (-Math.round(wrap.scrollLeft)) + 'px';
+            });
+        }
+
+        // Scroll fires far more often than a frame, so the work is batched.
+        let fzQueued = false;
+        function scheduleFrozenHeads() {
+            if (fzQueued) return;
+            fzQueued = true;
+            requestAnimationFrame(() => { fzQueued = false; syncFrozenHeads(); });
+        }
+
+        // Capture, so a wrapper scrolling sideways is heard as well as the page.
+        window.addEventListener('scroll', scheduleFrozenHeads, true);
+        window.addEventListener('resize', scheduleFrozenHeads);
 
         function initStickyHeader() {
             const header = document.querySelector('.header');
