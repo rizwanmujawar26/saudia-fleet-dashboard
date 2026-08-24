@@ -154,6 +154,7 @@
 
         "lruId":         { ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_]{1,40}$/)" },
         "serial":        { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "roaming":       { ".validate": "newData.isString() && newData.val().matches(/^(global|local)$/)" },
 
         "partNumber":    { ".validate": "newData.isString() && newData.val().length <= 60" },
         "altPartNumber": { ".validate": "newData.isString() && newData.val().length <= 60" },

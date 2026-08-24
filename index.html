@@ -2314,6 +2314,19 @@
 
         /* Sits next to the delete button. margin-left:auto moved here so the pair
            stays right-aligned as one group. */
+        /* SIM register badges. Status borrows the fleet vocabulary — green for in
+           service, grey for not yet used, red for off the aircraft. Roaming is a
+           different axis, so it takes blue/slate rather than another green. */
+        .status-badge.sim-active  { background: #e4f3ea; color: #0a5c34; }
+        .status-badge.sim-unused  { background: #eef1f3; color: #6b747c; }
+        .status-badge.sim-removed { background: #fdecee; color: #a52834; }
+        .status-badge.roam-global { background: #e6f0fb; color: #1c5b96; }
+        .status-badge.roam-local  { background: #f1f3f5; color: #55606a; }
+
+        /* "ex-ASV" — the aircraft a removed card came off. Muted, because it is
+           where the card WAS, not where it is. */
+        .sim-ex { color: #8a939b; font-weight: 600; }
+
         .maint-act-edit {
             margin-left: auto;
             border: 1px solid #cfe0d6;
@@ -4038,15 +4051,16 @@
                 <button class="tab-button active" onclick="switchTab('overview')">📊 Overview</button>
                 <button class="tab-button" onclick="switchTab('aircraft')">💿 Software</button>
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
+                <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
+                <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('sim')">📶 4G SIM</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('maintenance')">🛠️ Activity</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('hardware')">🔧 Hardware</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('serials')">🏷️ Serials</button>
-                <button class="tab-button" onclick="switchTab('schedule')">📅 Schedule</button>
-                <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
+                <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('schedule')">📅 Schedule</button>
                 <!-- The way back in for a signed-out viewer. It sits where the hidden
                      tabs would be, because that is where someone looks for them. -->
                 <button class="tab-button tab-signin" id="tabSignInBtn"
-                        title="Activity, Hardware and Serials are shown to signed-in users">🔒 Sign in</button>
+                        title="4G SIM, Activity, Hardware, Serials and Schedule are shown to signed-in users">🔒 Sign in</button>
             </div>
 
             <!-- Overview Tab -->
@@ -4371,6 +4385,47 @@
             </div>
 
             <!-- Fleet Tab -->
+            <!-- 4G SIM Tab — the SIM card register.
+                 Rows come from /units where lruId is a SIM: one row per CARD, showing
+                 its latest fitment. There is no separate SIM collection, deliberately —
+                 /units is already the single source for serials and their fitment
+                 history, and a second home would drift from it. -->
+            <div id="sim" class="tab-content">
+                <div class="media-widget-section">
+                    <span class="filter-group-label">SIM Card Register</span>
+                    <div class="media-widget-strip" id="simWidgets"></div>
+                </div>
+
+                <div class="filterbar">
+                    <div class="fb-filters" data-bar="sim"></div>
+                    <div class="fb-actions">
+                        <button id="simAddBtn" class="qf-btn" style="display:none;" onclick="openAddSim()">➕ Add SIM</button>
+                        <button id="simEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleSimEdit()">🔒 Edit</button>
+                        <button id="simResetBtn" class="qf-btn" onclick="resetSimTable()">↺ Reset</button>
+                    </div>
+                </div>
+
+                <div class="table-scroll-wrapper table-freeze">
+                    <table class="aircraft-table" id="simTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th class="sortable-th" data-col="1" data-label="Installation Date" onclick="sortTable('simTable', 1)">Installation Date</th>
+                                <th class="sortable-th" data-col="2" data-label="SIM Card" onclick="sortTable('simTable', 2)">SIM Card #</th>
+                                <th class="sortable-th" data-col="3" data-label="Aircraft" onclick="sortTable('simTable', 3)">Aircraft</th>
+                                <th class="sortable-th" data-col="4" data-label="Type" onclick="sortTable('simTable', 4)">Type</th>
+                                <th class="sortable-th" data-col="5" data-label="Fit" onclick="sortTable('simTable', 5)">Fit</th>
+                                <th class="sortable-th" data-col="6" data-label="Status" onclick="sortTable('simTable', 6)">Status</th>
+                                <th class="sortable-th" data-col="7" data-label="Roaming" onclick="sortTable('simTable', 7)">Roaming</th>
+                                <th class="sortable-th col-comment" data-col="8" data-label="Comments" onclick="sortTable('simTable', 8)">Comments</th>
+                            </tr>
+                        </thead>
+                        <tbody id="simTableBody"></tbody>
+                    </table>
+                </div>
+                <p class="bl-hint" id="simCount" style="padding: 0 4px 16px;"></p>
+            </div>
+
             <div id="fleet" class="tab-content">
                 <div class="media-widget-section">
                     <span class="filter-group-label">Fleet Composition</span>
@@ -4589,6 +4644,36 @@
             <div style="display:flex; gap:10px; margin-top:6px;">
                 <button id="addActCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="addActSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save Activity</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- A card added here has never flown: it gets NO fitment, which is exactly
+         what makes it read as Unused. Fitting it to an aircraft is a fitment, and
+         that is Record Installed's job on the Serials tab. -->
+    <div id="addSimOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="act-modal" style="max-width:460px;">
+            <h3 style="color:#0a5c34; margin-bottom:6px;">Add SIM Card</h3>
+            <p style="font-size:13px; color:#666; margin-bottom:16px;">Adds a spare to the register. It shows as <b>Unused</b> until it is fitted to an aircraft on the Serials tab.</p>
+
+            <label class="add-sched-label">SIM Number</label>
+            <input id="addSimSerial" class="add-sched-input" maxlength="60" placeholder="e.g. 899660117002235903" autocomplete="off">
+
+            <label class="add-sched-label">Roaming</label>
+            <select id="addSimRoaming" class="add-sched-input">
+                <option value="">— not set —</option>
+                <option value="global">Global</option>
+                <option value="local">Local</option>
+            </select>
+
+            <label class="add-sched-label">Comments</label>
+            <input id="addSimNotes" class="add-sched-input" maxlength="1000" placeholder="Anything worth knowing about this card" autocomplete="off">
+
+            <p id="addSimError" style="display:none; color:#dc3545; font-size:13px; margin-top:10px;"></p>
+
+            <div style="display:flex; gap:10px; margin-top:18px;">
+                <button id="addSimCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button id="addSimSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Add SIM</button>
             </div>
         </div>
     </div>
@@ -5414,10 +5499,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.40.0';
+        const APP_VERSION  = '2.41.0';
         const APP_BUILD    = '2026.08.24.21';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-24T21:25:40Z';
+        const APP_DEPLOYED = '2026-08-24T21:53:34Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -5487,6 +5572,7 @@
             populateAircraftTable();
             if (!mediaEditMode) populateMediaTable();
             if (!maintEditMode) renderMaintenancePage();
+            if (!simEditMode) renderSimPage();
             if (!hwEditMode) renderHardwarePage();
             renderSerialsPage();
             populateScheduleTables();
@@ -6104,7 +6190,10 @@
         // curl. Actually restricting the data means changing `.read` in
         // database.rules.json and signing in before the first read — the migration
         // written up under "Making this private" in DISASTER-RECOVERY.md.
-        const RESTRICTED_TABS = ['maintenance', 'hardware', 'serials'];
+        // Schedule joined these on 2026-08-25 — it is forward-looking work planning
+        // and the user does not want it public. `sim` is here while the page is being
+        // settled; it is meant to become public once it is signed off.
+        const RESTRICTED_TABS = ['sim', 'maintenance', 'hardware', 'serials', 'schedule'];
 
         // The trust boundary is the editor allowlist, the same one canEdit() uses — an
         // account that is not on it can sign in but is not recognised, and revealing the
@@ -6179,6 +6268,7 @@
             updateMaintEditUI();
             updateHwEditUI();
             updateFleetEditUI();
+            updateSimEditUI();
             renderSerialsPage();
         }
 
@@ -6277,6 +6367,8 @@
                 populateAircraftTable();
             } else if (tabName === 'media') {
                 populateMediaTable();
+            } else if (tabName === 'sim') {
+                renderSimPage();
             } else if (tabName === 'maintenance') {
                 renderMaintenancePage();
             } else if (tabName === 'hardware') {
@@ -6781,6 +6873,33 @@
                     { id: 'wifi', label: 'SaudiaWiFi', options: [
                         { v: 'public', l: 'Public' },
                         { v: 'hidden', l: 'Hidden' },
+                    ] },
+                ],
+            },
+
+            sim: {
+                apply: () => applySimFilters(),
+                filters: [
+                    { id: 'simstatus', label: 'Status', options: [
+                        { v: 'active',  l: 'Installed' },
+                        { v: 'unused',  l: 'Unused' },
+                        { v: 'removed', l: 'Removed' },
+                    ] },
+                    { id: 'roaming', label: 'Roaming', options: [
+                        { v: 'global', l: 'Global' },
+                        { v: 'local',  l: 'Local' },
+                        { v: 'none',   l: 'Not set' },
+                    ] },
+                    // Built from the types SIMs are actually fitted to, so it follows
+                    // the fleet rather than listing types with no cards.
+                    { id: 'type', label: 'Type', options: () => {
+                        const seen = [];
+                        simCards().forEach(c => { if (c.type && seen.indexOf(c.type) === -1) seen.push(c.type); });
+                        return seen.map(t => ({ v: t, l: TYPE_SHORT_LABEL[t] || t }));
+                    } },
+                    { id: 'fit', label: 'Fit', options: [
+                        { v: 'retrofit', l: 'Retrofit' },
+                        { v: 'linefit',  l: 'Linefit' },
                     ] },
                 ],
             },
@@ -7717,6 +7836,10 @@
         // carry a 14-nine sort key, so they land at the end.
         const MEDIA_DEFAULT_SORT = { col: 1, dir: 1 };
 
+        // The SIM register opens on Installation Date, oldest first, like the other
+        // three tables. Unused cards have no date and sort to the end on 99999999.
+        const SIM_DEFAULT_SORT = { col: 1, dir: 1 };
+
         const MEDIA_CYCLE_SIZES = {
             '0826': '791 GB',
             '0926': '884 GB',
@@ -8626,6 +8749,325 @@
             } catch (e) {
                 setSyncStatus(`🔴 Could not delete activity — ${e.message}`, '#dc3545');
             }
+        }
+
+        // ===== 4G SIM register =============================================
+        // One row per SIM CARD, derived from /units. There is no /simcards node,
+        // deliberately: /units is already the single source for a serial and its
+        // fitment history, and a second home for the same cards would drift from it
+        // exactly the way the old duplicated status fields did.
+        //
+        // A card's state comes from its fitments, never from a stored status:
+        //   Unused   no fitment at all — a spare that has never been on an aircraft
+        //   Active   latest fitment is on_wing
+        //   Removed  latest fitment is removed; the aircraft reads "ex-ASV"
+        //
+        // Roaming is the one thing stored ON the card (`roaming`: global|local),
+        // because a spare with no aircraft still has a plan and
+        // /aircraft/{tail}/simRoaming cannot express that.
+        const SIM_LRU_IDS = ['sim', 'lf_sim'];
+        const SIM_ROAMING = [
+            { value: 'global', label: 'Global' },
+            { value: 'local',  label: 'Local' },
+        ];
+
+        let simEditMode = false;
+        let pendingSim = {};        // { unitId: { roaming, notes } }
+
+        // The latest fitment for a unit, by fitted date then logged order. "Latest"
+        // has to be resolved the same way hardwareFitment() does it, or a card could
+        // read Active here and Removed on the Hardware tab.
+        function simLatestFitment(unit) {
+            const fits = Object.entries((unit && unit.fitments) || {})
+                .map(([id, f]) => ({ id, ...f }));
+            if (!fits.length) return null;
+            fits.sort((a, b) => {
+                const ad = dateSortKey(toISODate(a.removedDate || a.fittedDate)) || '0';
+                const bd = dateSortKey(toISODate(b.removedDate || b.fittedDate)) || '0';
+                if (ad !== bd) return Number(ad) - Number(bd);
+                return String(a.loggedAt || '').localeCompare(String(b.loggedAt || ''));
+            });
+            return fits[fits.length - 1];
+        }
+
+        // Every SIM card in the register, shaped for the table.
+        function simCards() {
+            const byTail = {};
+            aircraftData.forEach(a => { byTail[a.id] = a; });
+
+            return Object.entries(unitsLive || {})
+                .filter(([, u]) => SIM_LRU_IDS.includes(u.lruId))
+                .map(([id, u]) => {
+                    const fit = simLatestFitment(u);
+                    const state = fit ? (fit.state || 'on_wing') : '';
+                    const status = !fit ? 'unused' : (state === 'removed' ? 'removed' : 'active');
+                    const tail = fit ? (fit.aircraft || '') : '';
+                    const air = byTail[tail] || {};
+                    const staged = pendingSim[id] || {};
+                    return {
+                        id,
+                        serial: u.serial || '',
+                        status,
+                        tail,
+                        // A removed card is still identified by where it came off.
+                        tailLabel: !tail ? '' : (status === 'removed' ? 'ex-' + tail : tail),
+                        type: air.type || '',
+                        fit: tail ? (isLinefit(air) ? 'linefit' : 'retrofit') : '',
+                        fittedDate: fit ? (fit.fittedDate || '') : '',
+                        removedDate: fit ? (fit.removedDate || '') : '',
+                        roaming: staged.roaming !== undefined ? staged.roaming : (u.roaming || ''),
+                        notes: staged.notes !== undefined ? staged.notes : (u.notes || ''),
+                    };
+                });
+        }
+
+        function simScope(status) {
+            return simCards().filter(c => c.status === status).length;
+        }
+
+        function renderSimWidgets() {
+            const strip = document.getElementById('simWidgets');
+            if (!strip) return;
+            const cards = simCards();
+            const total = cards.length;
+            const card = (key, label, n, cls) => `
+                <div class="media-widget ${cls}">
+                    <div class="media-widget-label">${label}</div>
+                    <div class="media-widget-count">${n}<span class="media-widget-total">/${total}</span></div>
+                    <div class="media-widget-bar"><div class="media-widget-fill" style="width:${total ? (n / total * 100) : 0}%"></div></div>
+                </div>`;
+            strip.innerHTML =
+                card('active',  'Installed', cards.filter(c => c.status === 'active').length,  'mw-latest') +
+                card('unused',  'Unused',    cards.filter(c => c.status === 'unused').length,  'mw-none') +
+                card('removed', 'Removed',   cards.filter(c => c.status === 'removed').length, 'mw-older');
+        }
+
+        const SIM_STATUS_LABEL = { active: 'ACTIVE', removed: 'REMOVED', unused: 'UNUSED' };
+
+        function populateSimTable() {
+            const tbody = document.getElementById('simTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const editing = simEditMode && canEdit();
+            const cards = simCards().sort((a, b) => a.serial.localeCompare(b.serial));
+
+            cards.forEach((c, idx) => {
+                const row = document.createElement('tr');
+                row.dataset.simstatus = c.status;
+                row.dataset.roaming = c.roaming || 'none';
+                row.dataset.type = c.type;
+                row.dataset.fit = c.fit;
+
+                const dateSort = dateSortKey(toISODate(c.fittedDate)) || '99999999';
+                const dateCell = c.fittedDate
+                    ? `<span class="fleet-date">${escAttr(c.fittedDate)}</span>`
+                    : '<span class="fleet-notset">—</span>';
+
+                const tailCell = c.tailLabel
+                    ? `<strong${c.status === 'removed' ? ' class="sim-ex"' : ''}>${escAttr(c.tailLabel)}</strong>`
+                    : '<span class="fleet-notset">Not fitted</span>';
+
+                const statusCell = `<span class="status-badge sim-${c.status}">${SIM_STATUS_LABEL[c.status]}</span>`;
+
+                const roamCell = editing
+                    ? `<select class="edit-select" data-sim="${escAttr(c.id)}" data-field="roaming" onchange="handleSimEdit(this)">
+                           <option value="" ${!c.roaming ? 'selected' : ''}>—</option>
+                           ${SIM_ROAMING.map(r => `<option value="${r.value}" ${c.roaming === r.value ? 'selected' : ''}>${r.label}</option>`).join('')}
+                       </select>`
+                    : (c.roaming
+                        ? `<span class="status-badge roam-${c.roaming}">${escAttr(c.roaming === 'global' ? 'GLOBAL' : 'LOCAL')}</span>`
+                        : '<span class="fleet-notset">Not set</span>');
+
+                const noteCell = editing
+                    ? `<input class="edit-text comment-input" value="${escAttr(c.notes)}" placeholder="Add a comment" data-sim="${escAttr(c.id)}" data-field="notes" onchange="handleSimEdit(this)">`
+                    : `<span class="comment-text">${c.notes ? escAttr(c.notes) : '—'}</span>`;
+
+                row.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td data-sort="${dateSort}">${dateCell}</td>
+                    <td data-sort="${escAttr(c.serial)}"><span class="hw-serial">${escAttr(c.serial)}</span></td>
+                    <td data-sort="${escAttr(c.tail || 'zzz')}">${tailCell}</td>
+                    <td data-sort="${escAttr(c.type)}">${c.type ? escAttr(TYPE_SHORT_LABEL[c.type] || c.type) : '—'}</td>
+                    <td data-sort="${escAttr(c.fit)}">${c.fit ? escAttr(c.fit === 'linefit' ? 'LINEFIT' : 'RETROFIT') : '—'}</td>
+                    <td data-sort="${escAttr(c.status)}">${statusCell}</td>
+                    <td data-sort="${escAttr(c.roaming)}">${roamCell}</td>
+                    <td class="col-comment" data-sort="${escAttr(c.notes)}">${noteCell}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            renderSimWidgets();
+            fbRender('sim');
+            syncTableFreeze();
+            applySimFilters();
+            // Oldest installation first until someone picks another column, re-applied
+            // on every rebuild — same reason as the other tables.
+            const ss = lastSort['simTable'] || SIM_DEFAULT_SORT;
+            lastSort['simTable'] = ss;
+            applyTableSort('simTable', ss.col, ss.dir);
+            updateSortIndicators('simTable');
+            updateSimEditUI();
+        }
+
+        function applySimFilters() {
+            document.querySelectorAll('#simTableBody tr').forEach(row => {
+                row.style.display = fbRowMatch('sim', row) ? '' : 'none';
+            });
+            renumberVisibleRows('simTable');
+            const shown = Array.from(document.querySelectorAll('#simTableBody tr'))
+                .filter(r => r.style.display !== 'none').length;
+            setText('simCount', `${shown} of ${simCards().length} SIM cards`);
+        }
+
+        function resetSimTable() {
+            fbClear('sim');
+            fbRender('sim');
+            delete lastSort['simTable'];
+            populateSimTable();
+        }
+
+        // ---- edit mode: staged, then one save, like every other table ----
+        function handleSimEdit(el) {
+            const id = el.dataset.sim;
+            const field = el.dataset.field;
+            const entry = pendingSim[id] || {};
+            entry[field] = (el.value || '').trim();
+            pendingSim[id] = entry;
+            setSyncStatus('🟡 SIM change staged — press Save', '#e0a800');
+        }
+
+        async function toggleSimEdit() {
+            if (simEditMode) { await commitSimChanges(); return; }
+            if (!canEdit()) { requireSignIn(); return; }
+            simEditMode = true;
+            pendingSim = {};
+            populateSimTable();
+        }
+
+        async function commitSimChanges() {
+            const ids = Object.keys(pendingSim);
+            if (!ids.length) { simEditMode = false; populateSimTable(); return; }
+            const token = await getIdToken();
+            if (!token) return;
+
+            // One multi-path PATCH, the shape every other save on the page uses.
+            const patch = {};
+            ids.forEach(id => {
+                const e = pendingSim[id];
+                if (e.roaming !== undefined) patch[`${id}/roaming`] = e.roaming || null;
+                if (e.notes !== undefined) patch[`${id}/notes`] = e.notes || null;
+            });
+
+            setSyncStatus('🟡 Saving SIM changes...', '#e0a800');
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify(patch),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                // Mirror locally so the table is right before the poll comes back.
+                ids.forEach(id => {
+                    const e = pendingSim[id];
+                    if (!unitsLive[id]) return;
+                    if (e.roaming !== undefined) {
+                        if (e.roaming) unitsLive[id].roaming = e.roaming; else delete unitsLive[id].roaming;
+                    }
+                    if (e.notes !== undefined) {
+                        if (e.notes) unitsLive[id].notes = e.notes; else delete unitsLive[id].notes;
+                    }
+                });
+                pendingSim = {};
+                simEditMode = false;
+                populateSimTable();
+                renderHardwarePage();
+                renderSerialsPage();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not save SIM changes — ${e.message}`, '#dc3545');
+            }
+        }
+
+        function updateSimEditUI() {
+            const addBtn = document.getElementById('simAddBtn');
+            const editing = simEditMode && canEdit();
+            applyEditButton('simEditBtn', editing, 'Edit', '💾 Save');
+            if (addBtn) addBtn.style.display = canEdit() ? '' : 'none';
+        }
+
+        function renderSimPage() {
+            populateSimTable();
+        }
+
+        // ---- Add SIM: a spare with no fitment ----
+        // A card entered here has never been on an aircraft, so it gets no fitment at
+        // all — which is exactly what makes it read as Unused. Putting it on an
+        // aircraft is a fitment, and that is Record Installed's job on the Serials tab.
+        function openAddSim() {
+            if (!canEdit()) { requireSignIn(); return; }
+            const overlay = document.getElementById('addSimOverlay');
+            if (!overlay) return;
+            document.getElementById('addSimSerial').value = '';
+            document.getElementById('addSimRoaming').value = '';
+            document.getElementById('addSimNotes').value = '';
+            const err = document.getElementById('addSimError');
+            err.textContent = ''; err.style.display = 'none';
+            overlay.style.display = 'flex';
+            document.getElementById('addSimSerial').focus();
+        }
+
+        function initAddSimModal() {
+            const overlay = document.getElementById('addSimOverlay');
+            if (!overlay) return;
+            const err = document.getElementById('addSimError');
+            const close = () => { overlay.style.display = 'none'; };
+            document.getElementById('addSimCancel').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+            document.getElementById('addSimSave').addEventListener('click', async () => {
+                const serial = (document.getElementById('addSimSerial').value || '').trim();
+                const roaming = document.getElementById('addSimRoaming').value;
+                const notes = (document.getElementById('addSimNotes').value || '').trim();
+
+                if (!serial) {
+                    err.textContent = 'A SIM number is required.';
+                    err.style.display = 'block'; return;
+                }
+                // One serial is one physical card. A duplicate would put the same card
+                // in the register twice with two different histories.
+                const clash = Object.values(unitsLive || {})
+                    .find(u => SIM_LRU_IDS.includes(u.lruId) && u.serial === serial);
+                if (clash) {
+                    err.textContent = `${serial} is already in the register.`;
+                    err.style.display = 'block'; return;
+                }
+
+                const token = await getIdToken();
+                if (!token) return;
+                const btn = document.getElementById('addSimSave');
+                btn.disabled = true; btn.textContent = 'Saving...';
+                const id = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                const entry = { lruId: 'sim', serial, addedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z') };
+                if (roaming) entry.roaming = roaming;
+                if (notes) entry.notes = notes;
+                try {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units/${id}.json?auth=${token}`, {
+                        method: 'PUT', body: JSON.stringify(entry),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                    unitsLive[id] = entry;
+                    close();
+                    populateSimTable();
+                    renderHardwarePage();
+                    renderSerialsPage();
+                    setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                } catch (e) {
+                    err.textContent = `Could not add SIM — ${e.message}`;
+                    err.style.display = 'block';
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Add SIM';
+                }
+            });
         }
 
         // ===== Hardware page =====
@@ -11423,6 +11865,7 @@
             initSysBar();
             initScheduleAddModal();
             initAddActivityModal();
+            initAddSimModal();
             initAddIssueModal();
             initShopReportModal();
             initBaselineModal();

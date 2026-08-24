@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.40.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.41.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -812,7 +812,50 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
 ---
 
-## Tabs (8)
+## Tabs (9)
+
+Public order: **Overview, Software, Media, Fleet**. Everything else is behind
+sign-in: **4G SIM, Activity, Hardware, Serials, Schedule**.
+
+**Schedule became restricted on 2026-08-25** — it is forward-looking work planning and
+the user does not want it public. **4G SIM is restricted while it is being settled**
+and is meant to go public once it is signed off; that is a one-word change to
+`RESTRICTED_TABS`.
+
+### 4G SIM — the SIM card register
+
+One row per SIM **card**, derived from `/units` where `lruId` is `sim` or `lf_sim`.
+**There is no `/simcards` node, deliberately** — `/units` is already the single source
+for a serial and its fitment history, and a second home for the same cards would drift
+from it exactly the way the old duplicated status fields did.
+
+Columns: `# | Installation Date | SIM Card # | Aircraft | Type | Fit | Status |
+Roaming | Comments`. Installation Date is column 2 and the default sort, oldest first,
+like the other tables; every column sorts, so the register can be read by card or by
+aircraft.
+
+**Status is derived from fitments, never stored:**
+
+| status | condition | Aircraft column |
+|---|---|---|
+| Unused | no fitment at all — a spare that has never flown | *Not fitted* |
+| Active | latest fitment is `on_wing` | the registration |
+| Removed | latest fitment is `removed` | **`ex-ASV`** — where it came off |
+
+⚠️ **Roaming lives on the CARD** (`/units/{id}/roaming`, `global` \| `local`), not on
+the aircraft. A spare with no aircraft still has a plan, which
+`/aircraft/{tail}/simRoaming` cannot express. That field is **superseded**: it holds
+one stale record (AQJ `active`) and nothing reads it for the SIM page. It is left in
+place rather than deleted — clearing it is a data decision, not a side effect of this
+change.
+
+**Edit mode covers Roaming and Comments only.** Fitting and removing a card are
+*fitment* writes, and Record Installed / Record Removed on the Serials tab already own
+those — doing them from here as well would be a second write path to the same history.
+**Add SIM** creates a spare with **no fitment**, which is exactly what makes it read as
+Unused.
+
+Widgets: Installed / Unused / Removed, counted from the same derivation.
 
 **Activity, Hardware and Serials are shown only to a signed-in editor.**
 `RESTRICTED_TABS` lists them, `canViewRestricted()` is the test — currently just
@@ -1527,6 +1570,20 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.41.0 — 4G SIM register, and Schedule goes private
+New **4G SIM** tab: one row per SIM card with its aircraft, fit, status, roaming plan
+and comments, three widgets (Installed / Unused / Removed), the shared filter bar, the
+frozen head and Add SIM. It reads `/units` — the 47 cards already in the register
+appeared with nothing to import — and derives status from fitments, so a removed card
+reads `ex-ASV` rather than claiming an aircraft it is no longer on.
+
+Roaming moved onto the card (`/units/{id}/roaming`), because a spare with no aircraft
+still has a plan. Rules deployed ahead of the page, as a new field requires.
+
+Tab order is now Overview, Software, Media, Fleet, then the signed-in tabs. **Schedule
+joined them** — it is work planning and not for public view. 4G SIM is restricted too
+while it is being settled.
 
 ### v2.40.0 — Overview filters and calendar stay put
 The kind filter, the sort and the calendar strip now pin under the tab strip and the
