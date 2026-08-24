@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.38.1, 2026-08-24)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.39.0, 2026-08-24)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -513,6 +513,7 @@ single shape (`{ iso, kind, tail, type, location, title, sub }`):
 
 | kind | source | date it uses |
 |---|---|---|
+| **Activation** | `/aircraft` — every Active aircraft that has one. Title is `Entered Service` | `activatedDate` |
 | Software | `/aircraft` completion fields — `Middleware {swVersion}` for retrofit, `SBC Configuration A.13` for the linefit pair when `beamcfgStatus === 'done'` | `completionDate` |
 | Media | `/aircraft/{tail}/media` | `loadedDateUTC` |
 | Maintenance | `/activities` whose category maps to `maintenance` | `date` |
@@ -530,9 +531,32 @@ The kind filter drives the day counts as well as the rows, so a tile reading
 "2" under Hardware means two hardware activities that day, not two of anything
 else. Default sort is **newest first**. The title carries no count.
 
-Filter pills are **All / Software / Hardware / Media**. There is no Maintenance
-pill for now — maintenance-kind activities still appear under All, they just have
-no filter of their own until the categories settle.
+Filter pills are **All / Activation / Software / Hardware / Media**. There is no
+Maintenance pill for now — maintenance-kind activities still appear under All, they
+just have no filter of their own until the categories settle.
+
+### Activation is a milestone, and it is DERIVED
+
+Entering service is the event the other three kinds are work towards, so it renders
+differently: the row carries `.tl-milestone` — a Saudia-green left accent, a tinted
+wash, the registration and title in green, and a ✈ mark.
+
+⚠️ **The marker is on the ROW, not only the pill.** A kind pill is deliberately hidden
+under a kind filter (it would only restate the filter), so a milestone that relied on
+its pill would stop looking like one exactly when someone filtered to milestones.
+
+**Nothing was written and nothing needed backfilling.** `activatedDate` has been on
+`/aircraft` since the Fleet restructure, so all 42 activations — back to 01-Oct-2024 —
+appeared the moment the source was added, and a date corrected on the Fleet or Activity
+tab corrects the Timeline with it. Storing these as `/activities` records would have
+duplicated a fact the roster already holds and let the two drift. **If a fourth
+milestone is ever wanted, derive it the same way — do not write records for it.**
+
+Because `TIMELINE_KINDS` is the one definition, adding the entry gave the pill row
+*and* the collapsed mobile dropdown the new option with no other wiring.
+
+Note the ✈ is deliberately **not rotated**: fonts orient that glyph differently, so a
+fixed rotation points it sensibly in one and sideways in the next.
 
 **Every month in the calendar strip gets a tile**, the current one included, so the
 strip is navigable by month and this month's total reads first. The current month
@@ -1480,6 +1504,16 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.39.0 — Activation is a Timeline milestone
+Putting an aircraft into service is the milestone the whole programme works towards and
+it was not on the Overview at all. It is now a fourth Timeline kind with its own
+Activation filter pill, and its rows stand out — green accent, tinted wash, ✈ mark —
+rather than reading as one more line of work.
+
+Derived from `activatedDate`, not stored: all 42 activations back to October 2024
+appeared at once with nothing written and nothing to backfill, and a corrected date
+corrects the Timeline with it.
 
 ### v2.38.1 — Frozen head on a phone too
 v2.38.0 froze the head only where the table fits, which left a phone — the case that

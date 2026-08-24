@@ -2013,6 +2013,36 @@
         .tl-kind-maintenance { background: #fdf1e3; color: #8a5312; border-color: #f6ddc0; }
         .tl-kind-hardware    { background: #f1ecfa; color: #55408f; border-color: #ddd3f0; }
 
+        /* Activation is the milestone the other three kinds are work towards, so it
+           takes the Saudia green rather than another pastel — and it is the one kind
+           that is also marked on the ROW, not just with a pill, because a pill is
+           hidden under a kind filter and this should read as an event whatever is
+           being filtered. */
+        .tl-kind-activation  { background: #e2f2e9; color: #0a5c34; border-color: #c3e3d1; }
+
+        .tl-milestone {
+            background: linear-gradient(90deg, rgba(10, 92, 52, 0.055), rgba(10, 92, 52, 0) 60%);
+            /* Sits inside the row's own left padding so nothing shifts sideways. */
+            box-shadow: inset 3px 0 0 0 #0a5c34;
+        }
+
+        .tl-milestone .tl-reg { color: #0a5c34; }
+
+        .tl-milestone .tl-title {
+            color: #0a5c34;
+            font-weight: 700;
+        }
+
+        .tl-milestone-mark {
+            flex: 0 0 auto;
+            font-size: 13px;
+            line-height: 1;
+            color: #0a5c34;
+            /* Not rotated: fonts orient this glyph differently, so a fixed rotation
+               points it somewhere sensible in one font and sideways in the next. */
+        }
+
+
         /* The activity's own words, after the pills. Muted so the registration still
            leads the row. */
         .tl-title {
@@ -5364,10 +5394,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.38.1';
-        const APP_BUILD    = '2026.08.24.09';
+        const APP_VERSION  = '2.39.0';
+        const APP_BUILD    = '2026.08.24.19';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-24T09:01:32Z';
+        const APP_DEPLOYED = '2026-08-24T19:27:26Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -10501,7 +10531,9 @@
         // No Maintenance pill for now — maintenance-kind activities still appear under
         // All, they just have no filter of their own until the categories settle.
         const TIMELINE_KINDS = [
-            { value: '',         label: 'All' },
+            { value: '',           label: 'All' },
+            // First after All: it is the milestone the others are work towards.
+            { value: 'activation', label: 'Activation' },
             { value: 'software', label: 'Software' },
             { value: 'hardware', label: 'Hardware' },
             { value: 'media',    label: 'Media' },
@@ -10585,6 +10617,19 @@
                                    location: a.completionLocation || '',
                                    title: `Middleware ${swVersionOf(a)}`, sub: a.note || '' });
                     }
+                }
+
+                // --- Activation: the day the aircraft entered service ---
+                // Derived from activatedDate, exactly as Software and Media are derived
+                // from their own dates. Nothing is written and nothing needed
+                // backfilling: every aircraft that has ever been activated already
+                // carries the date, so the whole history appears at once — and a date
+                // corrected on the Fleet or Activity tab corrects the Timeline with it.
+                const actIso = toISODate(a.activatedDate);
+                if (actIso) {
+                    out.push({ iso: actIso, kind: 'activation', tail: a.id, type: a.type,
+                               location: aircraftLocationOf(a),
+                               title: 'Entered Service', sub: '' });
                 }
 
                 // --- Media: the actual loaded date from the Media tab ---
@@ -10752,8 +10797,13 @@
                 const locColor = LOCATION_PILL_COLORS[x.location] || NEUTRAL_PILL;
                 const typeColor = TYPE_PILL_COLORS[x.type] || NEUTRAL_PILL;
                 const typeLabel = TYPE_SHORT_LABEL[x.type] || x.type;
-                return `<li>
+                // An activation is a milestone, not a day's work, so it is marked on
+                // the row itself rather than relying on a pill that a kind filter
+                // hides. The ✈ carries it when the row is read at a glance.
+                const milestone = x.kind === 'activation';
+                return `<li${milestone ? ' class="tl-milestone"' : ''}>
                     <div class="tl-row">
+                        ${milestone ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>' : ''}
                         <span class="tl-reg">${escAttr(x.tail)}</span>
                         ${typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : ''}
                         ${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}
