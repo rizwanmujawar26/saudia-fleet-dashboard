@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.37.0, 2026-08-24)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.38.0, 2026-08-24)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1133,6 +1133,36 @@ opaque base the page showed through the strip once it was pinned.
 `initStickyHeader()` otherwise only toggles `.is-stuck` for the shadow, and only
 when the state changes — the pinning itself is pure CSS.
 
+### Three pinned layers, and a frozen table head
+
+The stack is **header → tab strip → filter bar → table head**, each pinned under the
+one above. Every offset below the first is a SUM, so `publishStickyHeights()` measures
+and publishes `--header-h`, `--tabs-h` and `--filterbar-h`, and `--sticky-top` adds the
+first two. **It runs on every tab switch as well as on resize**: at load the Overview
+tab is active and every `.filterbar` is `display:none`, so a measurement then finds
+nothing to measure.
+
+⚠️ **The table head cannot simply be `position: sticky`.** `.table-scroll-wrapper`
+carries `overflow-x: auto` for wide tables, and CSS turns the *other* axis `auto` with
+it — so the wrapper, not the viewport, becomes the scrollport a sticky `thead` anchors
+to, and the head just scrolls away with the page. `syncTableFreeze()` measures each
+table against its wrapper and sets `.is-overflowing`; a table that **fits** gets
+`overflow: visible` and a frozen head, one that does not keeps its horizontal scroll
+and an ordinary head. `.table-freeze` marks the seven page-level tables — the Installed
+Equipment and Hardware fitment tables sit inside detail panels and are left alone.
+
+⚠️ **A capped, internally-scrolling pane was tried first and rejected.** Giving the
+wrapper a `max-height` does make the head stick — but the page can still scroll past
+the pinned filter bar, dragging the pane and its head up behind the header, and making
+the pane sticky as well only moved the problem to the end of the page, where it is
+released by its containing block and the head disappears under the filter bar. That is
+the exact failure the freeze was meant to fix. Page-level stickiness keeps one scroll
+for the document, and the head releases naturally when the table ends and the next
+section begins.
+
+**A sticky `th` drops out of border collapsing**, so rows show through a hairline at
+its foot. The rule draws that line with a `::after` strip instead.
+
 ---
 
 ## The `#` column counts visible rows
@@ -1433,6 +1463,17 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.38.0 — The filter bar and table head stay put
+Scrolling a long table lost the column headers. The filter bar now pins under the tab
+strip and the table head pins under the filter bar, so the headers are readable at the
+last row as easily as the first. Three heights are measured and published rather than
+assumed, because each layer's offset is the sum of the ones above it.
+
+The head can only pin while no ancestor is a scroll container, and the table wrapper is
+one whenever `overflow-x: auto` applies. `syncTableFreeze()` measures each table and
+drops the overflow only where the table actually fits — so a wide table on a phone
+keeps its horizontal scroll and an ordinary head instead of getting a broken one.
 
 ### v2.37.0 — Activities can be corrected, not just deleted
 An activity was write-once: the only way to fix a typo was to delete it and retype the

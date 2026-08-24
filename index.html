@@ -1474,6 +1474,68 @@
             margin-top: 0;
         }
 
+        /* ===== Frozen filter bar and table head ==========================
+           The sticky stack is header -> tabs -> filter bar, and then the
+           table's own head inside the table's pane. Each offset is the sum
+           of the heights above it, published by initStickyHeader().
+
+           ⚠️ The table head CANNOT pin to the page. `.table-scroll-wrapper`
+           carries `overflow-x: auto` for wide tables, and CSS makes the other
+           axis `auto` with it — so the wrapper, not the viewport, is the
+           vertical scrollport a sticky `thead` would anchor to, and it would
+           simply scroll away with the page. Capping the wrapper's height is
+           what turns it into a real vertical scroller, which is what gives
+           the head something to stick to. Rows scroll inside it; the filter
+           bar and the head above them do not move. */
+        :root {
+            --sticky-top: calc(var(--header-h, 130px) + var(--tabs-h, 50px));
+        }
+
+        .filterbar {
+            position: sticky;
+            top: var(--sticky-top);
+            /* Under the tab strip (400) so the tabs cover it, over the table. */
+            z-index: 300;
+        }
+
+        /* Only the page-level data tables. The Installed Equipment and Hardware
+           fitment tables live inside detail panels and are left alone. */
+
+        /* The head pins to the PAGE, under the filter bar — one scroll for the
+           whole document, which is what a reader expects and what lets the head
+           release naturally when the table ends and the next section begins.
+
+           ⚠️ That only works while no ancestor is a scroll container, and
+           `.table-scroll-wrapper` carries `overflow-x: auto` for wide tables —
+           CSS turns the other axis `auto` with it, making the wrapper the
+           scrollport a sticky `thead` would anchor to instead of the viewport.
+           So the overflow is applied ONLY when the table really is too wide:
+           syncTableFreeze() measures each table and sets .is-overflowing.
+           A table that fits gets `overflow: visible` and a frozen head. */
+        .table-freeze:not(.is-overflowing) {
+            overflow: visible;
+        }
+
+        .table-freeze:not(.is-overflowing) thead th {
+            position: sticky;
+            top: calc(var(--sticky-top) + var(--filterbar-h, 52px));
+            /* Under the filter bar it tucks beneath, above its own rows. */
+            z-index: 200;
+        }
+
+        /* A sticky th keeps its background but drops out of border collapsing,
+           so rows would show through a hairline at its foot. */
+        .table-freeze:not(.is-overflowing) thead th::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            height: 1px;
+            background: #0a5c34;
+        }
+
+
         @media (max-width: 900px) {
             .table-scroll-wrapper .aircraft-table {
                 min-width: 900px;
@@ -3971,7 +4033,7 @@
                     </div>
                 </div>
 
-                <div class="table-scroll-wrapper">
+                <div class="table-scroll-wrapper table-freeze">
                     <table class="aircraft-table" id="aircraftTable">
                         <thead>
                             <tr>
@@ -3994,7 +4056,7 @@
                 </div>
 
                 <h3 class="section-heading">HBC+ Aircraft</h3>
-                <div class="table-scroll-wrapper">
+                <div class="table-scroll-wrapper table-freeze">
                     <table class="aircraft-table hbc-table" id="hbcTable">
                         <thead>
                             <tr>
@@ -4028,7 +4090,7 @@
                     </div>
                 </div>
 
-                <div class="table-scroll-wrapper">
+                <div class="table-scroll-wrapper table-freeze">
                     <table class="aircraft-table" id="mediaTable">
                         <thead>
                             <tr>
@@ -4148,7 +4210,7 @@
                     </div>
                 </div>
 
-                <div class="table-scroll-wrapper">
+                <div class="table-scroll-wrapper table-freeze">
                     <table id="srTable">
                         <thead><tr>
                             <th>Equipment</th><th>Serial</th><th>Aircraft</th><th>Pos</th>
@@ -4187,7 +4249,7 @@
                             ✈️ Jeddah Station (JED)
                             <span class="station-badge">UTC/Zulu</span>
                         </div>
-                        <div class="table-scroll-wrapper">
+                        <div class="table-scroll-wrapper table-freeze">
                         <table class="aircraft-table sortable-table">
                             <thead>
                                 <tr>
@@ -4212,7 +4274,7 @@
                             ✈️ Riyadh Station (RUH)
                             <span class="station-badge">UTC/Zulu</span>
                         </div>
-                        <div class="table-scroll-wrapper">
+                        <div class="table-scroll-wrapper table-freeze">
                         <table class="aircraft-table sortable-table">
                             <thead>
                                 <tr>
@@ -4250,7 +4312,7 @@
                     </div>
                 </div>
 
-                <div class="table-scroll-wrapper">
+                <div class="table-scroll-wrapper table-freeze">
                     <table class="aircraft-table" id="fleetTable">
                         <thead>
                             <tr>
@@ -5278,10 +5340,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.37.0';
-        const APP_BUILD    = '2026.08.24.07';
+        const APP_VERSION  = '2.38.0';
+        const APP_BUILD    = '2026.08.24.08';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-24T07:23:12Z';
+        const APP_DEPLOYED = '2026-08-24T08:19:12Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6128,6 +6190,12 @@
                 }
             }
 
+            // The newly shown tab's filter bar is the one the head pins beneath, and
+            // it had no height while the tab was hidden. The tables on it could not be
+            // measured for overflow while hidden either.
+            publishStickyHeights();
+            syncTableFreeze();
+
             // Populate tables if needed
             if (tabName === 'fleet') {
                 populateFleetTable();
@@ -6877,6 +6945,7 @@
                 tbody.appendChild(row);
             });
 
+            syncTableFreeze();
             applyAircraftFilters();
             // Oldest installation first until someone picks another column, and
             // re-applied on every rebuild — this runs again on every live update,
@@ -7233,6 +7302,7 @@
 
             renderFleetWidgets();
             fbRender('fleet');
+            syncTableFreeze();
             applyFleetFilters();
             // Oldest activation first until someone picks another column, and re-applied
             // on every rebuild — this runs again on every live update, which would
@@ -7543,6 +7613,7 @@
 
             renderMediaWidgets(latest);
             fbRender('media');
+            syncTableFreeze();
             applyMediaFilters();
             // Oldest load first until someone picks another column, re-applied on every
             // rebuild — same reason as the Software and Fleet tables: this runs again on
@@ -11047,6 +11118,51 @@
             fit(box.querySelector('p'), HEADER_SUB.min, subMax);
         }
 
+        // Three layers pin, each under the one above: header -> tabs -> filter bar,
+        // and then the table's own head inside its pane. Every offset below the first
+        // is a SUM, so each layer's real height has to be published rather than
+        // assumed — all three differ by breakpoint, and the header differs again when
+        // its title wraps.
+        //
+        // Called on resize AND on every tab switch: at load the Overview tab is
+        // active and every .filterbar is display:none, so a measurement then finds
+        // nothing to measure.
+        function publishStickyHeights() {
+            const root = document.documentElement.style;
+            const header = document.querySelector('.header');
+            const tabs = document.querySelector('.tabs');
+            if (header) root.setProperty('--header-h', Math.round(header.getBoundingClientRect().height) + 'px');
+            if (tabs) root.setProperty('--tabs-h', Math.round(tabs.getBoundingClientRect().height) + 'px');
+            // Every filter bar is one row and the same height, so whichever one is
+            // actually laid out answers for all of them. Overview has none at all, so
+            // the last known value stands rather than collapsing the table pane to
+            // nothing.
+            const bar = Array.from(document.querySelectorAll('.filterbar'))
+                .find(b => b.getBoundingClientRect().height > 0);
+            if (bar) root.setProperty('--filterbar-h', Math.round(bar.getBoundingClientRect().height) + 'px');
+        }
+
+        // A frozen table head needs the wrapper NOT to be a scroll container, and a
+        // wrapper is only allowed to stop being one when its table actually fits.
+        // Measured rather than guessed at a breakpoint: whether a table overflows
+        // depends on its own columns and content, not on the viewport alone.
+        //
+        // Called after every table render and on resize. The class is toggled rather
+        // than the style set directly so the CSS above stays the single description
+        // of what each state looks like.
+        function syncTableFreeze() {
+            document.querySelectorAll('.table-freeze').forEach(w => {
+                const t = w.querySelector('table');
+                if (!t) return;
+                // Measure against the wrapper's own box. Comparing to the table's
+                // offsetWidth would read 0 on a hidden tab and flip every table on
+                // that tab to frozen while it cannot be seen — harmless, but it would
+                // then be wrong for one paint after the tab opens.
+                if (!w.clientWidth) return;
+                w.classList.toggle('is-overflowing', t.scrollWidth > w.clientWidth + 1);
+            });
+        }
+
         function initStickyHeader() {
             const header = document.querySelector('.header');
             if (!header) return;
@@ -11054,8 +11170,12 @@
             // The tab strip pins to the bottom of the header, so it needs the header's
             // real height — which differs by breakpoint and again when the title wraps.
             // Observing the element beats hardcoding a number per breakpoint.
-            const publishHeight = () => document.documentElement.style.setProperty(
-                '--header-h', Math.round(header.getBoundingClientRect().height) + 'px');
+            // Three layers pin, each under the one above: header -> tabs -> filter
+            // bar, and then the table's own head inside its pane. Every offset below
+            // the first is a SUM, so each layer's real height has to be published
+            // rather than assumed — all three differ by breakpoint, and the header
+            // differs again when its title wraps.
+            const publishHeight = publishStickyHeights;
 
             // Fit before publishing: the fit changes the header's height, so measuring
             // first would publish a height that is about to be wrong.
@@ -11068,6 +11188,7 @@
             // does if its height happens not to change — a rotation being the obvious
             // case. Orientation and font loading both move the answer.
             window.addEventListener('resize', remeasure);
+            window.addEventListener('resize', syncTableFreeze);
             window.addEventListener('orientationchange', () => fitHeaderTitles(true));
             if (document.fonts && document.fonts.ready) {
                 document.fonts.ready.then(() => fitHeaderTitles(true));
