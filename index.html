@@ -2319,7 +2319,30 @@
            different axis, so it takes blue/slate rather than another green. */
         .status-badge.sim-active  { background: #e4f3ea; color: #0a5c34; }
         .status-badge.sim-unused  { background: #eef1f3; color: #6b747c; }
-        .status-badge.sim-removed { background: #fdecee; color: #a52834; }
+        .status-badge.sim-removed { background: #eef1f3; color: #6b747c; }
+        .status-badge.sim-fault   { background: #fdecee; color: #a52834; }
+
+        /* A closed span. Muted and struck through with a border so it reads as a
+           total that has stopped, not a figure still counting up. */
+        .age-pill.age-pill-closed {
+            background: rgba(138, 90, 18, 0.08);
+            border-color: rgba(138, 90, 18, 0.18);
+            color: #8a5a12;
+        }
+
+        /* Stands in for a removal date that does not exist yet. */
+        .sim-onwing {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            background: #e4f3ea;
+            color: #0a5c34;
+            border: 1px solid #c9e6d5;
+        }
         .status-badge.roam-global { background: #e6f0fb; color: #1c5b96; }
         .status-badge.roam-local  { background: #f1f3f5; color: #55606a; }
 
@@ -5517,10 +5540,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.43.0';
-        const APP_BUILD    = '2026.08.24.22';
+        const APP_VERSION  = '2.44.0';
+        const APP_BUILD    = '2026.08.24.23';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-24T22:27:13Z';
+        const APP_DEPLOYED = '2026-08-24T23:10:55Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -7337,21 +7360,38 @@
         // Returns '' when there is no date, or the date is in the future — nothing
         // sensible to say in either case, and a pill reading "-3d" would be noise.
         function activationAge(displayDate) {
-            const iso = toISODate(displayDate);
-            if (!iso) return '';
-            const from = new Date(iso + 'T00:00:00Z');
-            if (isNaN(from)) return '';
-            const now = new Date();
-            const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-            if (from > today) return '';
+            return dateSpan(displayDate, '');
+        }
 
-            let years = today.getUTCFullYear() - from.getUTCFullYear();
+        // The same calendar-aware count, but between any two dates. `to` blank means
+        // "until today", which is what an open-ended age is. A closed span — a SIM
+        // that came off — is a fixed number that will never change again, and the
+        // caller styles it differently for exactly that reason.
+        function dateSpan(fromDisplay, toDisplay) {
+            const fromIso = toISODate(fromDisplay);
+            if (!fromIso) return '';
+            const from = new Date(fromIso + 'T00:00:00Z');
+            if (isNaN(from)) return '';
+
+            let to;
+            if (toDisplay) {
+                const toIso = toISODate(toDisplay);
+                if (!toIso) return '';
+                to = new Date(toIso + 'T00:00:00Z');
+                if (isNaN(to)) return '';
+            } else {
+                const now = new Date();
+                to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+            }
+            if (from > to) return '';
+
+            let years = to.getUTCFullYear() - from.getUTCFullYear();
             const anniversary = new Date(Date.UTC(from.getUTCFullYear() + years, from.getUTCMonth(), from.getUTCDate()));
-            if (anniversary > today) {
+            if (anniversary > to) {
                 years -= 1;
                 anniversary.setUTCFullYear(anniversary.getUTCFullYear() - 1);
             }
-            const days = Math.round((today - anniversary) / 86400000);
+            const days = Math.round((to - anniversary) / 86400000);
             return years > 0 ? `${years}y ${days}d` : `${days}d`;
         }
 
@@ -7849,9 +7889,6 @@
         // carry a 14-nine sort key, so they land at the end.
         const MEDIA_DEFAULT_SORT = { col: 1, dir: 1 };
 
-        // The SIM register opens on Installation Date, oldest first, like the other
-        // three tables. Unused cards have no date and sort to the end on 99999999.
-        const SIM_DEFAULT_SORT = { col: 1, dir: 1 };
 
         const MEDIA_CYCLE_SIZES = {
             '0826': '791 GB',
@@ -8794,9 +8831,22 @@
         // not something chosen for it.
         const SIM_STATUSES = [
             { value: 'active',  label: 'Active',  badge: 'ACTIVE' },
+            { value: 'fault',   label: 'Fault',   badge: 'FAULT' },
             { value: 'unused',  label: 'Spare',   badge: 'SPARE' },
             { value: 'removed', label: 'Removed', badge: 'REMOVED' },
         ];
+
+        // The order the table opens in: what is flying, then what needs attention,
+        // then what is available, then history. Within each, oldest first.
+        const SIM_STATUS_RANK = { active: 0, fault: 1, unused: 2, removed: 3 };
+
+        // 18 digits is unreadable as one run. Grouped in sixes it can be checked
+        // against a physical card without losing your place. Display only — the
+        // stored serial, the sort key and the duplicate check all use the raw value.
+        function formatSimSerial(v) {
+            const raw = String(v || '');
+            return /^[0-9]+$/.test(raw) ? raw.replace(/(.{6})(?=.)/g, '$1 ') : raw;
+        }
 
         let simEditMode = false;
         let pendingSim = {};        // { unitId: { roaming, notes } }
@@ -8828,7 +8878,14 @@
                     const fit = simLatestFitment(u);
                     const state = fit ? (fit.state || 'on_wing') : '';
                     const staged0 = pendingSim[id] || {};
-                    const status = !fit ? 'unused' : (state === 'removed' ? 'removed' : 'active');
+                    const condition = staged0.condition !== undefined
+                        ? staged0.condition : (fit ? (fit.condition || '') : '');
+                    // Removed wins over a fault — a card that is off the aircraft is
+                    // no longer a fault to act on, it is history.
+                    const status = !fit ? 'unused'
+                        : state === 'removed' ? 'removed'
+                        : condition === 'fault' ? 'fault'
+                        : 'active';
                     const tail = fit ? (fit.aircraft || '') : '';
                     const air = byTail[tail] || {};
                     const staged = staged0;
@@ -8873,12 +8930,15 @@
                 </div>`;
             };
 
-            // Active first — the cards actually flying — then what is in hand, then
-            // what came off. The three sum to the register.
+            // Active, then the one that needs action, then what is in hand, then
+            // history. Fault takes the alert red and Removed steps back to grey: a
+            // removed card is settled, a faulty one is a job. The four sum to the
+            // register, so no card is counted nowhere.
             strip.innerHTML =
                 card('Active Cards', n('active'), 'latest') +
+                card('Fault', n('fault'), 'alert') +
                 card('Spares in Hand', n('unused'), 'previous') +
-                card('Removed', n('removed'), 'alert');
+                card('Removed', n('removed'), 'no_media');
         }
 
         function simStatusBadge(v) {
@@ -8891,7 +8951,17 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             const editing = simEditMode && canEdit();
-            const cards = simCards().sort((a, b) => a.serial.localeCompare(b.serial));
+            // Active first, then Fault, Spare, Removed; oldest install date within
+            // each. applyTableSort() sorts on ONE column, so a two-key default has to
+            // be the build order — a click on any header then takes over from here.
+            const cards = simCards().sort((a, b) => {
+                const r = (SIM_STATUS_RANK[a.status] ?? 9) - (SIM_STATUS_RANK[b.status] ?? 9);
+                if (r) return r;
+                const ad = Number(dateSortKey(toISODate(a.fittedDate)) || '99999999');
+                const bd = Number(dateSortKey(toISODate(b.fittedDate)) || '99999999');
+                if (ad !== bd) return ad - bd;
+                return a.serial.localeCompare(b.serial);
+            });
 
             cards.forEach((c, idx) => {
                 const row = document.createElement('tr');
@@ -8902,12 +8972,26 @@
                 // Dates belong to the FITMENT, so a spare with no fitment has nowhere
                 // to put one. The inputs say so rather than silently discarding it.
                 const hasFit = !!c.fitmentId;
-                // `age` only on the installation date: a pill beside a removal date
-                // would count days since the card came OFF, which is not a service life.
-                const dateCell = (field, value, title, age) => {
+                // The pill on the installation date measures the card's time in
+                // service. While it is on wing that is open-ended and counts up; once
+                // there is a removal date it is a CLOSED span — install to removal, a
+                // number that will never change again — so it is styled differently to
+                // say so rather than looking like a figure that is still moving.
+                const closed = !!c.removedDate;
+                const servicePill = c.fittedDate
+                    ? dateSpan(c.fittedDate, c.removedDate || '')
+                    : '';
+                const dateCell = (field, value, title, pillText, pillClass, pillTitle) => {
                     if (!editing) {
-                        if (!value) return '<span class="fleet-notset">—</span>';
-                        const pill = age ? `<span class="age-pill" title="Time since installation">${age}</span>` : '';
+                        if (!value) {
+                            // No removal date on a fitted card means it is still on the
+                            // aircraft — worth saying outright rather than an em dash.
+                            return field === 'removedDate' && hasFit && c.status !== 'removed'
+                                ? '<span class="sim-onwing">On-Wing</span>'
+                                : '<span class="fleet-notset">—</span>';
+                        }
+                        const pill = pillText
+                            ? `<span class="age-pill ${pillClass || ''}" title="${escAttr(pillTitle || '')}">${pillText}</span>` : '';
                         return `<span class="fleet-date">${escAttr(value)}</span>${pill}`;
                     }
                     if (!hasFit) {
@@ -8928,7 +9012,7 @@
                 // fitment", so it is what an unfitted card IS rather than something
                 // chosen for it — and a fitted card cannot go back to it without
                 // deleting its own history.
-                const allowed = hasFit ? ['active', 'removed'] : ['unused'];
+                const allowed = hasFit ? ['active', 'fault', 'removed'] : ['unused'];
                 const statusCell = (editing && hasFit)
                     ? `<select class="edit-select" data-sim="${escAttr(c.id)}" data-field="status" onchange="handleSimEdit(this)">
                            ${SIM_STATUSES.filter(x => allowed.includes(x.value))
@@ -8951,13 +9035,15 @@
 
                 row.innerHTML = `
                     <td>${idx + 1}</td>
-                    <td data-sort="${fitSort}">${dateCell('fittedDate', c.fittedDate, 'installation date', activationAge(c.fittedDate))}</td>
-                    <td data-sort="${escAttr(c.serial)}"><span class="hw-serial">${escAttr(c.serial)}</span></td>
+                    <td data-sort="${fitSort}">${dateCell('fittedDate', c.fittedDate, 'installation date', servicePill,
+                        closed ? 'age-pill-closed' : '',
+                        closed ? 'Total time on wing — this card has been removed, so the count has stopped' : 'Time on wing so far')}</td>
+                    <td data-sort="${escAttr(c.serial)}"><span class="hw-serial">${escAttr(formatSimSerial(c.serial))}</span></td>
                     <td data-sort="${escAttr(c.roaming)}">${roamCell}</td>
                     <td data-sort="${escAttr(c.tail || 'zzz')}">${tailCell}</td>
                     <td data-sort="${escAttr(c.type)}">${c.type ? escAttr(TYPE_SHORT_LABEL[c.type] || c.type) : '—'}</td>
                     <td data-sort="${escAttr(c.status)}">${statusCell}</td>
-                    <td data-sort="${remSort}">${dateCell('removedDate', c.removedDate, 'removal date', '')}</td>
+                    <td data-sort="${remSort}">${dateCell('removedDate', c.removedDate, 'removal date', '', '', '')}</td>
                     <td class="col-comment" data-sort="${escAttr(c.notes)}">${noteCell}</td>
                 `;
                 tbody.appendChild(row);
@@ -8967,11 +9053,10 @@
             fbRender('sim');
             syncTableFreeze();
             applySimFilters();
-            // Oldest installation first until someone picks another column, re-applied
-            // on every rebuild — same reason as the other tables.
-            const ss = lastSort['simTable'] || SIM_DEFAULT_SORT;
-            lastSort['simTable'] = ss;
-            applyTableSort('simTable', ss.col, ss.dir);
+            // Only re-apply a sort the user actually chose. Left alone, the rows keep
+            // the two-key build order above, which no single-column sort can express.
+            const ss = lastSort['simTable'];
+            if (ss) applyTableSort('simTable', ss.col, ss.dir);
             updateSortIndicators('simTable');
             updateSimEditUI();
         }
@@ -8989,6 +9074,8 @@
         function resetSimTable() {
             fbClear('sim');
             fbRender('sim');
+            // Back to the two-key build order: Active, Fault, Spare, Removed, oldest
+            // install first within each.
             delete lastSort['simTable'];
             populateSimTable();
         }
@@ -9005,11 +9092,15 @@
                 // DD-Mon-YYYY everywhere, so it is converted once, here.
                 entry[field] = raw ? fmtDate(raw) : '';
             } else if (field === 'status') {
-                // Status IS the fitment's state — there is nothing else to write.
+                // Status is the fitment's `state` plus, for a card that is fitted but
+                // not working, its `condition`. Fault is still ON WING — that is the
+                // whole point of the flag — so it writes on_wing and marks the fault
+                // beside it; Active writes on_wing and clears the fault.
                 entry.status = raw;
-                if (raw === 'active') entry.state = 'on_wing';
-                else if (raw === 'removed') entry.state = 'removed';
-                else delete entry.state;
+                if (raw === 'active') { entry.state = 'on_wing'; entry.condition = ''; }
+                else if (raw === 'fault') { entry.state = 'on_wing'; entry.condition = 'fault'; }
+                else if (raw === 'removed') { entry.state = 'removed'; }
+                else { delete entry.state; delete entry.condition; }
             } else {
                 entry[field] = raw;
             }
@@ -9046,6 +9137,7 @@
                 if (e.fittedDate !== undefined) patch[`${id}/fitments/${fid}/fittedDate`] = e.fittedDate || null;
                 if (e.removedDate !== undefined) patch[`${id}/fitments/${fid}/removedDate`] = e.removedDate || null;
                 if (e.state !== undefined) patch[`${id}/fitments/${fid}/state`] = e.state;
+                if (e.condition !== undefined) patch[`${id}/fitments/${fid}/condition`] = e.condition || null;
             });
 
             setSyncStatus('🟡 Saving SIM changes...', '#e0a800');
@@ -9069,6 +9161,7 @@
                     if (e.fittedDate !== undefined) setOrClear(f, 'fittedDate', e.fittedDate);
                     if (e.removedDate !== undefined) setOrClear(f, 'removedDate', e.removedDate);
                     if (e.state !== undefined) f.state = e.state;
+                    if (e.condition !== undefined) setOrClear(f, 'condition', e.condition);
                 });
                 pendingSim = {};
                 simEditMode = false;

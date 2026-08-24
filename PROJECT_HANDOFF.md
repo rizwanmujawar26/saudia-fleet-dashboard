@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.43.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.44.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -836,9 +836,21 @@ sits with the card number**, because the plan belongs to the card rather than to
 airframe. Installation Date is column 2 and the default sort, oldest first, like the
 other tables; every column sorts, so the register reads by card or by aircraft.
 
-Installation Date carries the same `activationAge()` pill the Fleet, Software and Media
-date columns carry. **The removal date does not** — a pill there would count days since
-the card came *off*, which is not a service life.
+**The installation pill measures time on wing, and changes meaning when the card comes
+off.** While it is fitted the span is open-ended and counts to today; once a removal
+date exists the pill shows the **closed** span install→removal and takes
+`.age-pill-closed` (amber), because that number will never change again and should not
+look like one that is still moving. `activationAge()` is now a thin wrapper over
+`dateSpan(from, to)`, where a blank `to` means "until today" — the Fleet, Software and
+Media columns are unaffected.
+
+**A fitted card with no removal date shows an `On-Wing` pill** in the Removal Date
+column rather than an em dash: the absence of a date *is* the statement that it is
+still on the aircraft.
+
+**Serials render grouped in sixes** (`899660 117002 235903`) via `formatSimSerial()` —
+18 digits in one run cannot be checked against a physical card. Display only: the
+stored serial, the `data-sort` key and the duplicate check all use the raw value.
 
 **There is no Fit column.** Every aircraft in this programme is retrofit by default, so
 the column and its filter said nothing.
@@ -850,12 +862,24 @@ cannot go stale against its own history.
 | status | condition | Aircraft column |
 |---|---|---|
 | Active | latest fitment is `on_wing` | the registration |
+| **Fault** | `on_wing` **and** `condition: 'fault'` — fitted but inoperative, needs replacing | the registration |
 | Spare | no fitment at all — never flown, in hand with the team | *Not fitted* |
 | Removed | latest fitment is `removed` | **`ex-ASV`** — where it came off |
 
-Widgets are Active Cards / Spares in Hand / Removed, in the shared `.media-widget`
-markup and variants the Fleet and Media strips use, so the three pages read as one
-system. The three sum to the register.
+⚠️ **Fault is still `on_wing`** — that is the whole point of it. It is the fitment's
+`condition`, not its `state`, so a faulty card is not pretending to have been removed.
+**Removed wins over Fault** in the derivation: once a card is off the aircraft it is
+history, not a job.
+
+**The table opens in a TWO-KEY order** — status rank (`SIM_STATUS_RANK`: Active,
+Fault, Spare, Removed) then oldest install date within each. `applyTableSort()` sorts
+on one column, so this has to be the **build** order; `populateSimTable()` only
+re-applies a sort the user actually clicked, and Reset clears it to come back here.
+
+Widgets are Active Cards / **Fault** / Spares in Hand / Removed, in the shared
+`.media-widget` markup and variants the Fleet and Media strips use. **Fault takes the
+alert red and Removed steps back to grey** — a removed card is settled, a faulty one is
+a job someone has to do. The four sum to the register, so no card is counted nowhere.
 
 ⚠️ **A `Retired` status was added in v2.42.0 and removed again in v2.43.0** at the
 user's request — status is just Active and Removed for a fitted card now. The
@@ -866,7 +890,9 @@ the rules whenever, or reuse it if the idea comes back.
 **Edit mode covers both dates, Status, Roaming and Comments.** Status is two writes
 wearing one control, and `handleSimEdit()` is where that is resolved:
 
-- **Status IS the fitment's `state`** — there is nothing else to write.
+- **Status writes the fitment's `state`, plus `condition` for Fault.** Active writes
+  `on_wing` and clears the fault; Fault writes `on_wing` *and* the flag; Removed writes
+  `removed`.
 - **Only reachable states are offered.** A fitted card gets Active/Removed; a spare's
   status is read-only, because Spare means "no fitment" and going back to it would mean
   deleting history, which is Record Removed's job.
@@ -1613,6 +1639,18 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.44.0 — SIM register: closed spans, On-Wing, FAULT
+The installation pill now changes meaning when a card comes off: install→removal as a
+closed span in amber, rather than counting up from an install date that no longer
+matters. A fitted card with no removal date says **On-Wing** instead of showing a dash.
+
+New **Fault** status for a card that is fitted but not working — still `on_wing`, with
+a `condition` flag beside it, so it is visibly a job without pretending to have been
+removed. It gets the alert-red widget and Removed steps back to grey.
+
+The table opens Active → Fault → Spare → Removed, oldest install first within each, and
+serials render grouped in sixes so they can be read against a physical card.
 
 ### v2.43.0 — SIM register: column order, days pill, Add SIM status
 Removal Date moved beside Status so the two read together, Roaming moved next to the
