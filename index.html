@@ -2320,6 +2320,7 @@
         .status-badge.sim-active  { background: #e4f3ea; color: #0a5c34; }
         .status-badge.sim-unused  { background: #eef1f3; color: #6b747c; }
         .status-badge.sim-removed { background: #fdecee; color: #a52834; }
+        .status-badge.sim-retired { background: #f4f2f7; color: #6b6478; }
         .status-badge.roam-global { background: #e6f0fb; color: #1c5b96; }
         .status-badge.roam-local  { background: #f1f3f5; color: #55606a; }
 
@@ -4411,13 +4412,14 @@
                             <tr>
                                 <th>#</th>
                                 <th class="sortable-th" data-col="1" data-label="Installation Date" onclick="sortTable('simTable', 1)">Installation Date</th>
-                                <th class="sortable-th" data-col="2" data-label="SIM Card" onclick="sortTable('simTable', 2)">SIM Card #</th>
-                                <th class="sortable-th" data-col="3" data-label="Aircraft" onclick="sortTable('simTable', 3)">Aircraft</th>
-                                <th class="sortable-th" data-col="4" data-label="Type" onclick="sortTable('simTable', 4)">Type</th>
-                                <th class="sortable-th" data-col="5" data-label="Fit" onclick="sortTable('simTable', 5)">Fit</th>
-                                <th class="sortable-th" data-col="6" data-label="Status" onclick="sortTable('simTable', 6)">Status</th>
-                                <th class="sortable-th" data-col="7" data-label="Roaming" onclick="sortTable('simTable', 7)">Roaming</th>
-                                <th class="sortable-th col-comment" data-col="8" data-label="Comments" onclick="sortTable('simTable', 8)">Comments</th>
+                                <th class="sortable-th" data-col="2" data-label="Removal Date" onclick="sortTable('simTable', 2)">Removal Date</th>
+                                <th class="sortable-th" data-col="3" data-label="SIM Card" onclick="sortTable('simTable', 3)">SIM Card #</th>
+                                <th class="sortable-th" data-col="4" data-label="Aircraft" onclick="sortTable('simTable', 4)">Aircraft</th>
+                                <th class="sortable-th" data-col="5" data-label="Type" onclick="sortTable('simTable', 5)">Type</th>
+                                <th class="sortable-th" data-col="6" data-label="Fit" onclick="sortTable('simTable', 6)">Fit</th>
+                                <th class="sortable-th" data-col="7" data-label="Status" onclick="sortTable('simTable', 7)">Status</th>
+                                <th class="sortable-th" data-col="8" data-label="Roaming" onclick="sortTable('simTable', 8)">Roaming</th>
+                                <th class="sortable-th col-comment" data-col="9" data-label="Comments" onclick="sortTable('simTable', 9)">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="simTableBody"></tbody>
@@ -5499,10 +5501,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.41.0';
-        const APP_BUILD    = '2026.08.24.21';
+        const APP_VERSION  = '2.42.0';
+        const APP_BUILD    = '2026.08.24.22';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-24T21:53:34Z';
+        const APP_DEPLOYED = '2026-08-24T22:09:20Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6880,11 +6882,10 @@
             sim: {
                 apply: () => applySimFilters(),
                 filters: [
-                    { id: 'simstatus', label: 'Status', options: [
-                        { v: 'active',  l: 'Installed' },
-                        { v: 'unused',  l: 'Unused' },
-                        { v: 'removed', l: 'Removed' },
-                    ] },
+                    // One definition: SIM_STATUSES drives the badges, the edit
+                    // dropdown and this filter together.
+                    { id: 'simstatus', label: 'Status',
+                      options: () => SIM_STATUSES.map(x => ({ v: x.value, l: x.label })) },
                     { id: 'roaming', label: 'Roaming', options: [
                         { v: 'global', l: 'Global' },
                         { v: 'local',  l: 'Local' },
@@ -8771,6 +8772,18 @@
             { value: 'local',  label: 'Local' },
         ];
 
+        // Four states. Three are DERIVED from fitments; `retired` is the one that is
+        // stored (`lifecycle: 'retired'`), because "the subscription was cancelled" is
+        // a decision about the card, not something its fitment history can say. It
+        // overrides the derived value — a retired card is retired whether it is still
+        // on an aircraft or sitting in a drawer.
+        const SIM_STATUSES = [
+            { value: 'active',  label: 'Active',  badge: 'ACTIVE' },
+            { value: 'unused',  label: 'Spare',   badge: 'SPARE' },
+            { value: 'removed', label: 'Removed', badge: 'REMOVED' },
+            { value: 'retired', label: 'Retired', badge: 'RETIRED' },
+        ];
+
         let simEditMode = false;
         let pendingSim = {};        // { unitId: { roaming, notes } }
 
@@ -8800,21 +8813,28 @@
                 .map(([id, u]) => {
                     const fit = simLatestFitment(u);
                     const state = fit ? (fit.state || 'on_wing') : '';
-                    const status = !fit ? 'unused' : (state === 'removed' ? 'removed' : 'active');
+                    const staged0 = pendingSim[id] || {};
+                    const lifecycle = staged0.lifecycle !== undefined ? staged0.lifecycle : (u.lifecycle || '');
+                    const derived = !fit ? 'unused' : (state === 'removed' ? 'removed' : 'active');
+                    // Retired wins: an unsubscribed card is out of service wherever it is.
+                    const status = lifecycle === 'retired' ? 'retired' : derived;
                     const tail = fit ? (fit.aircraft || '') : '';
                     const air = byTail[tail] || {};
-                    const staged = pendingSim[id] || {};
+                    const staged = staged0;
                     return {
                         id,
                         serial: u.serial || '',
                         status,
+                        derived,
+                        lifecycle,
+                        fitmentId: fit ? fit.id : '',
                         tail,
                         // A removed card is still identified by where it came off.
                         tailLabel: !tail ? '' : (status === 'removed' ? 'ex-' + tail : tail),
                         type: air.type || '',
                         fit: tail ? (isLinefit(air) ? 'linefit' : 'retrofit') : '',
-                        fittedDate: fit ? (fit.fittedDate || '') : '',
-                        removedDate: fit ? (fit.removedDate || '') : '',
+                        fittedDate: staged.fittedDate !== undefined ? staged.fittedDate : (fit ? (fit.fittedDate || '') : ''),
+                        removedDate: staged.removedDate !== undefined ? staged.removedDate : (fit ? (fit.removedDate || '') : ''),
                         roaming: staged.roaming !== undefined ? staged.roaming : (u.roaming || ''),
                         notes: staged.notes !== undefined ? staged.notes : (u.notes || ''),
                     };
@@ -8829,20 +8849,35 @@
             const strip = document.getElementById('simWidgets');
             if (!strip) return;
             const cards = simCards();
-            const total = cards.length;
-            const card = (key, label, n, cls) => `
-                <div class="media-widget ${cls}">
-                    <div class="media-widget-label">${label}</div>
-                    <div class="media-widget-count">${n}<span class="media-widget-total">/${total}</span></div>
-                    <div class="media-widget-bar"><div class="media-widget-fill" style="width:${total ? (n / total * 100) : 0}%"></div></div>
+            const total = cards.length || 1;
+            const n = st => cards.filter(c => c.status === st).length;
+
+            // Same markup and the same media-widget-* variants the Fleet and Media
+            // strips use, so the three pages read as one system rather than three
+            // hand-rolled cards.
+            const card = (label, count, type) => {
+                const pct = Math.round((count / total) * 1000) / 10;
+                return `<div class="media-widget media-widget-${type}">
+                    <div class="media-widget-head"><span class="media-widget-label">${label}</span></div>
+                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${cards.length}</span><span class="media-widget-pct">${pct}%</span></div>
+                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
                 </div>`;
+            };
+
+            // Active first — the cards actually flying. Then what is in hand, then the
+            // two that are out of service, so the strip reads left to right from
+            // "working" to "not". The four sum to the register.
             strip.innerHTML =
-                card('active',  'Installed', cards.filter(c => c.status === 'active').length,  'mw-latest') +
-                card('unused',  'Unused',    cards.filter(c => c.status === 'unused').length,  'mw-none') +
-                card('removed', 'Removed',   cards.filter(c => c.status === 'removed').length, 'mw-older');
+                card('Active Cards', n('active'), 'latest') +
+                card('Spares in Hand', n('unused'), 'previous') +
+                card('Removed', n('removed'), 'alert') +
+                card('Retired', n('retired'), 'no_media');
         }
 
-        const SIM_STATUS_LABEL = { active: 'ACTIVE', removed: 'REMOVED', unused: 'UNUSED' };
+        function simStatusBadge(v) {
+            const e = SIM_STATUSES.find(x => x.value === v);
+            return e ? e.badge : String(v || '').toUpperCase();
+        }
 
         function populateSimTable() {
             const tbody = document.getElementById('simTableBody');
@@ -8858,16 +8893,39 @@
                 row.dataset.type = c.type;
                 row.dataset.fit = c.fit;
 
-                const dateSort = dateSortKey(toISODate(c.fittedDate)) || '99999999';
-                const dateCell = c.fittedDate
-                    ? `<span class="fleet-date">${escAttr(c.fittedDate)}</span>`
-                    : '<span class="fleet-notset">—</span>';
+                // Dates belong to the FITMENT, so a spare with no fitment has nowhere
+                // to put one. The inputs say so rather than silently discarding it.
+                const hasFit = !!c.fitmentId;
+                const dateCell = (field, value, title) => {
+                    if (!editing) {
+                        return value ? `<span class="fleet-date">${escAttr(value)}</span>`
+                                     : '<span class="fleet-notset">—</span>';
+                    }
+                    if (!hasFit) {
+                        return `<span class="fleet-notset" title="This card has never been fitted, so it has no ${title} — fit it on the Serials tab first">—</span>`;
+                    }
+                    return `<input type="date" class="edit-date" value="${toISODate(value)}"
+                        data-sim="${escAttr(c.id)}" data-field="${field}" onchange="handleSimEdit(this)">`;
+                };
+
+                const fitSort = dateSortKey(toISODate(c.fittedDate)) || '99999999';
+                const remSort = dateSortKey(toISODate(c.removedDate)) || '99999999';
 
                 const tailCell = c.tailLabel
-                    ? `<strong${c.status === 'removed' ? ' class="sim-ex"' : ''}>${escAttr(c.tailLabel)}</strong>`
+                    ? `<strong${c.status === 'removed' || c.status === 'retired' ? ' class="sim-ex"' : ''}>${escAttr(c.tailLabel)}</strong>`
                     : '<span class="fleet-notset">Not fitted</span>';
 
-                const statusCell = `<span class="status-badge sim-${c.status}">${SIM_STATUS_LABEL[c.status]}</span>`;
+                // Only the states this card can actually reach are offered. Active and
+                // Removed are fitment states, so a card with no fitment cannot take
+                // them; Spare means "no fitment", so a fitted card cannot go back to it
+                // without deleting history, which is Record Removed's job.
+                const allowed = hasFit ? ['active', 'removed', 'retired'] : ['unused', 'retired'];
+                const statusCell = editing
+                    ? `<select class="edit-select" data-sim="${escAttr(c.id)}" data-field="status" onchange="handleSimEdit(this)">
+                           ${SIM_STATUSES.filter(x => allowed.includes(x.value))
+                               .map(x => `<option value="${x.value}" ${c.status === x.value ? 'selected' : ''}>${x.label}</option>`).join('')}
+                       </select>`
+                    : `<span class="status-badge sim-${c.status}">${simStatusBadge(c.status)}</span>`;
 
                 const roamCell = editing
                     ? `<select class="edit-select" data-sim="${escAttr(c.id)}" data-field="roaming" onchange="handleSimEdit(this)">
@@ -8884,7 +8942,8 @@
 
                 row.innerHTML = `
                     <td>${idx + 1}</td>
-                    <td data-sort="${dateSort}">${dateCell}</td>
+                    <td data-sort="${fitSort}">${dateCell('fittedDate', c.fittedDate, 'installation date')}</td>
+                    <td data-sort="${remSort}">${dateCell('removedDate', c.removedDate, 'removal date')}</td>
                     <td data-sort="${escAttr(c.serial)}"><span class="hw-serial">${escAttr(c.serial)}</span></td>
                     <td data-sort="${escAttr(c.tail || 'zzz')}">${tailCell}</td>
                     <td data-sort="${escAttr(c.type)}">${c.type ? escAttr(TYPE_SHORT_LABEL[c.type] || c.type) : '—'}</td>
@@ -8931,7 +8990,25 @@
             const id = el.dataset.sim;
             const field = el.dataset.field;
             const entry = pendingSim[id] || {};
-            entry[field] = (el.value || '').trim();
+            const raw = (el.value || '').trim();
+
+            if (field === 'fittedDate' || field === 'removedDate') {
+                // The inputs are native date pickers (YYYY-MM-DD); the store is
+                // DD-Mon-YYYY everywhere, so it is converted once, here.
+                entry[field] = raw ? fmtDate(raw) : '';
+            } else if (field === 'status') {
+                // Status is two different writes wearing one control. Retired is a
+                // flag on the CARD; Active and Removed are the fitment's own state.
+                // Choosing one has to clear the other, or a card could read Retired
+                // in the register and on_wing in its fitment at the same time.
+                entry.status = raw;
+                entry.lifecycle = raw === 'retired' ? 'retired' : '';
+                if (raw === 'active') entry.state = 'on_wing';
+                else if (raw === 'removed') entry.state = 'removed';
+                else delete entry.state;
+            } else {
+                entry[field] = raw;
+            }
             pendingSim[id] = entry;
             setSyncStatus('🟡 SIM change staged — press Save', '#e0a800');
         }
@@ -8951,11 +9028,21 @@
             if (!token) return;
 
             // One multi-path PATCH, the shape every other save on the page uses.
+            // Card-level fields go straight on the unit; dates and state belong to the
+            // fitment, so they are addressed through its id.
+            const byId = {};
+            simCards().forEach(c => { byId[c.id] = c; });
             const patch = {};
             ids.forEach(id => {
                 const e = pendingSim[id];
+                const fid = (byId[id] || {}).fitmentId;
                 if (e.roaming !== undefined) patch[`${id}/roaming`] = e.roaming || null;
                 if (e.notes !== undefined) patch[`${id}/notes`] = e.notes || null;
+                if (e.lifecycle !== undefined) patch[`${id}/lifecycle`] = e.lifecycle || null;
+                if (!fid) return;   // a spare has no fitment to write dates or state to
+                if (e.fittedDate !== undefined) patch[`${id}/fitments/${fid}/fittedDate`] = e.fittedDate || null;
+                if (e.removedDate !== undefined) patch[`${id}/fitments/${fid}/removedDate`] = e.removedDate || null;
+                if (e.state !== undefined) patch[`${id}/fitments/${fid}/state`] = e.state;
             });
 
             setSyncStatus('🟡 Saving SIM changes...', '#e0a800');
@@ -8968,13 +9055,18 @@
                 // Mirror locally so the table is right before the poll comes back.
                 ids.forEach(id => {
                     const e = pendingSim[id];
-                    if (!unitsLive[id]) return;
-                    if (e.roaming !== undefined) {
-                        if (e.roaming) unitsLive[id].roaming = e.roaming; else delete unitsLive[id].roaming;
-                    }
-                    if (e.notes !== undefined) {
-                        if (e.notes) unitsLive[id].notes = e.notes; else delete unitsLive[id].notes;
-                    }
+                    const u = unitsLive[id];
+                    if (!u) return;
+                    const setOrClear = (obj, k, v) => { if (v) obj[k] = v; else delete obj[k]; };
+                    if (e.roaming !== undefined) setOrClear(u, 'roaming', e.roaming);
+                    if (e.notes !== undefined) setOrClear(u, 'notes', e.notes);
+                    if (e.lifecycle !== undefined) setOrClear(u, 'lifecycle', e.lifecycle);
+                    const fid = (byId[id] || {}).fitmentId;
+                    const f = fid && u.fitments && u.fitments[fid];
+                    if (!f) return;
+                    if (e.fittedDate !== undefined) setOrClear(f, 'fittedDate', e.fittedDate);
+                    if (e.removedDate !== undefined) setOrClear(f, 'removedDate', e.removedDate);
+                    if (e.state !== undefined) f.state = e.state;
                 });
                 pendingSim = {};
                 simEditMode = false;

@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.41.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.42.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -829,18 +829,49 @@ One row per SIM **card**, derived from `/units` where `lruId` is `sim` or `lf_si
 for a serial and its fitment history, and a second home for the same cards would drift
 from it exactly the way the old duplicated status fields did.
 
-Columns: `# | Installation Date | SIM Card # | Aircraft | Type | Fit | Status |
-Roaming | Comments`. Installation Date is column 2 and the default sort, oldest first,
-like the other tables; every column sorts, so the register can be read by card or by
-aircraft.
+Columns: `# | Installation Date | Removal Date | SIM Card # | Aircraft | Type | Fit |
+Status | Roaming | Comments`. Installation Date is column 2 and the default sort,
+oldest first, like the other tables; every column sorts, so the register can be read by
+card or by aircraft.
 
-**Status is derived from fitments, never stored:**
+**`SIM_STATUSES` is the one definition** — it drives the badges, the edit dropdown and
+the filter together. Three of the four are DERIVED from fitments; **`retired` is the
+one that is stored** (`lifecycle: 'retired'` on the unit), because "the subscription
+was cancelled" is a decision about the card, not something its fitment history can
+say. Retired **overrides** the derived value: a retired card is retired whether it is
+still on an aircraft or in a drawer.
 
 | status | condition | Aircraft column |
 |---|---|---|
-| Unused | no fitment at all — a spare that has never flown | *Not fitted* |
 | Active | latest fitment is `on_wing` | the registration |
+| Spare | no fitment at all — never flown, in hand with the team | *Not fitted* |
 | Removed | latest fitment is `removed` | **`ex-ASV`** — where it came off |
+| Retired | `lifecycle: 'retired'` — unsubscribed, whatever the fitment says | as above |
+
+Widgets are Active Cards / Spares in Hand / Removed / Retired, in the shared
+`.media-widget` markup and variants the Fleet and Media strips use, so the three pages
+read as one system. **The four sum to the register** — that is why Retired has a card
+of its own rather than being a status with nowhere to be counted.
+
+**Edit mode covers both dates, Status, Roaming and Comments.** Status is two writes
+wearing one control, and `handleSimEdit()` is where that is resolved:
+
+- **Retired** writes `lifecycle` on the CARD and leaves the fitment alone.
+- **Active / Removed** write the FITMENT's `state` and clear `lifecycle`.
+- Choosing one always clears the other, or a card could read Retired in the register
+  and `on_wing` in its fitment at the same time.
+- **Only reachable states are offered.** A fitted card gets Active/Removed/Retired; a
+  spare gets Spare/Retired, because Active and Removed are fitment states and it has
+  no fitment. Going back to Spare would mean deleting history, which is Record
+  Removed's job.
+- **A spare's date cells are not editable** and say why on hover — dates belong to a
+  fitment, and it has none.
+
+⚠️ **All 41 SIM installation dates were cleared on 2026-08-25 at the user's request.**
+39 of them read `24-Aug-2026` and 2 read `16-Aug-2026`: they were the timestamp of the
+bulk baseline entry, not when the cards actually went on. The 13 non-SIM `fittedDate`
+values and all 7 SIM `removedDate` values were left untouched. Snapshot before the
+change: `~/Documents/fleet-backups/2026-08-25-before-sim-date-clear`.
 
 ⚠️ **Roaming lives on the CARD** (`/units/{id}/roaming`, `global` \| `local`), not on
 the aircraft. A spare with no aircraft still has a plan, which
@@ -1570,6 +1601,17 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.42.0 — SIM register: removal dates, Retired, and editable status
+Installation dates cleared — they were all the bulk-entry timestamp rather than real
+fit dates — and a **Removal Date** column added beside them. Both dates are editable in
+Edit mode, as is Status.
+
+New **Retired** status for an unsubscribed card. It is the only one of the four that is
+stored (`lifecycle` on the unit) because no fitment history can express it, and it
+overrides the derived value. The widgets moved to the shared `.media-widget` markup so
+the SIM, Fleet and Media strips match, and now read Active Cards / Spares in Hand /
+Removed / Retired — four, so they sum to the register.
 
 ### v2.41.0 — 4G SIM register, and Schedule goes private
 New **4G SIM** tab: one row per SIM card with its aircraft, fit, status, roaming plan
