@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.36.0, 2026-08-23)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.37.0, 2026-08-24)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -889,6 +889,29 @@ firing before authentication and with `backup.sh` losing anonymous access.
    flow the table used — nothing that could be edited before was lost.
    **Add New Activity** writes one `/activities` record and nothing else — the
    aircraft history and the Timeline both derive from it.
+   **Every activity card carries ✏️ Edit as well as 🗑 Delete.** Edit reuses the same
+   modal — `prepareActivityModal()` builds it and `setActivityModalMode(id|null)` is
+   the only difference between the two — so a correction can never drift into a
+   second, slightly different set of fields. `addActEditingId` carries the mode and is
+   cleared on cancel, on backdrop close and on success, because leaving it set would
+   make the next **Add** overwrite whatever was last edited.
+
+   ⚠️ **An edit PRESERVES the detail fields the form does not own.**
+   `ACT_FORM_DETAIL_FIELDS` lists the seven it does (`lruId`, `position`,
+   `removalReason`, `softwareName`, `version`, `modemType`, `commissioningResult`);
+   everything else on `details` is copied forward untouched. Rebuilding `details` from
+   the form alone would silently drop `shopStatus`/`shopRef`/`shopFinding` — written
+   weeks later by the Shop report — and would lose `recordType: 'baseline'`, which
+   would promote a serial record onto the Timeline. `loggedAt` is preserved too: it is
+   when the work was logged, not when the typo was fixed.
+
+   ⚠️ **Editing never writes `/units`.** The serial inputs are disabled in edit mode
+   with a note pointing at the Serials tab. A serial is one physical box in the
+   register, and changing a fitted one is a *swap* needing a reason and a removed
+   unit — not a text correction. Re-running `unitWritesForActivity()` on an edit would
+   also mint duplicate units against an `activityId` the register already holds.
+   No rules change was needed: `.write` on `/activities/$id` is per-record, so a PUT
+   to an existing id was already allowed.
    **Installed Equipment** sits between the profile and the history: every LRU
    this aircraft carries with the serial currently fitted, from
    `aircraftFitment(a)` — the same derivation `hardwareFitment()` does, pivoted
@@ -1410,6 +1433,18 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.37.0 — Activities can be corrected, not just deleted
+An activity was write-once: the only way to fix a typo was to delete it and retype the
+whole record. Every card now has ✏️ Edit beside 🗑 Delete, reusing the Add modal so
+there is one form rather than two.
+
+The care is in what an edit does *not* touch. Only the seven detail fields the form
+owns are replaced; `recordType`, the serials, the part number and the shop's verdict
+are copied forward, so a correction cannot drop a shop finding or promote a baseline
+serial record onto the Timeline. `loggedAt` keeps its original value, and `/units` is
+never written — serials are corrected on the Serials tab, and the disabled inputs say
+so.
 
 ### v2.36.0 — Full bleed on a phone
 The rounded card and its green surround cost 100px of a 375px screen — 27%, leaving

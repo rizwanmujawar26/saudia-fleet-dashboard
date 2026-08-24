@@ -2176,6 +2176,31 @@
 
         .maint-act-tech span b { color: #8a939b; font-weight: 700; }
 
+        /* Sits next to the delete button. margin-left:auto moved here so the pair
+           stays right-aligned as one group. */
+        .maint-act-edit {
+            margin-left: auto;
+            border: 1px solid #cfe0d6;
+            background: #f1f7f3;
+            border-radius: 4px;
+            padding: 1px 7px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .maint-act-edit:hover { background: #e3efe8; }
+        /* When Edit is present it owns the auto margin, so Delete just follows it. */
+        .maint-act-edit + .maint-act-del { margin-left: 4px; }
+
+        .act-serial-note {
+            font-size: 12px;
+            color: #7a838c;
+            background: #f4f6f8;
+            border: 1px solid #e4e8ec;
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-top: 4px;
+        }
+
         .maint-act-del {
             margin-left: auto;
             border: 1px solid #f0c8cc;
@@ -4384,6 +4409,13 @@
                 </div>
                 <label class="add-sched-label">Reason for Removal <span style="text-transform:none; font-weight:400;">(only if a unit came off)</span></label>
                 <input id="addActRemovalReason" class="add-sched-input" maxlength="200" placeholder="e.g. No RF output after power cycle" autocomplete="off">
+                <!-- Shown only while editing. Serials are one physical box each in
+                     /units; changing a fitted one is a swap, not a text correction. -->
+                <div class="act-serial-note" id="addActSerialNote" style="display:none;">
+                    Serials are shown here for reference but are corrected on the
+                    <b>Serials</b> tab — they belong to the unit register, and changing
+                    a fitted one is a swap rather than a text edit.
+                </div>
             </div>
 
             <div class="act-extra" id="actExtraSoftware">
@@ -5246,10 +5278,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.36.0';
-        const APP_BUILD    = '2026.08.23.23';
+        const APP_VERSION  = '2.37.0';
+        const APP_BUILD    = '2026.08.24.07';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-23T23:00:25Z';
+        const APP_DEPLOYED = '2026-08-24T07:23:12Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -7961,6 +7993,7 @@
                     <span class="tl-kind tl-kind-${cat.kind}">${cat.kind}</span>
                     ${act.location ? `<span class="tl-loc-pill" style="background:${(LOCATION_PILL_COLORS[act.location] || NEUTRAL_PILL).bg}; color:${(LOCATION_PILL_COLORS[act.location] || NEUTRAL_PILL).fg}; border-color:${(LOCATION_PILL_COLORS[act.location] || NEUTRAL_PILL).bd}">📍 ${escAttr(act.location)}</span>` : ''}
                     <span class="maint-act-cat">${escAttr(cat.label)}</span>
+                    ${canEdit() ? `<button class="maint-act-edit" title="Edit this activity" onclick="openEditActivity('${escAttr(act.id)}')">✏️</button>` : ''}
                     ${canEdit() ? `<button class="maint-act-del" title="Delete this activity" onclick="deleteActivity('${escAttr(act.id)}')">🗑</button>` : ''}
                 </div>
                 <div class="maint-act-title">${escAttr(act.title || cat.label)}</div>
@@ -8175,13 +8208,24 @@
             if (h) h.textContent = hint;
         }
 
-        function openAddActivity() {
-            if (!canEdit()) { requireSignIn(); return; }
+        // null when adding, the activity id when correcting an existing one. The
+        // modal is the same form either way — a correction should not be a second,
+        // slightly different set of fields to keep in step.
+        let addActEditingId = null;
 
+        // The detail fields this FORM owns. Everything else on an activity's details
+        // — recordType, the serials, and the shop's verdict, all written elsewhere and
+        // often long after — must survive an edit untouched. Rebuilding details from
+        // the form alone would silently drop a shop finding.
+        const ACT_FORM_DETAIL_FIELDS = ['lruId', 'position', 'removalReason',
+            'softwareName', 'version', 'modemType', 'commissioningResult'];
+
+        // Everything both entry points need: the pickers built and populated, the
+        // one-time listeners bound.
+        function prepareActivityModal() {
             const acSel = document.getElementById('addActAircraft');
             acSel.innerHTML = maintenanceFleet()
                 .map(a => `<option value="${escAttr(a.id)}">${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</option>`).join('');
-            if (maintSelectedId) acSel.value = maintSelectedId;
 
             const catSel = document.getElementById('addActCategory');
             if (!catSel.dataset.built) {
@@ -8191,7 +8235,41 @@
                 acSel.addEventListener('change', syncActParts);
                 document.getElementById('addActPart').addEventListener('change', syncActPositions);
             }
-            catSel.value = 'hardware_rr';
+            const err = document.getElementById('addActError');
+            err.textContent = ''; err.style.display = 'none';
+        }
+
+        // Add and Edit differ in three visible ways and nothing else.
+        function setActivityModalMode(editing) {
+            addActEditingId = editing || null;
+            setText('addActHeading', editing ? 'Edit Activity' : 'Add New Activity');
+            const btn = document.getElementById('addActSave');
+            if (btn) btn.textContent = editing ? 'Save Changes' : 'Save Activity';
+
+            // Serials are NOT editable here. They live in /units, one physical box per
+            // serial, and changing a fitted one is a swap needing a reason and a
+            // removed unit — not a text correction. Logging a NEW activity still
+            // creates them; correcting an old one must not rewrite the register behind
+            // the Serials tab's back.
+            ['addActOldPart', 'addActNewPart'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.disabled = !!editing;
+                el.style.opacity = editing ? '0.55' : '';
+                el.title = editing ? 'Serials are corrected on the Serials tab, not here' : '';
+            });
+            const note = document.getElementById('addActSerialNote');
+            if (note) note.style.display = editing ? 'block' : 'none';
+        }
+
+        function openAddActivity() {
+            if (!canEdit()) { requireSignIn(); return; }
+            prepareActivityModal();
+            setActivityModalMode(null);
+
+            const acSel = document.getElementById('addActAircraft');
+            if (maintSelectedId) acSel.value = maintSelectedId;
+            document.getElementById('addActCategory').value = 'hardware_rr';
 
             // Default the location to whatever the aircraft's retrofit location is —
             // most activities happen where the aircraft already is.
@@ -8210,8 +8288,52 @@
             if (partSel) partSel.value = '';
             syncActPositions();
             syncActExtras();
-            const err = document.getElementById('addActError');
-            err.textContent = ''; err.style.display = 'none';
+            document.getElementById('addActOverlay').style.display = 'flex';
+            document.getElementById('addActTitle').focus();
+        }
+
+        function openEditActivity(id) {
+            if (!canEdit()) { requireSignIn(); return; }
+            const act = activitiesLive[id];
+            if (!act) { setSyncStatus('🔴 That activity is no longer there — reload', '#dc3545'); return; }
+            prepareActivityModal();
+            setActivityModalMode(id);
+
+            const d = act.details || {};
+            const set = (elId, v) => { const el = document.getElementById(elId); if (el) el.value = v || ''; };
+
+            // The aircraft list is the maintenance fleet; if this record belongs to an
+            // aircraft that has since left it, add it back rather than silently
+            // reassigning the activity to whoever happens to be first in the list.
+            const acSel = document.getElementById('addActAircraft');
+            if (act.aircraft && !Array.from(acSel.options).some(o => o.value === act.aircraft)) {
+                acSel.insertAdjacentHTML('afterbegin',
+                    `<option value="${escAttr(act.aircraft)}">${escAttr(act.aircraft)}</option>`);
+            }
+            acSel.value = act.aircraft || '';
+            document.getElementById('addActCategory').value = act.category || 'other';
+            set('addActDate', toISODate(act.date));
+            set('addActLocation', act.location);
+            set('addActTitle', act.title);
+            set('addActTask', act.task);
+            set('addActOutcome', act.outcome);
+            set('addActNotes', act.notes);
+            set('addActSoftwareName', d.softwareName);
+            set('addActVersion', d.version);
+            set('addActModemType', d.modemType);
+            set('addActCommissioningResult', d.commissioningResult);
+            set('addActRemovalReason', d.removalReason);
+            // Shown read-only so the record still reads completely; not saved from here.
+            set('addActOldPart', d.oldPart);
+            set('addActNewPart', d.newPart);
+
+            // Parts and positions depend on the aircraft, so they are built after it
+            // is set, then the stored values selected.
+            syncActParts();
+            set('addActPart', d.lruId);
+            syncActPositions();
+            set('addActPosition', d.position);
+            syncActExtras();
             document.getElementById('addActOverlay').style.display = 'flex';
             document.getElementById('addActTitle').focus();
         }
@@ -8220,7 +8342,9 @@
             const overlay = document.getElementById('addActOverlay');
             if (!overlay) return;
             const err = document.getElementById('addActError');
-            const close = () => { overlay.style.display = 'none'; };
+            // Clearing the id matters: leaving it set would make the next Add
+            // overwrite whichever record was last being edited.
+            const close = () => { overlay.style.display = 'none'; addActEditingId = null; };
 
             document.getElementById('addActCancel').addEventListener('click', close);
             overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
@@ -8237,7 +8361,10 @@
                     task:     val('addActTask'),
                     outcome:  val('addActOutcome'),
                     notes:    val('addActNotes'),
-                    loggedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+                    // On an edit this is when the WORK was logged, not when the typo
+                    // was fixed — the original stands.
+                    loggedAt: (addActEditingId && activitiesLive[addActEditingId] && activitiesLive[addActEditingId].loggedAt)
+                        || new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
                 };
 
                 // Only the fields belonging to the chosen category are sent — `$other`
@@ -8260,7 +8387,18 @@
                         modemType: val('addActModemType'), commissioningResult: val('addActCommissioningResult'),
                     },
                 };
+                // Start from what is already stored when editing, minus the fields
+                // this form owns, so recordType, the serials and the shop's verdict
+                // survive. Rebuilding from the form alone would drop a shop finding
+                // filled in weeks after the removal, and would promote a baseline
+                // record onto the Timeline by losing its recordType.
+                const prev = (addActEditingId && activitiesLive[addActEditingId] && activitiesLive[addActEditingId].details) || {};
                 const details = {};
+                if (addActEditingId) {
+                    Object.entries(prev).forEach(([k, v]) => {
+                        if (ACT_FORM_DETAIL_FIELDS.indexOf(k) === -1) details[k] = v;
+                    });
+                }
                 Object.entries(detailsByCategory[category] || {}).forEach(([k, v]) => { if (v) details[k] = v; });
                 if (Object.keys(details).length) entry.details = details;
 
@@ -8280,8 +8418,9 @@
                 const token = await getIdToken();
                 if (!token) return;
                 const btn = document.getElementById('addActSave');
+                const editing = addActEditingId;
                 btn.disabled = true; btn.textContent = 'Saving...';
-                const id = 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                const id = editing || ('a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7));
                 try {
                     const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/activities/${id}.json?auth=${token}`, {
                         method: 'PUT', body: JSON.stringify(entry),
@@ -8290,10 +8429,12 @@
                     if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                     activitiesLive[id] = entry;
 
-                    // Then the register. Root is not writable, so this cannot be folded
-                    // into the same PATCH — if it fails the activity is still saved and
-                    // the message says exactly what is missing.
-                    const unitWrites = unitWritesForActivity(id, entry, val('addActOldPart'), val('addActNewPart'));
+                    // Then the register — on a NEW activity only. An edit deliberately
+                    // never writes /units: the serial inputs are disabled in that mode,
+                    // and re-running this would mint duplicate units for serials the
+                    // register already holds against this same activityId.
+                    const unitWrites = editing ? null
+                        : unitWritesForActivity(id, entry, val('addActOldPart'), val('addActNewPart'));
                     if (unitWrites) {
                         const ures = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
                             method: 'PATCH', body: JSON.stringify(unitWrites),
@@ -8307,6 +8448,7 @@
                             .then(d => { unitsLive = d || {}; }).catch(() => {});
                     }
                     maintSelectedId = entry.aircraft;      // land on the aircraft just logged
+                    addActEditingId = null;
                     close();
                     renderMaintenancePage();
                     renderHardwarePage();
@@ -8317,7 +8459,8 @@
                     err.textContent = `Could not save activity — ${e.message}`;
                     err.style.display = 'block';
                 } finally {
-                    btn.disabled = false; btn.textContent = 'Save Activity';
+                    btn.disabled = false;
+                    btn.textContent = editing ? 'Save Changes' : 'Save Activity';
                 }
             });
         }
