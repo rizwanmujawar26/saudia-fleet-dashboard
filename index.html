@@ -5680,10 +5680,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.51.0';
-        const APP_BUILD    = '2026.08.25.02';
+        const APP_VERSION  = '2.52.0';
+        const APP_BUILD    = '2026.08.25.03';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T11:01:51Z';
+        const APP_DEPLOYED = '2026-08-25T11:25:02Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -9187,50 +9187,83 @@
         }
 
         // Every SIM card in the register, shaped for the table.
-        function simCards() {
+        // One row, shaped from a card and ONE of its fitments. A spare has no fitment
+        // and passes null.
+        //
+        // ⚠️ `key` is what edits stage against, and it is the row — not the card. A
+        // card fitted to two aircraft produces two rows, and keying the staging by
+        // unit id would let an edit to the history row write itself onto the current
+        // fitment instead. That was a live hazard the moment a second fitment existed.
+        function simRowFor(id, u, fit, byTail) {
+            const key = fit ? `${id}:${fit.id}` : id;
+            const state = fit ? (fit.state || 'on_wing') : '';
+            const staged = pendingSim[key] || {};
+            const condition = staged.condition !== undefined
+                ? staged.condition : (fit ? (fit.condition || '') : '');
+            // Removed wins over a fault — a card that is off the aircraft is
+            // no longer a fault to act on, it is history.
+            const status = !fit ? 'unused'
+                : state === 'removed' ? 'removed'
+                : condition === 'fault' ? 'fault'
+                : 'active';
+            const tail = fit ? (fit.aircraft || '') : '';
+            // A staged aircraft shows in the row before it is saved, and the
+            // type it drags with it — otherwise assigning a spare looks like
+            // nothing happened until Save.
+            const tailShown = staged.aircraft !== undefined ? staged.aircraft : tail;
+            const airShown = byTail[tailShown] || {};
+            return {
+                id, key,
+                serial: u.serial || '',
+                status,
+                fitmentId: fit ? fit.id : '',
+                tailShown,
+                typeShown: airShown.type || '',
+                tail,
+                // A removed card is still identified by where it came off.
+                tailLabel: !tailShown ? '' : (status === 'removed' ? 'ex-' + tailShown : tailShown),
+                type: airShown.type || '',
+                fit: tailShown ? (isLinefit(airShown) ? 'linefit' : 'retrofit') : '',
+                fittedDate: staged.fittedDate !== undefined ? staged.fittedDate : (fit ? (fit.fittedDate || '') : ''),
+                removedDate: staged.removedDate !== undefined ? staged.removedDate : (fit ? (fit.removedDate || '') : ''),
+                roaming: staged.roaming !== undefined ? staged.roaming : (u.roaming || ''),
+                notes: staged.notes !== undefined ? staged.notes : (u.notes || ''),
+            };
+        }
+
+        function simUnitEntries() {
+            return Object.entries(unitsLive || {}).filter(([, u]) => SIM_LRU_IDS.includes(u.lruId));
+        }
+
+        function simTailIndex() {
             const byTail = {};
             aircraftData.forEach(a => { byTail[a.id] = a; });
+            return byTail;
+        }
 
-            return Object.entries(unitsLive || {})
-                .filter(([, u]) => SIM_LRU_IDS.includes(u.lruId))
-                .map(([id, u]) => {
-                    const fit = simLatestFitment(u);
-                    const state = fit ? (fit.state || 'on_wing') : '';
-                    const staged0 = pendingSim[id] || {};
-                    const condition = staged0.condition !== undefined
-                        ? staged0.condition : (fit ? (fit.condition || '') : '');
-                    // Removed wins over a fault — a card that is off the aircraft is
-                    // no longer a fault to act on, it is history.
-                    const status = !fit ? 'unused'
-                        : state === 'removed' ? 'removed'
-                        : condition === 'fault' ? 'fault'
-                        : 'active';
-                    const tail = fit ? (fit.aircraft || '') : '';
-                    const air = byTail[tail] || {};
-                    const staged = staged0;
-                    // A staged aircraft shows in the row before it is saved, and the
-                    // type it drags with it — otherwise assigning a spare looks like
-                    // nothing happened until Save.
-                    const tailShown = staged.aircraft !== undefined ? staged.aircraft : tail;
-                    const airShown = byTail[tailShown] || {};
-                    return {
-                        id,
-                        serial: u.serial || '',
-                        status,
-                        fitmentId: fit ? fit.id : '',
-                        tailShown,
-                        typeShown: airShown.type || '',
-                        tail,
-                        // A removed card is still identified by where it came off.
-                        tailLabel: !tailShown ? '' : (status === 'removed' ? 'ex-' + tailShown : tailShown),
-                        type: airShown.type || '',
-                        fit: tailShown ? (isLinefit(airShown) ? 'linefit' : 'retrofit') : '',
-                        fittedDate: staged.fittedDate !== undefined ? staged.fittedDate : (fit ? (fit.fittedDate || '') : ''),
-                        removedDate: staged.removedDate !== undefined ? staged.removedDate : (fit ? (fit.removedDate || '') : ''),
-                        roaming: staged.roaming !== undefined ? staged.roaming : (u.roaming || ''),
-                        notes: staged.notes !== undefined ? staged.notes : (u.notes || ''),
-                    };
-                });
+        // One entry per physical CARD, its state read from the latest fitment. This is
+        // the inventory view: the widgets, the Type filter and the card total use it,
+        // so those figures stay counts of cards however much history accumulates.
+        function simCards() {
+            const byTail = simTailIndex();
+            return simUnitEntries().map(([id, u]) => simRowFor(id, u, simLatestFitment(u), byTail));
+        }
+
+        // One entry per FITMENT — what the TABLE lists. A card that moved between
+        // airframes appears once per period it served: the current one, plus an
+        // `ex-TAIL` row for each aircraft it came off. That history is the whole
+        // reason the register exists, and reading only the latest fitment hid it.
+        // A spare has no fitment and is still exactly one row — there is nothing to
+        // expand, and it must not vanish from the register.
+        function simRows() {
+            const byTail = simTailIndex();
+            const rows = [];
+            simUnitEntries().forEach(([id, u]) => {
+                const fits = unitFitmentsSorted(u);
+                if (!fits.length) { rows.push(simRowFor(id, u, null, byTail)); return; }
+                fits.forEach(f => rows.push(simRowFor(id, u, f, byTail)));
+            });
+            return rows;
         }
 
         function simScope(status) {
@@ -9305,7 +9338,7 @@
             // click on Installation Date re-enters here rather than going through it.
             const mode = SIM_DATE_SORTS[simDateSort].key;
             const dnum = c => Number(dateSortKey(toISODate(c.fittedDate)) || 0);
-            const cards = simCards().sort((a, b) => {
+            const cards = simRows().sort((a, b) => {
                 const ta = SIM_TIER[a.status] ?? 9, tb = SIM_TIER[b.status] ?? 9;
                 // A fitted card with no date drops to the pinned tier: there is
                 // nothing to place it by, and leaving it in would put a blank row in
@@ -9380,7 +9413,7 @@
                         return `<span class="fleet-notset" title="This card is not fitted, so it has no ${title}">—</span>`;
                     }
                     return `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(value)}"
-                        data-sim="${escAttr(c.id)}" data-field="${field}" onchange="handleSimEdit(this)">`;
+                        data-sim="${escAttr(c.key)}" data-field="${field}" onchange="handleSimEdit(this)">`;
                 };
 
                 const fitSort = dateSortKey(toISODate(c.fittedDate)) || '99999999';
@@ -9392,7 +9425,7 @@
                 // move a card between aircraft, which is a removal and a refit and
                 // belongs on the Serials tab.
                 const tailCell = editing
-                    ? `<select class="edit-select" data-sim="${escAttr(c.id)}" data-field="aircraft" onchange="handleSimEdit(this)">
+                    ? `<select class="edit-select" data-sim="${escAttr(c.key)}" data-field="aircraft" onchange="handleSimEdit(this)">
                            ${hasFit ? '' : `<option value="" ${!c.tailShown ? 'selected' : ''}>— not assigned —</option>`}
                            ${projectFleet().map(a => `<option value="${escAttr(a.id)}" ${c.tailShown === a.id ? 'selected' : ''}>${escAttr(a.id)}</option>`).join('')}
                        </select>`
@@ -9406,14 +9439,14 @@
                 // deleting its own history.
                 const allowed = hasFit ? ['active', 'fault', 'removed'] : ['unused'];
                 const statusCell = (editing && hasFit)
-                    ? `<select class="edit-select" data-sim="${escAttr(c.id)}" data-field="status" onchange="handleSimEdit(this)">
+                    ? `<select class="edit-select" data-sim="${escAttr(c.key)}" data-field="status" onchange="handleSimEdit(this)">
                            ${SIM_STATUSES.filter(x => allowed.includes(x.value))
                                .map(x => `<option value="${x.value}" ${c.status === x.value ? 'selected' : ''}>${x.label}</option>`).join('')}
                        </select>`
                     : `<span class="status-badge sim-${c.status}">${simStatusBadge(c.status)}</span>`;
 
                 const roamCell = editing
-                    ? `<select class="edit-select" data-sim="${escAttr(c.id)}" data-field="roaming" onchange="handleSimEdit(this)">
+                    ? `<select class="edit-select" data-sim="${escAttr(c.key)}" data-field="roaming" onchange="handleSimEdit(this)">
                            <option value="" ${!c.roaming ? 'selected' : ''}>—</option>
                            ${SIM_ROAMING.map(r => `<option value="${r.value}" ${c.roaming === r.value ? 'selected' : ''}>${r.label}</option>`).join('')}
                        </select>`
@@ -9422,7 +9455,7 @@
                         : '<span class="fleet-notset">Not set</span>');
 
                 const noteCell = editing
-                    ? `<input class="edit-text comment-input" value="${escAttr(c.notes)}" placeholder="Add a comment" data-sim="${escAttr(c.id)}" data-field="notes" onchange="handleSimEdit(this)">`
+                    ? `<input class="edit-text comment-input" value="${escAttr(c.notes)}" placeholder="Add a comment" data-sim="${escAttr(c.key)}" data-field="notes" onchange="handleSimEdit(this)">`
                     : `<span class="comment-text">${c.notes ? escAttr(c.notes) : '—'}</span>`;
 
                 row.innerHTML = `
@@ -9468,7 +9501,14 @@
             renumberVisibleRows('simTable');
             const shown = Array.from(document.querySelectorAll('#simTableBody tr'))
                 .filter(r => r.style.display !== 'none').length;
-            setText('simCount', `${shown} of ${simCards().length} SIM cards`);
+            // Rows are fitments and cards are cards, and since a card can hold more
+            // than one fitment the two totals differ. Naming both stops the row count
+            // reading as a card count that has silently gained a card.
+            const totalRows = simRows().length;
+            const totalCards = simCards().length;
+            setText('simCount', totalRows === totalCards
+                ? `${shown} of ${totalCards} SIM cards`
+                : `${shown} of ${totalRows} entries · ${totalCards} cards`);
         }
 
         function resetSimTable() {
@@ -9531,18 +9571,39 @@
             // One multi-path PATCH, the shape every other save on the page uses.
             // Card-level fields go straight on the unit; dates and state belong to the
             // fitment, so they are addressed through its id.
-            const byId = {};
-            simCards().forEach(c => { byId[c.id] = c; });
+            // Keyed by ROW, so an edit lands on the fitment it was typed against.
+            // Resolving by unit id would send a history row's dates to whichever
+            // fitment happens to be latest.
+            const byKey = {};
+            simRows().forEach(r => { byKey[r.key] = r; });
             const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
             const patch = {};
-            const created = {};      // unitId -> the fitment id minted for it
+            const created = {};      // row key -> the fitment id minted for it
             let problem = '';
 
-            ids.forEach(id => {
-                const e = pendingSim[id];
-                const fid = (byId[id] || {}).fitmentId;
+            ids.forEach(key => {
+                const e = pendingSim[key];
+                const row = byKey[key];
+                if (!row) return;
+                const id = row.id;
+                const fid = row.fitmentId;
+                // Roaming and the comment belong to the CARD, so they are written to
+                // the unit whichever of its rows they were typed on.
                 if (e.roaming !== undefined) patch[`${id}/roaming`] = e.roaming || null;
                 if (e.notes !== undefined) patch[`${id}/notes`] = e.notes || null;
+
+                // A card is one physical box: it cannot be on wing in two places. With
+                // history rows editable, putting an old fitment back to Active is now
+                // reachable, so it is refused and named rather than quietly creating a
+                // card that reads as fitted to two aircraft at once.
+                if (e.state === 'on_wing' && fid) {
+                    const clash = unitFitments(unitsLive[id] || {})
+                        .find(f => f.id !== fid && (f.state || 'on_wing') === 'on_wing');
+                    if (clash) {
+                        problem = `${row.serial ? formatSimSerial(row.serial) : 'That card'} is already on wing on ${clash.aircraft || 'another aircraft'} — remove it there first.`;
+                        return;
+                    }
+                }
 
                 if (!fid) {
                     // A spare being assigned. The fitment is created here, in the same
@@ -9552,14 +9613,14 @@
                     // dropped silently.
                     const tail = (e.aircraft || '').trim();
                     if (!tail) {
-                        if (e.fittedDate) problem = `${(byId[id] || {}).serial || 'A card'} needs an aircraft before it can take an installation date.`;
+                        if (e.fittedDate) problem = `${row.serial ? formatSimSerial(row.serial) : 'A card'} needs an aircraft before it can take an installation date.`;
                         return;
                     }
                     const nfid = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
                     const f = { aircraft: tail, state: 'on_wing', loggedAt: stamp };
                     if (e.fittedDate) f.fittedDate = e.fittedDate;
                     patch[`${id}/fitments/${nfid}`] = f;
-                    created[id] = { fid: nfid, f };
+                    created[key] = { fid: nfid, f };
                     return;
                 }
 
@@ -9580,21 +9641,23 @@
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 // Mirror locally so the table is right before the poll comes back.
-                ids.forEach(id => {
-                    const e = pendingSim[id];
-                    const u = unitsLive[id];
+                ids.forEach(key => {
+                    const e = pendingSim[key];
+                    const row = byKey[key];
+                    if (!row) return;
+                    const u = unitsLive[row.id];
                     if (!u) return;
                     const setOrClear = (obj, k, v) => { if (v) obj[k] = v; else delete obj[k]; };
                     if (e.roaming !== undefined) setOrClear(u, 'roaming', e.roaming);
                     if (e.notes !== undefined) setOrClear(u, 'notes', e.notes);
                     // A newly assigned spare gets its fitment mirrored too, so the
                     // row flips from Spare to Active without waiting for the poll.
-                    if (created[id]) {
+                    if (created[key]) {
                         u.fitments = u.fitments || {};
-                        u.fitments[created[id].fid] = { ...created[id].f };
+                        u.fitments[created[key].fid] = { ...created[key].f };
                         return;
                     }
-                    const fid = (byId[id] || {}).fitmentId;
+                    const fid = row.fitmentId;
                     const f = fid && u.fitments && u.fitments[fid];
                     if (!f) return;
                     if (e.aircraft !== undefined && e.aircraft) f.aircraft = e.aircraft;
