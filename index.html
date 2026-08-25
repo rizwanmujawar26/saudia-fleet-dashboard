@@ -5695,10 +5695,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.52.1';
-        const APP_BUILD    = '2026.08.25.04';
+        const APP_VERSION  = '2.53.0';
+        const APP_BUILD    = '2026.08.25.05';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T11:36:00Z';
+        const APP_DEPLOYED = '2026-08-25T13:14:55Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -9183,7 +9183,7 @@
         }
 
         let simEditMode = false;
-        let pendingSim = {};        // { unitId: { roaming, notes } }
+        let pendingSim = {};        // { rowKey: { roaming, notes, ... } } — see simRowFor
 
         // The latest fitment for a unit, by fitted date then logged order. "Latest"
         // has to be resolved the same way hardwareFitment() does it, or a card could
@@ -9241,8 +9241,18 @@
                 fit: tailShown ? (isLinefit(airShown) ? 'linefit' : 'retrofit') : '',
                 fittedDate: staged.fittedDate !== undefined ? staged.fittedDate : (fit ? (fit.fittedDate || '') : ''),
                 removedDate: staged.removedDate !== undefined ? staged.removedDate : (fit ? (fit.removedDate || '') : ''),
-                roaming: staged.roaming !== undefined ? staged.roaming : (u.roaming || ''),
-                notes: staged.notes !== undefined ? staged.notes : (u.notes || ''),
+                // Roaming and the comment belong to the PERIOD OF SERVICE, not to the
+                // card: the same SIM can run a different plan on the next airframe,
+                // and a removal note is about the removal, not about the card for
+                // ever. A spare has no fitment to hold them, so an unfitted card
+                // keeps them at unit level — that is the ONLY thing unit-level
+                // roaming/notes mean now.
+                //
+                // ⚠️ No fallback to the unit for a fitted row, deliberately. A
+                // fallback cannot express "explicitly not set": the ASK period has no
+                // plan on record, and falling back would make it inherit ASC's.
+                roaming: staged.roaming !== undefined ? staged.roaming : (fit ? (fit.roaming || '') : (u.roaming || '')),
+                notes: staged.notes !== undefined ? staged.notes : (fit ? (fit.notes || '') : (u.notes || '')),
             };
         }
 
@@ -9602,10 +9612,11 @@
                 if (!row) return;
                 const id = row.id;
                 const fid = row.fitmentId;
-                // Roaming and the comment belong to the CARD, so they are written to
-                // the unit whichever of its rows they were typed on.
-                if (e.roaming !== undefined) patch[`${id}/roaming`] = e.roaming || null;
-                if (e.notes !== undefined) patch[`${id}/notes`] = e.notes || null;
+                // Written to the FITMENT the row stands for, so two periods of the
+                // same card stay independent. Only a card with no fitment at all —
+                // a spare — has nowhere to put them and keeps them on the unit.
+                if (e.roaming !== undefined) patch[fid ? `${id}/fitments/${fid}/roaming` : `${id}/roaming`] = e.roaming || null;
+                if (e.notes !== undefined) patch[fid ? `${id}/fitments/${fid}/notes` : `${id}/notes`] = e.notes || null;
 
                 // A card is one physical box: it cannot be on wing in two places. With
                 // history rows editable, putting an old fitment back to Active is now
@@ -9634,6 +9645,14 @@
                     const nfid = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
                     const f = { aircraft: tail, state: 'on_wing', loggedAt: stamp };
                     if (e.fittedDate) f.fittedDate = e.fittedDate;
+                    // The spare's plan and comment follow it onto the aircraft —
+                    // otherwise assigning a card would silently blank both, since a
+                    // fitted row no longer reads the unit.
+                    const carry = unitsLive[id] || {};
+                    const roam = e.roaming !== undefined ? e.roaming : (carry.roaming || '');
+                    const note = e.notes !== undefined ? e.notes : (carry.notes || '');
+                    if (roam) f.roaming = roam;
+                    if (note) f.notes = note;
                     patch[`${id}/fitments/${nfid}`] = f;
                     created[key] = { fid: nfid, f };
                     return;
@@ -9663,8 +9682,6 @@
                     const u = unitsLive[row.id];
                     if (!u) return;
                     const setOrClear = (obj, k, v) => { if (v) obj[k] = v; else delete obj[k]; };
-                    if (e.roaming !== undefined) setOrClear(u, 'roaming', e.roaming);
-                    if (e.notes !== undefined) setOrClear(u, 'notes', e.notes);
                     // A newly assigned spare gets its fitment mirrored too, so the
                     // row flips from Spare to Active without waiting for the poll.
                     if (created[key]) {
@@ -9674,6 +9691,11 @@
                     }
                     const fid = row.fitmentId;
                     const f = fid && u.fitments && u.fitments[fid];
+                    // Mirror roaming and the comment where the patch put them: on the
+                    // fitment for a fitted card, on the unit only for a spare.
+                    const target = f || u;
+                    if (e.roaming !== undefined) setOrClear(target, 'roaming', e.roaming);
+                    if (e.notes !== undefined) setOrClear(target, 'notes', e.notes);
                     if (!f) return;
                     if (e.aircraft !== undefined && e.aircraft) f.aircraft = e.aircraft;
                     if (e.fittedDate !== undefined) setOrClear(f, 'fittedDate', e.fittedDate);
@@ -9772,8 +9794,6 @@
                 const id = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
                 const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
                 const entry = { lruId: 'sim', serial, addedAt: stamp };
-                if (roaming) entry.roaming = roaming;
-                if (notes) entry.notes = notes;
 
                 // Active means "has a fitment". Creating one here is the same shape
                 // Record Installed writes, so the card reads identically on the
@@ -9793,7 +9813,16 @@
                     const fid = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
                     const f = { aircraft: tail, state: 'on_wing', loggedAt: stamp };
                     if (fittedStored) f.fittedDate = fittedStored;
+                    // Fitted: the plan and comment describe this period of service, so
+                    // they go on the fitment — the same place the table edits them.
+                    if (roaming) f.roaming = roaming;
+                    if (notes) f.notes = notes;
                     entry.fitments = { [fid]: f };
+                } else {
+                    // Spare: no fitment to hold them, so the card carries them until
+                    // it is assigned, at which point they follow it onto the aircraft.
+                    if (roaming) entry.roaming = roaming;
+                    if (notes) entry.notes = notes;
                 }
                 try {
                     const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units/${id}.json?auth=${token}`, {
