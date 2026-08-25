@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.60.0, 2026-08-26)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.61.0, 2026-08-26)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1650,6 +1650,19 @@ Editors type **one string** — `2026-08-16 04:22:00 (ME-SVA-UGO-0826)` — and
 parses with or without parentheses; bad input is flagged inline and never
 staged.
 
+⚠️ **A source ending in `DEV` is accepted and carries NO cycle** (user,
+2026-08-26) — `ME-SVA-UGO-DEV` is the development/default load. There is nothing
+to age it against, so it reads as **NO MEDIA**, but the **date is kept**: the day the
+default load was activated is a real fact. `MEDIA_DEV_SOURCE` is the one test.
+It therefore **sorts by its date, not to the end** — the end of the table is for
+aircraft with no loading event at all, and a DEV aircraft had one.
+
+⚠️ **`commitMediaChanges()` gates on `loadedDateUTC`, NOT on `mediaCycle`.** It used
+to gate on the cycle, which meant a record without one was **silently dropped** — the
+entry staged, Save reported success and wrote nothing. The cycle fields are written as
+`null` for a DEV record, so an aircraft moving from a dated load to the default one
+clears them rather than keeping a stale month.
+
 - A cycle is **MMYY** (`0826`). `cycleSortKey()` maps it to YYYYMM so January
   correctly outranks the previous December; `previousCycle()` rolls the year.
   **Never compare cycle strings directly.**
@@ -2291,6 +2304,12 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.61.0 — Media accepts ME-SVA-UGO-DEV
+A source ending in `DEV` is the default load: no monthly cycle, so it reads as **NO
+MEDIA**, but its date is kept and shown because that is the day the default load was
+activated. The save had to stop gating on `mediaCycle` — it was silently dropping any
+record without one, reporting success and writing nothing.
 
 ### v2.60.0 — Media opens newest-first, and 0526 is Light Media
 The Media table opens on the most recent load with the unloaded aircraft last — a build
