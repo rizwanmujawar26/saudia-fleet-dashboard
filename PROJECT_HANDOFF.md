@@ -2,6 +2,41 @@
 
 Paste this whole document into a new chat to resume work with full context.
 
+## Where things stand (read this first)
+
+The last working session took the app **v2.30.3 → v2.50.0**. If you are picking this
+up cold, these are the changes that alter how you should work on it — the rest of this
+document is the detail.
+
+**Four cross-cutting rules were established. They are not per-page decisions.**
+
+| | where |
+|---|---|
+| **Filters are DECLARED**, never hand-written in markup — one entry in `FILTER_BARS` | *Filter bar* |
+| **Dates are day-first everywhere**, and `<input type="date">` is banned | *Conventions* |
+| **Every table opens on a date column, oldest first**, with sentinels for undated rows | *Table sorting* |
+| **Widgets share one markup and one colour vocabulary**, and counts should sum | *Widget vocabulary* |
+
+**What was built:** the 4G SIM register (new public tab, 53 cards), Activation as a
+Timeline milestone, activity editing, the filter-bar component replacing every pill
+row, frozen filter bars and table heads, full-bleed mobile layout.
+
+**What changed about the data:** `/units` gained `roaming`, `lifecycle` and a fitment
+`condition`; 41 SIM installation dates were cleared and 34 rewritten from activation
+dates; `/aircraft/{tail}/simRoaming` is superseded and unread.
+
+**Two long-standing caveats closed:** the `/units` client write path is proven, and
+CWAP quantities are answered (A320-family ×3, A330 ×5, both fits).
+
+⚠️ **The single most useful habit from that session:** every edit script asserted its
+anchor was unique *before* writing, and several aborted mid-way because of it — losing
+edits that had already printed "ok". **Always re-verify in the browser after a scripted
+edit**, not just in the diff. Two real bugs were caught that way and would otherwise
+have shipped: a table whose headers and rows disagreed, and a date handler that staged
+`null` and would have wiped good dates.
+
+---
+
 ## What this is
 
 A single-file HTML dashboard for Saudia's wireless IFEC fleet: software
@@ -22,21 +57,24 @@ Realtime Database so the whole team sees the same data instantly.
 `gh` CLI and `firebase` CLI (via `npx firebase-tools`) are already authenticated
 on this Mac — no login needed to keep working.
 
-Live data (read from the database **2026-08-23**, verified at session close):
+Live data (read from the database **2026-08-25**, verified at session close):
 
-- **44 aircraft** — 41 Active, 3 In Retrofit (AQB, ASD, ASO)
-- Of the 41 Active: **39 retrofit + 2 linefit** (ASBA/ASBB, the A321XLR HBC+ pair)
-- **39 is the Software and Media denominator.** 35 on Middleware 2.1.0 — behind:
-  **AS59, AS76, ASAB, ASJ**. 35 on the August 2026 media cycle
-- `ugoVersion` 6.3.1 and `tilesVersion` 2.0 on all 39
-- `wifiVisibility`: 38 public, 6 hidden (AQA, AQJ, AS51 + the three In Retrofit)
-- `retrofitLocation`: 37 Jeddah, 2 Malta, 2 Qatar, 1 Jordan, 2 Airbus (linefit).
-  `retrofitStart`/`retrofitEnd` set on the five outstation only
-- 24 schedule entries, 9 activities, 1 hardware record, **5 units**, 1 allowlisted editor
+- **44 aircraft** — 42 Active, 2 In Retrofit (ASD, ASO). AQB was activated 24-Aug-2026
+- Of the 42 Active: **40 retrofit + 2 linefit** (ASBA/ASBB, the A321XLR HBC+ pair)
+- **40 is the Software and Media denominator.** 38 on Middleware 2.1.0 — behind:
+  **AS59, AS76** (2.0.0) — and 35 on the August 2026 media cycle
+- `activatedDate` set on **42** — every aircraft except the two in retrofit
+- 24 schedule entries, 11 activities, 1 hardware record, **67 units**, 1 allowlisted editor
+- Of the 67 units, **53 are SIM cards**: 39 Active, 1 Fault, 5 Spare, 8 Removed.
+  Roaming: 10 Global, 40 Local, 3 unset
 
-`/activities`, `/hardware` and `/units` are still lightly populated — a Hardware
-fitment reading "no record" is a gap in the record, not a fault. The serial backlog
-is the main data-entry job outstanding.
+⚠️ **These numbers move constantly — the user edits live.** Never quote them back as
+fact; re-read the node. They are here to tell you the shape of the data, not its
+current value.
+
+`/hardware` is still lightly populated — a Hardware fitment reading "no record" is a
+gap in the record, not a fault. The **SIM register is now the best-populated part of
+`/units`**; the other LRUs' serials are still the main data-entry job outstanding.
 
 ---
 
@@ -783,8 +821,113 @@ express.
 
 ---
 
+## Table sorting — one philosophy, four tables
+
+Every data table opens on a **date column, oldest first**, placed second right after
+`#`. That is deliberate: the question these pages answer is "what happened when", and
+the oldest row is the one that has been waiting longest.
+
+| table | opens on | constant |
+|---|---|---|
+| Software | Installation Date (`completionDate`) | `SW_DEFAULT_SORT` |
+| Media | Loading Date (`media.loadedDateUTC`) | `MEDIA_DEFAULT_SORT` |
+| Fleet | Activation Date (`activatedDate`) | `FLEET_DEFAULT_SORT` |
+| 4G SIM | Installation Date (fitment `fittedDate`) | tiers — see below |
+
+### Four rules that apply to every one of them
+
+1. **A date column's `data-sort` MUST go through `dateSortKey()`.** `sortTable` tries
+   `parseFloat` first, and `parseFloat('2026-05-19')` is `2026` — so a raw ISO key made
+   every date within a year compare equal, and date columns silently sorted by year
+   alone. `dateSortKey` strips the separators to give a real number (`20260519`).
+
+2. **Undated rows sort to the END, never the front.** They carry a sentinel instead of
+   an empty key. ⚠️ **The sentinel must have the same number of digits as a real key**:
+   `99999999` for `DD-Mon-YYYY` (8 digits), but `99999999999999` for the Media table,
+   whose `loadedDateUTC` is a full timestamp and produces 14. A short sentinel sorts
+   undated rows to the front, which is exactly wrong and looks like a data bug.
+
+3. **The default sort is RE-APPLIED on every rebuild**, not set once:
+   ```js
+   const s = lastSort['<table>'] || <TABLE>_DEFAULT_SORT;
+   lastSort['<table>'] = s;
+   applyTableSort('<table>', s.col, s.dir);
+   ```
+   These populate functions run again on every live update. Without this a teammate's
+   edit hands the rows back in build order while the header still shows its arrow —
+   which is what happened to the Fleet table the first time, and had been silently
+   happening to any user sort on any table.
+
+4. **Anything that changes which rows are visible, or their order, must call
+   `renumberVisibleRows()`** — the `#` column is a position in the list, not an id.
+
+### When one column is not enough: the SIM tiers
+
+`applyTableSort()` sorts **one column** and has no concept of grouping. Where an order
+needs more than that it becomes the **build** order in the populate function, and the
+header calls its own handler rather than `sortTable()`.
+
+The 4G SIM register is the case: only cards on an aircraft *with* a date can be
+sorted by when they went on, so it is three tiers (`SIM_TIER`) —
+
+| tier | rows | order |
+|---|---|---|
+| 0 | Active or Faulty **with** an install date | the chosen mode |
+| 1 | Removed, **or** fitted but undated | oldest first, undated last |
+| 2 | Spares | the absolute end |
+
+— and Installation Date cycles four modes (`SIM_DATE_SORTS`) instead of toggling two:
+Newest first → Oldest first → Most days → Fewest days. The header **names** the active
+mode, because four states cannot be told apart by an arrow.
+
+⚠️ **Days and date are the same fact for a card still on wing**, so Most days sorts
+identically to Oldest first. Both exist because the questions differ, not the answers.
+
+⚠️ **A build order and `lastSort` are mutually exclusive.** `populateSimTable()`
+re-applies a column sort *only if the user clicked one*; the date header clears
+`lastSort` so the tiers come back. Reset clears both.
+
+---
+
 ## Widget vocabulary
 
+### The rules that hold across every strip
+
+1. **One markup, one set of variants.** Every card is `.media-widget` with a
+   `media-widget-<variant>` modifier — `latest` green, `previous` blue, `older` amber,
+   `alert` red, `no_media` grey. Fleet, Media and 4G SIM all use it, so the pages read
+   as one system rather than three hand-rolled sets. **Do not write a new card shape.**
+
+2. **Counts on a strip should SUM to their population.** A status with no card is a
+   status counted nowhere, and the strip then misstates the total. This is why the SIM
+   register gained a Fault card the moment Fault became a status.
+   ⚠️ **The 4G SIM strip is the one deliberate exception**: Removed gave up its card
+   (2026-08-25, user's call) so the strip shows what is *live*. 39 + 1 + 5 = 45 of 53;
+   the other 8 are removed and one click away in the Status filter.
+
+3. **A composition is a SPLIT, not another count.** Two shares of one track that always
+   fill it, because it shows a ratio rather than progress towards anything —
+   Fleet's **SSID Visibility** (public/hidden) and 4G SIM's **Roaming Plan**
+   (global/local). A split answers a different question from the cards beside it and
+   must not be read as a fourth one.
+
+4. **Colour carries meaning, and it is the same meaning everywhere.** Green in service,
+   blue available, amber closed-or-behind, red needs action, grey history. A green
+   number, a green badge and the green widget all mean the same thing — which is why
+   the SIM serial, its status badge and its widget share hues.
+   ⚠️ Watch what red means on a given strip: on the SIM register **Fault** takes the
+   alert red and **Removed** steps back to grey, because a removed card is settled and
+   a faulty one is a job.
+
+5. **Figure convention:** count at the left edge of the bar, percentage at the right
+   (`margin-left: auto` on the percentage).
+
+### Per-page
+
+- **4G SIM** — Active Cards (green) / Faulty Cards (red) / Spare Cards (blue), plus the
+  **Roaming Plan** split. The split counts only cards **still fitted** — one that came
+  off has no live plan. Local takes slate rather than the SSID card's red: it is the
+  other half of a composition, not an exception state.
 - **Fleet widgets** — Active Fleet, In Retrofit, and **SSID Visibility**: a single
   track split between public (from the left) and hidden (from the right), the two
   shares always filling it, because it shows a composition rather than progress
@@ -1430,7 +1573,8 @@ it — so the wrapper, not the viewport, becomes the scrollport a sticky `thead`
 to, and the head just scrolls away with the page. `syncTableFreeze()` measures each
 table against its wrapper and sets `.is-overflowing`; a table that **fits** gets
 `overflow: visible` and a frozen head, one that does not keeps its horizontal scroll
-and an ordinary head. `.table-freeze` marks the seven page-level tables — the Installed
+and an ordinary head. `.table-freeze` marks the **eight** page-level tables
+(Software, HBC+, Media, Serials, both Schedule stations, 4G SIM, Fleet) — the Installed
 Equipment and Hardware fitment tables sit inside detail panels and are left alone.
 
 ⚠️ **A capped, internally-scrolling pane was tried first and rejected.** Giving the
@@ -1736,25 +1880,42 @@ live.
 - **Retrofit start/end dates for the 37 Jeddah aircraft.** The user said these would
   follow. `retrofitStart`/`retrofitEnd` already exist and are already surfaced in the
   Install Site tooltip, so this is a data write only.
-- **The serial backlog itself.** Record Installed / Record Removed are built and the
-  `/units` register is live with 5 units; the fleet's installed and removed serials
-  have not been entered yet.
+- **The serial backlog for the non-SIM LRUs.** The SIM cards are done — 53 of them in
+  `/units` with fitments, dates and roaming. The other nine LRUs (IFE Server, MODMAN,
+  KANDU, KRFU, RX/TX Antenna, Waveguide Adapter, Coax Cable J12, CWAP) have almost
+  nothing: 14 non-SIM units against ~400 positions. **Record Installed Serials** on
+  the Hardware tab is the tool for it and is built.
+
+### Ideas raised but not built
+
+- **Assigning a Spare from the table is one-way.** The Aircraft picker creates a
+  fitment; it cannot *move* a fitted card to another aircraft, because that is a
+  removal plus a refit and belongs on the Serials tab. If the SIM page is to be the
+  full hub, that flow needs designing rather than bolting the second write onto the
+  picker.
+- **A `Retired` / unsubscribed status** was built in v2.42.0 and removed in v2.43.0.
+  The `lifecycle` rule is still declared and inert if it comes back.
+- **A picker for dates.** Date fields are typed now — `<input type="date">` had to go
+  because it renders in the browser's locale. An in-page picker would restore the
+  convenience without the format problem; nobody has asked for one yet.
+- **`Fault` has no reason field.** It is a flag; why a card is faulty lives only in
+  Comments.
+
+### Closed this session — do not re-raise
 
 ✅ **The client write path to `/units` is PROVEN** (2026-08-25). The user added SIM
 `899660117002235940` through Add SIM — the stored record carries the `addedAt` and
 `roaming` that dialog writes — and edited a fitment's removal date from the SIM table.
 Both landed against the live rules engine. The caveat that stood since v2.12.0 is
-closed; `roaming`, `lifecycle`, `condition` and the fitment date/state writes all go
-through the same path.
+closed; `roaming`, `condition` and the fitment date/state writes all go through it.
+
+✅ **CWAP quantities** — A320-family ×3, A330 ×5, **both fits**. Encoded as a family
+rule, not a subtype list.
+
+✅ **Activation dates** — all 42 activated aircraft carry `activatedDate`, and the
+Timeline derives an Activation milestone from it.
 
 ### Known gaps and cleanups
-
-- **The client write path to `/units` has not been proven against the live rules
-  engine.** The migration used the admin CLI, which bypasses rules, and browser
-  testing stubbed `fetch`. The rules mirror the shapes `/activities` already uses,
-  so the risk is low and a rejection surfaces loudly in the UI rather than silently
-  — but **enter one serial first** and confirm it saves before doing a bulk run.
-  The same caveat applies to `details.recordType` from v2.12.0.
 
 - **SSID status has no home yet.** It was going in the old expandable drawer,
   which no longer exists. It now belongs either in the Maintenance right panel's

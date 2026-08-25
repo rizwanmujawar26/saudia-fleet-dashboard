@@ -18,6 +18,17 @@ A snapshot folder holds one JSON file per node, a copy of the rules, and a
 `manifest.json` with a SHA-256 of each file so corruption is detectable rather
 than discovered during a restore.
 
+### What a snapshot now holds
+
+`/units` is no longer a small node — it carries the **SIM register**, which is the
+best-populated operational data in the project (53 cards with fitments, dates, roaming
+plans and fault flags as of 2026-08-25). A restore that skips `/units` loses the SIM
+history entirely; there is no second copy of it anywhere.
+
+Fields added to `/units` during 2026-08-25 that a restore must therefore carry:
+`roaming` (`global|local`, on the unit), `lifecycle` (declared, currently unused — see
+the handoff), and `condition` (`fault`, on a **fitment**).
+
 ### The one gap: `/editors`
 
 `/editors` is readable only by the account it belongs to. That is the point — it
@@ -39,6 +50,16 @@ uids come from Firebase Console → Authentication → Users.
 Snapshots contain the **entire operational dataset**. They are deliberately kept
 out of this repository: it is public, and anything committed to git history is far
 harder to walk back than a live database. `backups/` is gitignored.
+
+**Take one before any bulk or destructive write.** That is not a formality: two
+data operations on 2026-08-25 cleared 41 SIM installation dates and then backfilled
+34 of them, and the snapshot taken first is the only thing that could have undone
+either. Snapshots from that day:
+
+| folder | taken before |
+|---|---|
+| `2026-08-25-before-sim-date-clear` | clearing all SIM `fittedDate` values |
+| `2026-08-25-before-sim-install-backfill` | writing 34 install dates from activation dates |
 
 Take one locally at any time — no credentials needed, it reads the database
 anonymously:
@@ -114,7 +135,9 @@ npx --yes firebase-tools deploy --only database --project saudia-fleet-dashboard
 2. `./scripts/restore.sh backups/<last good date>` and read the dry run.
 3. `--apply` when the numbers look right.
 4. Re-add editors if `/editors` was hit (above).
-5. Confirm: the app should show 42 aircraft and the tabs should populate.
+5. Confirm: the app should show **44 aircraft** and the tabs should populate. The
+   4G SIM tab is the quickest sanity check that `/units` came back whole — it should
+   list ~53 cards with their statuses, not an empty table.
 
 ---
 
