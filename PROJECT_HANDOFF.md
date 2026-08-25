@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.52.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.52.1, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -969,12 +969,20 @@ re-applies a column sort *only if the user clicked one*; the date header clears
    must not be read as a fourth one.
 
 4. **Colour carries meaning, and it is the same meaning everywhere.** Green in service,
-   blue available, amber closed-or-behind, red needs action, grey history. A green
-   number, a green badge and the green widget all mean the same thing — which is why
-   the SIM serial, its status badge and its widget share hues.
-   ⚠️ Watch what red means on a given strip: on the SIM register **Fault** takes the
-   alert red and **Removed** steps back to grey, because a removed card is settled and
-   a faulty one is a job.
+   blue available, **amber closed-or-behind**, red needs action, grey nothing set. A
+   green number, a green badge and the green widget all mean the same thing — which is
+   why the SIM serial, its status badge and its widget share hues.
+
+   ⚠️ **This rule is checkable, and it had silently broken.** Until v2.52.1 the SIM
+   register's `REMOVED` and `SPARE` badges were `#eef1f3`/`#6b747c` — *byte for byte
+   identical* — so two different states rendered the same and neither matched the
+   serial two columns away. **When you add or change a status, put the badge, the
+   serial and the widget side by side and check they agree**; nothing enforces it.
+
+   **Removed is amber, not grey** (user, 2026-08-25). Grey reads as *switched off*
+   rather than *taken off*; a removed card is a **closed span**, which is what amber
+   already says on that very row's days pill. Grey now means only "nothing set".
+   Red still belongs to Fault alone — a faulty card is a job, a removed one is history.
 
 5. **Figure convention:** count at the left edge of the bar, percentage at the right
    (`margin-left: auto` on the percentage).
@@ -1151,7 +1159,14 @@ groups dimmed to 0.55 rather than dropped, since reading a number off a physical
 still needs them.
 
 **The serial carries the card's state as colour**, the same hues as the badges and
-widgets: Active green, Fault red, Removed dark amber, Spare blue. A green number, a
+widgets: Active green, Fault red, Removed dark amber, Spare blue. **The whole row
+agrees** — serial, `ex-TAIL`, status badge and the closed days pill are one colour per
+state, and all four badges are bordered like the `On-Wing` pill beside them so they
+read as pills rather than flat washes. Tokens are reused, not invented:
+`#fdf3e3`/`#8a5a12`/`#efd9ae` is the amber `.ver-behind` and `.fit-in-retrofit` already
+use, and every pairing clears WCAG AA (removed 5.38:1, spare 6.1:1, active 7.06:1,
+fault 6.23:1, `ex-TAIL` 4.83:1 on white — **check this when picking a new one**, the
+first amber tried for `ex-TAIL` came in at 4.05:1 and had to be darkened). A green number, a
 green badge and the green widget all mean the same thing.
 
 ⚠️ **`simSerialHTML()` returns MARKUP, so it is for the cell only.** `data-search` must
@@ -2037,6 +2052,13 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.52.1 — REMOVED goes dark amber, and every SIM badge takes its own colour
+`REMOVED` and `SPARE` were the same grey, byte for byte, and neither matched its own
+serial. Removed now takes the dark amber of its serial, its `ex-TAIL` and its closed
+days pill — grey said *switched off* where the fact is *taken off* — and Spare takes
+the blue its serial and widget already had, leaving grey to mean nothing set. All four
+badges gained a border to match the `On-Wing` pill. Contrast checked to AA throughout.
 
 ### v2.52.0 — The SIM register lists fitments, not cards
 A card that moved between airframes only ever showed its current posting, so ASK's
