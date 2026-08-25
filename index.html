@@ -5336,8 +5336,9 @@
             { id: 'ASAB', type: 'A321-251NX', station: 'RUH' },
 
             // A321 253NY XLR (2 aircraft) - EXCLUDED (HBC+)
-            { id: 'ASBA', type: 'A321-253NY XLR', station: 'N/A' },
-            { id: 'ASBB', type: 'A321-253NY XLR', station: 'N/A' },
+            // ⚠️ No space in a type string — see TYPE_SHORT_LABEL.
+            { id: 'ASBA', type: 'A321-253NYXLR', station: 'N/A' },
+            { id: 'ASBB', type: 'A321-253NYXLR', station: 'N/A' },
 
             // A330 343 (4 aircraft)
             { id: 'AQJ', type: 'A330-343', station: 'JED' },
@@ -5834,10 +5835,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.59.0';
-        const APP_BUILD    = '2026.08.25.11';
+        const APP_VERSION  = '2.59.1';
+        const APP_BUILD    = '2026.08.25.12';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T20:31:48Z';
+        const APP_DEPLOYED = '2026-08-25T20:41:43Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -12348,10 +12349,17 @@
             'A321-211':       { bg: '#eaf2ec', fg: '#3f6b4f', bd: '#d2e4d8' },
             'A321-251NX':     { bg: '#efedf5', fg: '#55507a', bd: '#dedaea' },
             'A330-343':       { bg: '#f2efe9', fg: '#6d604a', bd: '#e3ddd2' },
-            'A321-253NY XLR': { bg: '#f0f1f2', fg: '#5a6066', bd: '#e0e2e4' },
+            'A321-253NYXLR':  { bg: '#f0f1f2', fg: '#5a6066', bd: '#e0e2e4' },
         };
         const NEUTRAL_PILL = { bg: '#f0f1f2', fg: '#5a6066', bd: '#e0e2e4' };
-        const TYPE_SHORT_LABEL = { 'A320-214': 'A320', 'A321-211': 'A321', 'A321-251NX': 'A321neo', 'A330-343': 'A330', 'A321-253NY XLR': 'A321 XLR' };
+        // ⚠️ An aircraft type NEVER contains a space, stored or displayed (user,
+        // 2026-08-25). The XLR pair were 'A321-253NY XLR' showing as 'A321 XLR'; both
+        // lost the space. These keys are the STORED strings, so a type renamed in the
+        // database has to be renamed here, in TYPE_PILL_COLORS and in the fallback
+        // roster — those three are the only places a type string is hardcoded.
+        // typeFamily() is safe either way: it matches on the A32x prefix, so CWAP stays
+        // three on this pair.
+        const TYPE_SHORT_LABEL = { 'A320-214': 'A320', 'A321-211': 'A321', 'A321-251NX': 'A321neo', 'A330-343': 'A330', 'A321-253NYXLR': 'A321XLR' };
         // Light enough that the 📍 glyph reads clearly — the old Riyadh green was so dark
         // it swallowed the pin entirely.
         const LOCATION_PILL_COLORS = {
