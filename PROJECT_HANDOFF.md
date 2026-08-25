@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.48.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.49.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -879,6 +879,16 @@ sits with the card number**, because the plan belongs to the card rather than to
 airframe. Installation Date is column 2 and the default sort, oldest first, like the
 other tables; every column sorts, so the register reads by card or by aircraft.
 
+**The register's own columns are centred**, headers included — it is short values, so
+centring reads as columns rather than ragged edges. Comments stays left: it is a
+sentence, and a centred sentence is hard to scan.
+
+**The installation pill is colour-coded by what it is saying.** Green while the card is
+Active and the count is running, amber once it is closed, and **neutral for a Fault** —
+the days are real but the card is not healthy, and the colour must not say it is. The
+green is scoped to this table; the Fleet, Software and Media pills stay neutral, where
+an age is context rather than a health signal.
+
 **The installation pill measures time on wing, and changes meaning when the card comes
 off.** While it is fitted the span is open-ended and counts to today; once a removal
 date exists the pill shows the **closed** span install→removal and takes
@@ -914,10 +924,33 @@ cannot go stale against its own history.
 **Removed wins over Fault** in the derivation: once a card is off the aircraft it is
 history, not a job.
 
-**The table opens in a TWO-KEY order** — status rank (`SIM_STATUS_RANK`: Active,
-Fault, Spare, Removed) then oldest install date within each. `applyTableSort()` sorts
-on one column, so this has to be the **build** order; `populateSimTable()` only
-re-applies a sort the user actually clicked, and Reset clears it to come back here.
+**Sorting the register is THREE TIERS, not one order** (`SIM_TIER`):
+
+| tier | rows | order |
+|---|---|---|
+| 0 | Active or Faulty **with** an install date | the chosen mode |
+| 1 | Removed, **or** fitted but undated | oldest first, undated last |
+| 2 | Spares | the absolute end |
+
+A spare has never been fitted so it has nothing to sort *by*; a removed card's install
+date is history and would otherwise push current cards down the list. A fitted card
+with no date drops to tier 1 for the same reason — a blank in the middle of a
+date-ordered list is worse than a blank at the end.
+
+**Clicking Installation Date cycles four modes** (`SIM_DATE_SORTS`): Newest first →
+Oldest first → Most days → Fewest days. The header names the active one, because four
+modes cannot be told apart by an arrow.
+
+⚠️ **`applyTableSort()` cannot express any of this** — it sorts one column with no
+concept of tiers. So this is the **build** order and the date header calls
+`cycleSimDateSort()` rather than `sortTable()`. Every *other* header still goes through
+`sortTable()`, and doing so drops the tiers for that sort, which is what you want when
+you ask for "by serial". Reset clears both.
+
+⚠️ **Days and date are the same fact for a card still on wing** — days is today minus
+the date — so Most days sorts identically to Oldest first, and Fewest to Newest. Both
+are offered because "which has been on longest" and "which went on first" are different
+questions to ask, even when the answer happens to be the same list.
 
 Widgets are **Active Cards / Faulty Cards / Spare Cards**, in the shared
 `.media-widget` markup and variants the Fleet and Media strips use, plus a **Roaming
@@ -1730,6 +1763,15 @@ through the same path.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.49.0 — Centred columns, green service pill, four-mode date sort
+The register's columns and headers are centred (Comments excepted), the days pill is
+green while a card is Active and still counting, and Installation Date cycles four sort
+modes instead of two.
+
+Sorting became three tiers: only cards on an aircraft with a date take part, removed
+and undated rows pin behind them oldest-first, and spares sit at the absolute end — so
+a date-ordered list is never interrupted by rows that have no date to order by.
 
 ### v2.48.0 — Search box, and a roaming split widget
 The filter bar gained a free-text box that matches SIM number or aircraft — raw or

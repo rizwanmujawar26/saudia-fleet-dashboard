@@ -2327,8 +2327,39 @@
         .status-badge.sim-removed { background: #eef1f3; color: #6b747c; }
         .status-badge.sim-fault   { background: #fdecee; color: #a52834; }
 
+        /* The register is short values — dates, serials, badges — so centring reads
+           as columns rather than ragged left edges. Comments is the one exception:
+           it is a sentence, and a centred sentence is hard to scan. */
+        #simTable th, #simTable td { text-align: center; }
+        #simTable td.col-comment, #simTable th.col-comment { text-align: left; }
+        /* Centred cells still need their inline controls centred within them. */
+        #simTable td .edit-select,
+        #simTable td .edit-date,
+        #simTable td .comment-input { display: inline-block; }
+
+        /* The mode the date column is sorted by, said outright rather than left to a
+           bare arrow — there are four of them and an arrow cannot name them. */
+        .sim-sort-mode {
+            display: inline-block;
+            margin-left: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-transform: none;
+            opacity: 0.85;
+        }
+
         /* A closed span. Muted and struck through with a border so it reads as a
            total that has stopped, not a figure still counting up. */
+        /* In service and still counting. Scoped to the SIM register — the Fleet,
+           Software and Media pills stay neutral, where the age is context rather
+           than a health signal. */
+        .age-pill.age-pill-active {
+            background: rgba(10, 92, 52, 0.09);
+            border-color: rgba(10, 92, 52, 0.20);
+            color: #0a5c34;
+        }
+
         .age-pill.age-pill-closed {
             background: rgba(138, 90, 18, 0.08);
             border-color: rgba(138, 90, 18, 0.18);
@@ -4498,7 +4529,7 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th class="sortable-th" data-col="1" data-label="Installation Date" onclick="sortTable('simTable', 1)">Installation Date</th>
+                                <th class="sortable-th" data-col="1" data-label="Installation Date" id="simDateHead" onclick="cycleSimDateSort()">Installation Date</th>
                                 <th class="sortable-th" data-col="2" data-label="SIM Card" onclick="sortTable('simTable', 2)">SIM Card #</th>
                                 <th class="sortable-th" data-col="3" data-label="Roaming" onclick="sortTable('simTable', 3)">Roaming</th>
                                 <th class="sortable-th" data-col="4" data-label="Aircraft" onclick="sortTable('simTable', 4)">Aircraft</th>
@@ -5605,10 +5636,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.48.0';
+        const APP_VERSION  = '2.49.0';
         const APP_BUILD    = '2026.08.25.01';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T01:09:29Z';
+        const APP_DEPLOYED = '2026-08-25T01:33:35Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -9022,9 +9053,49 @@
             { value: 'removed', label: 'Removed', badge: 'REMOVED' },
         ];
 
-        // The order the table opens in: what is flying, then what needs attention,
-        // then what is available, then history. Within each, oldest first.
-        const SIM_STATUS_RANK = { active: 0, fault: 1, unused: 2, removed: 3 };
+        // Sorting the register is THREE tiers, not one order. Only cards that are on
+        // an aircraft and have a date can meaningfully be sorted by when they went on;
+        // everything else is pinned behind them so it never interleaves:
+        //
+        //   tier 0  active or faulty WITH an install date  — sorted by the chosen mode
+        //   tier 1  removed, or fitted but undated         — oldest first, undated last
+        //   tier 2  spares                                 — the absolute end
+        //
+        // A spare has never been fitted, so it has nothing to sort BY; a removed card's
+        // install date is history and would otherwise push current cards down the list.
+        const SIM_TIER = { active: 0, fault: 0, removed: 1, unused: 2 };
+
+        // Clicking Installation Date cycles these. Days and date are the same fact for
+        // a card still on wing — days is today minus the date — so the two pairs mirror
+        // each other; they are both offered because "which has been on longest" and
+        // "which went on first" are different questions to ask even when the answer
+        // sorts the same way.
+        const SIM_DATE_SORTS = [
+            { key: 'date-desc', label: 'Newest first',  arrow: '↓' },
+            { key: 'date-asc',  label: 'Oldest first',  arrow: '↑' },
+            { key: 'days-desc', label: 'Most days',     arrow: '⇊' },
+            { key: 'days-asc',  label: 'Fewest days',   arrow: '⇈' },
+        ];
+        let simDateSort = 0;
+
+        function cycleSimDateSort() {
+            simDateSort = (simDateSort + 1) % SIM_DATE_SORTS.length;
+            // A mode here owns the whole order, so any column sort is dropped.
+            delete lastSort['simTable'];
+            populateSimTable();
+        }
+
+        // Days a card has been on wing. Null when it cannot be known, which is what
+        // keeps undated rows out of the days comparison rather than counting as zero.
+        function simDaysOnWing(c) {
+            const iso = toISODate(c.fittedDate);
+            if (!iso) return null;
+            const from = new Date(iso + 'T00:00:00Z');
+            if (isNaN(from)) return null;
+            const end = c.removedDate ? new Date(toISODate(c.removedDate) + 'T00:00:00Z') : new Date();
+            if (isNaN(end)) return null;
+            return Math.round((end - from) / 86400000);
+        }
 
         // 18 digits is unreadable as one run. Grouped in sixes it can be checked
         // against a physical card without losing your place. Display only — the
@@ -9167,15 +9238,35 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             const editing = simEditMode && canEdit();
-            // Active first, then Fault, Spare, Removed; oldest install date within
-            // each. applyTableSort() sorts on ONE column, so a two-key default has to
-            // be the build order — a click on any header then takes over from here.
+            // Three tiers, then the chosen mode inside tier 0. applyTableSort() sorts
+            // on ONE column and cannot express tiers, so this is the BUILD order and a
+            // click on Installation Date re-enters here rather than going through it.
+            const mode = SIM_DATE_SORTS[simDateSort].key;
+            const dnum = c => Number(dateSortKey(toISODate(c.fittedDate)) || 0);
             const cards = simCards().sort((a, b) => {
-                const r = (SIM_STATUS_RANK[a.status] ?? 9) - (SIM_STATUS_RANK[b.status] ?? 9);
-                if (r) return r;
-                const ad = Number(dateSortKey(toISODate(a.fittedDate)) || '99999999');
-                const bd = Number(dateSortKey(toISODate(b.fittedDate)) || '99999999');
-                if (ad !== bd) return ad - bd;
+                const ta = SIM_TIER[a.status] ?? 9, tb = SIM_TIER[b.status] ?? 9;
+                // A fitted card with no date drops to the pinned tier: there is
+                // nothing to place it by, and leaving it in would put a blank row in
+                // the middle of a date-ordered list.
+                const ua = ta === 0 && !a.fittedDate ? 1 : ta;
+                const ub = tb === 0 && !b.fittedDate ? 1 : tb;
+                if (ua !== ub) return ua - ub;
+
+                if (ua === 0) {
+                    if (mode === 'days-desc' || mode === 'days-asc') {
+                        const da = simDaysOnWing(a), db = simDaysOnWing(b);
+                        if (da !== db) return mode === 'days-desc' ? db - da : da - db;
+                    } else {
+                        const x = dnum(a), y = dnum(b);
+                        if (x !== y) return mode === 'date-desc' ? y - x : x - y;
+                    }
+                    return a.serial.localeCompare(b.serial);
+                }
+
+                // The pinned tiers always read oldest first, with the undated last —
+                // they are context, and a stable order is worth more than a clever one.
+                const x = dnum(a) || Infinity, y = dnum(b) || Infinity;
+                if (x !== y) return x - y;
                 return a.serial.localeCompare(b.serial);
             });
 
@@ -9202,6 +9293,11 @@
                 const servicePill = c.fittedDate
                     ? dateSpan(c.fittedDate, c.removedDate || '')
                     : '';
+                // Green while the card is in service and the count is still running.
+                // A fault keeps the neutral pill — the days are real, but the card is
+                // not healthy and the colour should not say it is.
+                const pillTone = c.removedDate ? 'age-pill-closed'
+                    : (c.status === 'active' ? 'age-pill-active' : '');
                 const dateCell = (field, value, title, pillText, pillClass, pillTitle) => {
                     if (!editing) {
                         if (!value) {
@@ -9270,7 +9366,7 @@
                 row.innerHTML = `
                     <td>${idx + 1}</td>
                     <td data-sort="${fitSort}">${dateCell('fittedDate', c.fittedDate, 'installation date', servicePill,
-                        closed ? 'age-pill-closed' : '',
+                        pillTone,
                         closed ? 'Total time on wing — this card has been removed, so the count has stopped' : 'Time on wing so far')}</td>
                     <td data-sort="${escAttr(c.serial)}"><span class="hw-serial">${escAttr(formatSimSerial(c.serial))}</span></td>
                     <td data-sort="${escAttr(c.roaming)}">${roamCell}</td>
@@ -9292,6 +9388,14 @@
             const ss = lastSort['simTable'];
             if (ss) applyTableSort('simTable', ss.col, ss.dir);
             updateSortIndicators('simTable');
+            // updateSortIndicators writes its own arrow from lastSort, which knows
+            // nothing about these modes — so the mode's label goes on afterwards.
+            const head = document.getElementById('simDateHead');
+            if (head && !ss) {
+                const m = SIM_DATE_SORTS[simDateSort];
+                head.innerHTML = `Installation Date <span class="sim-sort-mode">${m.arrow} ${escAttr(m.label)}</span>`;
+                head.title = 'Click to cycle: ' + SIM_DATE_SORTS.map(x => x.label).join(' → ');
+            }
             updateSimEditUI();
         }
 
@@ -9308,9 +9412,10 @@
         function resetSimTable() {
             fbClear('sim');
             fbRender('sim');
-            // Back to the two-key build order: Active, Fault, Spare, Removed, oldest
-            // install first within each.
+            // Back to the tiers with the first mode: newest first among the cards
+            // actually flying, then removed and undated, then spares.
             delete lastSort['simTable'];
+            simDateSort = 0;
             populateSimTable();
         }
 
