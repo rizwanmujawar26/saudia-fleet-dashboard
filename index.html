@@ -2384,8 +2384,17 @@
            better state to be in, and colour here identifies rather than judges. */
         /* The two groups are tinted rather than badged — the master head is the one
            place the vendor is named, so it is the one place that needs the colour. */
-        .aircraft-table th.modem-group-taurus { background: #3f7f5c; }
-        .aircraft-table th.modem-group-hughes { background: #2f6f78; }
+        /* Each group takes its MAKER's brand colour, sampled from the official logo
+           artwork rather than eyeballed. Taurus is Gilat's SkyEdge IV aero modem, so
+           the group wears Gilat's indigo; Hughes wears the Hughes blue.
+             #1B115D — Gilat wordmark, commons Gilat_logo.svg
+             #005DAC — Hughes logo, commons Hughes_Communications_logo.svg, which the
+                       published brand palettes independently agree on
+           White on them measures 16.34:1 and 6.64:1, both well past AA.
+           ⚠️ Colours only, deliberately NO logo artwork: this page carries no external
+           assets by design, and third-party marks are not ours to embed. */
+        .aircraft-table th.modem-group-taurus { background: #1B115D; }
+        .aircraft-table th.modem-group-hughes { background: #005DAC; }
 
         /* An identifier is read off a label and typed into a form, so it is
            monospaced and tabular — a transposed digit should be findable. */
@@ -4700,21 +4709,19 @@
                                 <th rowspan="2">#</th>
                                 <th rowspan="2" class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortTable('modemTable', 1)">Aircraft</th>
                                 <th rowspan="2" class="sortable-th" data-col="2" data-label="Type" onclick="sortTable('modemTable', 2)">Type</th>
-                                <th colspan="7" class="modem-group modem-group-taurus modem-taurus-col">Taurus</th>
+                                <th colspan="5" class="modem-group modem-group-taurus modem-taurus-col">Taurus</th>
                                 <th colspan="4" class="modem-group modem-group-hughes modem-hughes-col">Hughes</th>
                             </tr>
                             <tr>
-                                <th class="sortable-th modem-taurus-col" data-col="3" data-label="Commissioned" onclick="sortTable('modemTable', 3)">Commissioned</th>
+                                <th class="sortable-th modem-taurus-col" data-col="3" data-label="Commissioned Date" onclick="sortTable('modemTable', 3)">Commissioned Date</th>
                                 <th class="sortable-th modem-taurus-col" data-col="4" data-label="IPHO" onclick="sortTable('modemTable', 4)">IPHO</th>
                                 <th class="sortable-th modem-taurus-col" data-col="5" data-label="MG ID" onclick="sortTable('modemTable', 5)">MG ID</th>
                                 <th class="sortable-th modem-taurus-col" data-col="6" data-label="TID" onclick="sortTable('modemTable', 6)">TID</th>
-                                <th class="sortable-th modem-taurus-col" data-col="7" data-label="SE4" onclick="sortTable('modemTable', 7)">SE4</th>
-                                <th class="sortable-th modem-taurus-col" data-col="8" data-label="SE2c" onclick="sortTable('modemTable', 8)">SE2c</th>
-                                <th class="sortable-th modem-taurus-col col-comment" data-col="9" data-label="Comments" onclick="sortTable('modemTable', 9)">Comments</th>
-                                <th class="sortable-th modem-hughes-col" data-col="10" data-label="Commissioned" onclick="sortTable('modemTable', 10)">Commissioned</th>
-                                <th class="sortable-th modem-hughes-col" data-col="11" data-label="Chassis ID" onclick="sortTable('modemTable', 11)">Chassis ID</th>
-                                <th class="sortable-th modem-hughes-col" data-col="12" data-label="ESN" onclick="sortTable('modemTable', 12)">ESN</th>
-                                <th class="sortable-th modem-hughes-col col-comment" data-col="13" data-label="Comments" onclick="sortTable('modemTable', 13)">Comments</th>
+                                <th class="sortable-th modem-taurus-col col-comment" data-col="7" data-label="Comments" onclick="sortTable('modemTable', 7)">Comments</th>
+                                <th class="sortable-th modem-hughes-col" data-col="8" data-label="Commissioned Date" onclick="sortTable('modemTable', 8)">Commissioned Date</th>
+                                <th class="sortable-th modem-hughes-col" data-col="9" data-label="Chassis ID" onclick="sortTable('modemTable', 9)">Chassis ID</th>
+                                <th class="sortable-th modem-hughes-col" data-col="10" data-label="ESN" onclick="sortTable('modemTable', 10)">ESN</th>
+                                <th class="sortable-th modem-hughes-col col-comment" data-col="11" data-label="Comments" onclick="sortTable('modemTable', 11)">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="modemTableBody"></tbody>
@@ -5815,10 +5822,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.56.0';
-        const APP_BUILD    = '2026.08.25.08';
+        const APP_VERSION  = '2.57.0';
+        const APP_BUILD    = '2026.08.25.09';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T19:54:26Z';
+        const APP_DEPLOYED = '2026-08-25T20:10:47Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -9540,7 +9547,7 @@
         // fields did. This page is a second VIEW of one fact, like activatedDate being
         // editable on both Fleet and Activity.
         const MODEM_SLOTS = [
-            { value: 'taurus', label: 'Taurus', fields: ['mgId', 'tid', 'se4', 'se2c'] },
+            { value: 'taurus', label: 'Taurus', fields: ['mgId', 'tid'] },
             { value: 'hughes', label: 'Hughes', fields: ['chassisId', 'esn'] },
         ];
 
@@ -9554,7 +9561,7 @@
         // hidden, so sorting on it would leave the table ordered by a column nobody
         // can see and the visible date header showing no arrow at all.
         function modemDefaultSort(view) {
-            return { col: view === 'hughes' ? 10 : 3, dir: 1 };
+            return { col: view === 'hughes' ? 8 : 3, dir: 1 };
         }
 
         let modemEditMode = false;
@@ -9600,8 +9607,6 @@
                         commissionedDate: pick('modem/taurus/commissionedDate', t.commissionedDate),
                         mgId: pick('modem/taurus/mgId', t.mgId),
                         tid:  pick('modem/taurus/tid', t.tid),
-                        se4:  pick('modem/taurus/se4', t.se4),
-                        se2c: pick('modem/taurus/se2c', t.se2c),
                         notes: pick('modem/taurus/notes', t.notes),
                     },
                     hughes: {
@@ -9736,8 +9741,6 @@
                     <td class="modem-taurus-col" data-sort="${iphoDone ? 'completed' : 'pending'}">${iphoCell}</td>
                     <td class="modem-taurus-col" data-sort="${escAttr(r.taurus.mgId)}">${idCell('taurus', 'mgId')}</td>
                     <td class="modem-taurus-col" data-sort="${escAttr(r.taurus.tid)}">${idCell('taurus', 'tid')}</td>
-                    <td class="modem-taurus-col" data-sort="${escAttr(r.taurus.se4)}">${idCell('taurus', 'se4')}</td>
-                    <td class="modem-taurus-col" data-sort="${escAttr(r.taurus.se2c)}">${idCell('taurus', 'se2c')}</td>
                     <td class="modem-taurus-col col-comment" data-sort="${escAttr(r.taurus.notes)}">${noteCell('taurus')}</td>
 
                     <td class="modem-hughes-col modem-group-start" data-sort="${ds('hughes')}">${dateCell('hughes')}</td>
