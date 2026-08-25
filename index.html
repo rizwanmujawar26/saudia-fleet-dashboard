@@ -2396,6 +2396,18 @@
         .aircraft-table th.modem-group-taurus { background: #1B115D; }
         .aircraft-table th.modem-group-hughes { background: #005DAC; }
 
+        /* IPHO is one of two states, so it reads as a pill like every other status on
+           the page. Amber for Disabled, not red: it is work outstanding rather than a
+           fault, and these are the tokens .ver-behind and the SIM REMOVED badge use. */
+        .status-badge.ipho-on  { background: #e4f3ea; color: #0a5c34; border: 1px solid #c9e6d5; }
+        .status-badge.ipho-off { background: #fdf3e3; color: #8a5a12; border: 1px solid #efd9ae; }
+
+        /* The identifying number inside a chassis id or TID. Same shape as the SIM
+           serial: the significant digits bold and a shade larger, the leading zeros
+           dimmed rather than dropped. */
+        .modem-id b { font-weight: 800; font-size: 1.12em; letter-spacing: 0.4px; }
+        .modem-id-dim { opacity: 0.45; }
+
         /* An identifier is read off a label and typed into a form, so it is
            monospaced and tabular — a transposed digit should be findable. */
         .modem-id {
@@ -5822,10 +5834,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.57.0';
-        const APP_BUILD    = '2026.08.25.09';
+        const APP_VERSION  = '2.58.0';
+        const APP_BUILD    = '2026.08.25.10';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T20:10:47Z';
+        const APP_DEPLOYED = '2026-08-25T20:25:09Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -9568,6 +9580,42 @@
         let pendingModem = {};        // { tail: { "<relative path>": value } }
         let modemViewRendered = '';
 
+        // A chassis id reads AERSVA00064HNSJ3 and its TID carries the same number: the
+        // run of digits before "HNS" is what identifies the unit, and everything around
+        // it repeats across the fleet. So that number is promoted — bold and a shade
+        // larger — and its leading zeros are dimmed rather than dropped, because
+        // reading the value off a label still needs them. Exactly the treatment
+        // simSerialHTML() gives the last six digits of a SIM serial.
+        //
+        // ⚠️ Returns MARKUP, so it is for the cell only. Anything needing a string —
+        // data-sort, data-search, a duplicate check — must use the raw value.
+        function modemIdHTML(v) {
+            const raw = String(v || '');
+            if (!raw) return '';
+            let head, digits, tail;
+            const hns = raw.match(/^(.*?)(\d+)(HNS.*)$/i);
+            if (hns) {
+                [, head, digits, tail] = hns;
+            } else {
+                // No HNS marker — fall back to the longest run of digits, which is the
+                // identifying part of a TID or a bare serial.
+                const runs = Array.from(raw.matchAll(/\d+/g));
+                if (!runs.length) return `<span class="modem-id">${escAttr(raw)}</span>`;
+                const best = runs.reduce((a, b) => (b[0].length >= a[0].length ? b : a));
+                head = raw.slice(0, best.index);
+                digits = best[0];
+                tail = raw.slice(best.index + digits.length);
+            }
+            const zeros = digits.match(/^0*/)[0];
+            // An all-zero run has no "significant" part; promote the whole thing rather
+            // than rendering an empty bold span.
+            const sig = digits.slice(zeros.length) || digits;
+            const lead = sig === digits ? '' : zeros;
+            return `<span class="modem-id">${escAttr(head)}${
+                lead ? `<span class="modem-id-dim">${escAttr(lead)}</span>` : ''
+            }<b>${escAttr(sig)}</b>${escAttr(tail)}</span>`;
+        }
+
         function modemSlotLabel(v) {
             const e = MODEM_SLOTS.find(x => x.value === v);
             return e ? e.label : '';
@@ -9602,6 +9650,9 @@
                 return {
                     id: a.id,
                     acType: a.type || '',
+                    // Straight from the roster — the same field and the same pill the
+                    // Fleet tab's Activation Date column uses, so the two never differ.
+                    activatedDate: a.activatedDate || '',
                     ipho: pick('iphoStatus', a.iphoStatus),
                     taurus: {
                         commissionedDate: pick('modem/taurus/commissionedDate', t.commissionedDate),
@@ -9703,10 +9754,20 @@
                     return `<span class="fleet-date">${escAttr(v)}</span>${age ? `<span class="age-pill" title="Time since commissioning">${age}</span>` : ''}`;
                 };
 
+                // ⚠️ Only TID and Chassis ID get the promoted number, and that is the
+                // point of it: they carry the SAME unit number (TID 64 against chassis
+                // AERSVA00064HNSJ3), so emphasising both is what lets the eye pair them
+                // across the row. MG ID and ESN are bare numbers with nothing to pick
+                // out — bolding those too would leave every cell bold and nothing
+                // standing out at all.
+                const MODEM_PROMOTED = ['tid', 'chassisId'];
                 const idCell = (slot, field) => {
                     const v = r[slot][field];
                     if (!editing) {
-                        return v ? `<span class="modem-id">${escAttr(v)}</span>` : '<span class="fleet-notset">—</span>';
+                        if (!v) return '<span class="fleet-notset">—</span>';
+                        return MODEM_PROMOTED.includes(field)
+                            ? modemIdHTML(v)
+                            : `<span class="modem-id">${escAttr(v)}</span>`;
                     }
                     return `<input class="edit-text" maxlength="40" value="${escAttr(v)}" placeholder="—"
                                 data-modem="${escAttr(r.id)}" data-field="modem/${slot}/${field}" onchange="handleModemEdit(this)">`;
@@ -9727,14 +9788,20 @@
                            <option value="" ${!iphoDone ? 'selected' : ''}>Disabled</option>
                            <option value="completed" ${iphoDone ? 'selected' : ''}>Enabled</option>
                        </select>`
-                    : `<span class="system-indicator system-${iphoDone ? 'completed' : 'pending'}"></span>${iphoDone ? 'Enabled' : 'Disabled'}`;
+                    // A pill, not a dot-and-text pair: this column says one of two
+                    // things and a badge says it in one object. Amber for Disabled
+                    // rather than red — it is work outstanding, not a fault.
+                    : `<span class="status-badge ipho-${iphoDone ? 'on' : 'off'}">${iphoDone ? 'ENABLED' : 'DISABLED'}</span>`;
 
                 // Undated sorts to the END on the 8-digit sentinel, never the front.
                 const ds = slot => dateSortKey(toISODate(r[slot].commissionedDate)) || '99999999';
 
                 row.innerHTML = `
                     <td>${idx + 1}</td>
-                    <td data-sort="${escAttr(r.id)}"><strong>${escAttr(r.id)}</strong></td>
+                    <td data-sort="${escAttr(r.id)}"><strong>${escAttr(r.id)}</strong>${
+                        r.activatedDate && activationAge(r.activatedDate)
+                            ? `<span class="age-pill" title="In service since ${escAttr(r.activatedDate)}">${activationAge(r.activatedDate)}</span>` : ''
+                    }</td>
                     <td data-sort="${escAttr(r.acType)}">${r.acType ? escAttr(TYPE_SHORT_LABEL[r.acType] || r.acType) : '—'}</td>
 
                     <td class="modem-taurus-col modem-group-start" data-sort="${ds('taurus')}">${dateCell('taurus')}</td>
