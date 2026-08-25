@@ -3283,6 +3283,36 @@
         .fb-groups { display: contents; }
         .fb-compact { display: none; }
 
+        /* One-click pills for the values worth reaching without opening a menu.
+           Hidden by default and shown only where the row has the width — the
+           threshold is set from the measured content, in the media query below. */
+        .fb-quick { display: none; }
+        .fb-quick-btn { flex: 0 0 auto; }
+
+        /* A pinch tighter than the dropdown triggers beside them: these are values,
+           not axes, so they should not shout louder than the menus they duplicate. */
+        .fb-quick-btn {
+            padding: 5px 11px;
+            font-size: 12.5px;
+        }
+
+        /* Separates the quick values from the menus without another divider element. */
+        .fb-quick + .fb-groups .fb-trigger:first-child {
+            margin-left: 6px;
+            border-left-color: #ccc;
+        }
+
+        /* Room for the one-click values as well as the menus. Measured, not picked
+           off a device size: with four pills (264px), three dropdowns (267px) and
+           three action buttons (268px) plus gaps and padding the row needs 855px,
+           and the bar is the viewport less 100. 980 leaves a little margin.
+           ⚠️ A bar with more dropdowns than the SIM one would want a higher
+           threshold; .fb-filters scrolls sideways rather than breaking, but
+           re-measure before giving another bar a `quick` list. */
+        @media (min-width: 980px) {
+            .fb-quick { display: flex; align-items: center; gap: 8px; }
+        }
+
         @media (max-width: 700px) {
             .fb-groups { display: none; }
             .fb-compact { display: inline-flex; }
@@ -5549,10 +5579,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.46.0';
+        const APP_VERSION  = '2.47.0';
         const APP_BUILD    = '2026.08.25.00';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T00:35:21Z';
+        const APP_DEPLOYED = '2026-08-25T00:59:04Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6560,6 +6590,29 @@
                 (sel.size > 1 ? ' <span class="fb-badge">+' + (sel.size - 1) + '</span>' : '');
         }
 
+        // One-click pills for the handful of values worth reaching without opening a
+        // menu. They are NOT a separate filter: each toggles a value in the same Set
+        // its dropdown drives, so the two always agree and the trigger label updates
+        // with the pill. Declared per bar as `quick`, and shown only where the row has
+        // room — below that the dropdowns already carry everything.
+        function fbRenderQuick(barId) {
+            const bar = FILTER_BARS[barId];
+            if (!bar || !bar.quick || !bar.quick.length) return '';
+            return `<span class="fb-quick">` + bar.quick.map(q => {
+                const on = fbSel(barId, q.filter).has(q.value);
+                return `<button type="button" class="qf-btn fb-quick-btn ${on ? 'active' : ''}"
+                    onclick="fbQuickToggle('${escAttr(barId)}','${escAttr(q.filter)}','${escAttr(q.value)}')"
+                    aria-pressed="${on}">${escAttr(q.label)}</button>`;
+            }).join('') + `</span>`;
+        }
+
+        function fbQuickToggle(barId, filterId, value) {
+            const sel = fbSel(barId, filterId);
+            if (sel.has(value)) sel.delete(value); else sel.add(value);
+            fbApply(barId);
+            fbRender(barId);
+        }
+
         function fbRenderTrigger(barId, filter) {
             const on = fbSel(barId, filter.id).size > 0;
             return `<button type="button" class="fb-trigger ${on ? 'has-value' : ''}"
@@ -6593,6 +6646,7 @@
             const n = fbActiveCount(barId);
             const cl = fbCompactLabel(barId);
             host.innerHTML =
+                fbRenderQuick(barId) +
                 `<span class="fb-groups">` +
                     bar.filters.map(f => fbRenderTrigger(barId, f)).join('') +
                 `</span>` +
@@ -6980,6 +7034,14 @@
 
             sim: {
                 apply: () => applySimFilters(),
+                // The four worth one click: what is flying, what is in hand, and the
+                // two roaming plans. Everything else stays behind the dropdowns.
+                quick: [
+                    { filter: 'simstatus', value: 'active', label: 'Active' },
+                    { filter: 'simstatus', value: 'unused', label: 'Spare' },
+                    { filter: 'roaming',   value: 'global', label: 'Global' },
+                    { filter: 'roaming',   value: 'local',  label: 'Local' },
+                ],
                 filters: [
                     // One definition: SIM_STATUSES drives the badges, the edit
                     // dropdown and this filter together.

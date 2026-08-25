@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.46.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.47.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -707,6 +707,31 @@ the individual triggers and the collapsed one rendered at once.
   `swFleet()`/`activeFleet()` return arrays but **`projectScope()` returns a
   COUNT**. Passing the number in threw inside the popover build, which left the
   trigger looking open with nothing under it. The Fleet bar uses `fleetRoster`.
+
+### Quick pills — one click for the values that matter
+
+A bar may declare a `quick` list beside its `filters`: one-click pills for the handful
+of values worth reaching without opening a menu. The 4G SIM bar has **Active, Spare,
+Global, Local**.
+
+```js
+quick: [
+    { filter: 'simstatus', value: 'active', label: 'Active' },
+    { filter: 'roaming',   value: 'global', label: 'Global' },
+],
+```
+
+**They are not a separate filter.** Each pill toggles a value in the same `Set` its
+dropdown drives, so the two can never disagree — clicking *Spare* turns the pill green
+*and* the Status trigger reads `Status: Spare`. Toggling is additive, like the menus:
+Active + Spare is both, Active + Global is the intersection.
+
+⚠️ **Shown only above 980px, and that number is MEASURED.** Four pills (264px), three
+dropdowns (267px) and three action buttons (268px) plus gaps and padding need 855px of
+bar, and the bar is the viewport less 100. Below it the pills hide and the dropdowns
+carry everything — nothing becomes unreachable. **A bar with more dropdowns than the
+SIM one would need a higher threshold**; `.fb-filters` scrolls sideways rather than
+breaking, but re-measure before giving another bar a `quick` list.
 
 ### Single-select filters
 
@@ -1678,6 +1703,12 @@ through the same path.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.47.0 — One-click filter pills on a wide screen
+On a laptop the 4G SIM filters were all behind dropdowns even with room to spare.
+Active, Spare, Global and Local are now pills in the bar itself above 980px — a measured
+threshold, not a device size — and collapse back into the dropdowns below it. A pill
+toggles the same Set its dropdown drives, so the two always agree.
 
 ### v2.46.0 — Assign a spare SIM to an aircraft from the table
 A spare could be added but not put on an aircraft without going to the Serials tab. The
