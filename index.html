@@ -2327,6 +2327,31 @@
         .status-badge.sim-removed { background: #eef1f3; color: #6b747c; }
         .status-badge.sim-fault   { background: #fdecee; color: #a52834; }
 
+        /* The serial is the identifier, so it carries the card's state as colour —
+           the same hues the widgets and badges use, so a green number, a green badge
+           and the green widget all mean the same thing.
+
+           The LAST SIX digits are the part that distinguishes one card from another
+           on this programme; the leading groups repeat across the whole fleet. They
+           are dimmed rather than dropped, because reading a number off a physical
+           card still needs them. */
+        .sim-serial {
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+        }
+        .sim-serial-head { opacity: 0.55; font-weight: 500; }
+        .sim-serial b {
+            font-weight: 800;
+            font-size: 1.06em;
+            letter-spacing: 0.6px;
+        }
+
+        .sim-serial-active  { color: #0a5c34; }
+        .sim-serial-fault   { color: #a52834; }
+        .sim-serial-removed { color: #8a5a12; }
+        .sim-serial-unused  { color: #1c5b96; }
+
         /* The register is short values — dates, serials, badges — so centring reads
            as columns rather than ragged left edges. Comments is the one exception:
            it is a sentence, and a centred sentence is hard to scan. */
@@ -4171,7 +4196,7 @@
                 <button class="tab-button" onclick="switchTab('aircraft')">💿 Software</button>
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
-                <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('sim')">📶 4G SIM</button>
+                <button class="tab-button" onclick="switchTab('sim')">📶 4G SIM</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('maintenance')">🛠️ Activity</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('hardware')">🔧 Hardware</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('serials')">🏷️ Serials</button>
@@ -4179,7 +4204,7 @@
                 <!-- The way back in for a signed-out viewer. It sits where the hidden
                      tabs would be, because that is where someone looks for them. -->
                 <button class="tab-button tab-signin" id="tabSignInBtn"
-                        title="4G SIM, Activity, Hardware, Serials and Schedule are shown to signed-in users">🔒 Sign in</button>
+                        title="Activity, Hardware, Serials and Schedule are shown to signed-in users">🔒 Sign in</button>
             </div>
 
             <!-- Overview Tab -->
@@ -5636,10 +5661,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.49.0';
+        const APP_VERSION  = '2.50.0';
         const APP_BUILD    = '2026.08.25.01';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T01:33:35Z';
+        const APP_DEPLOYED = '2026-08-25T01:41:55Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6375,9 +6400,10 @@
         // database.rules.json and signing in before the first read — the migration
         // written up under "Making this private" in DISASTER-RECOVERY.md.
         // Schedule joined these on 2026-08-25 — it is forward-looking work planning
-        // and the user does not want it public. `sim` is here while the page is being
-        // settled; it is meant to become public once it is signed off.
-        const RESTRICTED_TABS = ['sim', 'maintenance', 'hardware', 'serials', 'schedule'];
+        // and the user does not want it public. `sim` was here while the page was
+        // being settled and went PUBLIC on 2026-08-25 once it was signed off; editing
+        // it still needs sign-in, like every other page.
+        const RESTRICTED_TABS = ['maintenance', 'hardware', 'serials', 'schedule'];
 
         // The trust boundary is the editor allowlist, the same one canEdit() uses — an
         // account that is not on it can sign in but is not recognised, and revealing the
@@ -9105,6 +9131,23 @@
             return /^[0-9]+$/.test(raw) ? raw.replace(/(.{6})(?=.)/g, '$1 ') : raw;
         }
 
+        // The same grouping, but with the LAST six digits promoted — that is the part
+        // that actually distinguishes one card from another here, since every serial
+        // on the programme shares its opening digits. The leading groups are dimmed
+        // rather than hidden: they are still needed to read a number off a card.
+        //
+        // ⚠️ Returns HTML, so it is for the cell only. `data-search` and the duplicate
+        // check use formatSimSerial()/the raw serial — markup in a search haystack
+        // would make "span" match every row.
+        function simSerialHTML(v, status) {
+            const raw = String(v || '');
+            const cls = `sim-serial sim-serial-${status || 'active'}`;
+            if (!/^[0-9]{7,}$/.test(raw)) return `<span class="hw-serial ${cls}">${escAttr(raw)}</span>`;
+            const head = raw.slice(0, -6).replace(/(.{6})(?=.)/g, '$1 ');
+            const tail = raw.slice(-6);
+            return `<span class="hw-serial ${cls}"><span class="sim-serial-head">${escAttr(head)}</span> <b>${escAttr(tail)}</b></span>`;
+        }
+
         let simEditMode = false;
         let pendingSim = {};        // { unitId: { roaming, notes } }
 
@@ -9368,7 +9411,7 @@
                     <td data-sort="${fitSort}">${dateCell('fittedDate', c.fittedDate, 'installation date', servicePill,
                         pillTone,
                         closed ? 'Total time on wing — this card has been removed, so the count has stopped' : 'Time on wing so far')}</td>
-                    <td data-sort="${escAttr(c.serial)}"><span class="hw-serial">${escAttr(formatSimSerial(c.serial))}</span></td>
+                    <td data-sort="${escAttr(c.serial)}">${simSerialHTML(c.serial, c.status)}</td>
                     <td data-sort="${escAttr(c.roaming)}">${roamCell}</td>
                     <td data-sort="${escAttr(c.tail || 'zzz')}">${tailCell}</td>
                     <td data-sort="${escAttr(c.type)}">${c.type ? escAttr(TYPE_SHORT_LABEL[c.type] || c.type) : '—'}</td>

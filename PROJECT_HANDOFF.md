@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.49.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.50.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -857,13 +857,13 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
 ## Tabs (9)
 
-Public order: **Overview, Software, Media, Fleet**. Everything else is behind
-sign-in: **4G SIM, Activity, Hardware, Serials, Schedule**.
+Public order: **Overview, Software, Media, Fleet, 4G SIM**. Behind sign-in:
+**Activity, Hardware, Serials, Schedule**.
 
 **Schedule became restricted on 2026-08-25** — it is forward-looking work planning and
-the user does not want it public. **4G SIM is restricted while it is being settled**
-and is meant to go public once it is signed off; that is a one-word change to
-`RESTRICTED_TABS`.
+the user does not want it public. **4G SIM went public the same day**, once it was
+signed off; it was restricted only while it was being built. Editing it still needs
+sign-in, like every other page — the tab gate governs who *browses*, never who writes.
 
 ### 4G SIM — the SIM card register
 
@@ -901,9 +901,29 @@ Media columns are unaffected.
 column rather than an em dash: the absence of a date *is* the statement that it is
 still on the aircraft.
 
-**Serials render grouped in sixes** (`899660 117002 235903`) via `formatSimSerial()` —
-18 digits in one run cannot be checked against a physical card. Display only: the
-stored serial, the `data-sort` key and the duplicate check all use the raw value.
+**Serials render grouped in sixes** (`899660 117002 235903`) — 18 digits in one run
+cannot be checked against a physical card. Two functions, and the difference matters:
+
+| | |
+|---|---|
+| `formatSimSerial(v)` | plain text. Used for `data-search` and anywhere a string is needed |
+| `simSerialHTML(v, status)` | the CELL. Promotes the **last six digits** and tints the whole serial by status |
+
+**The last six are what actually identify a card here** — every serial on the programme
+shares its opening digits — so they are bolder and a shade larger, with the leading
+groups dimmed to 0.55 rather than dropped, since reading a number off a physical card
+still needs them.
+
+**The serial carries the card's state as colour**, the same hues as the badges and
+widgets: Active green, Fault red, Removed dark amber, Spare blue. A green number, a
+green badge and the green widget all mean the same thing.
+
+⚠️ **`simSerialHTML()` returns MARKUP, so it is for the cell only.** `data-search` must
+keep using the plain form — markup in a search haystack would make a query like "span"
+match every row. Verified: it matches none.
+
+Display only either way: the stored serial, the `data-sort` key and the duplicate check
+all use the raw value.
 
 **There is no Fit column.** Every aircraft in this programme is retrofit by default, so
 the column and its filter said nothing.
@@ -1763,6 +1783,15 @@ through the same path.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.50.0 — SIM serials coloured by state, and the page goes public
+The serial now carries the card's state as colour — Active green, Fault red, Removed
+dark amber, Spare blue — matching the badges and widgets, and its **last six digits**
+are promoted, since those are the part that distinguishes one card from another on this
+programme.
+
+**4G SIM is public.** It was restricted only while it was being built. Editing still
+needs sign-in.
 
 ### v2.49.0 — Centred columns, green service pill, four-mode date sort
 The register's columns and headers are centred (Comments excepted), the days pill is
