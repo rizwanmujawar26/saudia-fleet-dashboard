@@ -2339,6 +2339,32 @@
         .status-badge.sim-removed { background: #fdf3e3; color: #8a5a12; border: 1px solid #efd9ae; }
         .status-badge.sim-fault   { background: #fdecee; color: #a52834; border: 1px solid #f5c9ce; }
 
+        /* Modem vendors. Two names for the same kind of box, so they take two
+           neutral-but-distinct hues rather than green/red — neither vendor is a
+           better state to be in, and colour here identifies rather than judges. */
+        .status-badge.modem-taurus { background: #ede9fb; color: #4c3d9a; border: 1px solid #d6cdf3; }
+        .status-badge.modem-hughes { background: #e6f0fb; color: #1c5b96; border: 1px solid #c3dbf3; }
+
+        /* An identifier is read off a label and typed into a form, so it is
+           monospaced and tabular — a transposed digit should be findable. */
+        .modem-id {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.2px;
+            color: #2c3238;
+        }
+
+        /* NOT the same as an empty cell. A Hughes aircraft has no MG ID to record,
+           ever — that is different from a Taurus aircraft whose MG ID nobody has
+           entered yet, which reads as a dash and IS outstanding work. */
+        .modem-na {
+            color: #b8c0c7;
+            font-size: 11px;
+            font-style: italic;
+            cursor: help;
+        }
+
         /* The serial is the identifier, so it carries the card's state as colour —
            the same hues the widgets and badges use, so a green number, a green badge
            and the green widget all mean the same thing.
@@ -4228,6 +4254,7 @@
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
                 <button class="tab-button" onclick="switchTab('sim')">📶 4G SIM</button>
+                <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('modem')">🛰️ Modem</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('maintenance')">🛠️ Activity</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('hardware')">🔧 Hardware</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('serials')">🏷️ Serials</button>
@@ -4601,6 +4628,56 @@
                     </table>
                 </div>
                 <p class="bl-hint" id="simCount" style="padding: 0 4px 16px;"></p>
+            </div>
+
+            <!-- Satellite modem commissioning. One row per aircraft in scope, because
+                 the blanks ARE the work: an aircraft with no modem on record is what
+                 this page exists to surface, the same way the Software tab shows
+                 "Not set" rather than hiding the aircraft.
+
+                 Taurus and Hughes carry completely different identifiers, so their
+                 columns are both present and each row fills the pair its modem uses.
+                 They are NOT split into two tables: the vendor does not map onto fit
+                 or programme (ASBB is linefit-Taurus, ASC is retrofit-Hughes), so a
+                 split would be arbitrary and would leave uncommissioned aircraft in
+                 neither table. The Modem filter gives a single-vendor view in one
+                 click instead. -->
+            <div id="modem" class="tab-content">
+                <div class="media-widget-section">
+                    <span class="filter-group-label">Modem Commissioning</span>
+                    <div class="media-widget-strip" id="modemWidgets"></div>
+                </div>
+
+                <div class="filterbar">
+                    <div class="fb-filters" data-bar="modem"></div>
+                    <div class="fb-actions">
+                        <button id="modemEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleModemEdit()">🔒 Edit</button>
+                        <button id="modemResetBtn" class="qf-btn" onclick="resetModemTable()">↺ Reset</button>
+                    </div>
+                </div>
+
+                <div class="table-scroll-wrapper table-freeze">
+                    <table class="aircraft-table" id="modemTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th class="sortable-th" data-col="1" data-label="Commissioning Date" onclick="sortTable('modemTable', 1)">Commissioning Date</th>
+                                <th class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortTable('modemTable', 2)">Aircraft</th>
+                                <th class="sortable-th" data-col="3" data-label="Type" onclick="sortTable('modemTable', 3)">Type</th>
+                                <th class="sortable-th" data-col="4" data-label="Modem" onclick="sortTable('modemTable', 4)">Modem</th>
+                                <th class="sortable-th modem-taurus-col" data-col="5" data-label="MG ID" onclick="sortTable('modemTable', 5)">MG ID</th>
+                                <th class="sortable-th modem-taurus-col" data-col="6" data-label="TID" onclick="sortTable('modemTable', 6)">TID</th>
+                                <th class="sortable-th modem-taurus-col" data-col="7" data-label="SE4" onclick="sortTable('modemTable', 7)">SE4</th>
+                                <th class="sortable-th modem-taurus-col" data-col="8" data-label="SE2c" onclick="sortTable('modemTable', 8)">SE2c</th>
+                                <th class="sortable-th modem-hughes-col" data-col="9" data-label="Chassis ID" onclick="sortTable('modemTable', 9)">Chassis ID</th>
+                                <th class="sortable-th modem-hughes-col" data-col="10" data-label="ESN" onclick="sortTable('modemTable', 10)">ESN</th>
+                                <th class="sortable-th col-comment" data-col="11" data-label="Comments" onclick="sortTable('modemTable', 11)">Comments</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modemTableBody"></tbody>
+                    </table>
+                </div>
+                <p class="bl-hint" id="modemCount" style="padding: 0 4px 16px;"></p>
             </div>
 
             <div id="fleet" class="tab-content">
@@ -5695,10 +5772,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.53.0';
-        const APP_BUILD    = '2026.08.25.05';
+        const APP_VERSION  = '2.54.0';
+        const APP_BUILD    = '2026.08.25.06';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T13:14:55Z';
+        const APP_DEPLOYED = '2026-08-25T16:20:32Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -5769,6 +5846,7 @@
             if (!mediaEditMode) populateMediaTable();
             if (!maintEditMode) renderMaintenancePage();
             if (!simEditMode) renderSimPage();
+            if (!modemEditMode) renderModemPage();
             if (!hwEditMode) renderHardwarePage();
             renderSerialsPage();
             populateScheduleTables();
@@ -6244,6 +6322,9 @@
             // open in Edit Mode would still be showing inputs nobody can save.
             editMode = scheduleEditMode = mediaEditMode = false;
             maintEditMode = hwEditMode = fleetEditMode = serialsEditMode = false;
+            // simEditMode was missing here — the SIM page stayed in Edit Mode across a
+            // sign-out, showing inputs nobody could save.
+            simEditMode = modemEditMode = false;
             updateAuthUI();
             renderAll();
         }
@@ -6437,7 +6518,9 @@
         // and the user does not want it public. `sim` was here while the page was
         // being settled and went PUBLIC on 2026-08-25 once it was signed off; editing
         // it still needs sign-in, like every other page.
-        const RESTRICTED_TABS = ['maintenance', 'hardware', 'serials', 'schedule'];
+        // 'modem' is here at the user's request while the page is still settling —
+        // it is a normal public-shaped page and moving it out is one edit here.
+        const RESTRICTED_TABS = ['modem', 'maintenance', 'hardware', 'serials', 'schedule'];
 
         // The trust boundary is the editor allowlist, the same one canEdit() uses — an
         // account that is not on it can sign in but is not recognised, and revealing the
@@ -6513,6 +6596,7 @@
             updateHwEditUI();
             updateFleetEditUI();
             updateSimEditUI();
+            updateModemEditUI();
             renderSerialsPage();
         }
 
@@ -7200,6 +7284,33 @@
                     { id: 'type', label: 'Type', options: () => {
                         const seen = [];
                         simCards().forEach(c => { if (c.type && seen.indexOf(c.type) === -1) seen.push(c.type); });
+                        return seen.map(t => ({ v: t, l: TYPE_SHORT_LABEL[t] || t }));
+                    } },
+                ],
+            },
+
+            modem: {
+                apply: () => applyModemFilters(),
+                search: 'Search aircraft, MG ID, TID, ESN',
+                // Three pills: the two vendors, and the work outstanding.
+                quick: [
+                    { filter: 'modemtype',    value: 'taurus', label: 'Taurus' },
+                    { filter: 'modemtype',    value: 'hughes', label: 'Hughes' },
+                    { filter: 'commissioned', value: 'no',     label: 'Awaiting' },
+                ],
+                filters: [
+                    // MODEM_TYPES is the one definition — badges, edit dropdown and
+                    // this filter together.
+                    { id: 'modemtype', label: 'Modem', options: () =>
+                        MODEM_TYPES.map(t => ({ v: t.value, l: t.label })).concat([{ v: 'none', l: 'Not set' }]) },
+                    { id: 'commissioned', label: 'Status', options: [
+                        { v: 'yes', l: 'Commissioned' },
+                        { v: 'no',  l: 'Awaiting' },
+                    ] },
+                    // Follows the fleet rather than listing types with no aircraft.
+                    { id: 'type', label: 'Type', options: () => {
+                        const seen = [];
+                        modemRows().forEach(r => { if (r.acType && seen.indexOf(r.acType) === -1) seen.push(r.acType); });
                         return seen.map(t => ({ v: t, l: TYPE_SHORT_LABEL[t] || t }));
                     } },
                 ],
@@ -9346,6 +9457,314 @@
                 card('Faulty Cards', n('fault'), 'alert') +
                 card('Spare Cards', n('unused'), 'previous') +
                 split;
+        }
+
+        // ===== Satellite modem commissioning =====
+        // Stored at /aircraft/{tail}/modem, so the page rides the /aircraft stream
+        // that already exists — the connection budget allows no seventh EventSource,
+        // and a new node would have needed one or a poll.
+        //
+        // Every field belongs to the modem, so they nest: clearing an aircraft's
+        // modem writes modem: null and correctly takes all of them. That is the
+        // opposite of ugoVersion/tilesVersion, which live at top level precisely
+        // because clearing `media` must NOT take them.
+        //
+        // ⚠️ Never put `modem` and `modem/<field>` in the same PATCH — Firebase
+        // rejects a multi-path update where one path contains another.
+        const MODEM_TYPES = [
+            { value: 'taurus', label: 'Taurus', badge: 'TAURUS' },
+            { value: 'hughes', label: 'Hughes', badge: 'HUGHES' },
+        ];
+
+        // Which identifiers each vendor carries. One definition: it drives the edit
+        // inputs, which cells are dimmed as not-applicable, and the column groups.
+        const MODEM_FIELDS = {
+            taurus: ['mgId', 'tid', 'se4', 'se2c'],
+            hughes: ['chassisId', 'esn'],
+        };
+
+        // Column 1, oldest first — the same rule every other table opens on, so the
+        // aircraft waiting longest for commissioning is the first one you read.
+        // ⚠️ `dir` is a numeric MULTIPLIER (1 asc / -1 desc), not a string —
+        // applyTableSort does `dir * (a - b)`, so 'asc' makes every comparison NaN
+        // and the rows come back in build order with no error anywhere.
+        const MODEM_DEFAULT_SORT = { col: 1, dir: 1 };
+
+        let modemEditMode = false;
+        let pendingModem = {};      // { tail: { field: value } }
+
+        function modemTypeLabel(v) {
+            const e = MODEM_TYPES.find(x => x.value === v);
+            return e ? e.label : '';
+        }
+
+        // Scope is activeFleet() — Active, either fit — the same set Maintenance,
+        // Hardware and the Timeline use. Both vendors appear in both programmes
+        // (ASBB is linefit-Taurus, ASC is retrofit-Hughes), so the split is per
+        // aircraft and no fit-based scope would be right.
+        // ⚠️ To include the aircraft still In Retrofit, this is the one line.
+        function modemFleet() {
+            return activeFleet();
+        }
+
+        function modemRows() {
+            return modemFleet().map(a => {
+                const m = a.modem || {};
+                const staged = pendingModem[a.id] || {};
+                const pick = k => staged[k] !== undefined ? staged[k] : (m[k] || '');
+                const type = pick('type');
+                return {
+                    id: a.id,
+                    type,
+                    typeLabel: modemTypeLabel(type),
+                    acType: a.type || '',
+                    commissionedDate: pick('commissionedDate'),
+                    mgId: pick('mgId'), tid: pick('tid'),
+                    se4: pick('se4'), se2c: pick('se2c'),
+                    chassisId: pick('chassisId'), esn: pick('esn'),
+                    notes: pick('notes'),
+                };
+            });
+        }
+
+        // Commissioned means a DATE is on record. A modem type with no date is a
+        // modem chosen, not a job finished — which is the same reasoning that makes
+        // Software completion require a location as well as a version.
+        function modemIsCommissioned(r) {
+            return !!r.commissionedDate;
+        }
+
+        function renderModemWidgets() {
+            const strip = document.getElementById('modemWidgets');
+            if (!strip) return;
+            const rows = modemRows();
+            const total = rows.length || 1;
+            const done = rows.filter(modemIsCommissioned).length;
+            const pending = rows.length - done;
+
+            // Two counts that SUM to the scope, then a composition as a split — the
+            // shared vocabulary, same markup and variants as Fleet, Media and 4G SIM.
+            const card = (label, count, type) => {
+                const pct = Math.round((count / total) * 1000) / 10;
+                return `<div class="media-widget media-widget-${type}">
+                    <div class="media-widget-head"><span class="media-widget-label">${label}</span></div>
+                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${rows.length}</span><span class="media-widget-pct">${pct}%</span></div>
+                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
+                </div>`;
+            };
+
+            // Which modem an aircraft carries is not progress towards anything, so it
+            // is a SPLIT of one track rather than a third and fourth count — the same
+            // shape as the Fleet tab's SSID card and the SIM tab's Roaming Plan.
+            const tau = rows.filter(r => r.type === 'taurus').length;
+            const hug = rows.filter(r => r.type === 'hughes').length;
+            const known = tau + hug;
+            const tauPct = known ? (tau / known) * 100 : 0;
+
+            const split = `<div class="media-widget fleet-ssid">
+                <div class="media-widget-head">
+                    <span class="media-widget-label">Modem Fleet</span>
+                    <span class="media-size-pill">${known} set</span>
+                </div>
+                <div class="ssid-figures">
+                    <span class="ssid-side ssid-public"><b>${tau}</b> Taurus</span>
+                    <span class="ssid-side sim-roam-local">Hughes <b>${hug}</b></span>
+                </div>
+                <div class="ssid-track" role="img" aria-label="${tau} Taurus, ${hug} Hughes">
+                    <div class="ssid-fill-public" style="width:${tauPct}%"></div>
+                    <div class="sim-roam-fill-local" style="width:${100 - tauPct}%"></div>
+                </div>
+            </div>`;
+
+            strip.innerHTML =
+                card('Commissioned', done, 'latest') +
+                card('Awaiting Commissioning', pending, pending ? 'older' : 'no_media') +
+                split;
+        }
+
+        function populateModemTable() {
+            const tbody = document.getElementById('modemTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const editing = modemEditMode && canEdit();
+
+            modemRows().forEach((r, idx) => {
+                const row = document.createElement('tr');
+                row.dataset.modemtype = r.type || 'none';
+                row.dataset.type = r.acType;
+                row.dataset.commissioned = modemIsCommissioned(r) ? 'yes' : 'no';
+                row.dataset.search = [r.id, r.typeLabel, r.mgId, r.tid, r.chassisId, r.esn]
+                    .filter(Boolean).join(' ');
+
+                // Undated sorts to the END on the 8-digit sentinel, never the front.
+                const dateSort = dateSortKey(toISODate(r.commissionedDate)) || '99999999';
+                const age = r.commissionedDate ? activationAge(r.commissionedDate) : '';
+
+                const dateCell = editing
+                    ? `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(r.commissionedDate)}"
+                           data-modem="${escAttr(r.id)}" data-field="commissionedDate" onchange="handleModemEdit(this)">`
+                    : (r.commissionedDate
+                        ? `<span class="fleet-date">${escAttr(r.commissionedDate)}</span>${age ? `<span class="age-pill" title="Time since commissioning">${age}</span>` : ''}`
+                        : '<span class="fleet-notset">Not set</span>');
+
+                const typeCell = editing
+                    ? `<select class="edit-select" data-modem="${escAttr(r.id)}" data-field="type" onchange="handleModemEdit(this)">
+                           <option value="" ${!r.type ? 'selected' : ''}>—</option>
+                           ${MODEM_TYPES.map(t => `<option value="${t.value}" ${r.type === t.value ? 'selected' : ''}>${t.label}</option>`).join('')}
+                       </select>`
+                    : (r.type
+                        ? `<span class="status-badge modem-${escAttr(r.type)}">${escAttr(modemTypeLabel(r.type).toUpperCase())}</span>`
+                        : '<span class="fleet-notset">Not set</span>');
+
+                // A cell belonging to the other vendor is not blank, it is NOT
+                // APPLICABLE, and it says so on hover rather than looking like a gap
+                // in the record that somebody still has to fill.
+                const idCell = (field, value, vendor) => {
+                    const applies = !r.type || MODEM_FIELDS[vendor].includes(field) && r.type === vendor;
+                    if (!applies) {
+                        return `<span class="modem-na" title="${escAttr(modemTypeLabel(vendor))} field — this aircraft carries a ${escAttr(r.typeLabel)} modem">n/a</span>`;
+                    }
+                    if (!editing) {
+                        return value ? `<span class="modem-id">${escAttr(value)}</span>` : '<span class="fleet-notset">—</span>';
+                    }
+                    return `<input class="edit-text" maxlength="40" value="${escAttr(value)}" placeholder="—"
+                                data-modem="${escAttr(r.id)}" data-field="${field}" onchange="handleModemEdit(this)">`;
+                };
+
+                const noteCell = editing
+                    ? `<input class="edit-text comment-input" value="${escAttr(r.notes)}" placeholder="Add a comment" data-modem="${escAttr(r.id)}" data-field="notes" onchange="handleModemEdit(this)">`
+                    : `<span class="comment-text">${r.notes ? escAttr(r.notes) : '—'}</span>`;
+
+                row.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td data-sort="${dateSort}">${dateCell}</td>
+                    <td data-sort="${escAttr(r.id)}"><strong>${escAttr(r.id)}</strong></td>
+                    <td data-sort="${escAttr(r.acType)}">${r.acType ? escAttr(TYPE_SHORT_LABEL[r.acType] || r.acType) : '—'}</td>
+                    <td data-sort="${escAttr(r.type)}">${typeCell}</td>
+                    <td class="modem-taurus-col" data-sort="${escAttr(r.mgId)}">${idCell('mgId', r.mgId, 'taurus')}</td>
+                    <td class="modem-taurus-col" data-sort="${escAttr(r.tid)}">${idCell('tid', r.tid, 'taurus')}</td>
+                    <td class="modem-taurus-col" data-sort="${escAttr(r.se4)}">${idCell('se4', r.se4, 'taurus')}</td>
+                    <td class="modem-taurus-col" data-sort="${escAttr(r.se2c)}">${idCell('se2c', r.se2c, 'taurus')}</td>
+                    <td class="modem-hughes-col" data-sort="${escAttr(r.chassisId)}">${idCell('chassisId', r.chassisId, 'hughes')}</td>
+                    <td class="modem-hughes-col" data-sort="${escAttr(r.esn)}">${idCell('esn', r.esn, 'hughes')}</td>
+                    <td class="col-comment" data-sort="${escAttr(r.notes)}">${noteCell}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            renderModemWidgets();
+            fbRender('modem');
+            syncTableFreeze();
+            applyModemFilters();
+            // Re-applied on EVERY rebuild, not set once: these run again on every
+            // live update, and without this a teammate's edit hands the rows back in
+            // build order while the header still shows its arrow.
+            const sm = lastSort['modemTable'] || MODEM_DEFAULT_SORT;
+            lastSort['modemTable'] = sm;
+            applyTableSort('modemTable', sm.col, sm.dir);
+            updateSortIndicators('modemTable');
+            updateModemEditUI();
+        }
+
+        function applyModemFilters() {
+            document.querySelectorAll('#modemTableBody tr').forEach(row => {
+                row.style.display = fbRowMatch('modem', row) ? '' : 'none';
+            });
+            renumberVisibleRows('modemTable');
+            const shown = Array.from(document.querySelectorAll('#modemTableBody tr'))
+                .filter(r => r.style.display !== 'none').length;
+            setText('modemCount', `${shown} of ${modemRows().length} aircraft`);
+        }
+
+        function resetModemTable() {
+            fbClear('modem');
+            fbRender('modem');
+            lastSort['modemTable'] = MODEM_DEFAULT_SORT;
+            populateModemTable();
+        }
+
+        // ---- edit mode: staged, then one save, like every other table ----
+        function handleModemEdit(el) {
+            const id = el.dataset.modem;
+            const field = el.dataset.field;
+            const entry = pendingModem[id] || {};
+
+            if (field === 'commissionedDate') {
+                const v = readDateField(el);
+                // ⚠️ Return WITHOUT staging on a bad date. Staging false would clear a
+                // date that was already good — the check is before the record is
+                // touched, never after.
+                if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
+                entry[field] = v;
+            } else {
+                entry[field] = (el.value || '').trim();
+            }
+            pendingModem[id] = entry;
+            setSyncStatus('🟡 Modem change staged — press Save', '#e0a800');
+            // Only the vendor repaints: it decides which identifier cells apply, so
+            // the row would otherwise show Taurus columns against a Hughes modem.
+            // Every other field is a text box, where re-rendering would pull the
+            // cursor out mid-typing.
+            if (field === 'type') populateModemTable();
+        }
+
+        async function toggleModemEdit() {
+            if (modemEditMode) { await commitModemChanges(); return; }
+            if (!canEdit()) { requireSignIn(); return; }
+            modemEditMode = true;
+            pendingModem = {};
+            populateModemTable();
+        }
+
+        async function commitModemChanges() {
+            const ids = Object.keys(pendingModem);
+            if (!ids.length) { modemEditMode = false; populateModemTable(); return; }
+            const token = await getIdToken();
+            if (!token) return;
+
+            // One multi-path PATCH, the shape every other save on the page uses.
+            // Field paths only — never `modem` and `modem/<field>` together.
+            const patch = {};
+            ids.forEach(id => {
+                const e = pendingModem[id];
+                Object.keys(e).forEach(f => {
+                    patch[`${id}/modem/${f}`] = e[f] === '' ? null : e[f];
+                });
+            });
+
+            setSyncStatus('🟡 Saving modem changes...', '#e0a800');
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify(patch),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                // Mirror locally so the table is right before the stream echoes back.
+                ids.forEach(id => {
+                    const a = aircraftLive[id] || (aircraftLive[id] = {});
+                    const m = a.modem || (a.modem = {});
+                    Object.keys(pendingModem[id]).forEach(f => {
+                        const v = pendingModem[id][f];
+                        if (v === '') delete m[f]; else m[f] = v;
+                    });
+                    if (!Object.keys(m).length) delete a.modem;
+                });
+                pendingModem = {};
+                modemEditMode = false;
+                rebuildAircraftData();
+                populateModemTable();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not save modem changes — ${e.message}`, '#dc3545');
+            }
+        }
+
+        function updateModemEditUI() {
+            applyEditButton('modemEditBtn', modemEditMode && canEdit(), 'Edit', '💾 Save');
+        }
+
+        function renderModemPage() {
+            populateModemTable();
         }
 
         function simStatusBadge(v) {
