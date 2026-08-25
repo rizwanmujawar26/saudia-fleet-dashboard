@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.56.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.57.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1420,9 +1420,26 @@ firing before authentication and with `backup.sh` losing anonymous access.
    field choosing between them, which could not represent an aircraft at all.
 
    **A row is an AIRCRAFT**, with each modem's columns under its own **master head**
-   — a two-row `<thead>`: Taurus over `Commissioned / IPHO / MG ID / TID / SE4 / SE2c /
-   Comments`, Hughes over `Commissioned / Chassis ID / ESN / Comments`, and
-   `# / Aircraft / Type` spanning both rows. **Each modem keeps its own commissioning
+   — a two-row `<thead>`: Taurus over `Commissioned Date / IPHO / MG ID / TID /
+   Comments`, Hughes over `Commissioned Date / Chassis ID / ESN / Comments`, and
+   `# / Aircraft / Type` spanning both rows.
+
+   ⚠️ **SE4 and SE2c are NOT tracked here** (user, 2026-08-25). They are **fleet-wide
+   settings**, not per-aircraft facts — the Overview's *Project Objectives* already
+   states them once (`SE2c: 8c = 101 · b0 = 101K · 4c = 0`, `SE4: No changes`), so a
+   column would have been 42 identical cells. The rules keep `se4`/`se2c` **declared
+   and inert**, the way `lifecycle` is: no record ever carried them, so nothing is
+   orphaned and bringing them back would be a UI change only.
+
+   **The group heads wear their MAKER's brand colour**, sampled from the official logo
+   artwork rather than eyeballed. Taurus is **Gilat's SkyEdge IV** aero modem — the
+   line Hughes competes with — so it takes Gilat's indigo **`#1B115D`** (the wordmark
+   in commons `Gilat_logo.svg`); Hughes takes **`#005DAC`** (commons
+   `Hughes_Communications_logo.svg`, which the published brand palettes agree on).
+   White on them is 16.34:1 and 6.64:1, both past AA.
+   ⚠️ **Colours only, never logo artwork.** The page carries **no external assets** by
+   design, so a mark could only be inlined as a data URI — and third-party trademarks
+   are not ours to embed on that basis. **Each modem keeps its own commissioning
    date.** Scope is `modemFleet()` (currently `activeFleet()`). ⚠️ **The blanks are
    the point**: a modem with no date is what the page exists to surface, the same way
    the Software tab shows *Not set* rather than hiding the aircraft. To include the
@@ -1458,8 +1475,8 @@ firing before authentication and with `backup.sh` losing anonymous access.
    **The View filter switches COLUMN GROUPS, and filters no rows at all.** Every
    aircraft has both modems, so there is nothing to filter out — it declares
    **`rowValue: () => modemView()`** so every row always matches, which is exactly what
-   that hook is for. Declared `single: true`, so empty means *both*. Both shows 14
-   columns, Taurus 10, Hughes 7. One class on the table
+   that hook is for. Declared `single: true`, so empty means *both*. Both shows 12
+   columns, Taurus 8, Hughes 7. One class on the table
    (`.modem-view-taurus` / `.modem-view-hughes`) drives it in **CSS**, and the
    frozen-head copy inherits it because that copy is cloned from the live `<thead>`
    with its classes intact.
@@ -2104,15 +2121,11 @@ live.
 
 ### Waiting on the user — ask, don't guess
 
-- **What SE4 and SE2c actually are.** Tracked on the Modem tab as free text (≤ 40
-  chars) because "modes" could be an on/off state, a named mode or a value, and text
-  holds all three. **If they are a fixed set, say so and they become a dropdown** —
-  one entry in the rules plus a select, the same shape as the View filter. Until then
-  a typo in one is not caught.
-- **Whether SE4 and SE2c belong on the Modem page at all.** The user described the
-  Taurus group as "IPHO, MG ID and TID — 3 columns" but had earlier asked for SE4 and
-  SE2c to be tracked. **They are kept**, because dropping a column is a removal and
-  those need asking. Say the word and the Taurus group goes to three.
+- **The Modem page has no data yet.** The rules, the table and the edit flow are all
+  proven against seeded data and a stubbed fetch, but **no aircraft carries a `modem`
+  record**, so the client write path to `/aircraft/{tail}/modem` is unproven against
+  the live rules engine. The first real save closes that — a `Permission denied` there
+  would mean a rules problem, not a silent failure.
 - **Whether the Modem tab should stay behind sign-in.** Restricted at the user's
   request while it settles; it is built as an ordinary public page and moving it out
   is one edit to `RESTRICTED_TABS`.
@@ -2195,6 +2208,14 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.57.0 — SE4/SE2c dropped, dates named, group heads branded
+SE4 and SE2c leave the Taurus group — they are fleet-wide settings the Overview already
+states once, so a column was 42 identical cells. Both date headers now read
+*Commissioned Date*. The two group heads take their maker's real brand colour, sampled
+from the official logo files: Gilat indigo `#1B115D` for Taurus, Hughes blue `#005DAC`.
+Colours only — the page carries no external assets and third-party marks are not ours
+to embed.
 
 ### v2.56.0 — Grouped headers, no modem column, IPHO from iphoStatus
 A row is an aircraft again, with each modem's columns under its own master head and its
