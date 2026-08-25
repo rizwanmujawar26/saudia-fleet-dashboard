@@ -2543,6 +2543,22 @@
             text-transform: uppercase; letter-spacing: 0.4px; display: block;
         }
 
+        .hw-issue-edit {
+            margin-left: auto;
+            border: 1px solid #d8e0e6;
+            background: #f4f7f9;
+            border-radius: 4px;
+            padding: 1px 7px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .hw-issue-edit:hover { background: #e8eef2; }
+
+        /* Edit takes the auto margin, so Delete sits beside it rather than
+           being pushed to the far edge on its own. */
+        .hw-issue-edit + .hw-issue-del { margin-left: 0; }
+
         .hw-issue-del {
             margin-left: auto;
             border: 1px solid #f0c8cc;
@@ -4870,7 +4886,7 @@
 
     <div id="addIssueOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
         <div class="act-modal">
-            <h3 style="color:#0a5c34; margin-bottom:6px;">Add Known Issue</h3>
+            <h3 style="color:#0a5c34; margin-bottom:6px;" id="addIssueHeading">Add Known Issue</h3>
             <p style="font-size:13px; color:#666; margin-bottom:16px;" id="addIssueFor">—</p>
 
             <label class="add-sched-label">Title</label>
@@ -4878,6 +4894,9 @@
 
             <label class="add-sched-label">Detail</label>
             <textarea id="addIssueDetail" class="add-sched-input" maxlength="1000" placeholder="What is seen, and when"></textarea>
+
+            <label class="add-sched-label">Root Cause</label>
+            <textarea id="addIssueRootCause" class="add-sched-input" maxlength="1000" placeholder="Why it happens, and what engineering or DevOps have established"></textarea>
 
             <label class="add-sched-label">Resolution</label>
             <textarea id="addIssueResolution" class="add-sched-input" maxlength="1000" placeholder="Fix, workaround, or what is still outstanding"></textarea>
@@ -5661,10 +5680,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.50.0';
-        const APP_BUILD    = '2026.08.25.01';
+        const APP_VERSION  = '2.51.0';
+        const APP_BUILD    = '2026.08.25.02';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T01:41:55Z';
+        const APP_DEPLOYED = '2026-08-25T11:01:51Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -9814,9 +9833,11 @@
                     <span class="hw-issue-title">${escAttr(i.title || 'Untitled issue')}</span>
                     <span class="status-badge issue-${i.status === 'resolved' ? 'resolved' : 'open'}">${i.status === 'resolved' ? 'RESOLVED' : 'OPEN'}</span>
                     ${i.loggedAt ? `<span class="maint-act-cat">${escAttr(fmtSysStamp(i.loggedAt))}</span>` : ''}
+                    ${canEdit() ? `<button class="hw-issue-edit" title="Edit this issue" onclick="openEditIssue('${escAttr(lru.id)}','${escAttr(i.id)}')">✏️</button>` : ''}
                     ${canEdit() ? `<button class="hw-issue-del" title="Delete this issue" onclick="deleteHwIssue('${escAttr(lru.id)}','${escAttr(i.id)}')">🗑</button>` : ''}
                 </div>
                 ${i.detail ? `<div class="hw-issue-field"><b>Detail</b>${escAttr(i.detail)}</div>` : ''}
+                ${i.rootCause ? `<div class="hw-issue-field"><b>Root Cause</b>${escAttr(i.rootCause)}</div>` : ''}
                 ${i.resolution ? `<div class="hw-issue-field"><b>Resolution</b>${escAttr(i.resolution)}</div>` : ''}
             </li>`;
 
@@ -10882,26 +10903,53 @@
         }
 
         // ===== Known issues =====
-        function openAddIssue() {
-            if (!canEdit()) { requireSignIn(); return; }
-            const lru = lruById(hwSelectedId);
-            if (!lru) return;
+        // One modal, two modes. Add and Edit share every field, the way the Activity
+        // tab's do, so a correction cannot drift into a second slightly different
+        // form. hwIssueEditingId carries the mode and MUST be cleared on close —
+        // left set, the next Add would overwrite whatever was last edited.
+        const ISSUE_FIELD_IDS = ['addIssueTitle', 'addIssueDetail', 'addIssueRootCause', 'addIssueResolution'];
+        let hwIssueEditingId = '';
+
+        function openIssueModal(lru, issue) {
             setText('addIssueFor', `${lru.label} — ${lru.fit === 'linefit' ? 'Linefit' : 'Retrofit'}`);
-            ['addIssueTitle', 'addIssueDetail', 'addIssueResolution'].forEach(id => {
-                const el = document.getElementById(id); if (el) el.value = '';
-            });
-            document.getElementById('addIssueStatus').value = 'open';
+            setText('addIssueHeading', issue ? 'Edit Known Issue' : 'Add Known Issue');
+            document.getElementById('addIssueSave').textContent = issue ? 'Save Changes' : 'Save Issue';
+            document.getElementById('addIssueTitle').value      = (issue && issue.title) || '';
+            document.getElementById('addIssueDetail').value     = (issue && issue.detail) || '';
+            document.getElementById('addIssueRootCause').value  = (issue && issue.rootCause) || '';
+            document.getElementById('addIssueResolution').value = (issue && issue.resolution) || '';
+            document.getElementById('addIssueStatus').value     = (issue && issue.status) || 'open';
             const err = document.getElementById('addIssueError');
             err.textContent = ''; err.style.display = 'none';
             document.getElementById('addIssueOverlay').style.display = 'flex';
             document.getElementById('addIssueTitle').focus();
         }
 
+        function openAddIssue() {
+            if (!canEdit()) { requireSignIn(); return; }
+            const lru = lruById(hwSelectedId);
+            if (!lru) return;
+            hwIssueEditingId = '';
+            openIssueModal(lru, null);
+        }
+
+        // Editing is what makes a field like Root Cause reachable on an issue that
+        // was logged before it existed. Without it the only correction available is
+        // delete-and-retype, which throws away loggedAt.
+        function openEditIssue(lruId, issueId) {
+            if (!canEdit()) { requireSignIn(); return; }
+            const lru = lruById(lruId);
+            const issue = ((hardwareLive[lruId] || {}).issues || {})[issueId];
+            if (!lru || !issue) return;
+            hwIssueEditingId = issueId;
+            openIssueModal(lru, issue);
+        }
+
         function initAddIssueModal() {
             const overlay = document.getElementById('addIssueOverlay');
             if (!overlay) return;
             const err = document.getElementById('addIssueError');
-            const close = () => { overlay.style.display = 'none'; };
+            const close = () => { overlay.style.display = 'none'; hwIssueEditingId = ''; };
             document.getElementById('addIssueCancel').addEventListener('click', close);
             overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 
@@ -10909,33 +10957,49 @@
                 const lru = lruById(hwSelectedId);
                 if (!lru) return;
                 const val = id => (document.getElementById(id).value || '').trim();
-                const entry = {
+                const editingId = hwIssueEditingId;
+                const fields = {
                     title: val('addIssueTitle'),
                     detail: val('addIssueDetail'),
+                    rootCause: val('addIssueRootCause'),
                     resolution: val('addIssueResolution'),
                     status: val('addIssueStatus'),
-                    loggedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
                 };
-                Object.keys(entry).forEach(k => { if (entry[k] === '') delete entry[k]; });
-                if (!entry.title) {
+                if (!fields.title) {
                     err.textContent = 'A title is required.';
                     err.style.display = 'block';
                     return;
                 }
+                // Add PUTs a whole record; an edit PATCHes only the fields the form
+                // owns, so loggedAt stays what it was — when the issue was logged, not
+                // when a typo was fixed — and anything added to the schema later is not
+                // silently dropped by a rebuild from the form alone. An emptied box
+                // must write null: omitting it from a PATCH would leave the old value.
+                const entry = {};
+                Object.keys(fields).forEach(k => {
+                    if (fields[k] !== '') entry[k] = fields[k];
+                    else if (editingId) entry[k] = null;
+                });
+                if (!editingId) entry.loggedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
                 const token = await getIdToken();
                 if (!token) return;
                 const btn = document.getElementById('addIssueSave');
+                const idleLabel = btn.textContent;
                 btn.disabled = true; btn.textContent = 'Saving...';
-                const id = 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                const id = editingId || ('i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7));
                 try {
                     const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/hardware/${lru.id}/issues/${id}.json?auth=${token}`, {
-                        method: 'PUT', body: JSON.stringify(entry),
+                        method: editingId ? 'PATCH' : 'PUT', body: JSON.stringify(entry),
                     });
                     const data = await res.json();
                     if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                     hardwareLive[lru.id] = hardwareLive[lru.id] || {};
                     hardwareLive[lru.id].issues = hardwareLive[lru.id].issues || {};
-                    hardwareLive[lru.id].issues[id] = entry;
+                    const target = editingId ? (hardwareLive[lru.id].issues[id] || {}) : {};
+                    Object.keys(entry).forEach(k => {
+                        if (entry[k] === null) delete target[k]; else target[k] = entry[k];
+                    });
+                    hardwareLive[lru.id].issues[id] = target;
                     close();
                     renderHardwarePage();
                     setSyncStatus('🟢 Live — synced with your team', '#28a745');
@@ -10943,7 +11007,7 @@
                     err.textContent = `Could not save issue — ${e.message}`;
                     err.style.display = 'block';
                 } finally {
-                    btn.disabled = false; btn.textContent = 'Save Issue';
+                    btn.disabled = false; btn.textContent = idleLabel;
                 }
             });
         }
