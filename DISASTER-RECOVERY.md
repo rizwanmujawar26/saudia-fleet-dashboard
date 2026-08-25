@@ -29,6 +29,14 @@ Fields added to `/units` during 2026-08-25 that a restore must therefore carry:
 `roaming` (`global|local`, on the unit), `lifecycle` (declared, currently unused — see
 the handoff), and `condition` (`fault`, on a **fitment**).
 
+`/hardware` gained one the same day: **`rootCause`** on `issues/{id}` (v2.51.0), which
+carries the engineering or DevOps explanation of why an issue happens. `/hardware` is a
+small node, so it is easy to overlook in a partial restore — `--only aircraft,fleet`
+would silently leave the known-issue register behind.
+
+A snapshot taken before that write is at
+`2026-08-25-before-issue-rootcause`.
+
 ### The one gap: `/editors`
 
 `/editors` is readable only by the account it belongs to. That is the point — it

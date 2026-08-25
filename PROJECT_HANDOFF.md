@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.50.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.51.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -258,7 +258,14 @@ Activity's Old/New part fields now write to `/units` via `unitWritesForActivity(
 ### `/hardware/{lruId}` — what belongs to the unit, not to an aircraft
 
 `swVersion`, `partNumber`, `vendor`, `notes`, and `issues/{id}`
-(`title`, `detail`, `resolution`, `status` open|resolved, `loggedAt`).
+(`title`, `detail`, `rootCause`, `resolution`, `status` open|resolved, `loggedAt`).
+
+**An issue answers four questions in this order**: what is it (`title`), what happens
+(`detail`), **why** (`rootCause`), what do we do (`resolution`). `rootCause` was added
+in v2.51.0 because the SIM card's *SIM Missing / Failed* issue had a cause established
+by DevOps while its detail still read "for unknown reason" — folding the two together
+would have buried a cause inside a symptom and left the card contradicting itself.
+It is where an engineering or DevOps finding goes; all four render only when non-empty.
 
 **Serial numbers are deliberately NOT here.** They live in `/units` — see above.
 
@@ -537,6 +544,26 @@ edit to `HARDWARE_LRUS` and nothing else.
 
 Retrofit units, in RF-chain order: SIM Card, IFE Server, MODMAN, KANDU, KRFU,
 RX Antenna, TX Antenna, Waveguide Adapter, Coax Cable J12, CWAP.
+
+**Known issues are added AND edited through one modal.** `openIssueModal(lru, issue)`
+builds it; `hwIssueEditingId` is the only difference between the two modes, exactly as
+`addActEditingId` works on the Activity tab, so a correction cannot drift into a second
+slightly different set of fields.
+
+⚠️ **`hwIssueEditingId` must be cleared on close** — left set, the next **Add** would
+overwrite whatever was last edited. `close()` does it, and it covers Cancel and the
+backdrop alike.
+
+**Add PUTs, edit PATCHes, and that difference is deliberate.** Add writes a whole
+record and stamps `loggedAt`. An edit merges only the fields the form owns, so
+`loggedAt` stays *when the issue was logged* rather than when a typo was fixed, and a
+field added to the schema later is not silently dropped by a rebuild from the form
+alone — the same reasoning as `ACT_FORM_DETAIL_FIELDS`. ⚠️ **An emptied box must write
+`null`**: omitted from a PATCH it would simply leave the old value standing.
+
+Before v2.51.0 an issue could only be added or deleted, so the only correction was
+delete-and-retype — which threw away `loggedAt`, and would have left `rootCause`
+unreachable on every issue logged before it existed.
 
 The two-pane shell reuses the `.maint-*` classes — they style a generic
 list/detail layout and the prefix is historical. Worth unifying under a neutral
@@ -1944,6 +1971,18 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.51.0 — Known issues gain a Root Cause, and can be edited
+`issues/{id}` gained **`rootCause`** (rules first), rendered between Detail and
+Resolution because that is the order the questions are asked in: what is it, what
+happens, **why**, what do we do. Written for the SIM card's *SIM Missing / Failed*
+issue, whose detail said "for unknown reason" while DevOps had already established
+that a provider change or a PIN on the SIM blocks the card after repeated attempts.
+Each issue card also gained **✏️ Edit** beside its 🗑, reusing the add modal — without
+it a field added today would be unreachable on every issue logged before it, and the
+only correction available was delete-and-retype, which throws away `loggedAt`.
+Add still PUTs and stamps `loggedAt`; an edit PATCHes only what the form owns, and an
+emptied box writes `null`.
 
 ### v2.50.0 — SIM serials coloured by state, and the page goes public
 The serial now carries the card's state as colour — Active green, Fault red, Removed
