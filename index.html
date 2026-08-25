@@ -2319,13 +2319,25 @@
 
         /* Sits next to the delete button. margin-left:auto moved here so the pair
            stays right-aligned as one group. */
-        /* SIM register badges. Status borrows the fleet vocabulary — green for in
-           service, grey for not yet used, red for off the aircraft. Roaming is a
-           different axis, so it takes blue/slate rather than another green. */
-        .status-badge.sim-active  { background: #e4f3ea; color: #0a5c34; }
-        .status-badge.sim-unused  { background: #eef1f3; color: #6b747c; }
-        .status-badge.sim-removed { background: #eef1f3; color: #6b747c; }
-        .status-badge.sim-fault   { background: #fdecee; color: #a52834; }
+        /* SIM register badges. Each one takes the SAME hue as that status's serial
+           and its widget — Active green, Fault red, Removed dark amber, Spare blue —
+           so a colour means one thing wherever it appears on the row.
+
+           ⚠️ Removed and Spare were BOTH #eef1f3/#6b747c, byte for byte: two
+           different states rendering identically, and neither matching its own
+           serial. Grey also reads as "switched off" rather than "taken off" — a
+           removed card is a CLOSED span, which is what amber says everywhere else
+           here, including the closed days pill on the very same row. Spare takes the
+           blue it already had on its serial and its widget; grey is left to mean
+           genuinely nothing set.
+
+           Bordered, like the On-Wing pill beside them, so a badge reads as a pill
+           rather than a flat wash. Tokens are the ones already in the sheet:
+           #fdf3e3/#8a5a12/#efd9ae is .ver-behind and .fit-in-retrofit. */
+        .status-badge.sim-active  { background: #e4f3ea; color: #0a5c34; border: 1px solid #c9e6d5; }
+        .status-badge.sim-unused  { background: #e6f0fb; color: #1c5b96; border: 1px solid #c3dbf3; }
+        .status-badge.sim-removed { background: #fdf3e3; color: #8a5a12; border: 1px solid #efd9ae; }
+        .status-badge.sim-fault   { background: #fdecee; color: #a52834; border: 1px solid #f5c9ce; }
 
         /* The serial is the identifier, so it carries the card's state as colour —
            the same hues the widgets and badges use, so a green number, a green badge
@@ -2407,9 +2419,12 @@
         .status-badge.roam-global { background: #e6f0fb; color: #1c5b96; }
         .status-badge.roam-local  { background: #f1f3f5; color: #55606a; }
 
-        /* "ex-ASV" — the aircraft a removed card came off. Muted, because it is
-           where the card WAS, not where it is. */
-        .sim-ex { color: #8a939b; font-weight: 600; }
+        /* "ex-ASV" — the aircraft a removed card came off. Still muted, because it is
+           where the card WAS, not where it is, but muted AMBER rather than grey: it
+           belongs to the removed row alongside the serial, the badge and the closed
+           days pill, and a grey tail was the one cell left arguing the card had
+           merely been switched off. */
+        .sim-ex { color: #96692a; font-weight: 600; }   /* 4.83:1 on white — AA */
 
         /* Date boxes are text inputs, not <input type="date">, because that control
            renders in the BROWSER's locale — which is what was showing American
@@ -5680,10 +5695,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.52.0';
-        const APP_BUILD    = '2026.08.25.03';
+        const APP_VERSION  = '2.52.1';
+        const APP_BUILD    = '2026.08.25.04';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T11:25:02Z';
+        const APP_DEPLOYED = '2026-08-25T11:36:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
