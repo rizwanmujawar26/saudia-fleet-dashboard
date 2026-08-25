@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.58.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.59.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -885,13 +885,17 @@ Every data table opens on a **date column, oldest first**, placed second right a
 `#`. That is deliberate: the question these pages answer is "what happened when", and
 the oldest row is the one that has been waiting longest.
 
+⚠️ **The Modem tab is the one deliberate exception** (2026-08-25): it opens on
+**activation date, newest first**, because it asks what has just arrived rather than
+what has waited longest. See its entry below.
+
 | table | opens on | constant |
 |---|---|---|
 | Software | Installation Date (`completionDate`) | `SW_DEFAULT_SORT` |
 | Media | Loading Date (`media.loadedDateUTC`) | `MEDIA_DEFAULT_SORT` |
 | Fleet | Activation Date (`activatedDate`) | `FLEET_DEFAULT_SORT` |
 | 4G SIM | Installation Date (fitment `fittedDate`) | tiers — see below |
-| Modem | that view's Commissioning Date, oldest first | `modemDefaultSort(view)` |
+| Modem | **Activation Date, NEWEST first** — a build order, not a column | `modemActivationKey()` |
 
 ### Four rules that apply to every one of them
 
@@ -1481,10 +1485,26 @@ firing before authentication and with `backup.sh` losing anonymous access.
    frozen-head copy inherits it because that copy is cloned from the live `<thead>`
    with its classes intact.
 
-   ⚠️ **The default sort FOLLOWS THE VIEW** (`modemDefaultSort()`). Under Hughes the
-   Taurus date is hidden, so opening on it left the table ordered by a column nobody
-   could see, with no arrow on the visible one. A view change also **drops any column
-   the user had chosen**, since it may not exist in the new view.
+   ⚠️ **This table opens on ACTIVATION DATE, NEWEST FIRST** (user, 2026-08-25) —
+   deliberately *not* the "date column, oldest first" rule the other four follow. It
+   asks a different question: those tables ask what has been waiting longest, this one
+   asks what has just arrived, because the aircraft that just entered service is the
+   one whose modems still need commissioning.
+
+   **Activation has no column of its own** — it is a pill inside the Aircraft cell — so
+   `applyTableSort()` cannot express it and it is the **build order**, the same move
+   the SIM register's tiers make. ⚠️ **A build order and `lastSort` are mutually
+   exclusive**: a column sort is re-applied only if the user clicked a header, and both
+   Reset and a view change drop back to activation order. That is also why there is no
+   per-view default any more — activation is an aircraft-level order, identical in
+   every view.
+
+   ⚠️ **With no column sorted there is no arrow to explain the order**, so the footer
+   says it: `· newest activation first`, dropped the moment a column sort is active.
+   Keeping that honest needs the headers to call **`sortModemTable()`**, not
+   `sortTable()` — the generic one knows nothing about this page's footer. Wrapping
+   locally beats giving the other eight tables a hook they do not need, the same shape
+   as the SIM date header calling `cycleSimDateSort()`.
 
    ⚠️ **Two header rows cannot share one sticky `top`** — they pin on top of each
    other. The second sits below the first by `--grouphead-h`, measured and published by
@@ -2231,6 +2251,13 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.59.0 — Modem opens on activation date, newest first
+AQB, activated yesterday, now opens the table. Activation has no column, so this is the
+build order rather than a column sort — which retires the per-view default and means a
+column sort applies only when the user clicks one. The footer names the order, and the
+headers call a local `sortModemTable()` so that note stops claiming it the moment a
+column sort takes over.
 
 ### v2.58.0 — Activation pill, IPHO pill, promoted unit number
 The aircraft cell carries the Fleet tab's activation age pill on every row. IPHO reads
