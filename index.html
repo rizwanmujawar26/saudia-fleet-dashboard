@@ -1718,6 +1718,11 @@
         .ssid-public { color: #2f5f8a; }
         .ssid-hidden { color: #a52834; }
 
+        /* Local roaming shares the split-bar shape but not the red — it is the other
+           half of a composition, not an exception state the way Hidden is. */
+        .sim-roam-local { color: #55606a; }
+        .sim-roam-fill-local { background: linear-gradient(90deg, #9aa5ae, #6b757e); transition: width 0.5s ease; }
+
         .ssid-track {
             display: flex;
             height: 9px;
@@ -3286,6 +3291,27 @@
         /* One-click pills for the values worth reaching without opening a menu.
            Hidden by default and shown only where the row has the width — the
            threshold is set from the measured content, in the media query below. */
+        /* The free-text box. Shrinks before the pills and menus do — a narrow
+           search box is still usable, a clipped dropdown is not. */
+        .fb-search {
+            flex: 1 1 150px;
+            min-width: 96px;
+            max-width: 240px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-family: inherit;
+            color: #333;
+            background: #fff;
+        }
+        .fb-search:focus {
+            outline: none;
+            border-color: #0a5c34;
+            box-shadow: 0 0 0 3px rgba(10, 92, 52, 0.12);
+        }
+        .fb-search::placeholder { color: #9aa3ab; }
+
         .fb-quick { display: none; }
         .fb-quick-btn { flex: 0 0 auto; }
 
@@ -5579,10 +5605,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.47.0';
-        const APP_BUILD    = '2026.08.25.00';
+        const APP_VERSION  = '2.48.0';
+        const APP_BUILD    = '2026.08.25.01';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T00:59:04Z';
+        const APP_DEPLOYED = '2026-08-25T01:09:29Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6531,6 +6557,7 @@
         // has-value styling without knowing anything about the filter.
 
         const fbState = {};        // fbState[barId][filterId] -> Set of values
+        const fbQuery = {};        // fbState's free-text twin: barId -> search string
         let fbOpenKey = null;      // '<barId>' (compact) or '<barId>:<filterId>'
         let fbOpenBtn = null;      // the trigger the open popover belongs to
         let fbOpenCompact = false; // whether that popover is the collapsed/sheet one
@@ -6553,6 +6580,15 @@
         function fbRowMatch(barId, row) {
             const bar = FILTER_BARS[barId];
             if (!bar) return true;
+            // Free text first — it is the cheapest reject and the most selective.
+            // A row opts in by carrying data-search; anything without it is simply
+            // not searchable rather than being hidden by a query it cannot answer.
+            const q = (fbQuery[barId] || '').trim().toLowerCase();
+            if (q) {
+                const hay = (row.dataset.search || '').toLowerCase();
+                // Every word has to appear, so "asv 235" narrows rather than widens.
+                if (!q.split(/\s+/).every(w => hay.includes(w))) return false;
+            }
             return bar.filters.every(f => {
                 const sel = fbSel(barId, f.id);
                 if (sel.size === 0) return true;
@@ -6563,13 +6599,22 @@
         function fbActiveCount(barId) {
             const bar = FILTER_BARS[barId];
             if (!bar) return 0;
-            return bar.filters.reduce((n, f) => n + (fbSel(barId, f.id).size ? 1 : 0), 0);
+            return bar.filters.reduce((n, f) => n + (fbSel(barId, f.id).size ? 1 : 0), 0)
+                + ((fbQuery[barId] || '').trim() ? 1 : 0);
         }
 
         function fbClear(barId) {
             const bar = FILTER_BARS[barId];
             if (!bar) return;
             bar.filters.forEach(f => fbSel(barId, f.id).clear());
+            fbQuery[barId] = '';
+        }
+
+        // Typing must NOT re-render the bar — the box being typed into would lose
+        // focus on every keystroke. Only the rows are re-filtered.
+        function fbSearchInput(barId, value) {
+            fbQuery[barId] = value;
+            fbApply(barId);
         }
 
         function fbOptionsOf(filter) {
@@ -6650,6 +6695,12 @@
                 `<span class="fb-groups">` +
                     bar.filters.map(f => fbRenderTrigger(barId, f)).join('') +
                 `</span>` +
+                (bar.search
+                    ? `<input type="search" class="fb-search" value="${escAttr(fbQuery[barId] || '')}"
+                        placeholder="${escAttr(bar.search)}" autocomplete="off" spellcheck="false"
+                        aria-label="${escAttr(bar.search)}"
+                        oninput="fbSearchInput('${escAttr(barId)}', this.value)">`
+                    : '') +
                 `<button type="button" class="fb-trigger fb-compact ${n ? 'has-value' : ''}"
                     data-fbkey="${escAttr(barId)}"
                     aria-haspopup="true" aria-expanded="false"
@@ -7034,6 +7085,7 @@
 
             sim: {
                 apply: () => applySimFilters(),
+                search: 'Search SIM or aircraft',
                 // The four worth one click: what is flying, what is in hand, and the
                 // two roaming plans. Everything else stays behind the dropdowns.
                 quick: [
@@ -9071,15 +9123,38 @@
                 </div>`;
             };
 
-            // Active, then the one that needs action, then what is in hand, then
-            // history. Fault takes the alert red and Removed steps back to grey: a
-            // removed card is settled, a faulty one is a job. The four sum to the
-            // register, so no card is counted nowhere.
+            // Three counts, then a split. The counts are the states a card can be in
+            // and needing action; the split is a different axis entirely — which plan
+            // the fitted cards are on — so it is drawn as two shares of one track
+            // rather than a fourth count, the same shape the Fleet tab's SSID card
+            // uses. Removed cards are still reachable from the Status filter; they
+            // are history rather than something to watch a number on.
+            const roam = cards.filter(c => c.status !== 'removed');
+            const glob = roam.filter(c => c.roaming === 'global').length;
+            const loc  = roam.filter(c => c.roaming === 'local').length;
+            const known = glob + loc;
+            const globPct = known ? (glob / known) * 100 : 0;
+
+            const split = `<div class="media-widget fleet-ssid">
+                <div class="media-widget-head">
+                    <span class="media-widget-label">Roaming Plan</span>
+                    <span class="media-size-pill">${known} set</span>
+                </div>
+                <div class="ssid-figures">
+                    <span class="ssid-side ssid-public"><b>${glob}</b> Global</span>
+                    <span class="ssid-side sim-roam-local">Local <b>${loc}</b></span>
+                </div>
+                <div class="ssid-track" role="img" aria-label="${glob} global, ${loc} local">
+                    <div class="ssid-fill-public" style="width:${globPct}%"></div>
+                    <div class="sim-roam-fill-local" style="width:${100 - globPct}%"></div>
+                </div>
+            </div>`;
+
             strip.innerHTML =
                 card('Active Cards', n('active'), 'latest') +
-                card('Fault', n('fault'), 'alert') +
-                card('Spares in Hand', n('unused'), 'previous') +
-                card('Removed', n('removed'), 'no_media');
+                card('Faulty Cards', n('fault'), 'alert') +
+                card('Spare Cards', n('unused'), 'previous') +
+                split;
         }
 
         function simStatusBadge(v) {
@@ -9109,6 +9184,11 @@
                 row.dataset.simstatus = c.status;
                 row.dataset.roaming = c.roaming || 'none';
                 row.dataset.type = c.type;
+                // What the search box matches. The raw serial AND the grouped form,
+                // so "235940" and "117002 235940" both find the card, plus the tail
+                // and its ex- form.
+                row.dataset.search = [c.serial, formatSimSerial(c.serial), c.tailLabel, c.tail]
+                    .filter(Boolean).join(' ');
 
                 // Dates belong to the FITMENT, so a spare with no fitment has nowhere
                 // to put one. The inputs say so rather than silently discarding it.

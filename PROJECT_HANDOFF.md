@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.47.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.48.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -733,6 +733,24 @@ carry everything — nothing becomes unreachable. **A bar with more dropdowns th
 SIM one would need a higher threshold**; `.fb-filters` scrolls sideways rather than
 breaking, but re-measure before giving another bar a `quick` list.
 
+### Free-text search
+
+A bar declares `search: 'placeholder text'` and gets a box in the row. A row opts in
+by carrying **`data-search`** — anything without it is simply not searchable rather
+than being hidden by a query it cannot answer.
+
+**Every word must match**, so `asv 235` narrows rather than widens. The SIM rows put
+the raw serial, its grouped form, the tail and the `ex-` tail in `data-search`, so
+`235940`, `117002 235940`, `AS53` and `ex-AS53` all find what you would expect.
+
+⚠️ **Typing must not re-render the bar** — the box would lose focus on every keystroke.
+`fbSearchInput()` sets the query and re-filters the ROWS only. The box's value is
+re-rendered from `fbQuery` when something else does rebuild the bar (a pill click), so
+the text survives.
+
+The query counts toward `fbActiveCount()`, so the collapsed mobile badge includes it,
+and `fbClear()` clears it — Reset empties the box.
+
 ### Single-select filters
 
 A filter declared `single: true` is an exclusive choice: the popover renders
@@ -901,10 +919,19 @@ Fault, Spare, Removed) then oldest install date within each. `applyTableSort()` 
 on one column, so this has to be the **build** order; `populateSimTable()` only
 re-applies a sort the user actually clicked, and Reset clears it to come back here.
 
-Widgets are Active Cards / **Fault** / Spares in Hand / Removed, in the shared
-`.media-widget` markup and variants the Fleet and Media strips use. **Fault takes the
-alert red and Removed steps back to grey** — a removed card is settled, a faulty one is
-a job someone has to do. The four sum to the register, so no card is counted nowhere.
+Widgets are **Active Cards / Faulty Cards / Spare Cards**, in the shared
+`.media-widget` markup and variants the Fleet and Media strips use, plus a **Roaming
+Plan** split.
+
+The three counts are states a card can be in; the split is a different axis — which
+plan the fitted cards are on — so it is drawn as two shares of one track, the same
+shape as the Fleet tab's SSID card, rather than a fourth count. It counts everything
+that is **not removed**, because a card that came off has no live plan.
+
+⚠️ **The counts no longer sum to the register**: Removed lost its widget on
+2026-08-25 at the user's request. Removed cards are still reachable from the Status
+filter — they are history rather than a number to watch. Local takes slate rather than
+the SSID card's red: it is the other half of a composition, not an exception state.
 
 ⚠️ **A `Retired` status was added in v2.42.0 and removed again in v2.43.0** at the
 user's request — status is just Active and Removed for a fitted card now. The
@@ -1703,6 +1730,15 @@ through the same path.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.48.0 — Search box, and a roaming split widget
+The filter bar gained a free-text box that matches SIM number or aircraft — raw or
+grouped serial, tail or `ex-` tail, every word required so two terms narrow. It is part
+of the shared component: a bar declares `search` and its rows carry `data-search`.
+
+Widgets renamed to Active Cards / Faulty Cards / Spare Cards, and Removed gave up its
+card to a Roaming Plan split showing Global against Local across the cards still
+fitted.
 
 ### v2.47.0 — One-click filter pills on a wide screen
 On a laptop the 4G SIM filters were all behind dropdowns even with room to spare.
