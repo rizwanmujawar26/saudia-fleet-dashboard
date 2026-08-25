@@ -29,6 +29,11 @@ Fields added to `/units` during 2026-08-25 that a restore must therefore carry:
 `roaming` (`global|local`, on the unit), `lifecycle` (declared, currently unused — see
 the handoff), and `condition` (`fault`, on a **fitment**).
 
+A fitment also gained **`roaming`** (v2.53.0), and its long-declared **`notes`** is now
+in use: roaming and the SIM comment moved from the unit to the fitment so two periods of
+service stay independent. A restore that carries units but drops fitment fields would
+silently merge them back.
+
 `/hardware` gained one the same day: **`rootCause`** on `issues/{id}` (v2.51.0), which
 carries the engineering or DevOps explanation of why an issue happens. `/hardware` is a
 small node, so it is easy to overlook in a partial restore — `--only aircraft,fleet`

@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.52.1, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.53.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -231,7 +231,7 @@ individual box.
 | `serial` | the identity. Unique **within** an `lruId`; two different LRUs may share a number |
 | `partNumber`, `altPartNumber`, `altSerial`, `revision`, `modDots`, `vendor`, `notes` | per-unit attributes. **Declared in the rules and deliberately unused** — they are where mod dots, revisions and alternates go when there is a UI for them |
 | `addedAt` | ISO stamp |
-| `fitments/{id}` | `aircraft`, `position`, `state`, `fittedDate`, `removedDate`, `removalReason`, `shopStatus`, `shopRef`, `shopFinding`, `activityId`, `notes`, `loggedAt` |
+| `fitments/{id}` | `aircraft`, `position`, `state`, `condition`, `fittedDate`, `removedDate`, `removalReason`, `shopStatus`, `shopRef`, `shopFinding`, `activityId`, **`roaming`**, `notes`, `loggedAt` |
 
 A **fitment** is one box, on one aircraft, for one period. A unit fitted twice has
 two fitments, which is what makes total time on wing and change counts add up
@@ -1113,8 +1113,8 @@ back to Active" within reach, which would leave one physical box reading as fitt
 two aircraft. `commitSimChanges()` refuses it by name and leaves Edit mode open, the
 same way an installation date with no aircraft already was.
 
-Card-level fields (**Roaming**, **Comments**) write to the unit from whichever of its
-rows they were typed on — they belong to the card, not to a period.
+**Roaming** and **Comments** are per-fitment as of v2.53.0 — each row edits its own,
+and only a spare's go to the unit. See the `/units` section above.
 
 Columns: `# | Installation Date | SIM Card # | Roaming | Aircraft | Type | Status |
 Removal Date | Comments`. Two of those placements are deliberate: **Removal Date sits
@@ -1285,12 +1285,30 @@ bulk baseline entry, not when the cards actually went on. The 13 non-SIM `fitted
 values and all 7 SIM `removedDate` values were left untouched. Snapshot before the
 change: `~/Documents/fleet-backups/2026-08-25-before-sim-date-clear`.
 
-⚠️ **Roaming lives on the CARD** (`/units/{id}/roaming`, `global` \| `local`), not on
-the aircraft. A spare with no aircraft still has a plan, which
-`/aircraft/{tail}/simRoaming` cannot express. That field is **superseded**: it holds
-one stale record (AQJ `active`) and nothing reads it for the SIM page. It is left in
-place rather than deleted — clearing it is a data decision, not a side effect of this
-change.
+⚠️ **Roaming and the comment live on the FITMENT** (`fitments/{id}/roaming`,
+`global` \| `local`, and `fitments/{id}/notes`) — **not on the card**, and not on the
+aircraft. They describe one *period of service*: the same SIM can run a different plan
+on the next airframe, and a removal note is about that removal rather than about the
+card for ever.
+
+**A spare has no fitment to hold them**, so an unfitted card keeps them at unit level
+(`/units/{id}/roaming`, `/units/{id}/notes`). That is now the *only* thing unit-level
+roaming and notes mean, and assigning a spare **carries both onto the new fitment** —
+without that, assigning a card would silently blank them.
+
+⚠️ **A fitted row does NOT fall back to the unit, deliberately.** A fallback cannot
+express *explicitly not set*: the ASK period on `…092859` has no plan on record and
+would inherit ASC's, which is the exact bug this replaced — until v2.53.0 both fields
+were card-level, so editing either row of a two-fitment card changed both.
+
+⚠️ **Unit-level values were left in place on the 44 fitted cards** when the 45 values
+were migrated onto their fitments (2026-08-25). Nothing reads them for a fitted card,
+so they are inert — but they are a **duplicate that can drift**, and clearing them is a
+data decision rather than a side effect. Snapshot:
+`~/Documents/fleet-backups/2026-08-25-before-fitment-roaming-notes`.
+
+`/aircraft/{tail}/simRoaming` is **superseded** twice over: it holds one stale record
+(AQJ `active`) and nothing reads it. Left in place for the same reason.
 
 **Edit mode covers Roaming and Comments only.** Fitting and removing a card are
 *fitment* writes, and Record Installed / Record Removed on the Serials tab already own
@@ -2052,6 +2070,14 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.53.0 — Roaming and the comment move to the fitment
+Editing either row of a card with two fitments changed both, because both fields were
+stored on the unit. They are per-fitment now, so two periods of service stay
+independent; a spare keeps them at unit level because it has no fitment, and assigning
+one carries them forward. **No fallback from fitment to unit** — a fallback cannot say
+"explicitly not set", which is the whole ask. 45 values were migrated onto their
+fitments; unit-level copies were left in place rather than deleted.
 
 ### v2.52.1 — REMOVED goes dark amber, and every SIM badge takes its own colour
 `REMOVED` and `SPARE` were the same grey, byte for byte, and neither matched its own
