@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.54.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.55.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -144,7 +144,7 @@ adding it to the rules first.
 | `wifiVisibility` | `public` \| `hidden` |
 | `activatedDate` | `DD-Mon-YYYY` |
 | `simRoaming` | `active` \| `inactive` — the SIM subscription, not the card |
-| `modem` | `{ type, commissionedDate, mgId, tid, se4, se2c, chassisId, esn, notes }` — satellite modem commissioning, see the Modem tab |
+| `modem` | `{ taurus: {commissionedDate, mgId, tid, se4, se2c, notes}, hughes: {commissionedDate, chassisId, esn, notes} }` — **both** modems, see the Modem tab |
 | `ugoVersion` | e.g. `6.3.1`. **Absent = not installed** |
 | `tilesVersion` | e.g. `2.0`. **Absent = not installed** |
 
@@ -891,7 +891,7 @@ the oldest row is the one that has been waiting longest.
 | Media | Loading Date (`media.loadedDateUTC`) | `MEDIA_DEFAULT_SORT` |
 | Fleet | Activation Date (`activatedDate`) | `FLEET_DEFAULT_SORT` |
 | 4G SIM | Installation Date (fitment `fittedDate`) | tiers — see below |
-| Modem | Commissioning Date (`modem.commissionedDate`) | `MODEM_DEFAULT_SORT` |
+| Modem | Commissioning Date (per-modem `commissionedDate`) | `MODEM_DEFAULT_SORT` |
 
 ### Four rules that apply to every one of them
 
@@ -1412,11 +1412,21 @@ firing before authentication and with `backup.sh` losing anonymous access.
    which is how an aircraft is marked as not having it at all. A value that does not
    match the rules' pattern is refused at the input and never staged, so it cannot take
    the atomic save down with it.
-4. **Modem** — satellite modem commissioning, **one row per aircraft** in
-   `modemFleet()` (currently `activeFleet()` — Active, either fit). ⚠️ **The blanks
-   are the point**: an aircraft with no modem on record is what the page exists to
-   surface, the same way the Software tab shows *Not set* rather than hiding it. To
-   include the two still In Retrofit, `modemFleet()` is the one line.
+4. **Modem** — satellite modem commissioning.
+
+   ⚠️ **The MODMAN carries TWO modems and every aircraft has both** (user,
+   2026-08-25) — a Taurus *and* a Hughes, commissioned on their **own dates** and
+   identified by completely different numbers. An earlier build had a single `type`
+   field choosing between them, which could not represent an aircraft at all.
+
+   **A row is a MODEM, not an aircraft** — the same move the SIM register makes for
+   fitments, and for the same reason: each modem has its own date, so a row per
+   aircraft could not be sorted by date at all, and the two sets of identifiers would
+   share a line meaning two different things. Scope is `modemFleet()` (currently
+   `activeFleet()`), so **both view is 2 × the fleet**. ⚠️ **The blanks are the
+   point**: a modem with no date is what the page exists to surface, the same way the
+   Software tab shows *Not set* rather than hiding the aircraft. To include the two
+   still In Retrofit, `modemFleet()` is the one line.
 
    Stored at **`/aircraft/{tail}/modem`**, so the page rides the `/aircraft` stream
    that already exists — the connection budget allows no seventh `EventSource`, and a
@@ -1432,21 +1442,42 @@ firing before authentication and with `backup.sh` losing anonymous access.
    together — and **`MODEM_FIELDS`** says which identifiers each vendor carries:
    Taurus `mgId`, `tid`, `se4`, `se2c`; Hughes `chassisId`, `esn`.
 
-   ⚠️ **ONE table, not one per vendor.** The identifiers differ completely, which
-   argues for splitting — but **the vendor does not map onto fit or programme**:
-   `ASBB` is *linefit* running Taurus and `ASC` is *retrofit* running Hughes. A split
-   would be arbitrary, and would leave every uncommissioned aircraft in neither table.
-   The Modem filter gives a single-vendor view in one click.
+   **The View filter switches COLUMNS, which no row filter can do.** Declared
+   `single: true`, so empty means *both* — the component's "no filter is All" rule
+   rather than a magic default. Taurus shows 9 columns, Hughes 7, both 12. One class
+   on the table (`.modem-view-taurus` / `.modem-view-hughes`) drives it in **CSS**, and
+   the frozen-head copy inherits it because that copy is cloned from the live
+   `<thead>` with its classes intact — so a view change needs no second list of
+   columns anywhere.
 
-   **A cell belonging to the other vendor reads `n/a`, not a dash**, and says why on
-   hover. A Hughes aircraft has no MG ID to record *ever*; a Taurus aircraft whose MG
-   ID nobody has typed yet is **outstanding work**. Those must not look alike.
+   ⚠️ **The Modem column hides itself under a single-modem view.** Every row is that
+   modem, so the badge would only restate the view — exactly the rule the Timeline
+   follows in hiding its kind pill under a kind filter. It returns under *both*.
 
-   Widgets: **Commissioned** and **Awaiting Commissioning** — two counts that sum to
-   the scope — plus a **Modem Fleet** split (Taurus/Hughes), because which modem an
-   aircraft carries is a composition, not progress towards anything.
+   ⚠️ **`applyModemFilters()` must tell a view change from a search keystroke.**
+   `fbSearchInput()` calls the bar's `apply` on **every character**, and a rebuild
+   there would pull focus out of the search box; a view change, by contrast, *must*
+   rebuild because the columns differ. It is guarded on `modemViewRendered`.
 
-   **Commissioned means a DATE is on record**, not merely a type chosen — the same
+   ⚠️ **The row's dataset key must be `data-view`, matching the filter's id.**
+   `fbRowMatch()` reads `data-<id>` off the row, so naming it anything else leaves the
+   View filter matching nothing and **hiding every row** — which is what it did, with
+   the footer reading "0 of 42" while 42 rows sat in the DOM.
+
+   **A cell belonging to the other modem reads `n/a`, not a dash** (in *both* view,
+   where the columns are on screen). A Hughes modem has no MG ID to record *ever*; a
+   Taurus modem whose MG ID nobody has typed yet is **outstanding work**. Those must
+   not look alike.
+
+   **Widgets follow the view**, so every figure counts the population beneath it: per
+   modem, **Commissioned** and **Awaiting**, which sum to the fleet. Under *both*,
+   **Both Commissioned / One Outstanding / Neither Started**, which **partition the
+   aircraft** rather than double-counting an airframe under each modem.
+   ⚠️ Neither Started takes **grey, not alert red** — it is the un-started backlog,
+   not a fault, and red would put the largest number on an unfilled page in alarm
+   colours.
+
+   **Commissioned means a DATE is on record**, not merely identifiers typed — the same
    reasoning that makes Software completion require a location as well as a version.
 
    ⚠️ **Restricted for now at the user's request** (2026-08-25) while the page
@@ -2048,8 +2079,13 @@ live.
 - **What SE4 and SE2c actually are.** Tracked on the Modem tab as free text (≤ 40
   chars) because "modes" could be an on/off state, a named mode or a value, and text
   holds all three. **If they are a fixed set, say so and they become a dropdown** —
-  one entry in the rules plus a select, the same shape as `MODEM_TYPES`. Until then a
-  typo in one is not caught.
+  one entry in the rules plus a select, the same shape as the View filter. Until then
+  a typo in one is not caught.
+- **Whether *both* view should pair an aircraft's two modems side by side** on one
+  row instead of one row per modem. One row per modem is what keeps the date sort
+  meaningful and gives each modem its own comment; sorting or searching by tail brings
+  the pair together. A side-by-side layout would answer "is this aircraft finished?"
+  at a glance but needs two date columns and cannot sort by date at all.
 - **Whether the Modem tab should stay behind sign-in.** Restricted at the user's
   request while it settles; it is built as an ordinary public page and moving it out
   is one edit to `RESTRICTED_TABS`.
@@ -2132,6 +2168,13 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.55.0 — Both modems per aircraft, and three views
+Corrects the model: the MODMAN carries **two** modems and every aircraft has both,
+each with its own commissioning date and identifiers. A row is now a modem rather than
+an aircraft, and the View filter switches Taurus / Hughes / both — swapping which
+columns exist, not just which rows show. Widgets follow the view; under *both* they
+partition the aircraft instead of double-counting it.
 
 ### v2.54.0 — Satellite modem commissioning page
 New 🛰️ **Modem** tab, restricted for now: one row per aircraft with its modem vendor,
