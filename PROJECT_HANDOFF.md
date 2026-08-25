@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.59.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.59.1, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -120,7 +120,7 @@ adding it to the rules first.
 
 | field | values |
 |---|---|
-| `type` | e.g. `A320-214`, `A321-253NY XLR` |
+| `type` | e.g. `A320-214`, `A321-253NYXLR`. ⚠️ **Never contains a space** — see *Conventions* |
 | `station` | `JED` / `RUH` / `N/A` |
 | `fit` | `retrofit` (42) \| `linefit` (2 — ASBA, ASBB). **How WiFi got onto the airframe, not where it is in the programme** — an aircraft can be `fit: retrofit` *and* `fleetStatus: In Retrofit` |
 | `fleetStatus` | **WiFi installation status** — one of `Planned`, `In Retrofit`, `Installed`, `Commissioned`, `Active`, `Decommissioned`. Exact strings, defined once in `FLEET_STATUSES` |
@@ -484,7 +484,7 @@ three like everything else in the family, so `lf_cwap` exists as well as `cwap`.
 
 `typeFamily()` maps `A318/A319/A320/A321` → `A320_FAMILY` and `A33x` → `A330`.
 ⚠️ **It is deliberately a family rule and not a list of subtypes.** The fleet runs five
-type strings today (`A320-214`, `A321-211`, `A321-251NX`, `A321-253NY XLR`, `A330-343`);
+type strings today (`A320-214`, `A321-211`, `A321-251NX`, `A321-253NYXLR`, `A330-343`);
 enumerating them is exactly what left the two A321 variants silently falling back to 1,
 and a sixth variant would have done it again. Anything outside the two families still
 falls back to `qty` — an A350 reads 1, obviously wrong rather than plausibly wrong.
@@ -1953,6 +1953,20 @@ skipped, so an empty-state row is never numbered.
 
   `parseScheduleUTC()` and `toISODate()` remain for sort keys and date maths and are
   unchanged.
+- ⚠️ **An aircraft type never contains a space** (user, 2026-08-25), stored or
+  displayed. The XLR pair were stored `A321-253NY XLR` and shown `A321 XLR`; both lost
+  the space — stored `A321-253NYXLR`, shown **`A321XLR`**. The full Airbus designation
+  is kept, because every other type carries its own (`-214`, `-211`, `-251NX`, `-343`).
+
+  **Three places hardcode a type string and must move together**: the fallback roster,
+  `TYPE_PILL_COLORS` and `TYPE_SHORT_LABEL`. Nothing else does — every type dropdown
+  and filter builds its options from the roster's own distinct values, so they follow
+  the data on their own.
+
+  ⚠️ **`typeFamily()` is the thing to check when a type is renamed**, because CWAP
+  quantity hangs off it. It matches on the **A32x prefix**, not a subtype list, so a
+  rename within a family cannot disturb it — but a rename that changed the prefix
+  would silently drop the aircraft to `qty` (1), which is why the family rule exists.
 - All times UTC/Zulu.
 - No external scripts. Keep it that way.
 
@@ -2251,6 +2265,12 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.59.1 — Aircraft types carry no space
+`A321-253NY XLR` becomes `A321-253NYXLR`, displaying as `A321XLR`. Only the XLR pair
+broke the rule. The three hardcoded type strings moved with the data; every filter and
+dropdown builds from the roster and followed on its own. `typeFamily()` matches on the
+A32x prefix, so CWAP stays ×3 on the pair.
 
 ### v2.59.0 — Modem opens on activation date, newest first
 AQB, activated yesterday, now opens the table. Activation has no column, so this is the
