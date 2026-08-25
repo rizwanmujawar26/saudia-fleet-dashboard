@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.59.1, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.60.0, 2026-08-26)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -885,14 +885,19 @@ Every data table opens on a **date column, oldest first**, placed second right a
 `#`. That is deliberate: the question these pages answer is "what happened when", and
 the oldest row is the one that has been waiting longest.
 
-⚠️ **The Modem tab is the one deliberate exception** (2026-08-25): it opens on
-**activation date, newest first**, because it asks what has just arrived rather than
-what has waited longest. See its entry below.
+⚠️ **Two tabs are deliberate exceptions** (2026-08-25). **Modem** opens on *activation
+date, newest first* and **Media** on *loading date, newest first* — both ask what has
+just arrived rather than what has waited longest.
+
+⚠️ **Neither could be a column sort, for the same reason**: descending on a date column
+puts the "no value" sentinel at the TOP, because that sentinel is built for the
+ascending default. Both are **build orders** with `lastSort` applied only when the user
+clicks a header — the move the SIM tiers already made.
 
 | table | opens on | constant |
 |---|---|---|
 | Software | Installation Date (`completionDate`) | `SW_DEFAULT_SORT` |
-| Media | Loading Date (`media.loadedDateUTC`) | `MEDIA_DEFAULT_SORT` |
+| Media | Loading Date, **NEWEST first** — a build order, not a column | `mediaLoadKey()` |
 | Fleet | Activation Date (`activatedDate`) | `FLEET_DEFAULT_SORT` |
 | 4G SIM | Installation Date (fitment `fittedDate`) | tiers — see below |
 | Modem | **Activation Date, NEWEST first** — a build order, not a column | `modemActivationKey()` |
@@ -1648,6 +1653,27 @@ staged.
 - A cycle is **MMYY** (`0826`). `cycleSortKey()` maps it to YYYYMM so January
   correctly outranks the previous December; `previousCycle()` rolls the year.
   **Never compare cycle strings directly.**
+- ⚠️ **Cycle `0526` is LIGHT MEDIA — the baseline, not a stale May load** (user,
+  2026-08-25). It is the mini package carrying just enough for the wireless IFE to
+  work, put on at installation before the aircraft joins the monthly cycle. Calling it
+  *May 2026 / older* claimed a newly installed aircraft was months behind when it is
+  simply not on the cycle yet.
+
+  `MEDIA_LIGHT_CYCLE` is the one definition, `isLightMediaCycle()` the one test.
+  `mediaStatusType()` returns **`light`**, checked **before** the latest/previous
+  comparison so the baseline keeps its identity even in a month where it would
+  otherwise count as current. **Keyed on the CYCLE**, so it follows the source string
+  on its own — any record whose `mediaSource` is `ME-SVA-UGO-0526` parses to `0526` and
+  is baseline.
+
+  It ranks **second last, above only No Media**, in the widget strip *and* in the Month
+  filter: it is not a point in the monthly sequence, so listing it between two months
+  would misplace it. **Violet**, deliberately clear of the green/blue/amber
+  progression, because the aircraft is not behind.
+  ⚠️ The two records still store `mediaDisplay: 'May 2026'`. Nothing reads it for
+  display — `cycleToDisplay()` derives the label — so it is superseded rather than
+  wrong, the same way `simRoaming` is.
+
 - `mediaStatus` is **never stored** — it is relative to the newest cycle in the
   fleet, so a stored value goes stale the moment a newer cycle lands.
   `mediaStatusType()` derives it: latest (green), one month back (blue), older
@@ -2265,6 +2291,14 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.60.0 — Media opens newest-first, and 0526 is Light Media
+The Media table opens on the most recent load with the unloaded aircraft last — a build
+order, since descending on the date column would float the no-load sentinel to the top.
+Cycle `0526` is now **Light Media**, a status of its own ranked second last before No
+Media in both the widget strip and the Month filter, because it is the baseline package
+an aircraft carries before joining the monthly cycle. *Older Media* no longer sweeps
+those aircraft up as months behind.
 
 ### v2.59.1 — Aircraft types carry no space
 `A321-253NY XLR` becomes `A321-253NYXLR`, displaying as `A321XLR`. Only the XLR pair
