@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.55.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.56.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -891,7 +891,7 @@ the oldest row is the one that has been waiting longest.
 | Media | Loading Date (`media.loadedDateUTC`) | `MEDIA_DEFAULT_SORT` |
 | Fleet | Activation Date (`activatedDate`) | `FLEET_DEFAULT_SORT` |
 | 4G SIM | Installation Date (fitment `fittedDate`) | tiers — see below |
-| Modem | Commissioning Date (per-modem `commissionedDate`) | `MODEM_DEFAULT_SORT` |
+| Modem | that view's Commissioning Date, oldest first | `modemDefaultSort(view)` |
 
 ### Four rules that apply to every one of them
 
@@ -1419,14 +1419,27 @@ firing before authentication and with `backup.sh` losing anonymous access.
    identified by completely different numbers. An earlier build had a single `type`
    field choosing between them, which could not represent an aircraft at all.
 
-   **A row is a MODEM, not an aircraft** — the same move the SIM register makes for
-   fitments, and for the same reason: each modem has its own date, so a row per
-   aircraft could not be sorted by date at all, and the two sets of identifiers would
-   share a line meaning two different things. Scope is `modemFleet()` (currently
-   `activeFleet()`), so **both view is 2 × the fleet**. ⚠️ **The blanks are the
-   point**: a modem with no date is what the page exists to surface, the same way the
-   Software tab shows *Not set* rather than hiding the aircraft. To include the two
-   still In Retrofit, `modemFleet()` is the one line.
+   **A row is an AIRCRAFT**, with each modem's columns under its own **master head**
+   — a two-row `<thead>`: Taurus over `Commissioned / IPHO / MG ID / TID / SE4 / SE2c /
+   Comments`, Hughes over `Commissioned / Chassis ID / ESN / Comments`, and
+   `# / Aircraft / Type` spanning both rows. **Each modem keeps its own commissioning
+   date.** Scope is `modemFleet()` (currently `activeFleet()`). ⚠️ **The blanks are
+   the point**: a modem with no date is what the page exists to surface, the same way
+   the Software tab shows *Not set* rather than hiding the aircraft. To include the
+   two still In Retrofit, `modemFleet()` is the one line.
+
+   ⚠️ **There is deliberately no Modem column.** MG ID and TID say Taurus; Chassis ID
+   and ESN say Hughes. A badge repeating what the columns already state is a column of
+   noise — the same reasoning that hides the Timeline's kind pill under a kind filter.
+
+   ⚠️ **IPHO is the EXISTING top-level `iphoStatus`**, not a new modem field. It is
+   already on 34 aircraft and already edited on the **Software** tab, so a second home
+   would drift exactly the way the old duplicated status fields did. This page is a
+   second *view* of one fact, like `activatedDate` on Fleet and Activity — which is
+   why a save here also repaints the Software table. **Staged edits are keyed by the
+   path relative to the aircraft** (`modem/taurus/mgId`, `iphoStatus`), so one handler
+   covers both modems and the top-level field with no branching, and the save is a
+   join.
 
    Stored at **`/aircraft/{tail}/modem`**, so the page rides the `/aircraft` stream
    that already exists — the connection budget allows no seventh `EventSource`, and a
@@ -1442,17 +1455,30 @@ firing before authentication and with `backup.sh` losing anonymous access.
    together — and **`MODEM_FIELDS`** says which identifiers each vendor carries:
    Taurus `mgId`, `tid`, `se4`, `se2c`; Hughes `chassisId`, `esn`.
 
-   **The View filter switches COLUMNS, which no row filter can do.** Declared
-   `single: true`, so empty means *both* — the component's "no filter is All" rule
-   rather than a magic default. Taurus shows 9 columns, Hughes 7, both 12. One class
-   on the table (`.modem-view-taurus` / `.modem-view-hughes`) drives it in **CSS**, and
-   the frozen-head copy inherits it because that copy is cloned from the live
-   `<thead>` with its classes intact — so a view change needs no second list of
-   columns anywhere.
+   **The View filter switches COLUMN GROUPS, and filters no rows at all.** Every
+   aircraft has both modems, so there is nothing to filter out — it declares
+   **`rowValue: () => modemView()`** so every row always matches, which is exactly what
+   that hook is for. Declared `single: true`, so empty means *both*. Both shows 14
+   columns, Taurus 10, Hughes 7. One class on the table
+   (`.modem-view-taurus` / `.modem-view-hughes`) drives it in **CSS**, and the
+   frozen-head copy inherits it because that copy is cloned from the live `<thead>`
+   with its classes intact.
 
-   ⚠️ **The Modem column hides itself under a single-modem view.** Every row is that
-   modem, so the badge would only restate the view — exactly the rule the Timeline
-   follows in hiding its kind pill under a kind filter. It returns under *both*.
+   ⚠️ **The default sort FOLLOWS THE VIEW** (`modemDefaultSort()`). Under Hughes the
+   Taurus date is hidden, so opening on it left the table ordered by a column nobody
+   could see, with no arrow on the visible one. A view change also **drops any column
+   the user had chosen**, since it may not exist in the new view.
+
+   ⚠️ **Two header rows cannot share one sticky `top`** — they pin on top of each
+   other. The second sits below the first by `--grouphead-h`, measured and published by
+   `publishGroupHeadHeight()`; a hardcoded number is wrong the moment the label wraps.
+   The head's hairline `::after` is scoped to `thead tr:last-child`, or the group row
+   draws a line through the middle of the header.
+
+   ⚠️ **`.modem-group` must out-specify `.aircraft-table th`** (0,1,1), which sets the
+   header background and a left text-align. A bare class loses, and the master head
+   renders left-aligned in the plain header green. White on the two group tints
+   measures 4.77:1 and 5.73:1 — both AA.
 
    ⚠️ **`applyModemFilters()` must tell a view change from a search keystroke.**
    `fbSearchInput()` calls the bar's `apply` on **every character**, and a rebuild
@@ -1463,11 +1489,6 @@ firing before authentication and with `backup.sh` losing anonymous access.
    `fbRowMatch()` reads `data-<id>` off the row, so naming it anything else leaves the
    View filter matching nothing and **hiding every row** — which is what it did, with
    the footer reading "0 of 42" while 42 rows sat in the DOM.
-
-   **A cell belonging to the other modem reads `n/a`, not a dash** (in *both* view,
-   where the columns are on screen). A Hughes modem has no MG ID to record *ever*; a
-   Taurus modem whose MG ID nobody has typed yet is **outstanding work**. Those must
-   not look alike.
 
    **Widgets follow the view**, so every figure counts the population beneath it: per
    modem, **Commissioned** and **Awaiting**, which sum to the fleet. Under *both*,
@@ -1806,6 +1827,13 @@ frozen head on a 1055px table in a 351px window.
   the arrow updates.
 - **Each `th` is given the live head's measured width and the copy is
   `table-layout: fixed`**, or it would size to its own content and drift.
+- ⚠️ **A GROUPED head cannot be sized cell by cell.** `table-layout: fixed` takes its
+  column widths from the **first row**, and a master head's `colspan` cell is divided
+  **equally** across the columns it spans — which put the Modem copy up to **65px** out
+  of step with its data. A **`<colgroup>`** of real widths, measured from a **body
+  row** (the only row with exactly one cell per column), overrides that inference. It
+  is guarded on `head.rows.length > 1`, so the eight single-row tables keep the per-`th`
+  path they already work with. Verified at 0px drift on both.
 - ⚠️ **Do not force `white-space: nowrap` on it.** With the widths copied, the copy has
   to wrap exactly as the original does; forcing one line pushed "INSTALLATION DATE"
   straight through the next column.
@@ -2081,11 +2109,10 @@ live.
   holds all three. **If they are a fixed set, say so and they become a dropdown** —
   one entry in the rules plus a select, the same shape as the View filter. Until then
   a typo in one is not caught.
-- **Whether *both* view should pair an aircraft's two modems side by side** on one
-  row instead of one row per modem. One row per modem is what keeps the date sort
-  meaningful and gives each modem its own comment; sorting or searching by tail brings
-  the pair together. A side-by-side layout would answer "is this aircraft finished?"
-  at a glance but needs two date columns and cannot sort by date at all.
+- **Whether SE4 and SE2c belong on the Modem page at all.** The user described the
+  Taurus group as "IPHO, MG ID and TID — 3 columns" but had earlier asked for SE4 and
+  SE2c to be tracked. **They are kept**, because dropping a column is a removal and
+  those need asking. Say the word and the Taurus group goes to three.
 - **Whether the Modem tab should stay behind sign-in.** Restricted at the user's
   request while it settles; it is built as an ordinary public page and moving it out
   is one edit to `RESTRICTED_TABS`.
@@ -2168,6 +2195,13 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.56.0 — Grouped headers, no modem column, IPHO from iphoStatus
+A row is an aircraft again, with each modem's columns under its own master head and its
+own commissioning date. The Modem column is gone — the identifiers already say which
+modem it is. IPHO reads the existing top-level `iphoStatus` rather than minting a
+second home for it. Also taught `syncFrozenHeads()` to size a grouped head with a
+`<colgroup>`, without which the floating copy sat 65px out of step with its data.
 
 ### v2.55.0 — Both modems per aircraft, and three views
 Corrects the model: the MODMAN carries **two** modems and every aircraft has both,
