@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.51.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.52.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -245,15 +245,16 @@ without a special case:
 
 | surface | shows |
 |---|---|
-| 4G SIM register | **Active on ASC** — one row per *card*, from `simLatestFitment()` |
+| 4G SIM register | **two rows** — ACTIVE on ASC, and REMOVED `ex-ASK` (29d closed span) |
 | Serials tab | **two rows** — one per *fitment*, ASC on-wing and ASK removed (29 days) |
 | Hardware → SIM → ASK | current `…092828`, **removals 2**, changes 3, `firstFit: false` |
 | Hardware → Removed Units | the ASK removal joins the shop queue |
 
 ⚠️ **A backfilled fitment must not flip the card's status**, and the reason it does not
 is that `simLatestFitment()` sorts on `removedDate || fittedDate` — *not* on `loggedAt`.
-Adding ASK's 2025 period today leaves the 2026 ASC fitment latest, so the card stays
-Active on ASC. **Anything that picks a "latest" fitment must sort by the DATE**, or
+Adding ASK's 2025 period today leaves the 2026 ASC fitment latest, so the card still
+reads Active on ASC — which is what the register's *status* derivation depends on even
+now that the table lists every fitment. **Anything that picks a "latest" fitment must sort by the DATE**, or
 entering history will rewrite the present.
 
 ⚠️ **`unitsAtSlot()` is the exception and sorts by `loggedAt`** — a fine proxy while
@@ -1066,10 +1067,46 @@ sign-in, like every other page — the tab gate governs who *browses*, never who
 
 ### 4G SIM — the SIM card register
 
-One row per SIM **card**, derived from `/units` where `lruId` is `sim` or `lf_sim`.
+One row per **FITMENT**, derived from `/units` where `lruId` is `sim` or `lf_sim`.
 **There is no `/simcards` node, deliberately** — `/units` is already the single source
 for a serial and its fitment history, and a second home for the same cards would drift
 from it exactly the way the old duplicated status fields did.
+
+⚠️ **It was one row per CARD until v2.52.0**, and that hid history: the table read only
+`simLatestFitment()`, so a card that moved between airframes showed its current posting
+and silently dropped every aircraft it had been on. Searching `ASK` returned two rows
+when three cards had served it. A card now appears **once per period it served** —
+`899660 117003 092859` is ACTIVE on ASC *and* REMOVED `ex-ASK` with its closed 29-day
+span. **A spare has no fitment and is still exactly one row**; there is nothing to
+expand and it must not fall out of the register.
+
+Three functions, and the split between them is the point:
+
+| | |
+|---|---|
+| `simRowFor(id, u, fit, byTail)` | shapes ONE row from a card and one of its fitments (`null` for a spare) |
+| `simCards()` | one entry per **card**, state from the latest fitment — the inventory view |
+| `simRows()` | one entry per **fitment** — what the table lists |
+
+**The widgets and the Type filter read `simCards()`, deliberately.** Active / Faulty /
+Spare are counts of physical cards, so they stay against **53 cards** rather than 54
+rows however much history accumulates. The footer names both when they differ
+(`3 of 54 entries · 53 cards`) and falls back to the plain card wording when they agree.
+
+⚠️ **Staging is keyed by ROW, not by unit** — `${unitId}:${fitmentId}`, or the bare
+unit id for a spare. `pendingSim` used to be keyed by unit id and `commitSimChanges()`
+resolved the fitment through `byId[id].fitmentId`, *the latest one*. The moment a
+second row existed that was a live corruption path: editing the history row's dates
+would have written them onto the current fitment. Every edit control binds `data-sim`
+to `c.key` and the commit resolves through `byKey`.
+
+⚠️ **A card cannot be on wing twice.** Editable history rows put "set this old fitment
+back to Active" within reach, which would leave one physical box reading as fitted to
+two aircraft. `commitSimChanges()` refuses it by name and leaves Edit mode open, the
+same way an installation date with no aircraft already was.
+
+Card-level fields (**Roaming**, **Comments**) write to the unit from whichever of its
+rows they were typed on — they belong to the card, not to a period.
 
 Columns: `# | Installation Date | SIM Card # | Roaming | Aircraft | Type | Status |
 Removal Date | Comments`. Two of those placements are deliberate: **Removal Date sits
@@ -2000,6 +2037,16 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.52.0 — The SIM register lists fitments, not cards
+A card that moved between airframes only ever showed its current posting, so ASK's
+SIM history read two rows instead of three. A row is now a **fitment**, so
+`899660 117003 092859` appears twice — ACTIVE on ASC and REMOVED `ex-ASK` — and the
+tiers keep history below the cards in service. 54 rows, 53 cards.
+Staging was rekeyed from unit id to `${unitId}:${fitmentId}`, without which an edit to
+a history row would have written onto the current fitment; and setting an old fitment
+back to Active is refused, since one card cannot be on wing twice. Widgets and the Type
+filter still read `simCards()`, so every count stays a count of cards.
 
 ### v2.51.0 — Known issues gain a Root Cause, and can be edited
 `issues/{id}` gained **`rootCause`** (rules first), rendered between Detail and
