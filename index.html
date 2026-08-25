@@ -4719,21 +4719,21 @@
                         <thead>
                             <tr class="modem-grouphead">
                                 <th rowspan="2">#</th>
-                                <th rowspan="2" class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortTable('modemTable', 1)">Aircraft</th>
-                                <th rowspan="2" class="sortable-th" data-col="2" data-label="Type" onclick="sortTable('modemTable', 2)">Type</th>
+                                <th rowspan="2" class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortModemTable(1)">Aircraft</th>
+                                <th rowspan="2" class="sortable-th" data-col="2" data-label="Type" onclick="sortModemTable(2)">Type</th>
                                 <th colspan="5" class="modem-group modem-group-taurus modem-taurus-col">Taurus</th>
                                 <th colspan="4" class="modem-group modem-group-hughes modem-hughes-col">Hughes</th>
                             </tr>
                             <tr>
-                                <th class="sortable-th modem-taurus-col" data-col="3" data-label="Commissioned Date" onclick="sortTable('modemTable', 3)">Commissioned Date</th>
-                                <th class="sortable-th modem-taurus-col" data-col="4" data-label="IPHO" onclick="sortTable('modemTable', 4)">IPHO</th>
-                                <th class="sortable-th modem-taurus-col" data-col="5" data-label="MG ID" onclick="sortTable('modemTable', 5)">MG ID</th>
-                                <th class="sortable-th modem-taurus-col" data-col="6" data-label="TID" onclick="sortTable('modemTable', 6)">TID</th>
-                                <th class="sortable-th modem-taurus-col col-comment" data-col="7" data-label="Comments" onclick="sortTable('modemTable', 7)">Comments</th>
-                                <th class="sortable-th modem-hughes-col" data-col="8" data-label="Commissioned Date" onclick="sortTable('modemTable', 8)">Commissioned Date</th>
-                                <th class="sortable-th modem-hughes-col" data-col="9" data-label="Chassis ID" onclick="sortTable('modemTable', 9)">Chassis ID</th>
-                                <th class="sortable-th modem-hughes-col" data-col="10" data-label="ESN" onclick="sortTable('modemTable', 10)">ESN</th>
-                                <th class="sortable-th modem-hughes-col col-comment" data-col="11" data-label="Comments" onclick="sortTable('modemTable', 11)">Comments</th>
+                                <th class="sortable-th modem-taurus-col" data-col="3" data-label="Commissioned Date" onclick="sortModemTable(3)">Commissioned Date</th>
+                                <th class="sortable-th modem-taurus-col" data-col="4" data-label="IPHO" onclick="sortModemTable(4)">IPHO</th>
+                                <th class="sortable-th modem-taurus-col" data-col="5" data-label="MG ID" onclick="sortModemTable(5)">MG ID</th>
+                                <th class="sortable-th modem-taurus-col" data-col="6" data-label="TID" onclick="sortModemTable(6)">TID</th>
+                                <th class="sortable-th modem-taurus-col col-comment" data-col="7" data-label="Comments" onclick="sortModemTable(7)">Comments</th>
+                                <th class="sortable-th modem-hughes-col" data-col="8" data-label="Commissioned Date" onclick="sortModemTable(8)">Commissioned Date</th>
+                                <th class="sortable-th modem-hughes-col" data-col="9" data-label="Chassis ID" onclick="sortModemTable(9)">Chassis ID</th>
+                                <th class="sortable-th modem-hughes-col" data-col="10" data-label="ESN" onclick="sortModemTable(10)">ESN</th>
+                                <th class="sortable-th modem-hughes-col col-comment" data-col="11" data-label="Comments" onclick="sortModemTable(11)">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="modemTableBody"></tbody>
@@ -5834,10 +5834,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.58.0';
-        const APP_BUILD    = '2026.08.25.10';
+        const APP_VERSION  = '2.59.0';
+        const APP_BUILD    = '2026.08.25.11';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T20:25:09Z';
+        const APP_DEPLOYED = '2026-08-25T20:31:48Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -9569,11 +9569,18 @@
         // ⚠️ `dir` is a numeric MULTIPLIER (1 asc / -1 desc). applyTableSort does
         // `dir * (a - b)`, so a string makes every comparison NaN and the rows come
         // back in build order with no error anywhere.
-        // ⚠️ The default column FOLLOWS THE VIEW. Under Hughes the Taurus date is
-        // hidden, so sorting on it would leave the table ordered by a column nobody
-        // can see and the visible date header showing no arrow at all.
-        function modemDefaultSort(view) {
-            return { col: view === 'hughes' ? 8 : 3, dir: 1 };
+        // ⚠️ This table opens on ACTIVATION DATE, NEWEST FIRST — deliberately not the
+        // "date column, oldest first" every other table uses (user, 2026-08-25). The
+        // aircraft that just entered service is the one whose modems still need
+        // commissioning, so it belongs at the top.
+        //
+        // Activation has no column of its own — it is a pill inside the Aircraft cell —
+        // so applyTableSort() cannot express this and it is the BUILD order instead,
+        // the same move the SIM register's tiers make.
+        // ⚠️ A build order and lastSort are mutually exclusive: the sort is re-applied
+        // ONLY if the user clicked a header, and Reset drops back to this order.
+        function modemActivationKey(r) {
+            return Number(dateSortKey(toISODate(r.activatedDate)) || 0);
         }
 
         let modemEditMode = false;
@@ -9640,6 +9647,16 @@
         }
 
         function modemRows() {
+            return modemRowsUnsorted().sort((a, b) => {
+                const ka = modemActivationKey(a), kb = modemActivationKey(b);
+                // Newest first; an aircraft with no activation date has nothing to
+                // place it by and falls to the end rather than the top.
+                if (ka !== kb) return kb - ka;
+                return a.id.localeCompare(b.id);
+            });
+        }
+
+        function modemRowsUnsorted() {
             return modemFleet().map(a => {
                 const staged = pendingModem[a.id] || {};
                 // A staged value is keyed by the path it will be written to, so the
@@ -9826,12 +9843,13 @@
             // Re-applied on EVERY rebuild, not set once: these run again on every live
             // update, and without this a teammate's edit hands the rows back in build
             // order while the header still shows its arrow.
-            // A view change drops any column the user had chosen: it may not exist
-            // any more, and the new view has its own date to open on.
+            // A view change drops any column the user had chosen — it may not exist
+            // in the new view — which also returns the table to the build order.
             if (prevView && prevView !== view) delete lastSort['modemTable'];
-            const sm = lastSort['modemTable'] || modemDefaultSort(view);
-            lastSort['modemTable'] = sm;
-            applyTableSort('modemTable', sm.col, sm.dir);
+            // Only re-apply a sort the user actually clicked. Left alone the rows keep
+            // the activation order above, which no single-column sort can express.
+            const sm = lastSort['modemTable'];
+            if (sm) applyTableSort('modemTable', sm.col, sm.dir);
             updateSortIndicators('modemTable');
             updateModemEditUI();
         }
@@ -9844,6 +9862,16 @@
             if (!first) return;
             const h = Math.round(first.getBoundingClientRect().height);
             if (h) document.documentElement.style.setProperty('--grouphead-h', h + 'px');
+        }
+
+        // sortTable() is generic and knows nothing about this page's footer note, which
+        // has to stop saying "newest activation first" the moment the user sorts by a
+        // column. Wrapping it keeps that honest without giving the other eight tables a
+        // hook they do not need — the same way the SIM date header calls its own
+        // handler rather than sortTable().
+        function sortModemTable(col) {
+            sortTable('modemTable', col);
+            applyModemFilters();
         }
 
         function applyModemFilters() {
@@ -9859,13 +9887,16 @@
             renumberVisibleRows('modemTable');
             const shown = Array.from(document.querySelectorAll('#modemTableBody tr'))
                 .filter(r => r.style.display !== 'none').length;
-            setText('modemCount', `${shown} of ${modemRows().length} aircraft`);
+            // With no column sorted there is no arrow to explain the order, so the
+            // footer says it outright rather than leaving it a mystery.
+            const order = lastSort['modemTable'] ? '' : ' · newest activation first';
+            setText('modemCount', `${shown} of ${modemRowsUnsorted().length} aircraft${order}`);
         }
 
         function resetModemTable() {
             fbClear('modem');
             fbRender('modem');
-            lastSort['modemTable'] = modemDefaultSort(modemView());
+            delete lastSort['modemTable'];
             populateModemTable();
         }
 
