@@ -237,6 +237,31 @@ A **fitment** is one box, on one aircraft, for one period. A unit fitted twice h
 two fitments, which is what makes total time on wing and change counts add up
 across airframes.
 
+**The worked example is SIM `899660 117003 092859`** (2026-08-25) — the only unit in
+the register with more than one fitment, and the only one fitted to more than one
+airframe. It was on **ASK** 18-Mar-2025 → 16-Apr-2025, came off, and is now on **ASC**
+from 10-Apr-2026. Two fitments on one unit, and every surface reads it correctly
+without a special case:
+
+| surface | shows |
+|---|---|
+| 4G SIM register | **Active on ASC** — one row per *card*, from `simLatestFitment()` |
+| Serials tab | **two rows** — one per *fitment*, ASC on-wing and ASK removed (29 days) |
+| Hardware → SIM → ASK | current `…092828`, **removals 2**, changes 3, `firstFit: false` |
+| Hardware → Removed Units | the ASK removal joins the shop queue |
+
+⚠️ **A backfilled fitment must not flip the card's status**, and the reason it does not
+is that `simLatestFitment()` sorts on `removedDate || fittedDate` — *not* on `loggedAt`.
+Adding ASK's 2025 period today leaves the 2026 ASC fitment latest, so the card stays
+Active on ASC. **Anything that picks a "latest" fitment must sort by the DATE**, or
+entering history will rewrite the present.
+
+⚠️ **`unitsAtSlot()` is the exception and sorts by `loggedAt`** — a fine proxy while
+every fitment was entered in the order it happened, which a backfill breaks: ASK's slot
+now lists its three cards in entry order, not chronological order. It is harmless today
+because `hardwareFitment()` only ever calls `.find(on_wing)` and takes lengths off that
+list, never renders its order. **Sort it by date before displaying it.**
+
 **`state` (`on_wing` \| `removed`) is what says a unit came off — not the presence
 of a removal date.** That distinction is the whole point: the historical backlog is
 known by serial now and the dates are dug out later. Everything undated still
@@ -506,10 +531,12 @@ deliberately **not** to `completionLocation` the way the Add Activity form does.
 That is where the *software* load finished, and copying it onto a few hundred
 fitment records would invent the install location instead of leaving it blank.
 
-**Fitment is derived, never stored.** `hardwareFitment(lru)` walks `/activities`
-for `hardware_rr` records whose `details.partReplaced` matches an alias and reads
-the current state from the **latest** change, not from the last serial ever
-mentioned. Three cases, all distinguished:
+**Fitment is derived, never stored.** `hardwareFitment(lru)` reads **`/units`** —
+`unitsAtSlot()` collects every fitment at an aircraft-and-position, and `current` is
+the one still marked `on_wing`. ⚠️ **It does NOT walk `/activities`**; that was the
+pre-v2.13.0 implementation, which matched `details.partReplaced` against an alias, and
+this document described it long after `/units` replaced it. `/activities` is the event
+log; `/units` is the register. Three cases, all distinguished:
 
 | case | record | shows as |
 |---|---|---|
@@ -524,8 +551,10 @@ never reads as a removal.
 **The Removed Units section is the shop queue.** `hardwareRemovals(lru)` lists every
 unit ever taken off this LRU across the fleet, newest first, with its
 `removalReason` and the shop's verdict (`shopStatus`, `shopRef`, `shopFinding`).
-Those live on the removal activity because **the removal is the activity** — a
-parallel collection would drift from it. "Shop report" PATCHes
+⚠️ It reads **`/units`** — `unitEntries()` then `unitFitments()` — and those fields
+live on the **fitment**, not on an activity. The older note here said they lived on the
+removal activity; that was true before `/units` existed. A removal recorded only as a
+fitment (which is what the SIM backlog is) still reaches this queue. "Shop report" PATCHes
 `/activities/{id}/details`, so a finding can be filled in long after the removal
 was logged.
 
