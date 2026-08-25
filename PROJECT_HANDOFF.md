@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.57.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.58.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1507,6 +1507,26 @@ firing before authentication and with `backup.sh` losing anonymous access.
    View filter matching nothing and **hiding every row** — which is what it did, with
    the footer reading "0 of 42" while 42 rows sat in the DOM.
 
+   **The aircraft cell carries the Fleet tab's activation age pill** — the same
+   `activatedDate` and the same `activationAge()`, so the two pages cannot disagree.
+
+   **IPHO is a pill**, green `ENABLED` / amber `DISABLED`. Amber rather than red: not
+   yet set is work outstanding, not a fault. ⚠️ Only this page — the **Software** tab's
+   IPHO column keeps the dot-and-text convention it shares with its neighbours.
+
+   **`modemIdHTML()` promotes the unit number inside TID and Chassis ID.** A chassis
+   reads `AERSVA00064HNSJ3` and its TID is `64`: the run of digits before `HNS`
+   identifies the unit and everything around it repeats across the fleet, so it goes
+   bold and a shade larger while the leading zeros **dim rather than disappear** —
+   reading the value off a label still needs them. The same treatment
+   `simSerialHTML()` gives a SIM serial's last six digits.
+   ⚠️ **Only TID and Chassis ID, and that is the point**: they carry the *same* number,
+   so emphasising both is what lets the eye pair them across the row. MG ID (`101`) and
+   ESN (`17501546`) are bare numbers with nothing to pick out — promoting those too
+   would leave every cell bold and nothing standing out at all.
+   ⚠️ It returns **markup**, so it is for the cell only; `data-sort` and `data-search`
+   keep the raw value.
+
    **Widgets follow the view**, so every figure counts the population beneath it: per
    modem, **Commissioned** and **Awaiting**, which sum to the fleet. Under *both*,
    **Both Commissioned / One Outstanding / Neither Started**, which **partition the
@@ -2121,11 +2141,9 @@ live.
 
 ### Waiting on the user — ask, don't guess
 
-- **The Modem page has no data yet.** The rules, the table and the edit flow are all
-  proven against seeded data and a stubbed fetch, but **no aircraft carries a `modem`
-  record**, so the client write path to `/aircraft/{tail}/modem` is unproven against
-  the live rules engine. The first real save closes that — a `Permission denied` there
-  would mean a rules problem, not a silent failure.
+- **The Modem backlog.** One aircraft (**AQB**) carries a full record; the other 41
+  are empty. That is the data-entry job, and the page is built to show it — every
+  undated modem reads *Not set* rather than being hidden.
 - **Whether the Modem tab should stay behind sign-in.** Restricted at the user's
   request while it settles; it is built as an ordinary public page and moving it out
   is one edit to `RESTRICTED_TABS`.
@@ -2176,6 +2194,11 @@ closed; `roaming`, `condition` and the fitment date/state writes all go through 
 ✅ **CWAP quantities** — A320-family ×3, A330 ×5, **both fits**. Encoded as a family
 rule, not a subtype list.
 
+✅ **The client write path to `/aircraft/{tail}/modem` is PROVEN** (2026-08-25). The
+user entered AQB — both modems, dates, `mgId`, `tid`, `chassisId`, `esn` — through the
+UI, and it landed against the live rules engine. The nested `modem/{slot}/{field}`
+shape and the leaf-path PATCH both work.
+
 ✅ **Activation dates** — all 42 activated aircraft carry `activatedDate`, and the
 Timeline derives an Activation milestone from it.
 
@@ -2208,6 +2231,13 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.58.0 — Activation pill, IPHO pill, promoted unit number
+The aircraft cell carries the Fleet tab's activation age pill on every row. IPHO reads
+as a green/amber pill instead of a dot and a word. TID and Chassis ID promote the unit
+number they share — `AERSVA000`**`64`**`HNSJ3` against TID **`64`** — bold and a shade
+larger, leading zeros dimmed. MG ID and ESN stay plain so the promoted number is the
+thing that stands out.
 
 ### v2.57.0 — SE4/SE2c dropped, dates named, group heads branded
 SE4 and SE2c leave the Taurus group — they are fleet-wide settings the Overview already
