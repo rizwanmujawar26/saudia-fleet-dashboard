@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.53.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.54.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -144,6 +144,7 @@ adding it to the rules first.
 | `wifiVisibility` | `public` \| `hidden` |
 | `activatedDate` | `DD-Mon-YYYY` |
 | `simRoaming` | `active` \| `inactive` — the SIM subscription, not the card |
+| `modem` | `{ type, commissionedDate, mgId, tid, se4, se2c, chassisId, esn, notes }` — satellite modem commissioning, see the Modem tab |
 | `ugoVersion` | e.g. `6.3.1`. **Absent = not installed** |
 | `tilesVersion` | e.g. `2.0`. **Absent = not installed** |
 
@@ -890,6 +891,7 @@ the oldest row is the one that has been waiting longest.
 | Media | Loading Date (`media.loadedDateUTC`) | `MEDIA_DEFAULT_SORT` |
 | Fleet | Activation Date (`activatedDate`) | `FLEET_DEFAULT_SORT` |
 | 4G SIM | Installation Date (fitment `fittedDate`) | tiers — see below |
+| Modem | Commissioning Date (`modem.commissionedDate`) | `MODEM_DEFAULT_SORT` |
 
 ### Four rules that apply to every one of them
 
@@ -904,7 +906,13 @@ the oldest row is the one that has been waiting longest.
    whose `loadedDateUTC` is a full timestamp and produces 14. A short sentinel sorts
    undated rows to the front, which is exactly wrong and looks like a data bug.
 
-3. **The default sort is RE-APPLIED on every rebuild**, not set once:
+3. ⚠️ **`dir` is a numeric MULTIPLIER, not a string.** `applyTableSort()` does
+   `dir * (a - b)`, so `{ dir: 'asc' }` makes **every comparison `NaN`** and the rows
+   come back in build order — with no error anywhere. It cost a debugging pass on the
+   Modem table, where the roster is alphabetical so the result looked plausibly
+   sorted. **Use `1` or `-1`**, like all four other `*_DEFAULT_SORT` constants.
+
+4. **The default sort is RE-APPLIED on every rebuild**, not set once:
    ```js
    const s = lastSort['<table>'] || <TABLE>_DEFAULT_SORT;
    lastSort['<table>'] = s;
@@ -915,7 +923,7 @@ the oldest row is the one that has been waiting longest.
    which is what happened to the Fleet table the first time, and had been silently
    happening to any user sort on any table.
 
-4. **Anything that changes which rows are visible, or their order, must call
+5. **Anything that changes which rows are visible, or their order, must call
    `renumberVisibleRows()`** — the `#` column is a position in the list, not an id.
 
 ### When one column is not enough: the SIM tiers
@@ -1063,10 +1071,10 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
 ---
 
-## Tabs (9)
+## Tabs (10)
 
 Public order: **Overview, Software, Media, Fleet, 4G SIM**. Behind sign-in:
-**Activity, Hardware, Serials, Schedule**.
+**Modem, Activity, Hardware, Serials, Schedule**.
 
 **Schedule became restricted on 2026-08-25** — it is forward-looking work planning and
 the user does not want it public. **4G SIM went public the same day**, once it was
@@ -1404,7 +1412,48 @@ firing before authentication and with `backup.sh` losing anonymous access.
    which is how an aircraft is marked as not having it at all. A value that does not
    match the rules' pattern is refused at the input and never staged, so it cannot take
    the atomic save down with it.
-4. **Activity** (tab id is still `maintenance`, like Software's is still `aircraft`)
+4. **Modem** — satellite modem commissioning, **one row per aircraft** in
+   `modemFleet()` (currently `activeFleet()` — Active, either fit). ⚠️ **The blanks
+   are the point**: an aircraft with no modem on record is what the page exists to
+   surface, the same way the Software tab shows *Not set* rather than hiding it. To
+   include the two still In Retrofit, `modemFleet()` is the one line.
+
+   Stored at **`/aircraft/{tail}/modem`**, so the page rides the `/aircraft` stream
+   that already exists — the connection budget allows no seventh `EventSource`, and a
+   node of its own would have needed one or a poll. Every field belongs to the modem,
+   so they **nest**: clearing writes `modem: null` and correctly takes all of them.
+   That is the opposite of `ugoVersion`/`tilesVersion`, which sit at top level
+   precisely because clearing `media` must not take them.
+   ⚠️ Never put `modem` and `modem/<field>` in the same PATCH — Firebase rejects a
+   multi-path update where one path contains another. `commitModemChanges()` emits
+   field paths only.
+
+   **`MODEM_TYPES` is the one definition** — badges, edit dropdown and filter
+   together — and **`MODEM_FIELDS`** says which identifiers each vendor carries:
+   Taurus `mgId`, `tid`, `se4`, `se2c`; Hughes `chassisId`, `esn`.
+
+   ⚠️ **ONE table, not one per vendor.** The identifiers differ completely, which
+   argues for splitting — but **the vendor does not map onto fit or programme**:
+   `ASBB` is *linefit* running Taurus and `ASC` is *retrofit* running Hughes. A split
+   would be arbitrary, and would leave every uncommissioned aircraft in neither table.
+   The Modem filter gives a single-vendor view in one click.
+
+   **A cell belonging to the other vendor reads `n/a`, not a dash**, and says why on
+   hover. A Hughes aircraft has no MG ID to record *ever*; a Taurus aircraft whose MG
+   ID nobody has typed yet is **outstanding work**. Those must not look alike.
+
+   Widgets: **Commissioned** and **Awaiting Commissioning** — two counts that sum to
+   the scope — plus a **Modem Fleet** split (Taurus/Hughes), because which modem an
+   aircraft carries is a composition, not progress towards anything.
+
+   **Commissioned means a DATE is on record**, not merely a type chosen — the same
+   reasoning that makes Software completion require a location as well as a version.
+
+   ⚠️ **Restricted for now at the user's request** (2026-08-25) while the page
+   settles. It is an ordinary public-shaped page; moving it out is one edit to
+   `RESTRICTED_TABS`.
+
+5. **Activity** (tab id is still `maintenance`, like Software's is still `aircraft`)
    — the **active** fleet only (`fleetStatus === 'active'`), the same
    set the global Maintenance card counts against, so the two cannot disagree.
    **Two panels, Outlook-style** (`.maint-split`): the aircraft list on the left
@@ -1454,20 +1503,20 @@ firing before authentication and with `backup.sh` losing anonymous access.
    Filters are Aircraft Type and Maintenance status. There is no station filter —
    the tab is about the retrofit and its systems, not which base an aircraft flies
    from. Base Station is one of the profile fields.
-5. **Hardware** — the LRU catalogue on the left in two fit groups, the selected unit
+6. **Hardware** — the LRU catalogue on the left in two fit groups, the selected unit
    on the right: profile, known issues, fitment, removed units. See *Hardware tab*
    above. Serials are derived from `/activities` and never stored here.
-6. **Serials** — the data-gathering surface for `/units`. One flat table, one row
+7. **Serials** — the data-gathering surface for `/units`. One flat table, one row
    per *fitment*, with **Record Installed** and **Record Removed** above it and CSV
    export. Deliberately not another two-pane shell: the job is getting serials in
    and completing dates later, not navigating a hierarchy. The date fields are
    editable in place — that is where the backlog gets finished — and the "Dates
    Outstanding" widget is the progress bar for it.
-7. **Schedule** — standalone forward-looking plan, deliberately **not** linked
+8. **Schedule** — standalone forward-looking plan, deliberately **not** linked
    to completion status. Entries drop off automatically 24h past their slot
    (`SCHEDULE_GRACE_MS`); in that window they show `⚠ Overdue` so they can be
    rescheduled rather than vanishing.
-8. **Fleet** — owns the roster: add / edit / remove, incl. linefit. The
+9. **Fleet** — owns the roster: add / edit / remove, incl. linefit. The
    **SaudiaWiFi** column shows `wifiVisibility` (Public / Hidden) and edits it, so a
    Fleet save now writes **three** kinds of field: roster fields to `/fleet`, and
    `activatedDate` *and* `wifiVisibility` to `/aircraft`. The Maintenance profile edits
@@ -1996,6 +2045,19 @@ live.
 
 ### Waiting on the user — ask, don't guess
 
+- **What SE4 and SE2c actually are.** Tracked on the Modem tab as free text (≤ 40
+  chars) because "modes" could be an on/off state, a named mode or a value, and text
+  holds all three. **If they are a fixed set, say so and they become a dropdown** —
+  one entry in the rules plus a select, the same shape as `MODEM_TYPES`. Until then a
+  typo in one is not caught.
+- **Whether the Modem tab should stay behind sign-in.** Restricted at the user's
+  request while it settles; it is built as an ordinary public page and moving it out
+  is one edit to `RESTRICTED_TABS`.
+- **Whether Modem scope should include the two aircraft In Retrofit.** It is
+  `activeFleet()` today, matching the other operational pages — but commissioning is
+  retrofit-time work, so the argument for `fleetRoster` is real. `modemFleet()` is the
+  one line.
+
 - **The linefit equipment list is still a placeholder** — 7 of its 8 entries. CWAP
   is now confirmed (`lf_cwap`, ×3); the other seven mirror the retrofit set so the
   pane is usable. Whether the linefit pair carry a Waveguide Adapter or Coax Cable
@@ -2070,6 +2132,15 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.54.0 — Satellite modem commissioning page
+New 🛰️ **Modem** tab, restricted for now: one row per aircraft with its modem vendor,
+that vendor's identifiers (Taurus MG ID/TID/SE4/SE2c, Hughes Chassis ID/ESN) and the
+commissioning date. Stored under `/aircraft/{tail}/modem`, so it rides the existing
+`/aircraft` stream rather than needing a seventh connection. One table rather than one
+per vendor, because the vendor does not follow fit — ASBB is linefit-Taurus, ASC is
+retrofit-Hughes — and a split would hide the uncommissioned aircraft the page exists to
+surface. Also fixed `signOut()` never clearing `simEditMode`.
 
 ### v2.53.0 — Roaming and the comment move to the fitment
 Editing either row of a card with two fitments changed both, because both fields were
