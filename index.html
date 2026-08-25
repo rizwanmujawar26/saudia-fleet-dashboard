@@ -5844,10 +5844,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.60.0';
-        const APP_BUILD    = '2026.08.25.13';
+        const APP_VERSION  = '2.61.0';
+        const APP_BUILD    = '2026.08.26.01';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T20:56:53Z';
+        const APP_DEPLOYED = '2026-08-25T21:10:22Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6285,6 +6285,12 @@
         // ⚠️ Keyed on the CYCLE, so it follows the source string automatically: any
         // record whose mediaSource is ME-SVA-UGO-0526 parses to cycle 0526 and is
         // baseline, with nothing else to remember.
+        // A source ending in DEV carries no cycle — the development/default load an
+        // aircraft has before any real media. It counts as NO MEDIA, but it keeps its
+        // date, because the day the default load went on is a real fact.
+        const MEDIA_DEV_SOURCE = /-?DEV\s*$/i;
+        const MEDIA_DEV_LABEL = 'Default media (no cycle)';
+
         const MEDIA_LIGHT_CYCLE = '0526';
         const MEDIA_LIGHT_LABEL = 'Light Media';
 
@@ -6333,8 +6339,23 @@
             if (!sm) return { error: 'Need a media source like (ME-SVA-UGO-0826)' };
             const mediaSource = sm[1].trim();
 
+            // ME-SVA-UGO-DEV is the development/default load: it carries no monthly
+            // cycle at all, so there is nothing to age it against and it reads as
+            // NO MEDIA. The DATE is still real and still recorded — it is the day this
+            // default load was put on — which is why this returns a record rather than
+            // clearing one.
+            if (MEDIA_DEV_SOURCE.test(mediaSource)) {
+                return {
+                    dev: true,
+                    mediaCycle: null,
+                    mediaDisplay: null,
+                    mediaSource,
+                    loadedDateUTC: `${y}-${mo}-${d}T${h}:${mi}:${s || '00'}Z`,
+                };
+            }
+
             const cm = mediaSource.match(/(\d{4})\s*$/);
-            if (!cm) return { error: 'Media source must end in a 4-digit MMYY cycle, e.g. 0826' };
+            if (!cm) return { error: 'Media source must end in a 4-digit MMYY cycle (e.g. 0826) or in DEV' };
             const mediaCycle = cm[1];
             if (+mediaCycle.slice(0, 2) < 1 || +mediaCycle.slice(0, 2) > 12) {
                 return { error: `"${mediaCycle}" is not a valid MMYY cycle — the month must be 01-12` };
@@ -8323,7 +8344,7 @@
                 const statusCell = `<span class="status-badge ${MEDIA_STATUS_CLASS[type]}">${badgeText}</span>`;
 
                 const loadedCell = editing
-                    ? `<input class="edit-text media-input" value="${escAttr(staged ? staged.raw : mediaToInputString(media))}" placeholder="2026-08-16 04:22:00 (ME-SVA-UGO-0826)" data-id="${aircraft.id}" onchange="handleMediaEdit(this)">`
+                    ? `<input class="edit-text media-input" value="${escAttr(staged ? staged.raw : mediaToInputString(media))}" placeholder="2026-08-16 04:22:00 (ME-SVA-UGO-0826) or …-DEV" data-id="${aircraft.id}" onchange="handleMediaEdit(this)">`
                     : `<span class="media-source">${effective.mediaSource ? escAttr(effective.mediaSource) : '—'}</span>`;
 
                 // Same treatment as the Software and Fleet date columns. activationAge()
@@ -8519,7 +8540,8 @@
             }
             el.title = '';
             pendingMedia[id] = { raw: el.value, parsed: result.cleared ? {} : result, cleared: !!result.cleared };
-            setSyncStatus(result.cleared ? `🟡 ${id}: media will be cleared on Save` : `🟡 ${id}: ${result.mediaDisplay} staged — press Save`, '#e0a800');
+            const what = result.cleared ? '' : (result.mediaDisplay || MEDIA_DEV_LABEL);
+            setSyncStatus(result.cleared ? `🟡 ${id}: media will be cleared on Save` : `🟡 ${id}: ${what} staged — press Save`, '#e0a800');
             populateMediaTable();
         }
 
@@ -8546,9 +8568,15 @@
                 const e = pendingMedia[id];
                 if (e.cleared) {
                     multi[`${id}/media`] = null;
-                } else if (e.parsed && e.parsed.mediaCycle) {
+                } else if (e.parsed && e.parsed.loadedDateUTC) {
+                    // ⚠️ Keyed on loadedDateUTC, NOT on mediaCycle. A DEV record has no
+                    // cycle, and the old guard silently dropped anything without one —
+                    // the save would have looked like it worked and written nothing.
+                    // The cycle fields are written as null in that case, so an aircraft
+                    // moving from a dated load to the default one clears them rather
+                    // than keeping a stale month.
                     ['mediaCycle', 'mediaDisplay', 'mediaSource', 'loadedDateUTC'].forEach(f => {
-                        multi[`${id}/media/${f}`] = e.parsed[f];
+                        multi[`${id}/media/${f}`] = e.parsed[f] || null;
                     });
                 }
                 if (e.comments !== undefined) multi[`${id}/media/comments`] = e.comments || null;
