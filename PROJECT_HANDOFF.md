@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.45.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.46.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -899,6 +899,24 @@ wearing one control, and `handleSimEdit()` is where that is resolved:
 - **A spare's date cells are not editable** and say why on hover — dates belong to a
   fitment, and it has none.
 
+**A spare is assigned to an aircraft from the table itself.** In Edit mode the
+Aircraft cell is a picker on every row and a spare's installation date is typeable —
+choosing a tail and saving **creates the fitment**, in the same shape Record Installed
+writes (`aircraft`, `state: 'on_wing'`, `loggedAt`, `fittedDate`), so the card reads
+identically on the Serials and Hardware tabs. The row flips Spare → Active on save.
+
+- ⚠️ **An installation date with no aircraft is refused, not dropped.** There is no
+  fitment for it to belong to, so the save stops with a message naming the card and
+  keeps Edit mode open rather than silently discarding what was typed.
+- **On a card that already has a fitment the picker CORRECTS which tail it names.** It
+  is not a way to move a card between aircraft — that is a removal and a refit, two
+  fitments, and belongs on the Serials tab.
+- **The picker is the only field that repaints the table on change**, because Type is
+  derived from the aircraft and the row would otherwise show a new tail against the old
+  type. Everything else is a text box, where re-rendering would pull the cursor out
+  mid-typing.
+- A spare's **removal** date stays uneditable — there is nothing to remove yet.
+
 **Add SIM adds a card either way.** Choosing *Spare* writes a bare unit with no
 fitment; choosing *Active* asks for an aircraft and an installation date and writes a
 fitment in the same shape Record Installed uses, so the card reads identically on the
@@ -1617,11 +1635,12 @@ live.
   `/units` register is live with 5 units; the fleet's installed and removed serials
   have not been entered yet.
 
-⚠️ **Unproven: the CLIENT write path to `/units` and `details.recordType`.** Every
-`/units` write so far went through the admin CLI, which bypasses rules, and browser
-testing stubbed `fetch`. The rules mirror shapes `/activities` already uses and a
-rejection surfaces loudly rather than silently — but **enter one serial through the UI
-and confirm it saves before a bulk run**.
+✅ **The client write path to `/units` is PROVEN** (2026-08-25). The user added SIM
+`899660117002235940` through Add SIM — the stored record carries the `addedAt` and
+`roaming` that dialog writes — and edited a fitment's removal date from the SIM table.
+Both landed against the live rules engine. The caveat that stood since v2.12.0 is
+closed; `roaming`, `lifecycle`, `condition` and the fitment date/state writes all go
+through the same path.
 
 ### Known gaps and cleanups
 
@@ -1659,6 +1678,13 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.46.0 — Assign a spare SIM to an aircraft from the table
+A spare could be added but not put on an aircraft without going to the Serials tab. The
+Aircraft cell is now a picker in Edit mode and a spare's installation date is typeable;
+saving creates the fitment in the same shape Record Installed writes, and the row flips
+Spare → Active. A date with no aircraft is refused with a message rather than dropped,
+because there is no fitment for it to belong to.
 
 ### v2.45.0 — Day-first dates everywhere, and no native date pickers
 Every date box was rendering American `mm/dd/yyyy`. The cause was `<input type="date">`,

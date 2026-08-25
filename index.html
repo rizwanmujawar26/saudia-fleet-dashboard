@@ -5549,10 +5549,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.45.0';
+        const APP_VERSION  = '2.46.0';
         const APP_BUILD    = '2026.08.25.00';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T00:16:15Z';
+        const APP_DEPLOYED = '2026-08-25T00:35:21Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -8961,16 +8961,23 @@
                     const tail = fit ? (fit.aircraft || '') : '';
                     const air = byTail[tail] || {};
                     const staged = staged0;
+                    // A staged aircraft shows in the row before it is saved, and the
+                    // type it drags with it — otherwise assigning a spare looks like
+                    // nothing happened until Save.
+                    const tailShown = staged.aircraft !== undefined ? staged.aircraft : tail;
+                    const airShown = byTail[tailShown] || {};
                     return {
                         id,
                         serial: u.serial || '',
                         status,
                         fitmentId: fit ? fit.id : '',
+                        tailShown,
+                        typeShown: airShown.type || '',
                         tail,
                         // A removed card is still identified by where it came off.
-                        tailLabel: !tail ? '' : (status === 'removed' ? 'ex-' + tail : tail),
-                        type: air.type || '',
-                        fit: tail ? (isLinefit(air) ? 'linefit' : 'retrofit') : '',
+                        tailLabel: !tailShown ? '' : (status === 'removed' ? 'ex-' + tailShown : tailShown),
+                        type: airShown.type || '',
+                        fit: tailShown ? (isLinefit(airShown) ? 'linefit' : 'retrofit') : '',
                         fittedDate: staged.fittedDate !== undefined ? staged.fittedDate : (fit ? (fit.fittedDate || '') : ''),
                         removedDate: staged.removedDate !== undefined ? staged.removedDate : (fit ? (fit.removedDate || '') : ''),
                         roaming: staged.roaming !== undefined ? staged.roaming : (u.roaming || ''),
@@ -9066,8 +9073,11 @@
                             ? `<span class="age-pill ${pillClass || ''}" title="${escAttr(pillTitle || '')}">${pillText}</span>` : '';
                         return `<span class="fleet-date">${escAttr(value)}</span>${pill}`;
                     }
-                    if (!hasFit) {
-                        return `<span class="fleet-notset" title="This card has never been fitted, so it has no ${title} — fit it on the Serials tab first">—</span>`;
+                    // The install date is editable even with no fitment yet: choosing
+                    // an aircraft creates one, and this is the date it gets. A removal
+                    // date still needs a fitment to belong to.
+                    if (!hasFit && field === 'removedDate') {
+                        return `<span class="fleet-notset" title="This card is not fitted, so it has no ${title}">—</span>`;
                     }
                     return `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(value)}"
                         data-sim="${escAttr(c.id)}" data-field="${field}" onchange="handleSimEdit(this)">`;
@@ -9076,9 +9086,19 @@
                 const fitSort = dateSortKey(toISODate(c.fittedDate)) || '99999999';
                 const remSort = dateSortKey(toISODate(c.removedDate)) || '99999999';
 
-                const tailCell = c.tailLabel
-                    ? `<strong${c.status === 'removed' ? ' class="sim-ex"' : ''}>${escAttr(c.tailLabel)}</strong>`
-                    : '<span class="fleet-notset">Not fitted</span>';
+                // Assigning a spare here is the point of the page: pick an aircraft
+                // and the save creates the fitment. For a card that already has one,
+                // this corrects which tail that fitment names — it is NOT a way to
+                // move a card between aircraft, which is a removal and a refit and
+                // belongs on the Serials tab.
+                const tailCell = editing
+                    ? `<select class="edit-select" data-sim="${escAttr(c.id)}" data-field="aircraft" onchange="handleSimEdit(this)">
+                           ${hasFit ? '' : `<option value="" ${!c.tailShown ? 'selected' : ''}>— not assigned —</option>`}
+                           ${projectFleet().map(a => `<option value="${escAttr(a.id)}" ${c.tailShown === a.id ? 'selected' : ''}>${escAttr(a.id)}</option>`).join('')}
+                       </select>`
+                    : (c.tailLabel
+                        ? `<strong${c.status === 'removed' ? ' class="sim-ex"' : ''}>${escAttr(c.tailLabel)}</strong>`
+                        : '<span class="fleet-notset">Not fitted</span>');
 
                 // A fitted card moves between exactly two states. Spare means "no
                 // fitment", so it is what an unfitted card IS rather than something
@@ -9178,6 +9198,11 @@
             }
             pendingSim[id] = entry;
             setSyncStatus('🟡 SIM change staged — press Save', '#e0a800');
+            // Only the aircraft repaints the table — it drags Type along with it, so
+            // the row would otherwise show the new tail against the old type. Every
+            // other field is a text box, and re-rendering one of those would yank the
+            // cursor out mid-typing.
+            if (field === 'aircraft') populateSimTable();
         }
 
         async function toggleSimEdit() {
@@ -9199,18 +9224,44 @@
             // fitment, so they are addressed through its id.
             const byId = {};
             simCards().forEach(c => { byId[c.id] = c; });
+            const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
             const patch = {};
+            const created = {};      // unitId -> the fitment id minted for it
+            let problem = '';
+
             ids.forEach(id => {
                 const e = pendingSim[id];
                 const fid = (byId[id] || {}).fitmentId;
                 if (e.roaming !== undefined) patch[`${id}/roaming`] = e.roaming || null;
                 if (e.notes !== undefined) patch[`${id}/notes`] = e.notes || null;
-                if (!fid) return;   // a spare has no fitment to write dates or state to
+
+                if (!fid) {
+                    // A spare being assigned. The fitment is created here, in the same
+                    // shape Record Installed writes, so the card reads identically on
+                    // the Serials and Hardware tabs. Without an aircraft there is
+                    // nothing to attach a date to, so that is refused rather than
+                    // dropped silently.
+                    const tail = (e.aircraft || '').trim();
+                    if (!tail) {
+                        if (e.fittedDate) problem = `${(byId[id] || {}).serial || 'A card'} needs an aircraft before it can take an installation date.`;
+                        return;
+                    }
+                    const nfid = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                    const f = { aircraft: tail, state: 'on_wing', loggedAt: stamp };
+                    if (e.fittedDate) f.fittedDate = e.fittedDate;
+                    patch[`${id}/fitments/${nfid}`] = f;
+                    created[id] = { fid: nfid, f };
+                    return;
+                }
+
+                if (e.aircraft !== undefined && e.aircraft) patch[`${id}/fitments/${fid}/aircraft`] = e.aircraft;
                 if (e.fittedDate !== undefined) patch[`${id}/fitments/${fid}/fittedDate`] = e.fittedDate || null;
                 if (e.removedDate !== undefined) patch[`${id}/fitments/${fid}/removedDate`] = e.removedDate || null;
                 if (e.state !== undefined) patch[`${id}/fitments/${fid}/state`] = e.state;
                 if (e.condition !== undefined) patch[`${id}/fitments/${fid}/condition`] = e.condition || null;
             });
+
+            if (problem) { setSyncStatus(`🔴 ${problem}`, '#dc3545'); return; }
 
             setSyncStatus('🟡 Saving SIM changes...', '#e0a800');
             try {
@@ -9227,9 +9278,17 @@
                     const setOrClear = (obj, k, v) => { if (v) obj[k] = v; else delete obj[k]; };
                     if (e.roaming !== undefined) setOrClear(u, 'roaming', e.roaming);
                     if (e.notes !== undefined) setOrClear(u, 'notes', e.notes);
+                    // A newly assigned spare gets its fitment mirrored too, so the
+                    // row flips from Spare to Active without waiting for the poll.
+                    if (created[id]) {
+                        u.fitments = u.fitments || {};
+                        u.fitments[created[id].fid] = { ...created[id].f };
+                        return;
+                    }
                     const fid = (byId[id] || {}).fitmentId;
                     const f = fid && u.fitments && u.fitments[fid];
                     if (!f) return;
+                    if (e.aircraft !== undefined && e.aircraft) f.aircraft = e.aircraft;
                     if (e.fittedDate !== undefined) setOrClear(f, 'fittedDate', e.fittedDate);
                     if (e.removedDate !== undefined) setOrClear(f, 'removedDate', e.removedDate);
                     if (e.state !== undefined) f.state = e.state;
