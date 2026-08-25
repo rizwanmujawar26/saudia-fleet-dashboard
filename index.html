@@ -2350,6 +2350,15 @@
            where the card WAS, not where it is. */
         .sim-ex { color: #8a939b; font-weight: 600; }
 
+        /* Date boxes are text inputs, not <input type="date">, because that control
+           renders in the BROWSER's locale — which is what was showing American
+           mm/dd/yyyy. Sized for "dd-mm-yyyy" and tabular so the digits line up. */
+        .edit-date, .sr-date-input, .rm-date, input[placeholder="dd-mm-yyyy"] {
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.2px;
+        }
+        .edit-date { min-width: 104px; }
+
         .maint-act-edit {
             margin-left: auto;
             border: 1px solid #cfe0d6;
@@ -4570,7 +4579,7 @@
                 </div>
                 <div>
                     <label class="add-sched-label">Date</label>
-                    <input type="date" id="addActDate" class="add-sched-input">
+                    <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="addActDate" class="add-sched-input">
                 </div>
             </div>
 
@@ -4697,7 +4706,7 @@
                 <select id="addSimAircraft" class="add-sched-input"></select>
 
                 <label class="add-sched-label">Installation Date</label>
-                <input type="date" id="addSimFitted" class="add-sched-input">
+                <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="addSimFitted" class="add-sched-input">
             </div>
 
             <label class="add-sched-label">Roaming</label>
@@ -4800,7 +4809,7 @@
             <div class="bl-batch">
                 <div>
                     <label class="add-sched-label">Installed Date <span style="text-transform:none; font-weight:400;">(optional — fill in later)</span></label>
-                    <input type="date" id="blDate" class="add-sched-input">
+                    <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="blDate" class="add-sched-input">
                 </div>
                 <div id="blEquipWrap" style="display:none;">
                     <label class="add-sched-label">Equipment</label>
@@ -4958,7 +4967,7 @@
             <div style="display:flex; gap:10px;">
                 <div style="flex:1;">
                     <label class="add-sched-label">Planned Date</label>
-                    <input type="date" id="addSchedDate" class="add-sched-input">
+                    <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="addSchedDate" class="add-sched-input">
                 </div>
                 <div style="flex:1;">
                     <label class="add-sched-label">Time (UTC)</label>
@@ -5540,10 +5549,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.44.0';
-        const APP_BUILD    = '2026.08.24.23';
+        const APP_VERSION  = '2.45.0';
+        const APP_BUILD    = '2026.08.25.00';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-24T23:10:55Z';
+        const APP_DEPLOYED = '2026-08-25T00:16:15Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -5884,14 +5893,61 @@
         // ===== Date formatting helpers (display: "13-Aug-2026", input[type=date]: "2026-08-13") =====
         const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-        function fmtDate(isoOrDisplay) {
-            if (!isoOrDisplay) return null;
-            const m = isoOrDisplay.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-            if (m) {
-                const [, y, mo, d] = m;
-                return `${d}-${MONTH_NAMES[parseInt(mo, 10) - 1]}-${y}`;
+        // Anything a date can arrive as, normalised to the one stored form,
+        // DD-Mon-YYYY. Returns null when it is not a real date — callers must treat
+        // that as "do not save", never as "clear the field".
+        //
+        // ⚠️ The numeric form accepted here is DAY-FIRST and only day-first.
+        // Month-first is not used in this region and 03-04-2026 read the American way
+        // is a different day, silently. There is no format in this project that
+        // produces or accepts it — see also the note under Conventions.
+        function fmtDate(input) {
+            if (!input) return null;
+            const s = String(input).trim();
+
+            // Already stored form — pass through untouched.
+            if (/^\d{2}-[A-Za-z]{3}-\d{4}$/.test(s)) return s;
+
+            let d, mo, y;
+            let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);      // ISO, from code
+            if (m) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+            else {
+                m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/);  // dd-mm-yyyy, from a user
+                if (!m) return null;
+                d = +m[1]; mo = +m[2]; y = +m[3];
             }
-            return isoOrDisplay;
+
+            // Round-trip through a real date so 31-02 and 31-04 are rejected rather
+            // than rolling silently into the next month.
+            const dt = new Date(Date.UTC(y, mo - 1, d));
+            if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+
+            return `${String(d).padStart(2, '0')}-${MONTH_NAMES[mo - 1]}-${y}`;
+        }
+
+        // What a date INPUT shows while it is being edited: dd-mm-yyyy.
+        // `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off">` cannot be used for this — its display format follows
+        // the browser's locale, which is why every date box was rendering American
+        // mm/dd/yyyy regardless of what the page stored. A text input is the only way
+        // to fix the format, so that is what the date fields are.
+        function toDMY(v) {
+            const stored = fmtDate(v);
+            if (!stored) return '';
+            const m = stored.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})$/);
+            if (!m) return '';
+            const mo = MONTH_NAMES.indexOf(m[2]) + 1;
+            return `${m[1]}-${String(mo).padStart(2, '0')}-${m[3]}`;
+        }
+
+        // Read a date box. '' for empty, the stored form when valid, and FALSE when it
+        // holds something that is not a date — a typo must not clear a good date, so
+        // callers return without staging on false.
+        function readDateField(el) {
+            const raw = (el.value || '').trim();
+            if (!raw) { el.classList.remove('input-invalid'); return ''; }
+            const v = fmtDate(raw);
+            el.classList.toggle('input-invalid', !v);
+            return v || false;
         }
 
         function toISODate(displayOrIso) {
@@ -6353,7 +6409,11 @@
             const id = el.dataset.id;
             const field = el.dataset.field;
             let value = el.value;
-            if (field === 'completionDate') value = value ? fmtDate(value) : null;
+            if (field === 'completionDate') {
+                const v = readDateField(el);
+                if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
+                value = v || null;
+            }
             // Empty means "no value" for these — null removes the field rather than
             // storing an empty string, which the rules reject anyway.
             if (['iphoStatus', 'mg101Status', 'completionLocation', 'beamcfgStatus', 'note'].includes(field)) value = value.trim ? (value.trim() || null) : (value || null);
@@ -6988,10 +7048,10 @@
         }
 
         function setQuickDate(btn, offsetDays) {
-            const input = btn.closest('.date-cell-group').querySelector('input[type="date"]');
+            const input = btn.closest('.date-cell-group').querySelector('.edit-date');
             const d = new Date();
             d.setUTCDate(d.getUTCDate() + offsetDays);
-            input.value = d.toISOString().slice(0, 10);
+            input.value = toDMY(d.toISOString().slice(0, 10));
             handleAircraftEdit(input);
         }
 
@@ -7130,7 +7190,7 @@
                 let dateCell;
                 if (editMode) {
                     dateCell = `<div class="date-cell-group">
-                        <input type="date" class="edit-date" data-id="${aircraft.id}" data-field="completionDate" value="${toISODate(aircraft.completionDate)}" onchange="handleAircraftEdit(this)">
+                        <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" data-id="${aircraft.id}" data-field="completionDate" value="${toDMY(aircraft.completionDate)}" onchange="handleAircraftEdit(this)">
                         <button type="button" class="date-quick-btn" onclick="setQuickDate(this, 0)">Today</button>
                         <button type="button" class="date-quick-btn" onclick="setQuickDate(this, -1)">Yest.</button>
                     </div>`;
@@ -7499,7 +7559,7 @@
                 // Never inferred — blank until someone types it.
                 const age = activationAge(activated);
                 const activatedCell = editing
-                    ? `<input type="date" class="edit-date" value="${toISODate(activated)}" data-id="${a.id}" data-field="activatedDate" onchange="handleFleetEdit(this)">`
+                    ? `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(activated)}" data-id="${a.id}" data-field="activatedDate" onchange="handleFleetEdit(this)">`
                     : (activated
                         ? `<span class="fleet-date">${escAttr(activated)}</span>${age ? `<span class="age-pill" title="Time since activation">${age}</span>` : ''}`
                         : '<span class="fleet-notset">Not set</span>');
@@ -7651,10 +7711,18 @@
 
         function handleFleetEdit(el) {
             const id = el.dataset.id, field = el.dataset.field;
+            // Validate BEFORE touching pendingFleet, or a rejected typo still leaves
+            // an empty staged record behind for this aircraft.
+            let staged;
+            if (field === 'activatedDate') {
+                const v = readDateField(el);
+                if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
+                staged = v;
+            } else {
+                staged = field === 'comments' ? el.value.trim() : el.value;
+            }
             pendingFleet[id] = pendingFleet[id] || {};
-            pendingFleet[id][field] = field === 'comments' ? el.value.trim()
-                : field === 'activatedDate' ? (el.value ? fmtDate(el.value) : '')
-                : el.value;
+            pendingFleet[id][field] = staged;
             const row = fleetRowOf(id);
             if (row) row[field] = pendingFleet[id][field];
             setSyncStatus(`🟡 ${id} staged — press Save`, '#e0a800');
@@ -8176,7 +8244,7 @@
                 : (rec.wifiVisibility ? `<span class="status-badge wifi-${rec.wifiVisibility}">${wifiLabel(rec.wifiVisibility).toUpperCase()}</span>` : '');
 
             const activatedVal = editing
-                ? `<input type="date" class="edit-date" value="${toISODate(rec.activatedDate)}" data-id="${a.id}" data-field="activatedDate" onchange="handleMaintEdit(this)">`
+                ? `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(rec.activatedDate)}" data-id="${a.id}" data-field="activatedDate" onchange="handleMaintEdit(this)">`
                 : rec.activatedDate;
 
             const flagVal = editing
@@ -8386,8 +8454,12 @@
             const id = el.dataset.id, field = el.dataset.field;
             const entry = pendingMaint[id] || {};
             if (field === 'open') entry.open = el.value === 'open';
-            // The input is ISO; the project stores and shows DD-Mon-YYYY.
-            else if (field === 'activatedDate') entry.activatedDate = el.value ? fmtDate(el.value) : '';
+            // The box speaks dd-mm-yyyy; the project stores and shows DD-Mon-YYYY.
+            else if (field === 'activatedDate') {
+                const v = readDateField(el);
+                if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
+                entry.activatedDate = v;
+            }
             else if (field === 'wifiVisibility') entry.wifiVisibility = el.value;
             else entry[field] = el.value.trim();
             pendingMaint[id] = entry;
@@ -8593,7 +8665,7 @@
             // most activities happen where the aircraft already is.
             const sel = aircraftData.find(a => a.id === acSel.value);
             document.getElementById('addActLocation').value = (sel && (sel.retrofitLocation || aircraftLocationOf(sel))) || '';
-            document.getElementById('addActDate').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('addActDate').value = toDMY(new Date().toISOString().slice(0, 10));
             ['addActTitle', 'addActTask', 'addActOutcome', 'addActNotes',
              'addActOldPart', 'addActNewPart', 'addActRemovalReason',
              'addActSoftwareName', 'addActVersion', 'addActModemType', 'addActCommissioningResult']
@@ -8630,7 +8702,7 @@
             }
             acSel.value = act.aircraft || '';
             document.getElementById('addActCategory').value = act.category || 'other';
-            set('addActDate', toISODate(act.date));
+            set('addActDate', toDMY(act.date));
             set('addActLocation', act.location);
             set('addActTitle', act.title);
             set('addActTask', act.task);
@@ -8997,7 +9069,7 @@
                     if (!hasFit) {
                         return `<span class="fleet-notset" title="This card has never been fitted, so it has no ${title} — fit it on the Serials tab first">—</span>`;
                     }
-                    return `<input type="date" class="edit-date" value="${toISODate(value)}"
+                    return `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(value)}"
                         data-sim="${escAttr(c.id)}" data-field="${field}" onchange="handleSimEdit(this)">`;
                 };
 
@@ -9088,9 +9160,9 @@
             const raw = (el.value || '').trim();
 
             if (field === 'fittedDate' || field === 'removedDate') {
-                // The inputs are native date pickers (YYYY-MM-DD); the store is
-                // DD-Mon-YYYY everywhere, so it is converted once, here.
-                entry[field] = raw ? fmtDate(raw) : '';
+                const v = readDateField(el);
+                if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
+                entry[field] = v;
             } else if (field === 'status') {
                 // Status is the fitment's `state` plus, for a card that is fitted but
                 // not working, its `condition`. Fault is still ON WING — that is the
@@ -9197,7 +9269,7 @@
             document.getElementById('addSimRoaming').value = '';
             document.getElementById('addSimNotes').value = '';
             document.getElementById('addSimStatus').value = 'unused';
-            document.getElementById('addSimFitted').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('addSimFitted').value = toDMY(new Date().toISOString().slice(0, 10));
             const acSel = document.getElementById('addSimAircraft');
             acSel.innerHTML = projectFleet()
                 .map(a => `<option value="${escAttr(a.id)}">${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</option>`).join('');
@@ -9266,10 +9338,15 @@
                         err.textContent = 'Choose the aircraft this card went into.';
                         err.style.display = 'block'; return;
                     }
-                    const fitted = document.getElementById('addSimFitted').value;
+                    const fitted = (document.getElementById('addSimFitted').value || '').trim();
+                    const fittedStored = fitted ? fmtDate(fitted) : '';
+                    if (fitted && !fittedStored) {
+                        err.textContent = 'Installation date must be dd-mm-yyyy.';
+                        err.style.display = 'block'; return;
+                    }
                     const fid = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
                     const f = { aircraft: tail, state: 'on_wing', loggedAt: stamp };
-                    if (fitted) f.fittedDate = fmtDate(fitted);
+                    if (fittedStored) f.fittedDate = fittedStored;
                     entry.fitments = { [fid]: f };
                 }
                 try {
@@ -9726,7 +9803,7 @@
                 sel.value = 'sim';
             }
 
-            document.getElementById('blDate').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('blDate').value = toDMY(new Date().toISOString().slice(0, 10));
             const err = document.getElementById('blError');
             err.textContent = ''; err.style.display = 'none';
 
@@ -10013,7 +10090,7 @@
                     <option value="">pos —</option>
                     ${Array.from({ length: qty }, (_, n) => `<option value="${n + 1}" ${String(r.position) === String(n + 1) ? 'selected' : ''}>pos ${n + 1}</option>`).join('')}
                 </select>` : ''}
-                <input class="rm-date" type="date" title="Removal date (optional)"
+                <input class="rm-date" type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" title="Removal date (optional)"
                        value="${escAttr(r.date)}" data-i="${i}" data-field="date" onchange="rmEdit(this)">
                 <input class="rm-reason" placeholder="Reason (optional)" maxlength="200"
                        value="${escAttr(r.reason)}" data-i="${i}" data-field="reason" oninput="rmEdit(this)">
@@ -10101,7 +10178,11 @@
                 staged.forEach((x, i) => {
                     const fitment = { aircraft: x.tail, state: 'removed', loggedAt: stamp };
                     if (x.position) fitment.position = String(x.position);
-                    if (x.date) fitment.removedDate = fmtDate(x.date);
+                    // A date that will not parse is left off rather than sent as
+                    // null — the serial and the removal still record, and the date
+                    // can be filled in on the Serials tab.
+                    const rd = fmtDate(x.date);
+                    if (rd) fitment.removedDate = rd;
                     if ((x.reason || '').trim()) fitment.removalReason = x.reason.trim();
 
                     const unitId = 'u' + Date.now().toString(36) + i.toString(36) + Math.random().toString(36).slice(2, 6);
@@ -10261,7 +10342,7 @@
                 if (!applies) return '<span class="hw-none">&mdash;</span>';
                 const val = f[field] || '';
                 if (!editable) return val ? escAttr(val) : '<span class="hw-none">not recorded</span>';
-                return `<input type="date" class="sr-date-input" value="${escAttr(toISODate(val))}"
+                return `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="sr-date-input" value="${escAttr(toDMY(val))}"
                         data-unit="${escAttr(r.unit.id)}" data-fitment="${escAttr(f.id)}" data-field="${field}"
                         onchange="saveFitmentDate(this)">`;
             };
@@ -10300,17 +10381,18 @@
             const u = unitsLive[unitId];
             const f = u && (u.fitments || {})[fitmentId];
             if (!f) return;
-            const value = el.value ? fmtDate(el.value) : null;
+            const value = readDateField(el);
+            if (value === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
             const token = await getIdToken();
             if (!token) return;
             el.disabled = true;
             try {
                 const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units/${unitId}/fitments/${fitmentId}.json?auth=${token}`, {
-                    method: 'PATCH', body: JSON.stringify({ [field]: value }),
+                    method: 'PATCH', body: JSON.stringify({ [field]: value || null }),
                 });
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                if (value === null) delete f[field]; else f[field] = value;
+                if (!value) delete f[field]; else f[field] = value;
                 renderSerialsPage();
                 renderHardwarePage();
                 renderMaintenancePage();
@@ -10626,7 +10708,7 @@
                 let dateCell;
                 if (editMode) {
                     dateCell = `<div class="date-cell-group">
-                        <input type="date" class="edit-date" data-id="${aircraft.id}" data-field="completionDate" value="${toISODate(aircraft.completionDate)}" onchange="handleAircraftEdit(this)">
+                        <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" data-id="${aircraft.id}" data-field="completionDate" value="${toDMY(aircraft.completionDate)}" onchange="handleAircraftEdit(this)">
                         <button type="button" class="date-quick-btn" onclick="setQuickDate(this, 0)">Today</button>
                         <button type="button" class="date-quick-btn" onclick="setQuickDate(this, -1)">Yest.</button>
                     </div>`;
@@ -10752,7 +10834,7 @@
                         .map(s => `<option value="${s}" ${item.station === s ? 'selected' : ''}>${s}</option>`).join('');
                     row.innerHTML = `
                         <td><input class="edit-text sched-ac" value="${escAttr(item.aircraft)}" data-id="${item.id}" data-field="aircraft" onchange="handleScheduleEdit(this)"></td>
-                        <td class="sched-date"><input type="date" class="edit-date" value="${toISODate(item.date)}" data-id="${item.id}" data-field="date" onchange="handleScheduleEdit(this)"></td>
+                        <td class="sched-date"><input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(item.date)}" data-id="${item.id}" data-field="date" onchange="handleScheduleEdit(this)"></td>
                         <td class="sched-date"><input type="time" class="edit-date" value="${escAttr(item.time || '')}" data-id="${item.id}" data-field="time" onchange="handleScheduleEdit(this)"></td>
                         <td><select class="edit-select" data-id="${item.id}" data-field="station" onchange="handleScheduleEdit(this)">${stationOpts}</select></td>
                         <td><input class="edit-text sched-wp" value="${escAttr(item.workpackage)}" data-id="${item.id}" data-field="workpackage" onchange="handleScheduleEdit(this)"></td>
@@ -10853,8 +10935,12 @@
             const id = el.dataset.id;
             const field = el.dataset.field;
             let value = el.value;
-            // The date input speaks ISO; the database and the page speak DD-Mon-YYYY.
-            if (field === 'date') value = value ? fmtDate(value) : '';
+            // The box speaks dd-mm-yyyy; the database and the page speak DD-Mon-YYYY.
+            if (field === 'date') {
+                const v = readDateField(el);
+                if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
+                value = v;
+            }
             if (!value && (field === 'date' || field === 'time')) return; // rules reject empty
             scheduleLive[id] = { ...(scheduleLive[id] || {}), [field]: value };
             saveScheduleField(id, { [field]: value });
@@ -10880,7 +10966,7 @@
         function openScheduleAdd() {
             const today = new Date();
             document.getElementById('addSchedAircraft').value = '';
-            document.getElementById('addSchedDate').value = today.toISOString().slice(0, 10);
+            document.getElementById('addSchedDate').value = toDMY(today.toISOString().slice(0, 10));
             document.getElementById('addSchedTime').value = '20:00';
             document.getElementById('addSchedStation').value = 'JED';
             document.getElementById('addSchedWorkpackage').value = '';

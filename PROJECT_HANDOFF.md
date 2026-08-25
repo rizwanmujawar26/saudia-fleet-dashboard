@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.44.0, 2026-08-25)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.45.0, 2026-08-25)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1372,9 +1372,29 @@ skipped, so an empty-state row is never numbered.
   year compare equal, and date columns silently sorted by year only. `dateSortKey`
   strips the separators to give a real number (`20260519`). All four date columns
   use it.
-- **Dates are always `DD-Mon-YYYY`** (e.g. `17-Aug-2026`). Never `M/D/YYYY` —
-  month-first numeric dates are not used in this region and read as the wrong
-  day. `parseScheduleUTC()` / `toISODate()` / `fmtDate()` are the only parsers.
+- **Dates are always `DD-Mon-YYYY`** stored (e.g. `17-Aug-2026`) and **`dd-mm-yyyy`
+  while being typed**. Never month-first — `03-04-2026` read the American way is a
+  different day, silently, and that format appears nowhere in this project.
+
+  ⚠️ **`<input type="date">` must not be used, anywhere.** Its display format follows
+  the BROWSER's locale, so every date box was rendering `mm/dd/yyyy` on a US-locale
+  machine no matter what the page stored — there is no attribute or CSS that overrides
+  it. All 13 date fields are **text inputs** with a `dd-mm-yyyy` placeholder.
+
+  Three functions carry this, and nothing else should parse a date:
+
+  | | |
+  |---|---|
+  | `fmtDate(v)` | anything → stored `DD-Mon-YYYY`, or **null** when it is not a real date. Accepts the stored form, ISO, and day-first `dd-mm-yyyy` (also `/` and `.`). Round-trips through a real `Date`, so `31-02` and `29-02` in a common year are rejected rather than rolling into the next month |
+  | `toDMY(v)` | stored → the `dd-mm-yyyy` an input shows |
+  | `readDateField(el)` | what every handler uses: `''` for empty, the stored form when valid, and **`false`** when the box holds a non-date |
+
+  ⚠️ **On `false`, a handler must return without staging.** A typo must never clear a
+  date that was already good — that is why the check happens *before* the pending
+  record is touched, not after.
+
+  `parseScheduleUTC()` and `toISODate()` remain for sort keys and date maths and are
+  unchanged.
 - All times UTC/Zulu.
 - No external scripts. Keep it that way.
 
@@ -1639,6 +1659,16 @@ and confirm it saves before a bulk run**.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.45.0 — Day-first dates everywhere, and no native date pickers
+Every date box was rendering American `mm/dd/yyyy`. The cause was `<input type="date">`,
+whose format follows the browser's locale and cannot be overridden — so all 13 of them
+became text inputs showing `dd-mm-yyyy`. Display is unchanged at `DD-Mon-YYYY`.
+
+`fmtDate()` now parses day-first numeric input and returns null for anything that is
+not a real date, `toDMY()` renders the input value, and `readDateField()` lets a
+handler reject a typo without clearing the date that was already there. Verified across
+Software, Fleet, 4G SIM, Schedule and Serials.
 
 ### v2.44.0 — SIM register: closed spans, On-Wing, FAULT
 The installation pill now changes meaning when a card comes off: install→removal as a
