@@ -2395,6 +2395,69 @@
            as their longest word. The head is already two rows tall, so a wrapped label
            costs nothing in height. */
         #modemTable thead tr:nth-child(2) th { white-space: normal; line-height: 1.15; }
+
+        /* ===== Column widths, sized to the VALUES =====
+           Every column was previously as wide as the widest thing in it — usually the
+           header — which left a 16-character chassis id clipped while a 2-digit Eclipse
+           serial sat in the same width. These are measured against the real data:
+           chassis AERSVA00064HNSJ3 (16 mono chars), Kontron 484569007 (9), ESN
+           17501546 (8), Eclipse and TID 2-3, MG ID 3, and a dd-mm-yyyy input in the
+           date columns. The widths hold in BOTH modes, so nothing reflows when Edit is
+           pressed.
+           ⚠️ Set on the <th>, not a <colgroup>. A colgroup would be a fixed list of
+           columns, and the eye toggles can remove three of them — the same mismatch
+           that broke the frozen head. A width on a header cell just travels with it. */
+        /* Column widths are set as a MIN-WIDTH on the body cells, by position.
+           ⚠️ Not `width` on the <th>: under `table-layout: auto` that is only a hint
+           and the algorithm overrode it — the chassis column came out 88px against a
+           16-character serial, which is exactly the clipping being fixed. A min-width
+           on a cell IS honoured, because a column can never be narrower than its
+           widest cell's minimum.
+           ⚠️ And not `table-layout: fixed` with a <colgroup> either: the eye toggles
+           can remove three column groups, and a colgroup is a fixed list of columns —
+           the same mismatch that broke the frozen head.
+           nth-child counts DOM position, not rendered position, so a hidden group does
+           not shift these.
+
+           Measured against the real values: chassis AERSVA00064HNSJ3 (16 mono chars),
+           Kontron 484569007 (9), ESN 17501546 (8), MG ID 101, Eclipse and TID 2-3, and
+           a dd-mm-yyyy input in the date columns. */
+        #modemTable tbody td:nth-child(1)  { min-width: 28px;  }   /* # */
+        #modemTable tbody td:nth-child(2)  { min-width: 76px;  }   /* MSP date + pill */
+        #modemTable tbody td:nth-child(3)  { min-width: 112px; }   /* reg + two pills */
+        #modemTable tbody td:nth-child(4)  { min-width: 92px;  }   /* installed date */
+        #modemTable tbody td:nth-child(5)  { min-width: 94px;  }   /* Kontron S/N */
+        #modemTable tbody td:nth-child(6)  { min-width: 58px;  }   /* Eclipse S/N */
+        #modemTable tbody td:nth-child(7)  { min-width: 92px;  }   /* Taurus comm date */
+        #modemTable tbody td:nth-child(8)  { min-width: 98px;  }   /* IPHO select */
+        #modemTable tbody td:nth-child(9)  { min-width: 54px;  }   /* MG ID */
+        #modemTable tbody td:nth-child(10) { min-width: 54px;  }   /* TID */
+        #modemTable tbody td:nth-child(11) { min-width: 92px;  }   /* Hughes comm date */
+        #modemTable tbody td:nth-child(12) { min-width: 152px; }   /* chassis id, 16 ch */
+        #modemTable tbody td:nth-child(13) { min-width: 86px;  }   /* ESN */
+
+        /* Inputs fill the column they are in rather than carrying a width of their own,
+           so the box is exactly as wide as the value it holds has room to be.
+           ⚠️ `.edit-date` sets min-width:104px globally, which overrode every date
+           column here and was why a date field was wider than the date inside it. */
+        #modemTable .edit-text,
+        #modemTable .edit-date,
+        #modemTable .edit-select {
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            font-size: 11.5px;
+            padding: 3px 5px;
+        }
+
+        /* A serial is read off a label and typed back in, so it stays monospaced and
+           tabular in the input too — a transposed digit should be findable while
+           editing, not only afterwards. */
+        #modemTable td .edit-text {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            letter-spacing: 0;
+        }
+        #modemTable td .edit-date { font-family: inherit; }
         #modemTable .modem-id { font-size: 11px; }
         #modemTable .modem-id b { font-size: 1.1em; }
 
@@ -5978,10 +6041,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.65.0';
-        const APP_BUILD    = '2026.08.26.05';
+        const APP_VERSION  = '2.65.1';
+        const APP_BUILD    = '2026.08.26.06';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-26T12:45:41Z';
+        const APP_DEPLOYED = '2026-08-26T15:07:28Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -10248,34 +10311,62 @@
             modemRows().forEach(r => { byId[r.id] = r; });
             const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
             const MM_FIELD = { kontronSn: 'serial', eclipseSn: 'altSerial' };
+            // What the /units write does, kept so it can be mirrored into unitsLive
+            // afterwards: [{ unitId, fitId, lruId, tail, isNew, unit:{}, fitted }]
+            const unitOps = [];
 
             ids.forEach(id => {
                 const e = pendingModem[id];
                 const row = byId[id];
+
+                // Aircraft-side fields go straight through.
                 Object.keys(e).forEach(path => {
-                    const v = e[path] === '' ? null : e[path];
-                    if (!path.startsWith('modman/')) { patch[`${id}/${path}`] = v; return; }
-                    if (!row) return;
-                    const field = path.slice('modman/'.length);
-                    let unitId = row.modman.unitId;
-                    let fitId  = row.modman.fitmentId;
-                    if (!unitId) {
-                        // No MODMAN on record for this aircraft yet: mint the unit and
-                        // its fitment in the same shape Record Installed writes, so the
-                        // box reads identically on the Serials and Hardware tabs.
-                        unitId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-                        fitId  = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-                        unitPatch[`${unitId}/lruId`] = row.modman.lruId;
-                        unitPatch[`${unitId}/addedAt`] = stamp;
-                        unitPatch[`${unitId}/fitments/${fitId}`] = {
-                            aircraft: id, state: 'on_wing', loggedAt: stamp,
-                        };
-                        row.modman.unitId = unitId;
-                        row.modman.fitmentId = fitId;
-                    }
-                    if (field === 'installedDate') unitPatch[`${unitId}/fitments/${fitId}/fittedDate`] = v;
-                    else unitPatch[`${unitId}/${MM_FIELD[field]}`] = v;
+                    if (path.startsWith('modman/')) return;
+                    patch[`${id}/${path}`] = e[path] === '' ? null : e[path];
                 });
+
+                // MODMAN is gathered per aircraft FIRST and written once. Emitting it
+                // field by field is what produced the bug below.
+                const mm = {};
+                Object.keys(e).forEach(path => {
+                    if (path.startsWith('modman/')) mm[path.slice('modman/'.length)] = e[path];
+                });
+                if (!row || !Object.keys(mm).length) return;
+
+                const hasDate = mm.installedDate !== undefined;
+                const fitted = hasDate ? (mm.installedDate || null) : undefined;
+                const unitFields = {};
+                Object.keys(MM_FIELD).forEach(k => {
+                    if (mm[k] !== undefined) unitFields[MM_FIELD[k]] = mm[k] === '' ? null : mm[k];
+                });
+
+                if (row.modman.unitId) {
+                    const unitId = row.modman.unitId, fitId = row.modman.fitmentId;
+                    Object.keys(unitFields).forEach(f => { unitPatch[`${unitId}/${f}`] = unitFields[f]; });
+                    if (hasDate) unitPatch[`${unitId}/fitments/${fitId}/fittedDate`] = fitted;
+                    unitOps.push({ unitId, fitId, isNew: false, unit: unitFields, hasDate, fitted });
+                    return;
+                }
+
+                // No MODMAN on record for this aircraft yet: mint the unit and its
+                // fitment in the same shape Record Installed writes, so the box reads
+                // identically on the Serials and Hardware tabs.
+                //
+                // ⚠️ ONE object, not an object plus paths inside it. Writing
+                // `<unit>/fitments/<fit>` alongside `<unit>/fitments/<fit>/fittedDate`
+                // is a multi-path update where one path CONTAINS another, which
+                // Firebase rejects outright — it would have failed the whole save the
+                // first time someone typed a serial and a date together.
+                const unitId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                const fitId  = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                const fit = { aircraft: id, state: 'on_wing', loggedAt: stamp };
+                if (fitted) fit.fittedDate = fitted;
+                const unit = { lruId: row.modman.lruId, addedAt: stamp, fitments: { [fitId]: fit } };
+                Object.keys(unitFields).forEach(f => { if (unitFields[f] != null) unit[f] = unitFields[f]; });
+                unitPatch[unitId] = unit;
+                row.modman.unitId = unitId;
+                row.modman.fitmentId = fitId;
+                unitOps.push({ unitId, fitId, isNew: true, unit, hasDate, fitted });
             });
 
             setSyncStatus('🟡 Saving modem changes...', '#e0a800');
@@ -10295,10 +10386,31 @@
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 // Mirror locally so the table is right before the stream echoes back.
+                // ⚠️ MIRROR THE /units WRITE TOO. Skipping it is what made a saved
+                // MODMAN serial vanish: the write succeeded, but the table re-rendered
+                // straight afterwards from a unitsLive that still knew nothing about
+                // it, and /units is POLLED rather than streamed — so the columns sat
+                // blank until the next poll came round. The data was never lost.
+                unitOps.forEach(op => {
+                    if (op.isNew) {
+                        unitsLive[op.unitId] = JSON.parse(JSON.stringify(op.unit));
+                        return;
+                    }
+                    const u = unitsLive[op.unitId];
+                    if (!u) return;
+                    Object.keys(op.unit).forEach(f => {
+                        if (op.unit[f] == null) delete u[f]; else u[f] = op.unit[f];
+                    });
+                    const f = (u.fitments || {})[op.fitId];
+                    if (f && op.hasDate) {
+                        if (op.fitted) f.fittedDate = op.fitted; else delete f.fittedDate;
+                    }
+                });
+
                 ids.forEach(id => {
                     const a = aircraftLive[id] || (aircraftLive[id] = {});
                     Object.keys(pendingModem[id]).forEach(path => {
-                        // MODMAN lives in /units; the poll brings it back.
+                        // MODMAN was mirrored above, from unitOps.
                         if (path.startsWith('modman/')) return;
                         const v = pendingModem[id][path];
                         const parts = path.split('/');
@@ -10319,6 +10431,8 @@
                 populateModemTable();
                 // IPHO is shown on the Software tab too, and it may have just changed.
                 populateAircraftTable();
+                // A MODMAN write lands in /units, which these two read.
+                if (unitOps.length) { renderSerialsPage(); renderHardwarePage(); }
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (e) {
                 setSyncStatus(`🔴 Could not save modem changes — ${e.message}`, '#dc3545');
