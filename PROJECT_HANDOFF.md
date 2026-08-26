@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.63.0, 2026-08-26)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.64.0, 2026-08-26)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1435,6 +1435,11 @@ firing before authentication and with `backup.sh` losing anonymous access.
    Type` spanning both rows. **Comments were removed from both modems** (user,
    2026-08-26); the `notes` fields stay declared and inert like `se4`/`se2c`.
 
+   ⚠️ **Scope is `swFleet()` — Active RETROFIT only** (user, 2026-08-26). The A321XLR
+   linefit pair carry their own equipment and are configured by SBC, not by this
+   MODMAN-and-two-modems arrangement, so they were two rows that could never be filled
+   in. It was `activeFleet()` until then.
+
    ⚠️ **MODMAN reads `/units`, NOT `/aircraft`** — and that is the point. It is a
    physical box with serials and a fitment, exactly what `/units` is the single source
    for, and boxes were **already on record there** (serial `44` on AQB, `226` on ASBB).
@@ -1510,14 +1515,24 @@ firing before authentication and with `backup.sh` losing anonymous access.
    together — and **`MODEM_FIELDS`** says which identifiers each vendor carries:
    Taurus `mgId`, `tid`, `se4`, `se2c`; Hughes `chassisId`, `esn`.
 
-   **The View filter switches COLUMN GROUPS, and filters no rows at all.** Every
-   aircraft has both modems, so there is nothing to filter out — it declares
-   **`rowValue: () => modemView()`** so every row always matches, which is exactly what
-   that hook is for. Declared `single: true`, so empty means *both*. Both shows 12
-   columns, Taurus 8, Hughes 7. One class on the table
-   (`.modem-view-taurus` / `.modem-view-hughes`) drives it in **CSS**, and the
-   frozen-head copy inherits it because that copy is cloned from the live `<thead>`
-   with its classes intact.
+   **The filter bar is Type and the search box, and nothing else** (user, 2026-08-26).
+   Which columns are on screen is **not a filter** and is deliberately not declared in
+   `FILTER_BARS`.
+
+   **Three eye toggles — MODMAN / Taurus / Hughes.** 👁 when that group is on screen,
+   🚫 greyed and struck through when it is not. `MODEM_COL_GROUPS` is the definition;
+   `modemColsHidden` records **only what is hidden**, so the default is everything
+   visible with no state to initialise, and Reset restores it. They are
+   **independent**, which the old single-select "view" could not be — MODMAN with
+   Hughes alone, or all three off, are now expressible. One class per hidden group
+   (`.modem-hide-<id>`) drives it in **CSS**, and the frozen-head copy inherits them
+   because that copy is cloned from the live `<thead>` with its classes intact.
+
+   **The search box matches MODMAN serials too**, and keeps matching while that column
+   is hidden — the haystack is the data, not the columns.
+
+   ⚠️ **Widgets do NOT follow the toggles.** They describe the data; hiding a column
+   does not uncommission a modem.
 
    **`MSP 5.2.2 Install Date` is the first column, between `#` and Aircraft**, in the
    ungrouped section so it sits outside both modem groups and spans the two header
@@ -1968,6 +1983,13 @@ frozen head on a 1055px table in a 351px window.
   row** (the only row with exactly one cell per column), overrides that inference. It
   is guarded on `head.rows.length > 1`, so the eight single-row tables keep the per-`th`
   path they already work with. Verified at 0px drift on both.
+- ⚠️ **HIDDEN columns must be SKIPPED when building that colgroup, not measured as
+  zero.** `display: none` removes a cell from the table structure outright — a table
+  with four hidden columns has four fewer **columns**, not four zero-width ones — so a
+  `<col>` per hidden cell puts the colgroup out of step with the copy and **every
+  column after the hidden run collapses to zero**, leaving the floating head
+  overlapping the live one. This stayed invisible until the Modem eye toggles gave
+  something the ability to hide a column.
 - ⚠️ **Do not force `white-space: nowrap` on it.** With the widths copied, the copy has
   to wrap exactly as the original does; forcing one line pushed "INSTALLATION DATE"
   straight through the next column.
@@ -2342,6 +2364,13 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.64.0 — Retrofit only, and eye toggles per column group
+The Modem page drops the linefit pair (scope is `swFleet()`), keeps only Type and the
+search box as filters, and gains three independent 👁/🚫 toggles for the MODMAN, Taurus
+and Hughes column groups. The search now matches MODMAN serials. Building this exposed
+a latent bug in `syncFrozenHeads()`: it measured hidden columns as zero-width instead
+of skipping them, which collapsed every column after a hidden run in the floating head.
 
 ### v2.63.0 — MODMAN section, Comments removed
 A third column group for the MODMAN chassis — Installed, Kontron S/N, Eclipse S/N — in
