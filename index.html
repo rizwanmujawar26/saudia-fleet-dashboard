@@ -2379,90 +2379,57 @@
            rather than showing a column of "n/a". One class on the table drives it, and
            the frozen-head copy inherits the rule because it is cloned from the live
            <thead> with its classes intact. */
-        /* ===== Compact layout =====
-           Thirteen columns have to fit a laptop without the Hughes group falling off
-           the right. Padding was the biggest cost, not content: the shared table gives
-           every cell 15px each side, which across this many columns is ~390px of pure
-           whitespace. Trimming it, shrinking the type and stacking each date over its
-           own age pill is what buys the width back — the columns are now as wide as
-           their values rather than as wide as a value PLUS a pill beside it. */
-        #modemTable th,
-        #modemTable td { padding: 6px 8px; font-size: 12px; }
+        /* ===== Modem table: one type scale, everything centred =====
+           The row had five different sizes in it and read as noise. There are now
+           exactly three: the VALUE (11.5px), its UNIT or qualifier (8.5px, quieter),
+           and the HEADER (10px). Nothing else sets a size.
 
-        #modemTable th { font-size: 10.5px; letter-spacing: 0.3px; }
+           Everything is centre-aligned — header, sub-header and value alike — so each
+           column reads as a single vertical line rather than three ragged edges, and a
+           short value in a wide column still sits under its own heading. */
+        .modem-table th,
+        .modem-table td {
+            padding: 5px 10px;
+            text-align: center;
+            vertical-align: middle;
+        }
 
-        /* Sub-headers wrap onto two short lines rather than forcing a column as wide
-           as their longest word. The head is already two rows tall, so a wrapped label
-           costs nothing in height. */
-        #modemTable thead tr:nth-child(2) th { white-space: normal; line-height: 1.15; }
+        .modem-table td { font-size: 11.5px; }
 
-        /* ===== Column widths, sized to the VALUES =====
-           Every column was previously as wide as the widest thing in it — usually the
-           header — which left a 16-character chassis id clipped while a 2-digit Eclipse
-           serial sat in the same width. These are measured against the real data:
-           chassis AERSVA00064HNSJ3 (16 mono chars), Kontron 484569007 (9), ESN
-           17501546 (8), Eclipse and TID 2-3, MG ID 3, and a dd-mm-yyyy input in the
-           date columns. The widths hold in BOTH modes, so nothing reflows when Edit is
-           pressed.
-           ⚠️ Set on the <th>, not a <colgroup>. A colgroup would be a fixed list of
-           columns, and the eye toggles can remove three of them — the same mismatch
-           that broke the frozen head. A width on a header cell just travels with it. */
-        /* Column widths are set as a MIN-WIDTH on the body cells, by position.
-           ⚠️ Not `width` on the <th>: under `table-layout: auto` that is only a hint
-           and the algorithm overrode it — the chassis column came out 88px against a
-           16-character serial, which is exactly the clipping being fixed. A min-width
-           on a cell IS honoured, because a column can never be narrower than its
-           widest cell's minimum.
-           ⚠️ And not `table-layout: fixed` with a <colgroup> either: the eye toggles
-           can remove three column groups, and a colgroup is a fixed list of columns —
-           the same mismatch that broke the frozen head.
-           nth-child counts DOM position, not rendered position, so a hidden group does
-           not shift these.
+        .modem-table th {
+            font-size: 10px;
+            letter-spacing: 0.4px;
+            line-height: 1.2;
+            /* Sub-headers WRAP rather than forcing a column as wide as their longest
+               word — the head is two rows tall, so the second line is free, and the
+               column can then size to its values instead of its label. */
+            white-space: normal;
+        }
 
-           Measured against the real values: chassis AERSVA00064HNSJ3 (16 mono chars),
-           Kontron 484569007 (9), ESN 17501546 (8), MG ID 101, Eclipse and TID 2-3, and
-           a dd-mm-yyyy input in the date columns. */
-        #modemTable tbody td:nth-child(1)  { min-width: 28px;  }   /* # */
-        #modemTable tbody td:nth-child(2)  { min-width: 76px;  }   /* MSP date + pill */
-        #modemTable tbody td:nth-child(3)  { min-width: 112px; }   /* reg + two pills */
-        #modemTable tbody td:nth-child(4)  { min-width: 92px;  }   /* installed date */
-        #modemTable tbody td:nth-child(5)  { min-width: 94px;  }   /* Kontron S/N */
-        #modemTable tbody td:nth-child(6)  { min-width: 58px;  }   /* Eclipse S/N */
-        #modemTable tbody td:nth-child(7)  { min-width: 92px;  }   /* Taurus comm date */
-        #modemTable tbody td:nth-child(8)  { min-width: 98px;  }   /* IPHO select */
-        #modemTable tbody td:nth-child(9)  { min-width: 54px;  }   /* MG ID */
-        #modemTable tbody td:nth-child(10) { min-width: 54px;  }   /* TID */
-        #modemTable tbody td:nth-child(11) { min-width: 92px;  }   /* Hughes comm date */
-        #modemTable tbody td:nth-child(12) { min-width: 152px; }   /* chassis id, 16 ch */
-        #modemTable tbody td:nth-child(13) { min-width: 86px;  }   /* ESN */
+        /* The comment column's left alignment does not apply here — this table has
+           none, and a centred column is the rule. */
+        .modem-table td.col-comment { text-align: center; }
 
-        /* Inputs fill the column they are in rather than carrying a width of their own,
-           so the box is exactly as wide as the value it holds has room to be.
-           ⚠️ `.edit-date` sets min-width:104px globally, which overrode every date
-           column here and was why a date field was wider than the date inside it. */
-        #modemTable .edit-text,
-        #modemTable .edit-date,
-        #modemTable .edit-select {
-            width: 100%;
-            min-width: 0;
-            box-sizing: border-box;
+        /* Identifiers are monospaced and tabular so a transposed digit is findable and
+           columns of numbers line up on their digits. */
+        .modem-table .modem-id {
             font-size: 11.5px;
-            padding: 3px 5px;
+            font-variant-numeric: tabular-nums;
+        }
+        .modem-table .modem-id b { font-size: 1.08em; }
+
+        /* A unit is not the value. It rides after the figure at the quiet size so the
+           eye lands on the number first — 8 dBm, not 8 DBM. */
+        .unit-sfx {
+            font-size: 8.5px;
+            font-weight: 600;
+            color: #8a939c;
+            letter-spacing: 0.2px;
+            font-family: inherit;
         }
 
-        /* A serial is read off a label and typed back in, so it stays monospaced and
-           tabular in the input too — a transposed digit should be findable while
-           editing, not only afterwards. */
-        #modemTable td .edit-text {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            letter-spacing: 0;
-        }
-        #modemTable td .edit-date { font-family: inherit; }
-        #modemTable .modem-id { font-size: 11px; }
-        #modemTable .modem-id b { font-size: 1.1em; }
-
-        /* A date and its age, stacked. The pill goes UNDER the date rather than beside
-           it, which is what lets a date column be the width of a date. */
+        /* A date and its age, stacked and centred. The pill goes UNDER the date rather
+           than beside it, which is what lets a date column be the width of a date. */
         .stack-date {
             display: block;
             font-size: 11.5px;
@@ -2476,12 +2443,12 @@
             margin-left: 0;
             margin-top: 2px;
             padding: 0 5px;
-            font-size: 9px;
+            font-size: 8.5px;
             vertical-align: 0;
         }
 
         /* Registration and type read as ONE fact — "AQB, an A330" — so they share a
-           line, with the type quieter beside it. */
+           line, centred, with the type quieter beside it. */
         .stack-top {
             display: flex;
             align-items: center;
@@ -2491,18 +2458,9 @@
 
         .stack-reg {
             font-weight: 700;
-            font-size: 12.5px;
+            font-size: 12px;
             color: #1f2937;
-        }
-
-        /* Second line: how long it has been in service, centred under the pair above
-           so the cell reads as one block rather than two ragged left edges. */
-        .stack-sub {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            margin-top: 2px;
+            letter-spacing: 0.2px;
         }
 
         /* The Type column was removed to save width, so the type rides here instead.
@@ -2510,25 +2468,77 @@
            is a display change, not a data one. */
         .type-mini {
             display: inline-block;
-            padding: 0 5px;
-            border-radius: 4px;
+            padding: 0 4px;
+            border-radius: 3px;
             background: #eef1f4;
             border: 1px solid #e0e5ea;
-            color: #5c6670;
-            font-size: 9px;
+            color: #6b747d;
+            font-size: 8.5px;
             font-weight: 700;
             letter-spacing: 0.2px;
             white-space: nowrap;
         }
 
-        /* Status pills sized like the identifiers beside them, so a row reads as one
-           scale rather than a badge shouting next to 11px text. */
-        .status-badge.mini-badge {
-            padding: 2px 7px;
-            font-size: 9.5px;
-            letter-spacing: 0.3px;
-            border-radius: 10px;
+        /* IPHO is one of two states and sits in a narrow column, so the pill is sized
+           to the column rather than the other way round — the quiet size, minimal
+           padding, no letter-spacing to push it wider. */
+        .modem-table .status-badge.mini-badge {
+            padding: 1px 6px;
+            font-size: 8.5px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            border-radius: 8px;
         }
+
+        /* ===== Column widths =====
+           A floor per column, sized to its VALUES so the column never collapses below
+           what it holds; content above that grows it naturally. With the headers now
+           wrapping, the label no longer sets the width — the data does.
+           ⚠️ min-width on the body cell, not `width` on the <th>: under
+           `table-layout: auto` a th width is only a hint and was being overridden,
+           which is how a 16-character chassis id ended up in an 88px column.
+           ⚠️ And not a <colgroup>: the eye toggles can remove three column groups, and
+           a colgroup is a fixed list of columns. nth-child counts DOM position, so a
+           hidden group does not shift these. */
+        .modem-table tbody td:nth-child(1)  { min-width: 26px;  }   /* # */
+        .modem-table tbody td:nth-child(2)  { min-width: 74px;  }   /* MSP date + pill */
+        .modem-table tbody td:nth-child(3)  { min-width: 96px;  }   /* reg + type pill */
+        .modem-table tbody td:nth-child(4)  { min-width: 86px;  }   /* install date */
+        .modem-table tbody td:nth-child(5)  { min-width: 92px;  }   /* Kontron S/N, 9 ch */
+        .modem-table tbody td:nth-child(6)  { min-width: 58px;  }   /* Eclipse S/N, 2-3 */
+        .modem-table tbody td:nth-child(7)  { min-width: 66px;  }   /* modem output */
+        .modem-table tbody td:nth-child(8)  { min-width: 86px;  }   /* Taurus comm date */
+        .modem-table tbody td:nth-child(9)  { min-width: 74px;  }   /* IPHO */
+        .modem-table tbody td:nth-child(10) { min-width: 52px;  }   /* MG ID */
+        .modem-table tbody td:nth-child(11) { min-width: 52px;  }   /* TID */
+        .modem-table tbody td:nth-child(12) { min-width: 86px;  }   /* Hughes comm date */
+        .modem-table tbody td:nth-child(13) { min-width: 148px; }   /* chassis id, 16 ch */
+        .modem-table tbody td:nth-child(14) { min-width: 84px;  }   /* ESN */
+
+        /* Inputs fill the column they are in rather than carrying a width of their own,
+           so the box is exactly as wide as its value has room to be, and the layout does
+           not reflow between viewing and editing.
+           ⚠️ `.edit-date` sets min-width:104px globally, which overrode every date
+           column here and was why a date field was wider than the date inside it. */
+        .modem-table .edit-text,
+        .modem-table .edit-date,
+        .modem-table .edit-select {
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            font-size: 11px;
+            padding: 3px 4px;
+            text-align: center;
+        }
+
+        /* A serial is read off a label and typed back in, so it stays monospaced and
+           tabular in the input too — a transposed digit should be findable while
+           editing, not only afterwards. */
+        .modem-table td .edit-text {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            letter-spacing: 0;
+        }
+        .modem-table td .edit-date { font-family: inherit; }
 
         /* One class per hidden group, set from modemColsHidden. Independent, so any
            combination is expressible — MODMAN with Hughes alone, all three off, and so
@@ -4917,12 +4927,12 @@
                          Taurus, Chassis ID and ESN say Hughes, so a badge repeating it was
                          a column of noise. Each modem owns its OWN commissioning date,
                          because they are commissioned separately. -->
-                    <table class="aircraft-table has-grouphead" id="modemTable">
+                    <table class="aircraft-table has-grouphead modem-table" id="modemTable">
                         <thead>
                             <tr class="modem-grouphead">
                                 <th rowspan="2">#</th>
-                                <th rowspan="2" class="sortable-th" data-col="1" data-label="MSP 5.2.2" onclick="sortModemTable(1)">MSP 5.2.2</th>
-                                <!-- Type has no column of its own: it rides under the
+                                <th rowspan="2" class="sortable-th" data-col="1" data-label="MSP 5.2.2 Install Date" onclick="sortModemTable(1)">MSP 5.2.2 Install Date</th>
+                                <!-- Type has no column of its own: it rides beside the
                                      registration as a pill. The FILTER still works —
                                      the row keeps its data-type. -->
                                 <th rowspan="2" class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortModemTable(2)">Aircraft</th>
@@ -4930,21 +4940,22 @@
                                      Hughes are the two modems inside it. Placing it here
                                      also keeps the Kontron blue clear of the Hughes blue,
                                      with the Gilat indigo between them. -->
-                                <th colspan="3" class="modem-group modem-group-modman modem-modman-col">MODMAN</th>
+                                <th colspan="4" class="modem-group modem-group-modman modem-modman-col">MODMAN</th>
                                 <th colspan="4" class="modem-group modem-group-taurus modem-taurus-col">Taurus</th>
                                 <th colspan="3" class="modem-group modem-group-hughes modem-hughes-col">Hughes</th>
                             </tr>
                             <tr>
-                                <th class="sortable-th modem-modman-col" data-col="3" data-label="Installed" onclick="sortModemTable(3)">Installed</th>
+                                <th class="sortable-th modem-modman-col" data-col="3" data-label="Install Date" onclick="sortModemTable(3)">Install Date</th>
                                 <th class="sortable-th modem-modman-col" data-col="4" data-label="Kontron S/N" onclick="sortModemTable(4)">Kontron S/N</th>
                                 <th class="sortable-th modem-modman-col" data-col="5" data-label="Eclipse S/N" onclick="sortModemTable(5)">Eclipse S/N</th>
-                                <th class="sortable-th modem-taurus-col" data-col="6" data-label="Comm. Date" onclick="sortModemTable(6)">Comm. Date</th>
-                                <th class="sortable-th modem-taurus-col" data-col="7" data-label="IPHO" onclick="sortModemTable(7)">IPHO</th>
-                                <th class="sortable-th modem-taurus-col" data-col="8" data-label="MG ID" onclick="sortModemTable(8)">MG ID</th>
-                                <th class="sortable-th modem-taurus-col" data-col="9" data-label="TID" onclick="sortModemTable(9)">TID</th>
-                                <th class="sortable-th modem-hughes-col" data-col="10" data-label="Comm. Date" onclick="sortModemTable(10)">Comm. Date</th>
-                                <th class="sortable-th modem-hughes-col" data-col="11" data-label="Chassis ID" onclick="sortModemTable(11)">Chassis ID</th>
-                                <th class="sortable-th modem-hughes-col" data-col="12" data-label="ESN" onclick="sortModemTable(12)">ESN</th>
+                                <th class="sortable-th modem-modman-col" data-col="6" data-label="Modem Output" onclick="sortModemTable(6)">Modem Output</th>
+                                <th class="sortable-th modem-taurus-col" data-col="7" data-label="Comm. Date" onclick="sortModemTable(7)">Comm. Date</th>
+                                <th class="sortable-th modem-taurus-col" data-col="8" data-label="IPHO" onclick="sortModemTable(8)">IPHO</th>
+                                <th class="sortable-th modem-taurus-col" data-col="9" data-label="MG ID" onclick="sortModemTable(9)">MG ID</th>
+                                <th class="sortable-th modem-taurus-col" data-col="10" data-label="TID" onclick="sortModemTable(10)">TID</th>
+                                <th class="sortable-th modem-hughes-col" data-col="11" data-label="Comm. Date" onclick="sortModemTable(11)">Comm. Date</th>
+                                <th class="sortable-th modem-hughes-col" data-col="12" data-label="Chassis ID" onclick="sortModemTable(12)">Chassis ID</th>
+                                <th class="sortable-th modem-hughes-col" data-col="13" data-label="ESN" onclick="sortModemTable(13)">ESN</th>
                             </tr>
                         </thead>
                         <tbody id="modemTableBody"></tbody>
@@ -6046,10 +6057,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.65.2';
-        const APP_BUILD    = '2026.08.26.07';
+        const APP_VERSION  = '2.66.0';
+        const APP_BUILD    = '2026.08.26.08';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-26T15:22:49Z';
+        const APP_DEPLOYED = '2026-08-26T17:29:06Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -10021,6 +10032,10 @@
                             kontronSn:     pick('modman/kontronSn',     at ? at.unit.serial : ''),
                             eclipseSn:     pick('modman/eclipseSn',     at ? at.unit.altSerial : ''),
                             installedDate: pick('modman/installedDate', at ? at.fitment.fittedDate : ''),
+                            // Measured for THIS installation, so it lives on the
+                            // fitment beside fittedDate — move the box to another
+                            // aircraft and the reading is re-taken, not inherited.
+                            outputDbm:     pick('modman/outputDbm',     at ? at.fitment.outputDbm : ''),
                         };
                     })(),
                     taurus: {
@@ -10147,6 +10162,16 @@
                         ? stackedDate(r.modman.installedDate, 'Time since MODMAN install')
                         : '<span class="fleet-notset">Not set</span>');
 
+                // Stored as a bare number so it stays sortable and editable; the unit
+                // is TYPOGRAPHY, not data. Entering "8" reads back as 8 dBm, with the
+                // unit set quieter than the figure so the eye lands on the value.
+                const mmOutputCell = editing
+                    ? `<input class="edit-text" inputmode="decimal" maxlength="7" value="${escAttr(r.modman.outputDbm)}" placeholder="dBm"
+                           data-modem="${escAttr(r.id)}" data-field="modman/outputDbm" onchange="handleModemEdit(this)">`
+                    : (r.modman.outputDbm
+                        ? `<span class="modem-id">${escAttr(r.modman.outputDbm)}<span class="unit-sfx">&nbsp;dBm</span></span>`
+                        : '<span class="fleet-notset">—</span>');
+
                 const mmSnCell = (field) => {
                     const v = r.modman[field];
                     if (!editing) {
@@ -10185,16 +10210,14 @@
                 row.innerHTML = `
                     <td>${idx + 1}</td>
                     <td data-sort="${mspSort}" title="Installed with Middleware 2.1.0 — edited on the Software tab">${mspCell}</td>
-                    <td data-sort="${escAttr(r.id)}"><span class="stack-top"><span class="stack-reg">${escAttr(r.id)}</span>${
+                    <td data-sort="${escAttr(r.id)}" title="${r.activatedDate ? `In service since ${escAttr(r.activatedDate)}` : ''}"><span class="stack-top"><span class="stack-reg">${escAttr(r.id)}</span>${
                         r.acType ? `<span class="type-mini">${escAttr(TYPE_SHORT_LABEL[r.acType] || r.acType)}</span>` : ''
-                    }</span>${
-                        r.activatedDate && activationAge(r.activatedDate)
-                            ? `<span class="stack-sub"><span class="age-pill stack-age" title="In service since ${escAttr(r.activatedDate)}">${activationAge(r.activatedDate)}</span></span>` : ''
-                    }</td>
+                    }</span></td>
 
                     <td class="modem-modman-col modem-group-start" data-sort="${dateSortKey(toISODate(r.modman.installedDate)) || '99999999'}">${mmDateCell}</td>
                     <td class="modem-modman-col" data-sort="${escAttr(r.modman.kontronSn)}">${mmSnCell('kontronSn')}</td>
                     <td class="modem-modman-col" data-sort="${escAttr(r.modman.eclipseSn)}">${mmSnCell('eclipseSn')}</td>
+                    <td class="modem-modman-col" data-sort="${escAttr(r.modman.outputDbm)}">${mmOutputCell}</td>
 
                     <td class="modem-taurus-col modem-group-start" data-sort="${ds('taurus')}">${dateCell('taurus')}</td>
                     <td class="modem-taurus-col" data-sort="${iphoDone ? 'completed' : 'pending'}">${iphoCell}</td>
@@ -10232,7 +10255,7 @@
         // row's measured height. A hardcoded number is wrong the moment the group
         // label wraps or the breakpoint changes the font.
         function publishGroupHeadHeight() {
-            const first = document.querySelector('#modemTable thead tr:first-child');
+            const first = document.querySelector('.modem-table thead tr:first-child');
             if (!first) return;
             const h = Math.round(first.getBoundingClientRect().height);
             if (h) document.documentElement.style.setProperty('--grouphead-h', h + 'px');
@@ -10352,12 +10375,16 @@
                 Object.keys(MM_FIELD).forEach(k => {
                     if (mm[k] !== undefined) unitFields[MM_FIELD[k]] = mm[k] === '' ? null : mm[k];
                 });
+                // Fitment-level, like the date — not a unit field.
+                const hasOut = mm.outputDbm !== undefined;
+                const outVal = hasOut ? (mm.outputDbm || null) : undefined;
 
                 if (row.modman.unitId) {
                     const unitId = row.modman.unitId, fitId = row.modman.fitmentId;
                     Object.keys(unitFields).forEach(f => { unitPatch[`${unitId}/${f}`] = unitFields[f]; });
                     if (hasDate) unitPatch[`${unitId}/fitments/${fitId}/fittedDate`] = fitted;
-                    unitOps.push({ unitId, fitId, isNew: false, unit: unitFields, hasDate, fitted });
+                    if (hasOut)  unitPatch[`${unitId}/fitments/${fitId}/outputDbm`]  = outVal;
+                    unitOps.push({ unitId, fitId, isNew: false, unit: unitFields, hasDate, fitted, hasOut, outVal });
                     return;
                 }
 
@@ -10374,12 +10401,13 @@
                 const fitId  = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
                 const fit = { aircraft: id, state: 'on_wing', loggedAt: stamp };
                 if (fitted) fit.fittedDate = fitted;
+                if (outVal) fit.outputDbm = outVal;
                 const unit = { lruId: row.modman.lruId, addedAt: stamp, fitments: { [fitId]: fit } };
                 Object.keys(unitFields).forEach(f => { if (unitFields[f] != null) unit[f] = unitFields[f]; });
                 unitPatch[unitId] = unit;
                 row.modman.unitId = unitId;
                 row.modman.fitmentId = fitId;
-                unitOps.push({ unitId, fitId, isNew: true, unit, hasDate, fitted });
+                unitOps.push({ unitId, fitId, isNew: true, unit, hasDate, fitted, hasOut, outVal });
             });
 
             setSyncStatus('🟡 Saving modem changes...', '#e0a800');
@@ -10417,6 +10445,9 @@
                     const f = (u.fitments || {})[op.fitId];
                     if (f && op.hasDate) {
                         if (op.fitted) f.fittedDate = op.fitted; else delete f.fittedDate;
+                    }
+                    if (f && op.hasOut) {
+                        if (op.outVal) f.outputDbm = op.outVal; else delete f.outputDbm;
                     }
                 });
 
