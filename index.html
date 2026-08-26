@@ -4728,21 +4728,22 @@
                         <thead>
                             <tr class="modem-grouphead">
                                 <th rowspan="2">#</th>
-                                <th rowspan="2" class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortModemTable(1)">Aircraft</th>
-                                <th rowspan="2" class="sortable-th" data-col="2" data-label="Type" onclick="sortModemTable(2)">Type</th>
+                                <th rowspan="2" class="sortable-th" data-col="1" data-label="MSP 5.2.2 Install Date" onclick="sortModemTable(1)">MSP 5.2.2 Install Date</th>
+                                <th rowspan="2" class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortModemTable(2)">Aircraft</th>
+                                <th rowspan="2" class="sortable-th" data-col="3" data-label="Type" onclick="sortModemTable(3)">Type</th>
                                 <th colspan="5" class="modem-group modem-group-taurus modem-taurus-col">Taurus</th>
                                 <th colspan="4" class="modem-group modem-group-hughes modem-hughes-col">Hughes</th>
                             </tr>
                             <tr>
-                                <th class="sortable-th modem-taurus-col" data-col="3" data-label="Commissioned Date" onclick="sortModemTable(3)">Commissioned Date</th>
-                                <th class="sortable-th modem-taurus-col" data-col="4" data-label="IPHO" onclick="sortModemTable(4)">IPHO</th>
-                                <th class="sortable-th modem-taurus-col" data-col="5" data-label="MG ID" onclick="sortModemTable(5)">MG ID</th>
-                                <th class="sortable-th modem-taurus-col" data-col="6" data-label="TID" onclick="sortModemTable(6)">TID</th>
-                                <th class="sortable-th modem-taurus-col col-comment" data-col="7" data-label="Comments" onclick="sortModemTable(7)">Comments</th>
-                                <th class="sortable-th modem-hughes-col" data-col="8" data-label="Commissioned Date" onclick="sortModemTable(8)">Commissioned Date</th>
-                                <th class="sortable-th modem-hughes-col" data-col="9" data-label="Chassis ID" onclick="sortModemTable(9)">Chassis ID</th>
-                                <th class="sortable-th modem-hughes-col" data-col="10" data-label="ESN" onclick="sortModemTable(10)">ESN</th>
-                                <th class="sortable-th modem-hughes-col col-comment" data-col="11" data-label="Comments" onclick="sortModemTable(11)">Comments</th>
+                                <th class="sortable-th modem-taurus-col" data-col="4" data-label="Commissioned Date" onclick="sortModemTable(4)">Commissioned Date</th>
+                                <th class="sortable-th modem-taurus-col" data-col="5" data-label="IPHO" onclick="sortModemTable(5)">IPHO</th>
+                                <th class="sortable-th modem-taurus-col" data-col="6" data-label="MG ID" onclick="sortModemTable(6)">MG ID</th>
+                                <th class="sortable-th modem-taurus-col" data-col="7" data-label="TID" onclick="sortModemTable(7)">TID</th>
+                                <th class="sortable-th modem-taurus-col col-comment" data-col="8" data-label="Comments" onclick="sortModemTable(8)">Comments</th>
+                                <th class="sortable-th modem-hughes-col" data-col="9" data-label="Commissioned Date" onclick="sortModemTable(9)">Commissioned Date</th>
+                                <th class="sortable-th modem-hughes-col" data-col="10" data-label="Chassis ID" onclick="sortModemTable(10)">Chassis ID</th>
+                                <th class="sortable-th modem-hughes-col" data-col="11" data-label="ESN" onclick="sortModemTable(11)">ESN</th>
+                                <th class="sortable-th modem-hughes-col col-comment" data-col="12" data-label="Comments" onclick="sortModemTable(12)">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="modemTableBody"></tbody>
@@ -5844,10 +5845,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.61.0';
-        const APP_BUILD    = '2026.08.26.01';
+        const APP_VERSION  = '2.62.0';
+        const APP_BUILD    = '2026.08.26.02';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-25T21:10:22Z';
+        const APP_DEPLOYED = '2026-08-26T12:00:42Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -9664,18 +9665,19 @@
         // ⚠️ `dir` is a numeric MULTIPLIER (1 asc / -1 desc). applyTableSort does
         // `dir * (a - b)`, so a string makes every comparison NaN and the rows come
         // back in build order with no error anywhere.
-        // ⚠️ This table opens on ACTIVATION DATE, NEWEST FIRST — deliberately not the
-        // "date column, oldest first" every other table uses (user, 2026-08-25). The
-        // aircraft that just entered service is the one whose modems still need
-        // commissioning, so it belongs at the top.
+        // ⚠️ This table opens on MSP 5.2.2 INSTALL DATE, NEWEST FIRST (user,
+        // 2026-08-26) — deliberately not the "date column, oldest first" every other
+        // table uses. MSP shipped inside Middleware 2.1.0 and is the software that
+        // talks to the modem, so its install is the reference point for major software
+        // activity on this page, and the most recent one leads.
         //
-        // Activation has no column of its own — it is a pill inside the Aircraft cell —
-        // so applyTableSort() cannot express this and it is the BUILD order instead,
-        // the same move the SIM register's tiers make.
+        // It stays the BUILD order rather than a column sort, for the reason it always
+        // was: descending on the column would float the "Not set" sentinel to the TOP,
+        // since that sentinel is built for an ascending default.
         // ⚠️ A build order and lastSort are mutually exclusive: the sort is re-applied
         // ONLY if the user clicked a header, and Reset drops back to this order.
-        function modemActivationKey(r) {
-            return Number(dateSortKey(toISODate(r.activatedDate)) || 0);
+        function modemMspKey(r) {
+            return Number(dateSortKey(toISODate(r.mspDate)) || 0);
         }
 
         let modemEditMode = false;
@@ -9743,8 +9745,8 @@
 
         function modemRows() {
             return modemRowsUnsorted().sort((a, b) => {
-                const ka = modemActivationKey(a), kb = modemActivationKey(b);
-                // Newest first; an aircraft with no activation date has nothing to
+                const ka = modemMspKey(a), kb = modemMspKey(b);
+                // Newest first; an aircraft with no MSP install date has nothing to
                 // place it by and falls to the end rather than the top.
                 if (ka !== kb) return kb - ka;
                 return a.id.localeCompare(b.id);
@@ -9765,6 +9767,11 @@
                     // Straight from the roster — the same field and the same pill the
                     // Fleet tab's Activation Date column uses, so the two never differ.
                     activatedDate: a.activatedDate || '',
+                    // MSP 5.2.2 shipped as part of Middleware 2.1.0, so its install date
+                    // IS the software completion date — the very field the Software tab
+                    // shows as Installation Date. Read, never copied: a second stored
+                    // date for one event could only drift.
+                    mspDate: a.completionDate || '',
                     ipho: pick('iphoStatus', a.iphoStatus),
                     taurus: {
                         commissionedDate: pick('modem/taurus/commissionedDate', t.commissionedDate),
@@ -9908,8 +9915,17 @@
                 // Undated sorts to the END on the 8-digit sentinel, never the front.
                 const ds = slot => dateSortKey(toISODate(r[slot].commissionedDate)) || '99999999';
 
+                // Read-only here, like a spare's date cells on the SIM register: it is
+                // one fact with one home, edited on the Software tab.
+                const mspSort = dateSortKey(toISODate(r.mspDate)) || '99999999';
+                const mspAge = r.mspDate ? activationAge(r.mspDate) : '';
+                const mspCell = r.mspDate
+                    ? `<span class="fleet-date">${escAttr(r.mspDate)}</span>${mspAge ? `<span class="age-pill" title="Time since MSP 5.2.2 install">${mspAge}</span>` : ''}`
+                    : '<span class="fleet-notset">Not set</span>';
+
                 row.innerHTML = `
                     <td>${idx + 1}</td>
+                    <td data-sort="${mspSort}" title="Installed with Middleware 2.1.0 — edited on the Software tab">${mspCell}</td>
                     <td data-sort="${escAttr(r.id)}"><strong>${escAttr(r.id)}</strong>${
                         r.activatedDate && activationAge(r.activatedDate)
                             ? `<span class="age-pill" title="In service since ${escAttr(r.activatedDate)}">${activationAge(r.activatedDate)}</span>` : ''
@@ -9984,7 +10000,7 @@
                 .filter(r => r.style.display !== 'none').length;
             // With no column sorted there is no arrow to explain the order, so the
             // footer says it outright rather than leaving it a mystery.
-            const order = lastSort['modemTable'] ? '' : ' · newest activation first';
+            const order = lastSort['modemTable'] ? '' : ' · newest MSP install first';
             setText('modemCount', `${shown} of ${modemRowsUnsorted().length} aircraft${order}`);
         }
 
