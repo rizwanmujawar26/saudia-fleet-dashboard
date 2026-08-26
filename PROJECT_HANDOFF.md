@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.61.0, 2026-08-26)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.62.0, 2026-08-26)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -885,9 +885,9 @@ Every data table opens on a **date column, oldest first**, placed second right a
 `#`. That is deliberate: the question these pages answer is "what happened when", and
 the oldest row is the one that has been waiting longest.
 
-⚠️ **Two tabs are deliberate exceptions** (2026-08-25). **Modem** opens on *activation
-date, newest first* and **Media** on *loading date, newest first* — both ask what has
-just arrived rather than what has waited longest.
+⚠️ **Two tabs are deliberate exceptions.** **Modem** opens on *MSP 5.2.2 install date,
+newest first* and **Media** on *loading date, newest first* — both ask what has just
+arrived rather than what has waited longest.
 
 ⚠️ **Neither could be a column sort, for the same reason**: descending on a date column
 puts the "no value" sentinel at the TOP, because that sentinel is built for the
@@ -900,7 +900,7 @@ clicks a header — the move the SIM tiers already made.
 | Media | Loading Date, **NEWEST first** — a build order, not a column | `mediaLoadKey()` |
 | Fleet | Activation Date (`activatedDate`) | `FLEET_DEFAULT_SORT` |
 | 4G SIM | Installation Date (fitment `fittedDate`) | tiers — see below |
-| Modem | **Activation Date, NEWEST first** — a build order, not a column | `modemActivationKey()` |
+| Modem | **MSP 5.2.2 Install Date, NEWEST first** — a build order | `modemMspKey()` |
 
 ### Four rules that apply to every one of them
 
@@ -1490,15 +1490,24 @@ firing before authentication and with `backup.sh` losing anonymous access.
    frozen-head copy inherits it because that copy is cloned from the live `<thead>`
    with its classes intact.
 
-   ⚠️ **This table opens on ACTIVATION DATE, NEWEST FIRST** (user, 2026-08-25) —
-   deliberately *not* the "date column, oldest first" rule the other four follow. It
-   asks a different question: those tables ask what has been waiting longest, this one
-   asks what has just arrived, because the aircraft that just entered service is the
-   one whose modems still need commissioning.
+   **`MSP 5.2.2 Install Date` is the first column, between `#` and Aircraft**, in the
+   ungrouped section so it sits outside both modem groups and spans the two header
+   rows. ⚠️ **It is DERIVED from `completionDate`, not stored.** MSP 5.2.2 shipped as
+   part of Middleware 2.1.0, so its install *is* the software completion date — the
+   field the Software tab labels *Installation Date*. A second stored date for one
+   event could only drift. It is **read-only here** and says so on hover; the Software
+   tab stays the one place it is edited.
 
-   **Activation has no column of its own** — it is a pill inside the Aircraft cell — so
-   `applyTableSort()` cannot express it and it is the **build order**, the same move
-   the SIM register's tiers make. ⚠️ **A build order and `lastSort` are mutually
+   ⚠️ **This table opens on MSP INSTALL DATE, NEWEST FIRST** (user, 2026-08-26) —
+   deliberately *not* the "date column, oldest first" rule the other tables follow. MSP
+   is the software that talks to the modem, so its install is the reference point for
+   major software activity here, and the most recent leads. (It opened on *activation*
+   date from 2026-08-25 until the MSP column arrived; the activation pill stays on the
+   Aircraft cell, since the two dates answer different questions.)
+
+   It is the **build order** rather than a column sort, for the reason it always was:
+   descending on the column would float the "Not set" sentinel to the **top**, since
+   that sentinel is built for an ascending default. ⚠️ **A build order and `lastSort` are mutually
    exclusive**: a column sort is re-applied only if the user clicked a header, and both
    Reset and a view change drop back to activation order. That is also why there is no
    per-view default any more — activation is an aircraft-level order, identical in
@@ -2304,6 +2313,14 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.62.0 — Modem gains an MSP 5.2.2 install date column
+A new first column between `#` and Aircraft, derived from `completionDate` rather than
+stored — MSP shipped inside Middleware 2.1.0, so it is the same event and a copy could
+only drift. The table now opens on it, newest first, replacing the activation-date
+order; the activation pill stays on the Aircraft cell. Adding a column shifted every
+`data-col` after `#`, so the checks now assert the sequence is contiguous and the
+colspans still sum to the sub-row.
 
 ### v2.61.0 — Media accepts ME-SVA-UGO-DEV
 A source ending in `DEV` is the default load: no monthly cycle, so it reads as **NO
