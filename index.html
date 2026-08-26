@@ -2379,6 +2379,85 @@
            rather than showing a column of "n/a". One class on the table drives it, and
            the frozen-head copy inherits the rule because it is cloned from the live
            <thead> with its classes intact. */
+        /* ===== Compact layout =====
+           Thirteen columns have to fit a laptop without the Hughes group falling off
+           the right. Padding was the biggest cost, not content: the shared table gives
+           every cell 15px each side, which across this many columns is ~390px of pure
+           whitespace. Trimming it, shrinking the type and stacking each date over its
+           own age pill is what buys the width back — the columns are now as wide as
+           their values rather than as wide as a value PLUS a pill beside it. */
+        #modemTable th,
+        #modemTable td { padding: 6px 8px; font-size: 12px; }
+
+        #modemTable th { font-size: 10.5px; letter-spacing: 0.3px; }
+
+        /* Sub-headers wrap onto two short lines rather than forcing a column as wide
+           as their longest word. The head is already two rows tall, so a wrapped label
+           costs nothing in height. */
+        #modemTable thead tr:nth-child(2) th { white-space: normal; line-height: 1.15; }
+        #modemTable .modem-id { font-size: 11px; }
+        #modemTable .modem-id b { font-size: 1.1em; }
+
+        /* A date and its age, stacked. The pill goes UNDER the date rather than beside
+           it, which is what lets a date column be the width of a date. */
+        .stack-date {
+            display: block;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #2c3238;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .age-pill.stack-age {
+            margin-left: 0;
+            margin-top: 2px;
+            padding: 0 5px;
+            font-size: 9px;
+            vertical-align: 0;
+        }
+
+        .stack-reg {
+            display: block;
+            font-weight: 700;
+            font-size: 12.5px;
+            color: #1f2937;
+        }
+
+        /* Second line under the registration: the type, and how long it has been in
+           service. Both are context, so both are quieter than the registration. */
+        .stack-sub {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 2px;
+        }
+
+        /* The Type column was removed to save width, so the type rides here instead.
+           ⚠️ The row still carries data-type, so the Type FILTER is unaffected — this
+           is a display change, not a data one. */
+        .type-mini {
+            display: inline-block;
+            padding: 0 5px;
+            border-radius: 4px;
+            background: #eef1f4;
+            border: 1px solid #e0e5ea;
+            color: #5c6670;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+        }
+
+        /* Status pills sized like the identifiers beside them, so a row reads as one
+           scale rather than a badge shouting next to 11px text. */
+        .status-badge.mini-badge {
+            padding: 2px 7px;
+            font-size: 9.5px;
+            letter-spacing: 0.3px;
+            border-radius: 10px;
+        }
+
         /* One class per hidden group, set from modemColsHidden. Independent, so any
            combination is expressible — MODMAN with Hughes alone, all three off, and so
            on — which the old single-select view could not do. */
@@ -4774,9 +4853,11 @@
                         <thead>
                             <tr class="modem-grouphead">
                                 <th rowspan="2">#</th>
-                                <th rowspan="2" class="sortable-th" data-col="1" data-label="MSP 5.2.2 Install Date" onclick="sortModemTable(1)">MSP 5.2.2 Install Date</th>
+                                <th rowspan="2" class="sortable-th" data-col="1" data-label="MSP 5.2.2" onclick="sortModemTable(1)">MSP 5.2.2</th>
+                                <!-- Type has no column of its own: it rides under the
+                                     registration as a pill. The FILTER still works —
+                                     the row keeps its data-type. -->
                                 <th rowspan="2" class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortModemTable(2)">Aircraft</th>
-                                <th rowspan="2" class="sortable-th" data-col="3" data-label="Type" onclick="sortModemTable(3)">Type</th>
                                 <!-- MODMAN comes FIRST: it is the chassis, and Taurus and
                                      Hughes are the two modems inside it. Placing it here
                                      also keeps the Kontron blue clear of the Hughes blue,
@@ -4786,16 +4867,16 @@
                                 <th colspan="3" class="modem-group modem-group-hughes modem-hughes-col">Hughes</th>
                             </tr>
                             <tr>
-                                <th class="sortable-th modem-modman-col" data-col="4" data-label="Installed" onclick="sortModemTable(4)">Installed</th>
-                                <th class="sortable-th modem-modman-col" data-col="5" data-label="Kontron S/N" onclick="sortModemTable(5)">Kontron S/N</th>
-                                <th class="sortable-th modem-modman-col" data-col="6" data-label="Eclipse S/N" onclick="sortModemTable(6)">Eclipse S/N</th>
-                                <th class="sortable-th modem-taurus-col" data-col="7" data-label="Commissioned Date" onclick="sortModemTable(7)">Commissioned Date</th>
-                                <th class="sortable-th modem-taurus-col" data-col="8" data-label="IPHO" onclick="sortModemTable(8)">IPHO</th>
-                                <th class="sortable-th modem-taurus-col" data-col="9" data-label="MG ID" onclick="sortModemTable(9)">MG ID</th>
-                                <th class="sortable-th modem-taurus-col" data-col="10" data-label="TID" onclick="sortModemTable(10)">TID</th>
-                                <th class="sortable-th modem-hughes-col" data-col="11" data-label="Commissioned Date" onclick="sortModemTable(11)">Commissioned Date</th>
-                                <th class="sortable-th modem-hughes-col" data-col="12" data-label="Chassis ID" onclick="sortModemTable(12)">Chassis ID</th>
-                                <th class="sortable-th modem-hughes-col" data-col="13" data-label="ESN" onclick="sortModemTable(13)">ESN</th>
+                                <th class="sortable-th modem-modman-col" data-col="3" data-label="Installed" onclick="sortModemTable(3)">Installed</th>
+                                <th class="sortable-th modem-modman-col" data-col="4" data-label="Kontron S/N" onclick="sortModemTable(4)">Kontron S/N</th>
+                                <th class="sortable-th modem-modman-col" data-col="5" data-label="Eclipse S/N" onclick="sortModemTable(5)">Eclipse S/N</th>
+                                <th class="sortable-th modem-taurus-col" data-col="6" data-label="Comm. Date" onclick="sortModemTable(6)">Comm. Date</th>
+                                <th class="sortable-th modem-taurus-col" data-col="7" data-label="IPHO" onclick="sortModemTable(7)">IPHO</th>
+                                <th class="sortable-th modem-taurus-col" data-col="8" data-label="MG ID" onclick="sortModemTable(8)">MG ID</th>
+                                <th class="sortable-th modem-taurus-col" data-col="9" data-label="TID" onclick="sortModemTable(9)">TID</th>
+                                <th class="sortable-th modem-hughes-col" data-col="10" data-label="Comm. Date" onclick="sortModemTable(10)">Comm. Date</th>
+                                <th class="sortable-th modem-hughes-col" data-col="11" data-label="Chassis ID" onclick="sortModemTable(11)">Chassis ID</th>
+                                <th class="sortable-th modem-hughes-col" data-col="12" data-label="ESN" onclick="sortModemTable(12)">ESN</th>
                             </tr>
                         </thead>
                         <tbody id="modemTableBody"></tbody>
@@ -5897,10 +5978,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.64.0';
-        const APP_BUILD    = '2026.08.26.04';
+        const APP_VERSION  = '2.65.0';
+        const APP_BUILD    = '2026.08.26.05';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-26T12:27:53Z';
+        const APP_DEPLOYED = '2026-08-26T12:45:41Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6349,6 +6430,16 @@
 
         function isLightMediaCycle(cycle) {
             return cycle === MEDIA_LIGHT_CYCLE;
+        }
+
+        // DD-Mon-YYYY -> DD-Mon-YY, for tables tight on width. Display only: the
+        // stored value, the sort key and every handler keep the full form.
+        // ⚠️ Still DAY-FIRST. Shortening the year must never become a chance to
+        // reorder the parts — 24-Aug-26 is the 24th, and month-first appears nowhere
+        // in this project.
+        function fmtDateShort(v) {
+            const m = String(v || '').match(/^(\d{2})-([A-Za-z]{3})-\d{2}(\d{2})$/);
+            return m ? `${m[1]}-${m[2]}-${m[3]}` : String(v || '');
         }
 
         function cycleToDisplay(cycle) {
@@ -9908,6 +9999,15 @@
                 card('Neither Started', none, 'no_media');
         }
 
+        // One date, two lines: the short form on top, its age beneath. Everything on
+        // this page uses it, so the four date columns are all the width of a date and
+        // no wider.
+        function stackedDate(v, why) {
+            const age = activationAge(v);
+            return `<span class="stack-date">${escAttr(fmtDateShort(v))}</span>${
+                age ? `<span class="age-pill stack-age" title="${escAttr(why)}">${age}</span>` : ''}`;
+        }
+
         function populateModemTable() {
             const tbody = document.getElementById('modemTableBody');
             const table = document.getElementById('modemTable');
@@ -9938,9 +10038,8 @@
                         return `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(v)}"
                                     data-modem="${escAttr(r.id)}" data-field="${path}" onchange="handleModemEdit(this)">`;
                     }
-                    if (!v) return '<span class="fleet-notset">Not set</span>';
-                    const age = activationAge(v);
-                    return `<span class="fleet-date">${escAttr(v)}</span>${age ? `<span class="age-pill" title="Time since commissioning">${age}</span>` : ''}`;
+                    return v ? stackedDate(v, 'Time since commissioning')
+                             : '<span class="fleet-notset">Not set</span>';
                 };
 
                 // ⚠️ Only TID and Chassis ID get the promoted number, and that is the
@@ -9968,10 +10067,7 @@
                     ? `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(r.modman.installedDate)}"
                            data-modem="${escAttr(r.id)}" data-field="modman/installedDate" onchange="handleModemEdit(this)">`
                     : (r.modman.installedDate
-                        ? (() => {
-                            const age = activationAge(r.modman.installedDate);
-                            return `<span class="fleet-date">${escAttr(r.modman.installedDate)}</span>${age ? `<span class="age-pill" title="Time since MODMAN install">${age}</span>` : ''}`;
-                          })()
+                        ? stackedDate(r.modman.installedDate, 'Time since MODMAN install')
                         : '<span class="fleet-notset">Not set</span>');
 
                 const mmSnCell = (field) => {
@@ -9994,7 +10090,7 @@
                     // A pill, not a dot-and-text pair: this column says one of two
                     // things and a badge says it in one object. Amber for Disabled
                     // rather than red — it is work outstanding, not a fault.
-                    : `<span class="status-badge ipho-${iphoDone ? 'on' : 'off'}">${iphoDone ? 'ENABLED' : 'DISABLED'}</span>`;
+                    : `<span class="status-badge mini-badge ipho-${iphoDone ? 'on' : 'off'}">${iphoDone ? 'ENABLED' : 'DISABLED'}</span>`;
 
                 // Undated sorts to the END on the 8-digit sentinel, never the front.
                 const ds = slot => dateSortKey(toISODate(r[slot].commissionedDate)) || '99999999';
@@ -10002,19 +10098,22 @@
                 // Read-only here, like a spare's date cells on the SIM register: it is
                 // one fact with one home, edited on the Software tab.
                 const mspSort = dateSortKey(toISODate(r.mspDate)) || '99999999';
-                const mspAge = r.mspDate ? activationAge(r.mspDate) : '';
+                // Two lines, not one: the date on top and its days pill beneath. A pill
+                // sitting BESIDE a date is what made every date column ~60px wider than
+                // the date needs, and there are four of them on this row.
                 const mspCell = r.mspDate
-                    ? `<span class="fleet-date">${escAttr(r.mspDate)}</span>${mspAge ? `<span class="age-pill" title="Time since MSP 5.2.2 install">${mspAge}</span>` : ''}`
+                    ? stackedDate(r.mspDate, 'Time since MSP 5.2.2 install')
                     : '<span class="fleet-notset">Not set</span>';
 
                 row.innerHTML = `
                     <td>${idx + 1}</td>
                     <td data-sort="${mspSort}" title="Installed with Middleware 2.1.0 — edited on the Software tab">${mspCell}</td>
-                    <td data-sort="${escAttr(r.id)}"><strong>${escAttr(r.id)}</strong>${
+                    <td data-sort="${escAttr(r.id)}"><span class="stack-reg">${escAttr(r.id)}</span><span class="stack-sub">${
+                        r.acType ? `<span class="type-mini">${escAttr(TYPE_SHORT_LABEL[r.acType] || r.acType)}</span>` : ''
+                    }${
                         r.activatedDate && activationAge(r.activatedDate)
-                            ? `<span class="age-pill" title="In service since ${escAttr(r.activatedDate)}">${activationAge(r.activatedDate)}</span>` : ''
-                    }</td>
-                    <td data-sort="${escAttr(r.acType)}">${r.acType ? escAttr(TYPE_SHORT_LABEL[r.acType] || r.acType) : '—'}</td>
+                            ? `<span class="age-pill stack-age" title="In service since ${escAttr(r.activatedDate)}">${activationAge(r.activatedDate)}</span>` : ''
+                    }</span></td>
 
                     <td class="modem-modman-col modem-group-start" data-sort="${dateSortKey(toISODate(r.modman.installedDate)) || '99999999'}">${mmDateCell}</td>
                     <td class="modem-modman-col" data-sort="${escAttr(r.modman.kontronSn)}">${mmSnCell('kontronSn')}</td>
