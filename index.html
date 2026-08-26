@@ -2379,11 +2379,42 @@
            rather than showing a column of "n/a". One class on the table drives it, and
            the frozen-head copy inherits the rule because it is cloned from the live
            <thead> with its classes intact. */
-        .modem-view-taurus .modem-hughes-col,
-        .modem-view-hughes .modem-taurus-col { display: none; }
+        /* One class per hidden group, set from modemColsHidden. Independent, so any
+           combination is expressible — MODMAN with Hughes alone, all three off, and so
+           on — which the old single-select view could not do. */
+        .modem-hide-modman .modem-modman-col,
+        .modem-hide-taurus .modem-taurus-col,
+        .modem-hide-hughes .modem-hughes-col { display: none; }
 
-        /* MODMAN is the chassis both modems sit in, so it stays visible under either
-           single-modem view — filtering to Taurus does not stop the box being the box. */
+        /* The eye toggles. Same pill geometry as .qf-btn beside them, so the bar reads
+           as one row of controls; only the state colour and the icon change. */
+        .modem-coltoggles {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 0 0 auto;
+        }
+
+        .modem-coltoggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .modem-eye { font-size: 12px; line-height: 1; }
+
+        /* On is the resting state and reads as ordinary. Off is the exception, so it
+           steps back to grey and strikes the label — the button says at a glance that
+           something is being withheld. */
+        .modem-coltoggle.is-on  { background: #eaf2ec; border-color: #c9e0d2; color: #235c3c; }
+        .modem-coltoggle.is-off { background: #f1f3f5; border-color: #dfe3e7; color: #98a1a9; }
+        .modem-coltoggle.is-off { text-decoration: line-through; text-decoration-color: rgba(152, 161, 169, 0.6); }
+        .modem-coltoggle.is-off .modem-eye { text-decoration: none; display: inline-block; }
+
+        @media (max-width: 700px) {
+            /* The toggles wrap under the filters rather than squeezing them out. */
+            .modem-coltoggles { flex-wrap: wrap; }
+        }
 
         /* The Modem column goes with them. Under a single-modem view every row is
            that modem, so the badge only restates the view — the same reason the
@@ -4723,6 +4754,10 @@
 
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="modem"></div>
+                    <!-- Column show/hide. Not filters — they change which columns
+                         exist, not which rows match — so they are their own control
+                         rather than an entry in FILTER_BARS. -->
+                    <div class="modem-coltoggles" id="modemColToggles"></div>
                     <div class="fb-actions">
                         <button id="modemEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleModemEdit()">🔒 Edit</button>
                         <button id="modemResetBtn" class="qf-btn" onclick="resetModemTable()">↺ Reset</button>
@@ -5862,10 +5897,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.63.0';
-        const APP_BUILD    = '2026.08.26.03';
+        const APP_VERSION  = '2.64.0';
+        const APP_BUILD    = '2026.08.26.04';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-26T12:17:24Z';
+        const APP_DEPLOYED = '2026-08-26T12:27:53Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -7432,41 +7467,13 @@
                 ],
             },
 
+            // Type and the search box, and nothing else (user, 2026-08-26). Which
+            // COLUMNS are on screen is NOT a filter and is deliberately not declared
+            // here — see MODEM_COL_GROUPS and the eye toggles beside this bar.
             modem: {
                 apply: () => applyModemFilters(),
-                search: 'Search aircraft, MG ID, TID, ESN',
-                // Three pills: the two vendors, and the work outstanding.
-                quick: [
-                    { filter: 'view',        value: 'taurus', label: 'Taurus' },
-                    { filter: 'view',        value: 'hughes', label: 'Hughes' },
-                    { filter: 'taurusdone',  value: 'no',     label: 'Taurus due' },
-                    { filter: 'hughesdone',  value: 'no',     label: 'Hughes due' },
-                ],
+                search: 'Search aircraft, serial, MG ID, TID, ESN',
                 filters: [
-                    // The VIEW, not a row filter: it decides which modem's rows and
-                    // columns are on screen. Declared single:true so the set holds at
-                    // most one value, and EMPTY means both — the component's "no
-                    // filter is All" rule rather than a magic default.
-                    // ⚠️ It sits first so its trigger is the leftmost control on the
-                    // bar; it is the page's primary switch, not a refinement.
-                    // ⚠️ This filter selects COLUMNS, not rows — every aircraft has
-                    // both modems, so there is nothing to filter out. rowValue()
-                    // returns the current view, so every row always matches; the
-                    // column groups are hidden in CSS instead.
-                    { id: 'view', label: 'View', single: true,
-                      rowValue: () => modemView(),
-                      options: () => MODEM_SLOTS.map(t => ({ v: t.value, l: `${t.label} only` })) },
-                    // One row now carries BOTH modems, so "commissioned" is two
-                    // independent axes rather than one. Selecting both narrows to
-                    // aircraft where each is in the chosen state.
-                    { id: 'taurusdone', label: 'Taurus', options: [
-                        { v: 'yes', l: 'Commissioned' },
-                        { v: 'no',  l: 'Awaiting' },
-                    ] },
-                    { id: 'hughesdone', label: 'Hughes', options: [
-                        { v: 'yes', l: 'Commissioned' },
-                        { v: 'no',  l: 'Awaiting' },
-                    ] },
                     // Follows the fleet rather than listing types with no aircraft.
                     { id: 'type', label: 'Type', options: () => {
                         const seen = [];
@@ -9742,22 +9749,59 @@
             return e ? e.label : '';
         }
 
-        // Taurus / Hughes / both. Declared single:true, so the set holds at most one
-        // value and EMPTY means both — the component's "no filter is All" rule.
-        // ⚠️ It selects COLUMNS, not rows: every aircraft has both modems, so there is
-        // nothing to filter out. That is why the filter declares rowValue() returning
-        // the current view — every row matches, always.
-        function modemView() {
-            const sel = fbSel('modem', 'view');
-            const v = sel.size ? Array.from(sel)[0] : 'both';
-            return MODEM_SLOTS.some(s => s.value === v) ? v : 'both';
+        // ===== Column groups: three independent show/hide toggles =====
+        // Not filters. Every aircraft has all three, so there is nothing to filter out
+        // — these decide which COLUMNS are on screen, and each is independent, which
+        // the old single-select "view" could not express (it could show one modem or
+        // both, never MODMAN with Hughes alone).
+        //
+        // Hidden is the exception, so the map records only what is HIDDEN and an absent
+        // key means visible: the default is everything on, with no state to initialise.
+        const MODEM_COL_GROUPS = [
+            { id: 'modman', label: 'MODMAN' },
+            { id: 'taurus', label: 'Taurus' },
+            { id: 'hughes', label: 'Hughes' },
+        ];
+        let modemColsHidden = {};
+
+        function modemColVisible(id) {
+            return !modemColsHidden[id];
         }
 
-        // Scope is activeFleet() — Active, either fit — the same set Maintenance,
-        // Hardware and the Timeline use. Both modems are fitted regardless of fit.
-        // ⚠️ To include the aircraft still In Retrofit, this is the one line.
+        // What the table was last built against. A toggle changes which columns EXIST,
+        // so it must rebuild rather than re-filter rows.
+        function modemColSignature() {
+            return MODEM_COL_GROUPS.map(g => (modemColVisible(g.id) ? '1' : '0')).join('');
+        }
+
+        function toggleModemCol(id) {
+            if (modemColsHidden[id]) delete modemColsHidden[id];
+            else modemColsHidden[id] = true;
+            populateModemTable();
+        }
+
+        // An open eye for a column group that is on screen, a crossed one for a group
+        // that is not — the icon states what you are looking at, and the label says
+        // which columns it governs.
+        function renderModemColToggles() {
+            const host = document.getElementById('modemColToggles');
+            if (!host) return;
+            host.innerHTML = MODEM_COL_GROUPS.map(g => {
+                const on = modemColVisible(g.id);
+                return `<button class="qf-btn modem-coltoggle ${on ? 'is-on' : 'is-off'}"
+                            aria-pressed="${on ? 'true' : 'false'}"
+                            title="${on ? 'Hide' : 'Show'} the ${escAttr(g.label)} columns"
+                            onclick="toggleModemCol('${g.id}')"><span class="modem-eye">${on ? '👁' : '🚫'}</span>${escAttr(g.label)}</button>`;
+            }).join('');
+        }
+
+        // ⚠️ RETROFIT ONLY (user, 2026-08-26) — swFleet(), the same population the
+        // Software and Media pages count. The A321XLR linefit pair carry their own
+        // equipment and are configured by SBC, not by this MODMAN-and-two-modems
+        // arrangement, so including them put two aircraft on the page whose rows could
+        // never be filled in.
         function modemFleet() {
-            return activeFleet();
+            return swFleet();
         }
 
         function modemRows() {
@@ -9834,7 +9878,6 @@
         function renderModemWidgets() {
             const strip = document.getElementById('modemWidgets');
             if (!strip) return;
-            const view = modemView();
             const rows = modemRows();
             const total = rows.length;
 
@@ -9847,19 +9890,11 @@
                 </div>`;
             };
 
-            // The strip follows the VIEW, so every figure counts the same population
-            // as the columns beneath it.
-            if (view !== 'both') {
-                const done = rows.filter(r => modemDone(r, view)).length;
-                const pending = total - done;
-                strip.innerHTML =
-                    card(`${modemSlotLabel(view)} Commissioned`, done, 'latest') +
-                    card('Awaiting Commissioning', pending, pending ? 'older' : 'no_media');
-                return;
-            }
-
-            // Both: three states that PARTITION the fleet, so the counts sum to the
-            // aircraft rather than double-counting an airframe under each modem.
+            // Three states that PARTITION the fleet, so the counts sum to the aircraft
+            // rather than double-counting an airframe under each modem.
+            // ⚠️ They do NOT follow the column toggles. The toggles decide what is on
+            // screen; the strip describes the DATA, and hiding a column does not
+            // uncommission a modem.
             const n = rows.map(r => (modemDone(r, 'taurus') ? 1 : 0) + (modemDone(r, 'hughes') ? 1 : 0));
             const full = n.filter(x => x === 2).length;
             const part = n.filter(x => x === 1).length;
@@ -9877,14 +9912,14 @@
             const tbody = document.getElementById('modemTableBody');
             const table = document.getElementById('modemTable');
             if (!tbody || !table) return;
-            const view = modemView();
-            const prevView = modemViewRendered;
-            modemViewRendered = view;
-            // Which column GROUP is on screen is pure CSS off this one class. The
-            // frozen-head copy inherits it because that copy is cloned from the live
+            const sig = modemColSignature();
+            const prevSig = modemViewRendered;
+            modemViewRendered = sig;
+            // Which column GROUPS are on screen is pure CSS off these classes. The
+            // frozen-head copy inherits them because that copy is cloned from the live
             // <thead> with its classes intact.
-            table.classList.toggle('modem-view-taurus', view === 'taurus');
-            table.classList.toggle('modem-view-hughes', view === 'hughes');
+            MODEM_COL_GROUPS.forEach(g =>
+                table.classList.toggle(`modem-hide-${g.id}`, !modemColVisible(g.id)));
 
             tbody.innerHTML = '';
             const editing = modemEditMode && canEdit();
@@ -9892,8 +9927,6 @@
             modemRows().forEach((r, idx) => {
                 const row = document.createElement('tr');
                 row.dataset.type = r.acType;
-                row.dataset.taurusdone = modemDone(r, 'taurus') ? 'yes' : 'no';
-                row.dataset.hughesdone = modemDone(r, 'hughes') ? 'yes' : 'no';
                 row.dataset.search = [r.id, r.taurus.mgId, r.taurus.tid, r.hughes.chassisId,
                                       r.hughes.esn, r.modman.kontronSn, r.modman.eclipseSn]
                     .filter(Boolean).join(' ');
@@ -10000,6 +10033,7 @@
             });
 
             renderModemWidgets();
+            renderModemColToggles();
             fbRender('modem');
             syncTableFreeze();
             publishGroupHeadHeight();
@@ -10007,9 +10041,10 @@
             // Re-applied on EVERY rebuild, not set once: these run again on every live
             // update, and without this a teammate's edit hands the rows back in build
             // order while the header still shows its arrow.
-            // A view change drops any column the user had chosen — it may not exist
-            // in the new view — which also returns the table to the build order.
-            if (prevView && prevView !== view) delete lastSort['modemTable'];
+            // Hiding a group drops any column sort the user had chosen — that column
+            // may have just left the screen — which returns the table to the build
+            // order.
+            if (prevSig && prevSig !== sig) delete lastSort['modemTable'];
             // Only re-apply a sort the user actually clicked. Left alone the rows keep
             // the activation order above, which no single-column sort can express.
             const sm = lastSort['modemTable'];
@@ -10039,11 +10074,11 @@
         }
 
         function applyModemFilters() {
-            // A view change swaps which COLUMNS exist, which no row filter can express,
-            // so it rebuilds instead. Guarded on the rendered view so that typing in
+            // A toggle swaps which COLUMNS exist, which no row filter can express, so
+            // it rebuilds instead. Guarded on the rendered signature so that typing in
             // the search box — which calls apply on every keystroke — re-filters rows
             // only and never pulls focus out of the box.
-            if (modemView() !== modemViewRendered) { populateModemTable(); return; }
+            if (modemColSignature() !== modemViewRendered) { populateModemTable(); return; }
 
             document.querySelectorAll('#modemTableBody tr').forEach(row => {
                 row.style.display = fbRowMatch('modem', row) ? '' : 'none';
@@ -10059,6 +10094,8 @@
 
         function resetModemTable() {
             fbClear('modem');
+            // Reset is "back to default", and the default is every column on screen.
+            modemColsHidden = {};
             fbRender('modem');
             delete lastSort['modemTable'];
             populateModemTable();
@@ -13466,7 +13503,16 @@
                 if (multiRowHead) {
                     const bodyRow = table.querySelector('tbody tr');
                     if (bodyRow && bodyRow.cells.length) {
+                        // ⚠️ HIDDEN COLUMNS MUST BE SKIPPED, not measured as zero.
+                        // `display: none` removes a cell from the table structure
+                        // outright, so a table with four hidden columns has four fewer
+                        // COLUMNS — not four zero-width ones. Emitting a <col> for each
+                        // of them puts the colgroup out of step with what the
+                        // fixed-layout copy actually has, and every column after the
+                        // hidden run collapses to zero. That is invisible until
+                        // something can hide a column, which the Modem eye toggles can.
                         colWidths = Array.from(bodyRow.cells)
+                            .filter(td => getComputedStyle(td).display !== 'none')
                             .map(td => Math.round(td.getBoundingClientRect().width));
                     }
                 }
