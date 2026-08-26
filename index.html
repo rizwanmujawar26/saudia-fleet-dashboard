@@ -2480,18 +2480,27 @@
             vertical-align: 0;
         }
 
+        /* Registration and type read as ONE fact — "AQB, an A330" — so they share a
+           line, with the type quieter beside it. */
+        .stack-top {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
         .stack-reg {
-            display: block;
             font-weight: 700;
             font-size: 12.5px;
             color: #1f2937;
         }
 
-        /* Second line under the registration: the type, and how long it has been in
-           service. Both are context, so both are quieter than the registration. */
+        /* Second line: how long it has been in service, centred under the pair above
+           so the cell reads as one block rather than two ragged left edges. */
         .stack-sub {
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 4px;
             margin-top: 2px;
         }
@@ -4896,10 +4905,6 @@
 
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="modem"></div>
-                    <!-- Column show/hide. Not filters — they change which columns
-                         exist, not which rows match — so they are their own control
-                         rather than an entry in FILTER_BARS. -->
-                    <div class="modem-coltoggles" id="modemColToggles"></div>
                     <div class="fb-actions">
                         <button id="modemEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleModemEdit()">🔒 Edit</button>
                         <button id="modemResetBtn" class="qf-btn" onclick="resetModemTable()">↺ Reset</button>
@@ -6041,10 +6046,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.65.1';
-        const APP_BUILD    = '2026.08.26.06';
+        const APP_VERSION  = '2.65.2';
+        const APP_BUILD    = '2026.08.26.07';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-26T15:07:28Z';
+        const APP_DEPLOYED = '2026-08-26T15:22:49Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -7193,6 +7198,11 @@
                 `<span class="fb-groups">` +
                     bar.filters.map(f => fbRenderTrigger(barId, f)).join('') +
                 `</span>` +
+                // A bar's own controls, sitting with the filters rather than adrift at
+                // the other end of the row. Declared as `extra` so the COMPONENT places
+                // them — a page cannot put its controls inside .fb-filters itself,
+                // because every fbRender() replaces that innerHTML.
+                (bar.extra ? bar.extra() : '') +
                 (bar.search
                     ? `<input type="search" class="fb-search" value="${escAttr(fbQuery[barId] || '')}"
                         placeholder="${escAttr(bar.search)}" autocomplete="off" spellcheck="false"
@@ -7627,6 +7637,10 @@
             modem: {
                 apply: () => applyModemFilters(),
                 search: 'Search aircraft, serial, MG ID, TID, ESN',
+                // The column show/hide toggles. Not filters — they change which columns
+                // exist, not which rows match — but they belong beside the filters, so
+                // the bar renders them between the Type trigger and the search box.
+                extra: () => modemColTogglesHTML(),
                 filters: [
                     // Follows the fleet rather than listing types with no aircraft.
                     { id: 'type', label: 'Type', options: () => {
@@ -9931,22 +9945,22 @@
         function toggleModemCol(id) {
             if (modemColsHidden[id]) delete modemColsHidden[id];
             else modemColsHidden[id] = true;
+            // populateModemTable() calls fbRender, which repaints the toggles with
+            // their new state — they live inside the bar now.
             populateModemTable();
         }
 
         // An open eye for a column group that is on screen, a crossed one for a group
         // that is not — the icon states what you are looking at, and the label says
         // which columns it governs.
-        function renderModemColToggles() {
-            const host = document.getElementById('modemColToggles');
-            if (!host) return;
-            host.innerHTML = MODEM_COL_GROUPS.map(g => {
+        function modemColTogglesHTML() {
+            return `<span class="modem-coltoggles">` + MODEM_COL_GROUPS.map(g => {
                 const on = modemColVisible(g.id);
                 return `<button class="qf-btn modem-coltoggle ${on ? 'is-on' : 'is-off'}"
                             aria-pressed="${on ? 'true' : 'false'}"
                             title="${on ? 'Hide' : 'Show'} the ${escAttr(g.label)} columns"
                             onclick="toggleModemCol('${g.id}')"><span class="modem-eye">${on ? '👁' : '🚫'}</span>${escAttr(g.label)}</button>`;
-            }).join('');
+            }).join('') + `</span>`;
         }
 
         // ⚠️ RETROFIT ONLY (user, 2026-08-26) — swFleet(), the same population the
@@ -10171,12 +10185,12 @@
                 row.innerHTML = `
                     <td>${idx + 1}</td>
                     <td data-sort="${mspSort}" title="Installed with Middleware 2.1.0 — edited on the Software tab">${mspCell}</td>
-                    <td data-sort="${escAttr(r.id)}"><span class="stack-reg">${escAttr(r.id)}</span><span class="stack-sub">${
+                    <td data-sort="${escAttr(r.id)}"><span class="stack-top"><span class="stack-reg">${escAttr(r.id)}</span>${
                         r.acType ? `<span class="type-mini">${escAttr(TYPE_SHORT_LABEL[r.acType] || r.acType)}</span>` : ''
-                    }${
+                    }</span>${
                         r.activatedDate && activationAge(r.activatedDate)
-                            ? `<span class="age-pill stack-age" title="In service since ${escAttr(r.activatedDate)}">${activationAge(r.activatedDate)}</span>` : ''
-                    }</span></td>
+                            ? `<span class="stack-sub"><span class="age-pill stack-age" title="In service since ${escAttr(r.activatedDate)}">${activationAge(r.activatedDate)}</span></span>` : ''
+                    }</td>
 
                     <td class="modem-modman-col modem-group-start" data-sort="${dateSortKey(toISODate(r.modman.installedDate)) || '99999999'}">${mmDateCell}</td>
                     <td class="modem-modman-col" data-sort="${escAttr(r.modman.kontronSn)}">${mmSnCell('kontronSn')}</td>
@@ -10195,7 +10209,6 @@
             });
 
             renderModemWidgets();
-            renderModemColToggles();
             fbRender('modem');
             syncTableFreeze();
             publishGroupHeadHeight();
