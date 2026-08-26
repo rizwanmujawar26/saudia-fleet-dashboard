@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.64.0, 2026-08-26)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.65.0, 2026-08-26)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1534,6 +1534,30 @@ firing before authentication and with `backup.sh` losing anonymous access.
    ⚠️ **Widgets do NOT follow the toggles.** They describe the data; hiding a column
    does not uncommission a modem.
 
+   **Compact layout** (user, 2026-08-26). Thirteen columns have to fit a laptop, and
+   the Hughes group was falling off the right. **1195px → 977px**, which fits from
+   1152px of viewport upward. What bought it, in order of size:
+
+   | | saving |
+   |---|---|
+   | cell padding 15px → 8px each side | ~180px across the row |
+   | each date stacked ABOVE its days pill instead of beside it | ~60px × 4 columns |
+   | the Type column removed | ~71px |
+   | `Commissioned` → `Comm. Date` on the two sub-heads | ~38px × 2 |
+   | type 14px → 12px, headers → 10.5px | the rest |
+
+   ⚠️ **A single long word cannot wrap**, so `Commissioned` forced its column 117px
+   wide against a 60px date. Giving the label a space lets it break onto two short
+   lines inside a head that is already two rows tall.
+
+   ⚠️ **`fmtDateShort()` is DISPLAY ONLY.** `DD-Mon-YYYY` → `DD-Mon-YY`; the stored
+   value, the sort key and every handler keep the full form. It is still **day-first** —
+   shortening the year is not an excuse to reorder the parts.
+
+   ⚠️ **The Type column is gone but the Type FILTER is not.** The row still carries
+   `data-type`; the type shows as a tiny pill under the registration, beside the
+   in-service age.
+
    **`MSP 5.2.2 Install Date` is the first column, between `#` and Aircraft**, in the
    ungrouped section so it sits outside both modem groups and spans the two header
    rows. ⚠️ **It is DERIVED from `completionDate`, not stored.** MSP 5.2.2 shipped as
@@ -2364,6 +2388,11 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.65.0 — Compact Modem layout, 1195px to 977px
+The table now fits a laptop with every column visible. Padding was the biggest cost,
+not content. Dates read `dd-mmm-yy` and sit above their days pill rather than beside
+it; the Type column became a pill under the registration, with its filter untouched.
 
 ### v2.64.0 — Retrofit only, and eye toggles per column group
 The Modem page drops the linefit pair (scope is `swFleet()`), keeps only Type and the
