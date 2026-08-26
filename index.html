@@ -2382,6 +2382,9 @@
         .modem-view-taurus .modem-hughes-col,
         .modem-view-hughes .modem-taurus-col { display: none; }
 
+        /* MODMAN is the chassis both modems sit in, so it stays visible under either
+           single-modem view — filtering to Taurus does not stop the box being the box. */
+
         /* The Modem column goes with them. Under a single-modem view every row is
            that modem, so the badge only restates the view — the same reason the
            Timeline hides its kind pill under a kind filter. It returns under Both. */
@@ -2402,8 +2405,16 @@
            White on them measures 16.34:1 and 6.64:1, both well past AA.
            ⚠️ Colours only, deliberately NO logo artwork: this page carries no external
            assets by design, and third-party marks are not ours to embed. */
+        .aircraft-table th.modem-group-modman { background: #005083; }
         .aircraft-table th.modem-group-taurus { background: #1B115D; }
         .aircraft-table th.modem-group-hughes { background: #005DAC; }
+
+        /* Kontron's own teal, as the MODMAN group's left accent. The header takes the
+           wordmark blue, which is close enough to the Hughes blue (ΔE 17.8) that the
+           two groups are deliberately NOT adjacent — Gilat's indigo sits between them —
+           and the teal edge gives the group a second, unmistakable cue. */
+        .aircraft-table .modem-modman-col.modem-group-start { border-left: 2px solid #46b294; }
+        .aircraft-table thead th.modem-modman-col { border-left-color: #46b294; }
 
         /* IPHO is one of two states, so it reads as a pill like every other status on
            the page. Amber for Disabled, not red: it is work outstanding rather than a
@@ -4731,19 +4742,25 @@
                                 <th rowspan="2" class="sortable-th" data-col="1" data-label="MSP 5.2.2 Install Date" onclick="sortModemTable(1)">MSP 5.2.2 Install Date</th>
                                 <th rowspan="2" class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortModemTable(2)">Aircraft</th>
                                 <th rowspan="2" class="sortable-th" data-col="3" data-label="Type" onclick="sortModemTable(3)">Type</th>
-                                <th colspan="5" class="modem-group modem-group-taurus modem-taurus-col">Taurus</th>
-                                <th colspan="4" class="modem-group modem-group-hughes modem-hughes-col">Hughes</th>
+                                <!-- MODMAN comes FIRST: it is the chassis, and Taurus and
+                                     Hughes are the two modems inside it. Placing it here
+                                     also keeps the Kontron blue clear of the Hughes blue,
+                                     with the Gilat indigo between them. -->
+                                <th colspan="3" class="modem-group modem-group-modman modem-modman-col">MODMAN</th>
+                                <th colspan="4" class="modem-group modem-group-taurus modem-taurus-col">Taurus</th>
+                                <th colspan="3" class="modem-group modem-group-hughes modem-hughes-col">Hughes</th>
                             </tr>
                             <tr>
-                                <th class="sortable-th modem-taurus-col" data-col="4" data-label="Commissioned Date" onclick="sortModemTable(4)">Commissioned Date</th>
-                                <th class="sortable-th modem-taurus-col" data-col="5" data-label="IPHO" onclick="sortModemTable(5)">IPHO</th>
-                                <th class="sortable-th modem-taurus-col" data-col="6" data-label="MG ID" onclick="sortModemTable(6)">MG ID</th>
-                                <th class="sortable-th modem-taurus-col" data-col="7" data-label="TID" onclick="sortModemTable(7)">TID</th>
-                                <th class="sortable-th modem-taurus-col col-comment" data-col="8" data-label="Comments" onclick="sortModemTable(8)">Comments</th>
-                                <th class="sortable-th modem-hughes-col" data-col="9" data-label="Commissioned Date" onclick="sortModemTable(9)">Commissioned Date</th>
-                                <th class="sortable-th modem-hughes-col" data-col="10" data-label="Chassis ID" onclick="sortModemTable(10)">Chassis ID</th>
-                                <th class="sortable-th modem-hughes-col" data-col="11" data-label="ESN" onclick="sortModemTable(11)">ESN</th>
-                                <th class="sortable-th modem-hughes-col col-comment" data-col="12" data-label="Comments" onclick="sortModemTable(12)">Comments</th>
+                                <th class="sortable-th modem-modman-col" data-col="4" data-label="Installed" onclick="sortModemTable(4)">Installed</th>
+                                <th class="sortable-th modem-modman-col" data-col="5" data-label="Kontron S/N" onclick="sortModemTable(5)">Kontron S/N</th>
+                                <th class="sortable-th modem-modman-col" data-col="6" data-label="Eclipse S/N" onclick="sortModemTable(6)">Eclipse S/N</th>
+                                <th class="sortable-th modem-taurus-col" data-col="7" data-label="Commissioned Date" onclick="sortModemTable(7)">Commissioned Date</th>
+                                <th class="sortable-th modem-taurus-col" data-col="8" data-label="IPHO" onclick="sortModemTable(8)">IPHO</th>
+                                <th class="sortable-th modem-taurus-col" data-col="9" data-label="MG ID" onclick="sortModemTable(9)">MG ID</th>
+                                <th class="sortable-th modem-taurus-col" data-col="10" data-label="TID" onclick="sortModemTable(10)">TID</th>
+                                <th class="sortable-th modem-hughes-col" data-col="11" data-label="Commissioned Date" onclick="sortModemTable(11)">Commissioned Date</th>
+                                <th class="sortable-th modem-hughes-col" data-col="12" data-label="Chassis ID" onclick="sortModemTable(12)">Chassis ID</th>
+                                <th class="sortable-th modem-hughes-col" data-col="13" data-label="ESN" onclick="sortModemTable(13)">ESN</th>
                             </tr>
                         </thead>
                         <tbody id="modemTableBody"></tbody>
@@ -5845,10 +5862,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.62.0';
-        const APP_BUILD    = '2026.08.26.02';
+        const APP_VERSION  = '2.63.0';
+        const APP_BUILD    = '2026.08.26.03';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-26T12:00:42Z';
+        const APP_DEPLOYED = '2026-08-26T12:17:24Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -9773,17 +9790,36 @@
                     // date for one event could only drift.
                     mspDate: a.completionDate || '',
                     ipho: pick('iphoStatus', a.iphoStatus),
+                    // ⚠️ MODMAN is read from /units, NOT from /aircraft. It is a
+                    // physical box with serials and a fitment, which is exactly what
+                    // /units is the single source for — and two of them are already on
+                    // record there. A second home under /aircraft/modem would have
+                    // duplicated data the register already holds.
+                    //   Kontron S/N -> unit.serial      (the primary serial)
+                    //   Eclipse S/N -> unit.altSerial   (declared for exactly this and
+                    //                                    unused until now)
+                    //   Installed   -> fitment.fittedDate
+                    modman: (() => {
+                        const lruId = fitOf(a) === 'linefit' ? 'lf_modman' : 'modman';
+                        const at = fittedUnitAt(lruId, a.id, undefined);
+                        return {
+                            lruId,
+                            unitId: at ? at.unit.id : '',
+                            fitmentId: at ? at.fitment.id : '',
+                            kontronSn:     pick('modman/kontronSn',     at ? at.unit.serial : ''),
+                            eclipseSn:     pick('modman/eclipseSn',     at ? at.unit.altSerial : ''),
+                            installedDate: pick('modman/installedDate', at ? at.fitment.fittedDate : ''),
+                        };
+                    })(),
                     taurus: {
                         commissionedDate: pick('modem/taurus/commissionedDate', t.commissionedDate),
                         mgId: pick('modem/taurus/mgId', t.mgId),
                         tid:  pick('modem/taurus/tid', t.tid),
-                        notes: pick('modem/taurus/notes', t.notes),
                     },
                     hughes: {
                         commissionedDate: pick('modem/hughes/commissionedDate', h.commissionedDate),
                         chassisId: pick('modem/hughes/chassisId', h.chassisId),
                         esn: pick('modem/hughes/esn', h.esn),
-                        notes: pick('modem/hughes/notes', h.notes),
                     },
                 };
             });
@@ -9858,7 +9894,8 @@
                 row.dataset.type = r.acType;
                 row.dataset.taurusdone = modemDone(r, 'taurus') ? 'yes' : 'no';
                 row.dataset.hughesdone = modemDone(r, 'hughes') ? 'yes' : 'no';
-                row.dataset.search = [r.id, r.taurus.mgId, r.taurus.tid, r.hughes.chassisId, r.hughes.esn]
+                row.dataset.search = [r.id, r.taurus.mgId, r.taurus.tid, r.hughes.chassisId,
+                                      r.hughes.esn, r.modman.kontronSn, r.modman.eclipseSn]
                     .filter(Boolean).join(' ');
 
                 const dateCell = (slot) => {
@@ -9892,11 +9929,25 @@
                                 data-modem="${escAttr(r.id)}" data-field="modem/${slot}/${field}" onchange="handleModemEdit(this)">`;
                 };
 
-                const noteCell = (slot) => {
-                    const v = r[slot].notes;
-                    return editing
-                        ? `<input class="edit-text comment-input" value="${escAttr(v)}" placeholder="Add a comment" data-modem="${escAttr(r.id)}" data-field="modem/${slot}/notes" onchange="handleModemEdit(this)">`
-                        : `<span class="comment-text">${v ? escAttr(v) : '—'}</span>`;
+                // MODMAN cells write to /units, so they carry the modman/* paths that
+                // commitModemChanges routes there rather than to /aircraft.
+                const mmDateCell = editing
+                    ? `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(r.modman.installedDate)}"
+                           data-modem="${escAttr(r.id)}" data-field="modman/installedDate" onchange="handleModemEdit(this)">`
+                    : (r.modman.installedDate
+                        ? (() => {
+                            const age = activationAge(r.modman.installedDate);
+                            return `<span class="fleet-date">${escAttr(r.modman.installedDate)}</span>${age ? `<span class="age-pill" title="Time since MODMAN install">${age}</span>` : ''}`;
+                          })()
+                        : '<span class="fleet-notset">Not set</span>');
+
+                const mmSnCell = (field) => {
+                    const v = r.modman[field];
+                    if (!editing) {
+                        return v ? modemIdHTML(v) : '<span class="fleet-notset">—</span>';
+                    }
+                    return `<input class="edit-text" maxlength="60" value="${escAttr(v)}" placeholder="—"
+                                data-modem="${escAttr(r.id)}" data-field="modman/${field}" onchange="handleModemEdit(this)">`;
                 };
 
                 // IPHO writes the TOP-LEVEL iphoStatus, the same field and the same
@@ -9932,16 +9983,18 @@
                     }</td>
                     <td data-sort="${escAttr(r.acType)}">${r.acType ? escAttr(TYPE_SHORT_LABEL[r.acType] || r.acType) : '—'}</td>
 
+                    <td class="modem-modman-col modem-group-start" data-sort="${dateSortKey(toISODate(r.modman.installedDate)) || '99999999'}">${mmDateCell}</td>
+                    <td class="modem-modman-col" data-sort="${escAttr(r.modman.kontronSn)}">${mmSnCell('kontronSn')}</td>
+                    <td class="modem-modman-col" data-sort="${escAttr(r.modman.eclipseSn)}">${mmSnCell('eclipseSn')}</td>
+
                     <td class="modem-taurus-col modem-group-start" data-sort="${ds('taurus')}">${dateCell('taurus')}</td>
                     <td class="modem-taurus-col" data-sort="${iphoDone ? 'completed' : 'pending'}">${iphoCell}</td>
                     <td class="modem-taurus-col" data-sort="${escAttr(r.taurus.mgId)}">${idCell('taurus', 'mgId')}</td>
                     <td class="modem-taurus-col" data-sort="${escAttr(r.taurus.tid)}">${idCell('taurus', 'tid')}</td>
-                    <td class="modem-taurus-col col-comment" data-sort="${escAttr(r.taurus.notes)}">${noteCell('taurus')}</td>
 
                     <td class="modem-hughes-col modem-group-start" data-sort="${ds('hughes')}">${dateCell('hughes')}</td>
                     <td class="modem-hughes-col" data-sort="${escAttr(r.hughes.chassisId)}">${idCell('hughes', 'chassisId')}</td>
                     <td class="modem-hughes-col" data-sort="${escAttr(r.hughes.esn)}">${idCell('hughes', 'esn')}</td>
-                    <td class="modem-hughes-col col-comment" data-sort="${escAttr(r.hughes.notes)}">${noteCell('hughes')}</td>
                 `;
                 tbody.appendChild(row);
             });
@@ -10019,7 +10072,7 @@
             const path = el.dataset.field;
             const entry = pendingModem[id] || {};
 
-            if (path.endsWith('/commissionedDate')) {
+            if (path === 'modman/installedDate' || path.endsWith('/commissionedDate')) {
                 const v = readDateField(el);
                 // ⚠️ Return WITHOUT staging on a bad date. Staging false would clear a
                 // date that was already good — the check happens before the record is
@@ -10047,30 +10100,70 @@
             const token = await getIdToken();
             if (!token) return;
 
-            // One multi-path PATCH, the shape every other save on the page uses. The
-            // staged keys are already aircraft-relative paths, so this is a join.
+            // Two nodes, because MODMAN is a physical box: its serials and its fitted
+            // date belong to /units, everything else to /aircraft. The staged keys say
+            // which — anything under modman/ is a unit write.
             // ⚠️ Leaf paths only — never `modem` or `modem/<slot>` alongside a field
             // beneath it; Firebase rejects a multi-path update where one path
             // contains another.
             const patch = {};
+            const unitPatch = {};
+            const byId = {};
+            modemRows().forEach(r => { byId[r.id] = r; });
+            const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+            const MM_FIELD = { kontronSn: 'serial', eclipseSn: 'altSerial' };
+
             ids.forEach(id => {
                 const e = pendingModem[id];
+                const row = byId[id];
                 Object.keys(e).forEach(path => {
-                    patch[`${id}/${path}`] = e[path] === '' ? null : e[path];
+                    const v = e[path] === '' ? null : e[path];
+                    if (!path.startsWith('modman/')) { patch[`${id}/${path}`] = v; return; }
+                    if (!row) return;
+                    const field = path.slice('modman/'.length);
+                    let unitId = row.modman.unitId;
+                    let fitId  = row.modman.fitmentId;
+                    if (!unitId) {
+                        // No MODMAN on record for this aircraft yet: mint the unit and
+                        // its fitment in the same shape Record Installed writes, so the
+                        // box reads identically on the Serials and Hardware tabs.
+                        unitId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                        fitId  = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                        unitPatch[`${unitId}/lruId`] = row.modman.lruId;
+                        unitPatch[`${unitId}/addedAt`] = stamp;
+                        unitPatch[`${unitId}/fitments/${fitId}`] = {
+                            aircraft: id, state: 'on_wing', loggedAt: stamp,
+                        };
+                        row.modman.unitId = unitId;
+                        row.modman.fitmentId = fitId;
+                    }
+                    if (field === 'installedDate') unitPatch[`${unitId}/fitments/${fitId}/fittedDate`] = v;
+                    else unitPatch[`${unitId}/${MM_FIELD[field]}`] = v;
                 });
             });
 
             setSyncStatus('🟡 Saving modem changes...', '#e0a800');
             try {
-                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
-                    method: 'PATCH', body: JSON.stringify(patch),
-                });
+                if (Object.keys(unitPatch).length) {
+                    const ures = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(unitPatch),
+                    });
+                    const udata = await ures.json();
+                    if (!ures.ok || (udata && udata.error)) throw new Error((udata && udata.error) || 'unit write failed');
+                }
+                const res = Object.keys(patch).length
+                    ? await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(patch),
+                      })
+                    : { ok: true, json: async () => ({}) };
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 // Mirror locally so the table is right before the stream echoes back.
                 ids.forEach(id => {
                     const a = aircraftLive[id] || (aircraftLive[id] = {});
                     Object.keys(pendingModem[id]).forEach(path => {
+                        // MODMAN lives in /units; the poll brings it back.
+                        if (path.startsWith('modman/')) return;
                         const v = pendingModem[id][path];
                         const parts = path.split('/');
                         let node = a;
