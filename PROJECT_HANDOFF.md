@@ -1,4 +1,4 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.62.0, 2026-08-26)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.63.0, 2026-08-26)
 
 Paste this whole document into a new chat to resume work with full context.
 
@@ -1429,9 +1429,35 @@ firing before authentication and with `backup.sh` losing anonymous access.
    field choosing between them, which could not represent an aircraft at all.
 
    **A row is an AIRCRAFT**, with each modem's columns under its own **master head**
-   — a two-row `<thead>`: Taurus over `Commissioned Date / IPHO / MG ID / TID /
-   Comments`, Hughes over `Commissioned Date / Chassis ID / ESN / Comments`, and
-   `# / Aircraft / Type` spanning both rows.
+   — a two-row `<thead>`: **MODMAN** over `Installed / Kontron S/N / Eclipse S/N`,
+   Taurus over `Commissioned Date / IPHO / MG ID / TID`, Hughes over
+   `Commissioned Date / Chassis ID / ESN`, and `# / MSP 5.2.2 Install Date / Aircraft /
+   Type` spanning both rows. **Comments were removed from both modems** (user,
+   2026-08-26); the `notes` fields stay declared and inert like `se4`/`se2c`.
+
+   ⚠️ **MODMAN reads `/units`, NOT `/aircraft`** — and that is the point. It is a
+   physical box with serials and a fitment, exactly what `/units` is the single source
+   for, and boxes were **already on record there** (serial `44` on AQB, `226` on ASBB).
+   Storing them under `/aircraft/{tail}/modem` would have been a second home for data
+   the register already held, with the page showing blanks beside it.
+
+   | column | field |
+   |---|---|
+   | Kontron S/N | `unit.serial` |
+   | Eclipse S/N | `unit.altSerial` — declared for exactly this, unused until now |
+   | Installed | the fitment's `fittedDate` |
+
+   Editing writes back: an aircraft that already has a MODMAN patches that unit, one
+   that does not gets a unit **and** fitment minted in the shape Record Installed uses.
+   ⚠️ **The save is therefore TWO PATCHes**, one per node, split on whether the staged
+   key starts `modman/`. The local mirror skips those keys — the poll brings `/units`
+   back.
+
+   **MODMAN is placed FIRST**, before Taurus: it is the chassis and the two modems sit
+   inside it. It also keeps the Kontron blue clear of the Hughes blue, which are closer
+   than the other pairing (ΔE 17.8 against 35.3), with the Gilat indigo between them —
+   and it stays visible under either single-modem view, because filtering to Taurus
+   does not stop the box being the box.
 
    ⚠️ **SE4 and SE2c are NOT tracked here** (user, 2026-08-25). They are **fleet-wide
    settings**, not per-aircraft facts — the Overview's *Project Objectives* already
@@ -1444,8 +1470,11 @@ firing before authentication and with `backup.sh` losing anonymous access.
    artwork rather than eyeballed. Taurus is **Gilat's SkyEdge IV** aero modem — the
    line Hughes competes with — so it takes Gilat's indigo **`#1B115D`** (the wordmark
    in commons `Gilat_logo.svg`); Hughes takes **`#005DAC`** (commons
-   `Hughes_Communications_logo.svg`, which the published brand palettes agree on).
-   White on them is 16.34:1 and 6.64:1, both past AA.
+   `Hughes_Communications_logo.svg`, which the published brand palettes agree on); the
+   MODMAN is Kontron's, so it takes **`#005083`** with **`#46b294`** as its left accent
+   (both from commons `Kontron_logo.svg`). The teal edge is a second cue that does not
+   depend on telling two blues apart. White on them is 16.34:1, 6.64:1 and 8.48:1 —
+   all past AA.
    ⚠️ **Colours only, never logo artwork.** The page carries **no external assets** by
    design, so a mark could only be inlined as a data URI — and third-party trademarks
    are not ours to embed on that basis. **Each modem keeps its own commissioning
@@ -2313,6 +2342,13 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.63.0 — MODMAN section, Comments removed
+A third column group for the MODMAN chassis — Installed, Kontron S/N, Eclipse S/N — in
+Kontron's own blue and teal, placed first because the two modems sit inside it. It
+reads and writes **`/units`**, where two MODMAN boxes were already on record, so both
+appear without any data entry; `altSerial` finally has the use it was declared for. The
+save became two PATCHes, one per node. Comments left both modem groups.
 
 ### v2.62.0 — Modem gains an MSP 5.2.2 install date column
 A new first column between `#` and Aircraft, derived from `completionDate` rather than
