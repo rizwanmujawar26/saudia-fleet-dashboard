@@ -141,6 +141,7 @@ adding it to the rules first.
 | `swVersion` | semver, e.g. `2.0.0` / `2.1.0` |
 | `completionLocation` | `Jeddah` \| `Riyadh` |
 | `completionDate` | `DD-Mon-YYYY` |
+| `otaPatchUTC` | full ISO stamp, `2026-08-17T14:56:00Z`. When the over-the-air patch that follows the middleware load reached the aircraft. **Absent = not patched** |
 | `iphoStatus` | `completed` |
 | `mg101Status` | `provisioned` \| `done` |
 | `beamcfgStatus` | `pending` \| `done` (linefit pair only) |
@@ -1435,6 +1436,35 @@ Fleet tab uses — deliberately the identical treatment, so the two tables read 
 same way. The field behind it is **`completionDate`**, unchanged; only the column's
 label and position moved. Undated aircraft sort to the end on `99999999` and read
 *Not set*, which today is exactly the four still behind on middleware.
+**OTA Patch Date is column 3**, immediately after Installation Date, because the
+patch is pushed over the air *after* the middleware load — the two read as one
+sequence. Field is **`otaPatchUTC`** on `/aircraft/{tail}`, top level beside
+`completionDate` rather than nested, for the same reason `ugoVersion` is.
+
+⚠️ **It is a full ISO stamp, so it carries the Media table's two traps**, which the
+other date columns on this tab do not: `activationAge()` parses `DD-Mon-YYYY` or
+`YYYY-MM-DD` only, so the stamp is **sliced to its first 10 characters** or the pill
+silently never draws; and `dateSortKey()` returns **14 digits**, so the undated
+sentinel is `99999999999999` — an 8-digit one sorts unpatched aircraft to the FRONT.
+
+**Stored ISO, displayed and typed DAY-FIRST.** `parseOtaStamp` / `toOtaInput` /
+`readOtaField` mirror `fmtDate` / `toDMY` / `readDateField` exactly, and nothing else
+parses this value. `parseOtaStamp` round-trips through a real `Date`, so `31-02` and
+`25:00` are rejected rather than rolled forward, and **`08-17-2026` is rejected** —
+a month-first entry cannot get in. ⚠️ On `false` the handler returns **without
+staging**, so a typo cannot clear a stamp that was already good.
+
+⚠️ **The age pill sits BELOW the date, beside the time — not inline after it.**
+Inline, the column measured 140px and pushed the table from exactly fitting its
+wrapper (1165px at a 1280px viewport) to 1198px, so a laptop gained a sideways
+scroll it never had. Stacked it is 102px and the table fits again. This is the same
+fix, for the same reason, as the Modem tab stacking its dates above their pills.
+**Re-measure if anything is added to this table** — it fits with 0px to spare.
+
+40 aircraft carry a patch, which is exactly `swFleet()`. The four without are the two
+linefit (own table) and the two In Retrofit — so the column has no blanks today, and
+the "Not set" branch is what a newly activated aircraft will show.
+
 ⚠️ **The label says "Installation" but the field is the software COMPLETION date.**
 On this tab that reads correctly — it is when the middleware was installed — but do
 not confuse it with the Fleet tab's **Install Site** (`retrofitLocation`, where the

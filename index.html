@@ -2058,6 +2058,41 @@
 
         .fleet-notset { color: #b3bac0; font-style: italic; }
 
+        /* The OTA patch time, under its day-first date. A quiet second line rather
+           than a second column: the minute matters when reading it, but never enough
+           to compete with the date or to widen an already 11-column table. */
+        .ota-time {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            color: #98a1a9;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Date on top, then age and time on one quiet line beneath. The column is
+           sized by its widest LINE, so stacking keeps it to the width of the date
+           alone rather than date + pill + time laid end to end. */
+        .ota-stack { display: inline-block; text-align: left; }
+
+        .ota-sub {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 2px;
+        }
+
+        /* The shared pill, trimmed for a sub-line: no left margin (it is first on its
+           own row now) and a touch less padding. Colour and weight are untouched, so
+           it still reads as the same pill as every other age on the dashboard. */
+        .age-pill-tight {
+            margin-left: 0;
+            padding: 0 4px;
+            font-size: 9px;
+            vertical-align: 0;
+        }
+
+        .edit-ota { max-width: 132px; }
+
         #fleetTable td:not(.col-comment) {
             white-space: nowrap;
         }
@@ -4632,14 +4667,15 @@
                             <tr>
                                 <th>#</th>
                                 <th class="sortable-th" data-col="1" data-label="Installation Date" onclick="sortTable('aircraftTable', 1)">Installation Date</th>
-                                <th class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortTable('aircraftTable', 2)">Aircraft</th>
-                                <th class="sortable-th" data-col="3" data-label="Type" onclick="sortTable('aircraftTable', 3)">Type</th>
-                                <th class="sortable-th" data-col="4" data-label="Status" onclick="sortTable('aircraftTable', 4)">Status</th>
-                                <th class="sortable-th" data-col="5" data-label="Middleware" onclick="sortTable('aircraftTable', 5)">Middleware</th>
-                                <th class="sortable-th" data-col="6" data-label="IPHO Mode" onclick="sortTable('aircraftTable', 6)">IPHO Mode</th>
-                                <th class="sortable-th" data-col="7" data-label="SES Migration" onclick="sortTable('aircraftTable', 7)">SES Migration</th>
-                                <th class="sortable-th" data-col="8" data-label="Base" onclick="sortTable('aircraftTable', 8)">Base</th>
-                                <th class="sortable-th col-comment" data-col="9" data-label="Comments" onclick="sortTable('aircraftTable', 9)">Comments</th>
+                                <th class="sortable-th" data-col="2" data-label="OTA Patch Date" onclick="sortTable('aircraftTable', 2)">OTA Patch Date</th>
+                                <th class="sortable-th" data-col="3" data-label="Aircraft" onclick="sortTable('aircraftTable', 3)">Aircraft</th>
+                                <th class="sortable-th" data-col="4" data-label="Type" onclick="sortTable('aircraftTable', 4)">Type</th>
+                                <th class="sortable-th" data-col="5" data-label="Status" onclick="sortTable('aircraftTable', 5)">Status</th>
+                                <th class="sortable-th" data-col="6" data-label="Middleware" onclick="sortTable('aircraftTable', 6)">Middleware</th>
+                                <th class="sortable-th" data-col="7" data-label="IPHO Mode" onclick="sortTable('aircraftTable', 7)">IPHO Mode</th>
+                                <th class="sortable-th" data-col="8" data-label="SES Migration" onclick="sortTable('aircraftTable', 8)">SES Migration</th>
+                                <th class="sortable-th" data-col="9" data-label="Base" onclick="sortTable('aircraftTable', 9)">Base</th>
+                                <th class="sortable-th col-comment" data-col="10" data-label="Comments" onclick="sortTable('aircraftTable', 10)">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="aircraftTableBody">
@@ -6107,10 +6143,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.68.1';
-        const APP_BUILD    = '2026.08.27.03';
+        const APP_VERSION  = '2.69.0';
+        const APP_BUILD    = '2026.08.28.01';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-27T20:28:21Z';
+        const APP_DEPLOYED = '2026-08-28T00:00:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6527,6 +6563,55 @@
             const raw = (el.value || '').trim();
             if (!raw) { el.classList.remove('input-invalid'); return ''; }
             const v = fmtDate(raw);
+            el.classList.toggle('input-invalid', !v);
+            return v || false;
+        }
+
+        // ---- OTA patch stamp ------------------------------------------------
+        // The OTA patch is stored as a full ISO stamp (2026-08-17T14:56:00Z) because
+        // the minute it landed is operationally meaningful — the same reasoning as
+        // media's loadedDateUTC. It is TYPED and DISPLAYED day-first like every other
+        // date here: storing ISO is not a licence to show month-first anywhere.
+        // These three mirror fmtDate / toDMY / readDateField exactly; nothing else
+        // should parse this value.
+        function parseOtaStamp(v) {
+            const raw = (v || '').trim();
+            if (!raw) return null;
+            let y, mo, d, hh, mm, ss;
+            const iso = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[T ](\d{1,2}):(\d{2})(?::(\d{2}))?Z?$/);
+            if (iso) {
+                [y, mo, d, hh, mm, ss] = [iso[1], iso[2], iso[3], iso[4], iso[5], iso[6] || '00'];
+            } else {
+                // day-first, the form the box asks for: dd-mm-yyyy hh:mm[:ss]
+                const m = raw.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+                if (!m) return null;
+                [d, mo, y, hh, mm, ss] = [m[1], m[2], m[3], m[4], m[5], m[6] || '00'];
+            }
+            const pad = n => String(n).padStart(2, '0');
+            [mo, d, hh, mm, ss] = [pad(mo), pad(d), pad(hh), pad(mm), pad(ss)];
+            // Round-trip through a real Date, so 31-02 and 25:00 are REJECTED rather
+            // than rolling into the next day — the same guard fmtDate() applies.
+            const dt = new Date(`${y}-${mo}-${d}T${hh}:${mm}:${ss}Z`);
+            if (isNaN(dt.getTime())) return null;
+            if (dt.getUTCFullYear() !== +y || dt.getUTCMonth() + 1 !== +mo
+                || dt.getUTCDate() !== +d || dt.getUTCHours() !== +hh
+                || dt.getUTCMinutes() !== +mm || dt.getUTCSeconds() !== +ss) return null;
+            return `${y}-${mo}-${d}T${hh}:${mm}:${ss}Z`;
+        }
+
+        // Stored ISO -> the `dd-mm-yyyy hh:mm` an input shows. Mirrors toDMY().
+        function toOtaInput(v) {
+            const m = (v || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+            return m ? `${m[3]}-${m[2]}-${m[1]} ${m[4]}:${m[5]}` : '';
+        }
+
+        // '' when empty, the stored form when valid, and false when the box holds
+        // something that is not a stamp. ⚠️ On false the handler MUST return without
+        // staging, or a typo silently clears a value that was already good.
+        function readOtaField(el) {
+            const raw = (el.value || '').trim();
+            if (!raw) { el.classList.remove('input-invalid'); return ''; }
+            const v = parseOtaStamp(raw);
             el.classList.toggle('input-invalid', !v);
             return v || false;
         }
@@ -7054,6 +7139,11 @@
             if (field === 'completionDate') {
                 const v = readDateField(el);
                 if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
+                value = v || null;
+            }
+            if (field === 'otaPatchUTC') {
+                const v = readOtaField(el);
+                if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy hh:mm (UTC) — that is not a date and time', '#dc3545'); return; }
                 value = v || null;
             }
             // Empty means "no value" for these — null removes the field rather than
@@ -7966,6 +8056,37 @@
                         : '<span class="fleet-notset">Not set</span>';
                 }
 
+                // OTA patch: the middleware load is followed by a patch pushed over
+                // the air, so the column sits directly after Installation Date — the
+                // two read as one sequence.
+                const ota = aircraft.otaPatchUTC || '';
+                // ⚠️ A full timestamp gives dateSortKey() FOURTEEN digits, so the
+                // "no value" sentinel needs fourteen nines. An 8-digit one would sort
+                // unpatched aircraft to the FRONT — the Media table's trap exactly.
+                const otaSort = ota ? dateSortKey(ota) : '99999999999999';
+                let otaCell;
+                if (editMode) {
+                    otaCell = `<input type="text" maxlength="16" placeholder="dd-mm-yyyy hh:mm" autocomplete="off" class="edit-date edit-ota" data-id="${aircraft.id}" data-field="otaPatchUTC" value="${toOtaInput(ota)}" onchange="handleAircraftEdit(this)" title="UTC. Empty clears the patch date.">`;
+                } else if (ota) {
+                    // ⚠️ activationAge() parses DD-Mon-YYYY or YYYY-MM-DD only and
+                    // returns '' for anything else, so the stamp must be SLICED to its
+                    // first 10 characters — without that the pill silently never draws.
+                    const otaAge = activationAge(ota.slice(0, 10));
+                    // ⚠️ The pill sits BELOW the date, beside the time — not inline
+                    // after it. Inline, this column measured 140px and pushed the
+                    // table from exactly fitting its wrapper (1165px) to 1198px, so a
+                    // 1280px laptop gained a sideways scroll it never had. Stacking is
+                    // the same fix the Modem tab used for the same reason.
+                    otaCell = `<div class="ota-stack">`
+                        + `<span class="fleet-date">${escAttr(fmtDate(ota.slice(0, 10)) || '')}</span>`
+                        + `<div class="ota-sub">`
+                        + (otaAge ? `<span class="age-pill age-pill-tight" title="Time since OTA patch">${otaAge}</span>` : '')
+                        + `<span class="ota-time">${escAttr(ota.slice(11, 16))} UTC</span>`
+                        + `</div></div>`;
+                } else {
+                    otaCell = '<span class="fleet-notset">Not set</span>';
+                }
+
                 const loc = aircraft.completionLocation || '';
                 const locWarning = (swVersionOf(aircraft) === latestSwVersion() && !loc) ? `<div class="loc-warning">⚠ needed to count as done</div>` : '';
                 let locCell;
@@ -7982,6 +8103,7 @@
                 row.innerHTML = `
                     <td>${idx + 1}</td>
                     <td data-sort="${dateSort}">${dateCell}</td>
+                    <td data-sort="${otaSort}">${otaCell}</td>
                     <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong></td>
                     <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
                     <td data-sort="${statusSort}">${statusCell}</td>

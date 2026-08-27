@@ -13,6 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.69.0 — OTA Patch Date on the Software tab
+The middleware load is followed by a patch pushed over the air; that date and time is
+now a column, `otaPatchUTC` on `/aircraft/{tail}`, with the same age pill the other
+date columns carry. Stored as a full ISO stamp because the minute matters, displayed
+and typed day-first like everything else. 40 records loaded — exactly `swFleet()`.
+Rules first, then the page. The pill is stacked under the date rather than inline:
+inline it pushed the table 33px past its wrapper and reintroduced a sideways scroll.
+
 ### v2.68.1 — Media widgets vanishing on load
 `/mediaLoads` was not in the initial fetch, only the 25-second poll, so every monthly
 card was missing for the first 25 seconds of each page load. It joins the initial fetch,
