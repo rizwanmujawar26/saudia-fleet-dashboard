@@ -29,6 +29,13 @@ Fields added to `/units` during 2026-08-25 that a restore must therefore carry:
 `roaming` (`global|local`, on the unit), `lifecycle` (declared, currently unused — see
 the handoff), and `condition` (`fault`, on a **fitment**).
 
+⚠️ **`/mediaLoads` is a NODE OF ITS OWN and holds the entire media history** — one
+record per load, and the only record that a given aircraft ever took a given cycle. It
+was added on 2026-08-26 and, for a day, was **missing from every node list in these
+scripts**: a restore would have dropped the whole history silently. Adding a node means
+four edits — the rules, `backup.sh`, `restore.sh` and `verify-deployment.sh`. Check a
+fresh snapshot lists it.
+
 A fitment also gained **`roaming`** (v2.53.0), and its long-declared **`notes`** is now
 in use: roaming and the SIM comment moved from the unit to the fitment so two periods of
 service stay independent. A restore that carries units but drops fitment fields would
@@ -150,7 +157,9 @@ npx --yes firebase-tools deploy --only database --project saudia-fleet-dashboard
 4. Re-add editors if `/editors` was hit (above).
 5. Confirm: the app should show **44 aircraft** and the tabs should populate. The
    4G SIM tab is the quickest sanity check that `/units` came back whole — it should
-   list ~53 cards with their statuses, not an empty table.
+   list ~53 cards with their statuses, not an empty table. The **Media** tab checks
+   `/mediaLoads`: its widget strip should show a card per cycle with a "N loaded" pill,
+   not a single No Media card.
 
 ---
 

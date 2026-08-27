@@ -1,39 +1,45 @@
-# Saudia Connectivity Fleet Status — Project Handoff (v2.65.0, 2026-08-26)
+# Saudia Connectivity Fleet Status — Project Handoff (v2.68.1, 2026-08-27)
 
 Paste this whole document into a new chat to resume work with full context.
 
 ## Where things stand (read this first)
 
-The last working session took the app **v2.30.3 → v2.50.0**. If you are picking this
-up cold, these are the changes that alter how you should work on it — the rest of this
-document is the detail.
+The last session took the app **v2.50.0 → v2.68.1**. Everything below is detail; these
+are the things that change how you work on it.
 
-**Four cross-cutting rules were established. They are not per-page decisions.**
+**The Modem tab is new and is where most of the work went.** 🛰️ Modem, restricted to
+signed-in users, retrofit only. One row per aircraft: MSP install date, then three
+column groups — MODMAN, Taurus, Hughes — each in its maker's brand colour, with eye
+toggles to hide any of them.
 
-| | where |
+**Media is now an EVENT LOG, and that is the biggest change to the data model.**
+`/mediaLoads` holds one record per load; the current load is *derived* from the newest
+one. Past loads and their Timeline entries persist, cycles have windows, and the Media
+page can be viewed against any declared cycle.
+
+**Four rules worth knowing before you touch anything:**
+
+| | |
 |---|---|
-| **Filters are DECLARED**, never hand-written in markup — one entry in `FILTER_BARS` | *Filter bar* |
-| **Dates are day-first everywhere**, and `<input type="date">` is banned | *Conventions* |
-| **Every table opens on a date column, oldest first**, with sentinels for undated rows | *Table sorting* |
-| **Widgets share one markup and one colour vocabulary**, and counts should sum | *Widget vocabulary* |
+| **A new node needs FOUR edits** — the rules, and the node lists in `backup.sh`, `restore.sh`, `verify-deployment.sh` | *Backups* |
+| **A "view" that changes what a row MEANS must REBUILD, not re-filter** | *Media / Modem* |
+| **A write to a POLLED node must be mirrored locally**, or the save looks like it vanished | *Media / Modem* |
+| **Style a frozen-head table by CLASS** — the floating copy inherits className, never id | *Sticky header* |
 
-**What was built:** the 4G SIM register (new public tab, 53 cards), Activation as a
-Timeline milestone, activity editing, the filter-bar component replacing every pill
-row, frozen filter bars and table heads, full-bleed mobile layout.
+⚠️ **The most expensive habit from that session, twice over: verify in the browser, and
+verify the thing the USER sees.** Three bugs shipped or nearly shipped that every diff
+and syntax check passed — a sort direction given as `'asc'` where the code multiplies by
+it, a filter that changed state but never rebuilt, and a node left out of the initial
+fetch so a whole widget strip was empty for 25 seconds. None were visible in the code.
 
-**What changed about the data:** `/units` gained `roaming`, `lifecycle` and a fitment
-`condition`; 41 SIM installation dates were cleared and 34 rewritten from activation
-dates; `/aircraft/{tail}/simRoaming` is superseded and unread.
+⚠️ **And a data-shaped one: nothing was ever actually lost, but it looked like it.**
+A MODMAN save wrote correctly and then redrew from a store that had not heard about it.
+Before concluding data is gone, `curl` the node.
 
-**Two long-standing caveats closed:** the `/units` client write path is proven, and
-CWAP quantities are answered (A320-family ×3, A330 ×5, both fits).
-
-⚠️ **The single most useful habit from that session:** every edit script asserted its
-anchor was unique *before* writing, and several aborted mid-way because of it — losing
-edits that had already printed "ok". **Always re-verify in the browser after a scripted
-edit**, not just in the diff. Two real bugs were caught that way and would otherwise
-have shipped: a table whose headers and rows disagreed, and a date handler that staged
-`null` and would have wiped good dates.
+**Current live figures** (2026-08-27, re-read them — the user edits constantly):
+44 aircraft, 42 Active, 40 retrofit + 2 linefit. 40 media load records: 35 August,
+1 September, 1 July, 1 Light Media, 2 DEV. 70 units, of which 53 SIM and 4 MODMAN.
+One aircraft (AQB) carries a full modem record.
 
 ---
 
@@ -281,6 +287,27 @@ meaningfully carry a serial with no date, which is exactly what the backlog need
 `/activities` keeps its role as the event and shop log and links to a fitment by
 `activityId`. **Serials are no longer stored on an activity at all**: Add New
 Activity's Old/New part fields now write to `/units` via `unitWritesForActivity()`.
+
+### `/mediaLoads/{id}` — every media load ever, one record per load
+
+`aircraft`, `cycle` (MMYY, absent on a DEV load), `loadedAt` (ISO), `source`, `loggedAt`.
+
+⚠️ **This is the source of truth for media.** `/aircraft/{tail}/media` used to hold the
+current load and was *overwritten* on every update, so the previous load — and its
+Timeline entry — vanished. A load is an **event**, and events are kept.
+
+**Current media is DERIVED**, in `rebuildAircraftData()`, as the newest record for that
+tail. That one seam is why the change was small: fourteen places read `a.media` and
+they all read the object that function builds. It falls back to the stored value while
+the log is still loading, so a slow poll shows the last known load rather than a blank.
+
+⚠️ **`/aircraft/{tail}/media` is SUPERSEDED but not deleted** — nothing reads it for
+current media now. Left in place rather than cleared, like `simRoaming`.
+
+⚠️ **Polled, not streamed** — the page already holds three streams and the budget
+allows no seventh. **It must be in the INITIAL fetch as well as the poll**: it was left
+to the poll alone once, and since the Media widgets are built from it, every monthly
+card was missing for the first 25 seconds of each page load.
 
 ### `/hardware/{lruId}` — what belongs to the unit, not to an aircraft
 
@@ -1534,6 +1561,33 @@ firing before authentication and with `backup.sh` losing anonymous access.
    ⚠️ **Widgets do NOT follow the toggles.** They describe the data; hiding a column
    does not uncommission a modem.
 
+   **Modem Output** is stored as a BARE NUMBER on the fitment beside `fittedDate` —
+   measured for this installation, so moving the box re-measures rather than inherits.
+   The unit is **typography, not data**: entering `8` reads back as `8 dBm` with the
+   unit quieter than the figure. The rules take an optional sign and up to two decimals
+   and **reject `8dBm`**, so the unit can never be stored.
+   ⚠️ `data-sort` carries the raw number — `sortTable` parseFloats it, and a zero-padded
+   key turned `-8` into `000000-8`, which reads as 0.
+
+   ⚠️ **Saving a MODMAN edit writes /units, and that write MUST be mirrored.** It was
+   not, so a saved serial appeared to vanish: the write succeeded, the table redrew from
+   a `unitsLive` that had not heard about it, and `/units` is polled. **The data was
+   never lost.** `unitOps` records what the unit write did and replays it locally.
+
+   ⚠️ **A new MODMAN is written as ONE object.** Writing `<unit>/fitments/<fit>` and
+   `<unit>/fitments/<fit>/fittedDate` together is a multi-path update where one path
+   contains another, which Firebase rejects — it would have failed the whole save the
+   first time anyone typed a serial and a date together.
+
+   **Column widths are a MIN-WIDTH on the body cells**, sized to the values.
+   ⚠️ `width` on a `<th>` under `table-layout: auto` is only a hint and was overridden —
+   a 16-character chassis id ended up in an 88px column. And **not** a `<colgroup>`: the
+   eye toggles can remove three column groups and a colgroup is a fixed list of columns.
+   `nth-child` counts DOM position, so a hidden group does not shift them.
+
+   **One type scale**: 10px headers, 11.5px values, 8.5px qualifiers, 12px registration,
+   and a 1.08em bump on an identifier's promoted digits. Everything centred.
+
    **Compact layout** (user, 2026-08-26). Thirteen columns have to fit a laptop, and
    the Hughes group was falling off the right. **1195px → 977px**, which fits from
    1152px of viewport upward. What bought it, in order of size:
@@ -1763,6 +1817,45 @@ clears them rather than keeping a stale month.
   ⚠️ The two records still store `mediaDisplay: 'May 2026'`. Nothing reads it for
   display — `cycleToDisplay()` derives the label — so it is superseded rather than
   wrong, the same way `simRoaming` is.
+
+- **`MEDIA_CYCLES` defines each cycle's release date**, and that is all that is
+  stored: `{ '0826': { size: '791 GB', start: '26-Jul-2026' } }`. ⚠️ **The END is
+  DERIVED** as the day before the next cycle's start — September opening on 25-Aug is
+  exactly what makes August run 26-Jul to 24-Aug. Storing both would let them
+  contradict each other. Code, not data, like `SW_VERSIONS`: one line a month.
+
+- **Two figures per cycle widget, and the difference is the point.** The figure and bar
+  track the **live** count — aircraft on that media right now, which falls as they move
+  on. Below the bar sit the window and a pill counting every aircraft that **ever** took
+  it, which only rises. August will read fewer and fewer live while "35 loaded" stays
+  true.
+  ⚠️ **A missing log must never empty the strip.** A cycle any aircraft currently
+  carries gets a card even with no log at all, its total falling back to the live count.
+
+- **The Cycle view** (`cycleview`, `single: true`) is a VIEW, not a row filter. Empty
+  means current media. Pick a cycle and every in-scope aircraft is listed against *that*
+  cycle — takers with their date, the rest reading `NOT LOADED`, because the blanks are
+  how a missed month is spotted. Read-only in that view: a save there would write a new
+  load rather than correct the historical one being looked at.
+  ⚠️ **A view change must REBUILD, not re-filter.** `applyMediaFilters()` only toggled
+  row visibility, so picking a cycle did *nothing* — the rows still showed current
+  media. Guarded on `mediaViewRendered`, exactly as the Modem table is.
+  ⚠️ **Only cycles declared in `MEDIA_CYCLES`** are offered, plus the two out-of-cycle
+  kinds. An older month with no release date has no window to view against — but its
+  records, its count and its **widget** all remain.
+
+- ⚠️ **The DEV load has no cycle code**, because the rules accept four digits only. It
+  takes a **pseudo-cycle** (`MEDIA_DEV_VIEW`) used for views and counts and **never
+  stored**; `loadCycleKey()` is the one place that mapping lives.
+
+- **Missed months** come from `missedCycles(tail)` — the cycles between an aircraft's
+  first load and now that it never took. July straight to September reports August.
+
+- **The Timeline emits one row per LOAD**, not one per aircraft, which is what makes
+  past entries persist. A derived **cycle-closed** row lands on each cycle's end date
+  with the total and percentage — never stored, like the Activation milestone.
+  ⚠️ Because a late load still counts toward its cycle (user's call), that figure can
+  **rise after the close date**: it is the cycle's total, not a frozen snapshot.
 
 - `mediaStatus` is **never stored** — it is relative to the newest cycle in the
   fleet, so a stored value goes stale the moment a newer cycle lands.
@@ -2007,6 +2100,11 @@ frozen head on a 1055px table in a 351px window.
   row** (the only row with exactly one cell per column), overrides that inference. It
   is guarded on `head.rows.length > 1`, so the eight single-row tables keep the per-`th`
   path they already work with. Verified at 0px drift on both.
+- ⚠️ **`syncFrozenHeads` copies a table's className, NOT its id.** Style a table by
+  `#id` and the floating copy gets none of it — it renders at the default font and
+  padding, wraps differently, and is then clipped by a host sized to the live head. The
+  Modem table's sub-headers lost their second line to exactly this. **Style a
+  frozen-head table by CLASS.**
 - ⚠️ **HIDDEN columns must be SKIPPED when building that colgroup, not measured as
   zero.** `display: none` removes a cell from the table structure outright — a table
   with four hidden columns has four fewer **columns**, not four zero-width ones — so a
@@ -2095,6 +2193,63 @@ skipped, so an empty-state row is never numbered.
 
 ---
 
+## "CHECKPOINT" — the one-word session close
+
+When the user says **CHECKPOINT** (alone or in a sentence), it means: *wrap this session
+up so it can be resumed cleanly in a fresh chat.* Do all four, in order, without asking:
+
+1. **Back up the data.**
+   ```bash
+   FLEET_BACKUP_DIR="$HOME/Documents/fleet-backups/$(date -u +%F)-session-close" ./scripts/backup.sh
+   ```
+   Check the output lists **every** node — a node missing from `backup.sh` is a silent
+   hole in the snapshot.
+
+2. **Bring these two documents current.** Update *Where things stand*, the data model,
+   the affected tab sections, the change log, and — most valuable — any ⚠️ lesson that
+   cost real debugging time. Write what would have saved that time.
+
+3. **Verify and deploy.** `./scripts/verify-deployment.sh`, then confirm the working
+   tree is clean, everything is pushed, and the live `index.html` hash matches local.
+   Never report a deploy from build status alone.
+
+4. **Print the resume prompt** — the block under *Resuming in a new chat* below, with
+   the version, commit and live figures filled in. That is what the user pastes into
+   the next chat.
+
+⚠️ **CHECKPOINT is a close-out, not a stopping point.** Finish whatever is in flight
+first, or say plainly what is unfinished so it lands in the resume prompt.
+
+## Resuming in a new chat
+
+The user pastes this. Keep it current at each CHECKPOINT — the numbers are the parts
+that go stale.
+
+```
+Resuming the Saudia Connectivity Fleet Status dashboard. Read these two files first,
+in this order — they are the full context:
+/Users/rizwanmujawar/Downloads/saudia-fleet-dashboard/PROJECT_HANDOFF.md
+then /Users/rizwanmujawar/Downloads/saudia-fleet-dashboard/DISASTER-RECOVERY.md
+Start with "Where things stand".
+
+Then confirm the current state before changing anything:
+cd /Users/rizwanmujawar/Downloads/saudia-fleet-dashboard && git log --oneline -5 &&
+./scripts/verify-deployment.sh
+and compare the live index.html hash against local.
+
+Working agreements:
+- Deploy without asking me — rules first, then the page, and prove it by hash, never
+  by build status.
+- Ask me before removing anything major (a tab, page, feature or data node). Additive
+  and cosmetic changes just ship.
+- Never use US month-first dates anywhere.
+- When I say CHECKPOINT, do the four-step close-out in the handoff.
+
+Last session closed at v2.68.1, clean tree, everything pushed, 12/12 checks.
+Backup at ~/Documents/fleet-backups/2026-08-27-session-close.
+Open items are under "Open items" in the handoff — don't guess at those.
+```
+
 ## Backups & disaster recovery
 
 Full runbook: **`DISASTER-RECOVERY.md`**. In short:
@@ -2110,6 +2265,11 @@ Full runbook: **`DISASTER-RECOVERY.md`**. In short:
 - `scripts/restore.sh` is **dry-run by default**, verifies every checksum before
   proceeding, takes a safety copy of current state into its own folder, and needs
   the project id typed to confirm. Rules are never restored implicitly.
+- ⚠️ **A NEW NODE MUST BE ADDED TO `scripts/backup.sh`, `restore.sh` AND
+  `verify-deployment.sh`.** Each carries its own hardcoded node list. `/mediaLoads` was
+  created and backed up for a day without being in any of them — a restore would have
+  silently dropped the entire media history. Adding a node is four edits: the rules,
+  and those three lists.
 - **`/editors` is not in the backups** — it is not anonymously readable, by design.
   Keep the uid list outside the repo or a restore leaves nobody able to edit.
 
@@ -2298,6 +2458,19 @@ live.
 
 ### Waiting on the user — ask, don't guess
 
+- **Media cycle release dates.** `MEDIA_CYCLES` has August (26-Jul-2026) and September
+  (25-Aug-2026). Earlier months have none, so they show a widget and a count but no
+  window, no cycle-closed Timeline row, and no entry in the Cycle view. Each new month
+  is one line, alongside the load size the user already supplies.
+- **Whether the Kontron serial should be the unit's primary serial.** MODMAN writes
+  Kontron to `/units.serial` and Eclipse to `altSerial`, so AQB now reads `484569029`
+  on the Serials and Hardware tabs where it used to read `44`. A one-line swap if the
+  short Eclipse number should be primary.
+- **Whether `/aircraft/{tail}/media` should be cleared.** Superseded by `/mediaLoads`
+  and unread, left in place rather than deleted.
+- **Whether the cycle-closed Timeline figure should freeze.** It currently rises when a
+  late load lands, per the user's call that a late load still counts toward its cycle.
+
 - **The Modem backlog.** One aircraft (**AQB**) carries a full record; the other 41
   are empty. That is the data-entry job, and the page is built to show it — every
   undated modem reads *Not set* rather than being hidden.
@@ -2388,6 +2561,38 @@ Timeline derives an Activation milestone from it.
 
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
+
+### v2.68.1 — Media widgets vanishing on load
+`/mediaLoads` was not in the initial fetch, only the 25-second poll, so every monthly
+card was missing for the first 25 seconds of each page load. It joins the initial fetch,
+and the strip can no longer blank even with no log at all. Nothing was deleted; the
+cycle FILTER drops undeclared months while their records, counts and widgets remain.
+
+### v2.68.0 — Cycle filter fixed; Light Media and No Media become cycles
+The cycle selector did nothing — `applyMediaFilters` only toggled visibility, and a view
+change has to rebuild. Light Media and the DEV default now have their own filter entry,
+counts and history. Widget footers gained the cycle window and a cumulative "N loaded"
+pill under the bar, with the figure above tracking the live count.
+
+### v2.67.0 — Media becomes a load history
+New `/mediaLoads` node, one record per load, backfilled from the 40 current records.
+Current media is derived from the newest record, so past loads and their Timeline
+entries persist. Cycles gained release dates and derived windows, plus a derived
+cycle-closed Timeline row and a past-cycle view on the Media page.
+
+### v2.66.0 — Modem: one type scale, centred, Modem Output
+The days pill leaves the Aircraft column, everything centres, six font sizes become
+four, and a Modem Output column stores a bare number rendered as `8 dBm`. Also fixed the
+frozen-head copy inheriting className but not id, which was clipping the sub-headers.
+
+### v2.65.2 — Type beside the registration, toggles into the filter bar
+`FILTER_BARS` gained an `extra` slot so a bar can carry its own controls and have them
+survive a repaint.
+
+### v2.65.1 — MODMAN save fix and value-sized columns
+The save wrote correctly but was not mirrored locally, so it looked like it vanished;
+a new MODMAN was also written with a nested path Firebase rejects. Column widths became
+a min-width on the body cells.
 
 ### v2.65.0 — Compact Modem layout, 1195px to 977px
 The table now fits a laptop with every column visible. Padding was the biggest cost,
