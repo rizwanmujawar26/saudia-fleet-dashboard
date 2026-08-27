@@ -1933,6 +1933,18 @@
            quietest card on the strip: it is an announcement, not progress, and it must
            not compete with the month the fleet is actually on. It also must not borrow
            the amber that means "out of date" — nothing is late about it yet. */
+        /* The cycle's window — when it opened and when the next release closed it.
+           Quiet, because it is the frame around the figure rather than the figure. */
+        .cycle-window {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            color: #7b858e;
+            margin: -2px 0 4px;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
         .media-widget-light    { background: #f0eefb; border-color: #d5cef1; border-left-color: #6a5acd; }
         .media-widget-light    .media-widget-pct  { color: #4c3d9a; }
         .media-widget-light    .media-widget-fill { background: #6a5acd; }
@@ -5947,6 +5959,18 @@
         // Expanding it is one rules line per field: altPartNumber, altSerial, revision
         // and modDots are already declared and simply have no UI yet.
         let unitsLive = {};
+        // ===== Media load history =====
+        // One record per load: { aircraft, cycle, loadedAt, source, loggedAt }.
+        //
+        // ⚠️ This is the SOURCE OF TRUTH for media now. /aircraft/{tail}/media used to
+        // hold the current load and was overwritten on every update, so the previous
+        // load — and its Timeline entry — vanished. A load is an EVENT, and events are
+        // kept. The current load is the newest record for that tail, derived in
+        // rebuildAircraftData(), so nothing is stored twice and the two cannot drift.
+        //
+        // Polled rather than streamed: a browser allows about six connections per
+        // origin and the page already holds three streams. See the connection budget.
+        let mediaLoadsLive = {};
 
         function unitEntries() {
             return Object.entries(unitsLive).map(([id, u]) => ({ id, ...u }));
@@ -6057,10 +6081,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.66.0';
-        const APP_BUILD    = '2026.08.26.08';
+        const APP_VERSION  = '2.67.0';
+        const APP_BUILD    = '2026.08.27.01';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-26T17:29:06Z';
+        const APP_DEPLOYED = '2026-08-27T20:02:41Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6092,7 +6116,20 @@
         function rebuildAircraftData() {
             aircraftData = fleetRoster.map(s => {
                 const live = aircraftLive[s.id] || {};
-                return { ...s, ...live };
+                const a = { ...s, ...live };
+                // ⚠️ CURRENT MEDIA IS DERIVED, from the newest record in /mediaLoads.
+                // Overwriting it here rather than at each call site is deliberate:
+                // fourteen places read `a.media`, and they all read this object, so the
+                // switch from stored-current to derived-current needed one change
+                // instead of fourteen.
+                //
+                // Falls back to the stored value only while the log is still loading —
+                // /mediaLoads is polled, so the first paint can land before it arrives,
+                // and showing the last known load beats blanking the whole page.
+                const derived = currentMediaOf(s.id);
+                if (derived) a.media = derived;
+                else if (Object.keys(mediaLoadsLive || {}).length) delete a.media;
+                return a;
             });
         }
 
@@ -6307,6 +6344,7 @@
                 hardware:   d => { hardwareLive = d || {}; },
                 units:      d => { unitsLive = d || {}; },
                 activities: d => { activitiesLive = d || {}; },
+                mediaLoads: d => { mediaLoadsLive = d || {}; },
             };
             let changed = false;
 
@@ -7570,6 +7608,18 @@
                         if (none) out.push({ v: 'none', l: 'No Media' });
                         return out;
                     } },
+                    // ⚠️ A VIEW, not a row filter. Empty means "current media", which
+                    // is the page as it has always been. Pick a cycle and every
+                    // in-scope aircraft is listed against THAT cycle instead — the ones
+                    // that took it with their date, the ones that did not left blank,
+                    // because the blanks are how a missed month is spotted.
+                    { id: 'cycleview', label: 'Cycle', single: true,
+                      rowValue: () => mediaCycleView(),
+                      options: () => Object.keys(MEDIA_CYCLES)
+                          .concat(mediaLoadEntries().map(l => l.cycle).filter(Boolean))
+                          .filter((c, i, arr) => arr.indexOf(c) === i && !isLightMediaCycle(c))
+                          .sort((a, b) => cycleSortKey(b) - cycleSortKey(a))
+                          .map(c => ({ v: c, l: cycleToDisplay(c) })) },
                     { id: 'mstatus', label: 'Status', options: [
                         { v: 'latest', l: 'Latest Media' },
                         { v: 'previous', l: 'Previous Media' },
@@ -8522,7 +8572,11 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             const latest = latestMediaCycle();
-            const editing = mediaEditMode && canEdit();
+            const cycleView = mediaCycleView();
+            // Editing is about the CURRENT load, so a past-cycle view is read-only —
+            // otherwise a save would silently write a new load rather than correcting
+            // the historical one being looked at.
+            const editing = mediaEditMode && canEdit() && !cycleView;
 
             // Newest load first; an aircraft with no load has nothing to place it by
             // and falls to the end rather than the top.
@@ -8535,8 +8589,20 @@
             ordered.forEach((aircraft, idx) => {
                 const media = aircraft.media || {};
                 const staged = pendingMedia[aircraft.id];
-                const effective = staged && staged.parsed ? staged.parsed : media;
-                const type = mediaStatusType({ media: effective }, latest);
+                // Under a cycle view the row is about THAT cycle, not the aircraft's
+                // current load: the date, source and badge all describe whether this
+                // aircraft took the cycle being viewed.
+                const viewLoad = cycleView ? cycleLoadFor(aircraft.id, cycleView) : null;
+                const effective = cycleView
+                    ? (viewLoad ? { mediaCycle: viewLoad.cycle, mediaSource: viewLoad.source || '',
+                                    loadedDateUTC: viewLoad.loadedAt || '' } : {})
+                    : (staged && staged.parsed ? staged.parsed : media);
+                // In a cycle view "did it take this cycle" is the only question, so a
+                // load reads as done rather than being aged against the newest cycle —
+                // August is not "older" when August is what you asked to see.
+                const type = cycleView
+                    ? (viewLoad ? 'latest' : 'no_media')
+                    : mediaStatusType({ media: effective }, latest);
 
                 const row = document.createElement('tr');
                 if (type === 'latest') row.classList.add('media-row-latest');
@@ -8544,7 +8610,9 @@
                 row.dataset.cycle = effective.mediaCycle || 'none';
                 row.dataset.mstatus = type;
 
-                const badgeText = type === 'no_media' ? 'NO MEDIA' : cycleToShort(effective.mediaCycle);
+                const badgeText = type === 'no_media'
+                    ? (cycleView ? 'NOT LOADED' : 'NO MEDIA')
+                    : cycleToShort(effective.mediaCycle);
                 const statusCell = `<span class="status-badge ${MEDIA_STATUS_CLASS[type]}">${badgeText}</span>`;
 
                 const loadedCell = editing
@@ -8635,41 +8703,149 @@
         }
 
 
-        const MEDIA_CYCLE_SIZES = {
-            '0826': '791 GB',
-            '0926': '884 GB',
+        // ===== The monthly cycles =====
+        // `start` is the day the load was RELEASED for roll-out, which opens that cycle
+        // and closes the one before it: September opening on 25-Aug is exactly what
+        // makes August run 26-Jul to 24-Aug. So only the start is recorded — an end is
+        // always the day before the next cycle's start, and storing both would let them
+        // contradict each other.
+        //
+        // Code rather than data, like SW_VERSIONS: one line a month, and there is no
+        // editor UI that would own it. A cycle listed here also gets a widget before any
+        // aircraft carries it, which is how next month's load shows at 0/40 while it is
+        // being deployed.
+        const MEDIA_CYCLES = {
+            '0826': { size: '791 GB', start: '26-Jul-2026' },
+            '0926': { size: '884 GB', start: '25-Aug-2026' },
         };
 
         function mediaCycleSize(cycle) {
-            return MEDIA_CYCLE_SIZES[cycle] || '';
+            return (MEDIA_CYCLES[cycle] || {}).size || '';
+        }
+
+        // The window a cycle owns: its own release date, to the day before the next
+        // cycle's. An open-ended cycle (the newest declared) has no end yet.
+        function mediaCycleWindow(cycle) {
+            const start = (MEDIA_CYCLES[cycle] || {}).start || '';
+            const next = Object.keys(MEDIA_CYCLES)
+                .filter(c => cycleSortKey(c) > cycleSortKey(cycle) && (MEDIA_CYCLES[c] || {}).start)
+                .sort((a, b) => cycleSortKey(a) - cycleSortKey(b))[0];
+            let end = '';
+            if (next) {
+                const d = new Date(toISODate(MEDIA_CYCLES[next].start) + 'T00:00:00Z');
+                if (!isNaN(d)) { d.setUTCDate(d.getUTCDate() - 1); end = fmtDate(d.toISOString().slice(0, 10)); }
+            }
+            return { start, end };
+        }
+
+        // ===== Reading the load history =====
+        // Which cycle the Media page is looking at. Empty = the current load on each
+        // aircraft, which is the default and the page's original behaviour.
+        function mediaCycleView() {
+            const sel = fbSel('media', 'cycleview');
+            return sel.size ? Array.from(sel)[0] : '';
+        }
+
+        // That cycle's load for one aircraft, or null if it never took it.
+        function cycleLoadFor(tail, cycle) {
+            return mediaLoadsFor(tail).find(l => l.cycle === cycle) || null;
+        }
+
+        function mediaLoadEntries() {
+            return Object.entries(mediaLoadsLive || {}).map(([id, v]) => ({ id, ...v }));
+        }
+
+        // Every load for one aircraft, oldest first — the aircraft's media history.
+        function mediaLoadsFor(tail) {
+            return mediaLoadEntries()
+                .filter(l => l.aircraft === tail)
+                .sort((a, b) => String(a.loadedAt || '').localeCompare(String(b.loadedAt || '')));
+        }
+
+        // The CURRENT load: the newest record for that tail, shaped exactly like the
+        // old /aircraft/{tail}/media object so every existing reader is unchanged.
+        function currentMediaOf(tail) {
+            const list = mediaLoadsFor(tail);
+            if (!list.length) return null;
+            const l = list[list.length - 1];
+            return {
+                mediaCycle: l.cycle || '',
+                mediaDisplay: l.cycle ? cycleToDisplay(l.cycle) : '',
+                mediaSource: l.source || '',
+                loadedDateUTC: l.loadedAt || '',
+            };
+        }
+
+        // Everyone who took a given cycle, newest load first. ⚠️ Counts a load whenever
+        // it happened (user, 2026-08-26): an aircraft that catches up late still counts
+        // toward that cycle, so the figure keeps rising after the cycle closes.
+        function cycleLoads(cycle) {
+            return mediaLoadEntries()
+                .filter(l => l.cycle === cycle)
+                .sort((a, b) => String(b.loadedAt || '').localeCompare(String(a.loadedAt || '')));
+        }
+
+        // A load counts as LATE when it landed after its own cycle's window closed.
+        function loadIsLate(load) {
+            const w = mediaCycleWindow(load.cycle);
+            if (!w.end || !load.loadedAt) return false;
+            return load.loadedAt.slice(0, 10) > toISODate(w.end);
+        }
+
+        function cycleStats(cycle) {
+            const scope = mediaScope() || 0;
+            const tails = new Set(cycleLoads(cycle).map(l => l.aircraft));
+            const done = tails.size;
+            return { done, scope, pct: scope ? Math.round((done / scope) * 1000) / 10 : 0, tails };
+        }
+
+        // Which cycles an aircraft never took, between its first load and the newest
+        // declared cycle — the gap that says "this one went from July straight to
+        // September".
+        function missedCycles(tail) {
+            const mine = mediaLoadsFor(tail).map(l => l.cycle).filter(Boolean);
+            if (!mine.length) return [];
+            const have = new Set(mine);
+            const known = Object.keys(MEDIA_CYCLES).concat(mediaLoadEntries().map(l => l.cycle).filter(Boolean));
+            const first = Math.min(...mine.map(cycleSortKey));
+            return [...new Set(known)]
+                .filter(c => cycleSortKey(c) >= first && !have.has(c) && !isLightMediaCycle(c))
+                .sort((a, b) => cycleSortKey(a) - cycleSortKey(b));
         }
 
         // Cycles that have been declared but that nothing carries yet. Kept separate
         // from the loaded ones so they can be styled as pending rather than stale.
         function upcomingMediaCycles(latest) {
-            return Object.keys(MEDIA_CYCLE_SIZES)
+            return Object.keys(MEDIA_CYCLES)
                 .filter(c => cycleSortKey(c) > cycleSortKey(latest || ''));
         }
 
         function renderMediaWidgets(latest) {
             const grid = document.getElementById('mediaWidgets');
             if (!grid) return;
+            // ⚠️ Counted from the LOAD LOG, not from each aircraft's current cycle.
+            // An aircraft that has moved on to September still took August, and the
+            // August card has to keep saying so — that is the whole point of keeping
+            // the history. Counted as distinct aircraft, so two loads of one cycle by
+            // the same tail are one.
+            const scopeTails = new Set(mediaFleet().map(a => a.id));
             const counts = {};
-            let none = 0;
-            mediaFleet().forEach(a => {
-                const c = a.media && a.media.mediaCycle;
-                if (c) counts[c] = (counts[c] || 0) + 1;
-                else none++;
+            mediaLoadEntries().forEach(l => {
+                if (!l.cycle || !scopeTails.has(l.aircraft)) return;
+                (counts[l.cycle] = counts[l.cycle] || new Set()).add(l.aircraft);
             });
+            Object.keys(counts).forEach(c => { counts[c] = counts[c].size; });
+            const none = mediaFleet().filter(a => !(a.media && a.media.mediaCycle)).length;
 
             const scope = mediaScope() || 1;
-            const card = (label, count, type, size) => {
+            const card = (label, count, type, size, window) => {
                 const pct = Math.round((count / scope) * 1000) / 10;
                 return `<div class="media-widget media-widget-${type}">
                     <div class="media-widget-head">
                         <span class="media-widget-label">${label}</span>
                         ${size ? `<span class="media-size-pill">${escAttr(size)}</span>` : ''}
                     </div>
+                    ${window ? `<div class="cycle-window">${escAttr(window)}</div>` : ''}
                     <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${scope}</span><span class="media-widget-pct">${pct}%</span></div>
                     <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
                 </div>`;
@@ -8695,12 +8871,20 @@
             const dated = cycles.filter(c => !isLightMediaCycle(c));
             const light = cycles.filter(isLightMediaCycle);
 
-            let html = dated.map(c =>
-                card(cycleToDisplay(c), counts[c] || 0, typeOf(c), mediaCycleSize(c))).join('');
-            html += light.map(c =>
-                card(MEDIA_LIGHT_LABEL, counts[c] || 0, 'light', mediaCycleSize(c))).join('');
+            // The window a cycle owns, so a card says not just how many but by when.
+            const windowOf = c => {
+                const w = mediaCycleWindow(c);
+                if (!w.start) return '';
+                return w.end ? `${fmtDateShort(w.start)} → ${fmtDateShort(w.end)}`
+                             : `${fmtDateShort(w.start)} → open`;
+            };
 
-            if (none) html += card('No Media', none, 'no_media', '');
+            let html = dated.map(c =>
+                card(cycleToDisplay(c), counts[c] || 0, typeOf(c), mediaCycleSize(c), windowOf(c))).join('');
+            html += light.map(c =>
+                card(MEDIA_LIGHT_LABEL, counts[c] || 0, 'light', mediaCycleSize(c), '')).join('');
+
+            if (none) html += card('No Media', none, 'no_media', '', '');
             grid.innerHTML = html || '<div class="media-widget media-widget-no_media"><div class="media-widget-head"><span class="media-widget-label">No Media Data</span></div></div>';
         }
 
@@ -8768,20 +8952,28 @@
             setSyncStatus('🟡 Saving media...', '#e0a800');
 
             const multi = {};
+            const loadPatch = {};
+            const loadOps = [];
+            const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
             ids.forEach(id => {
                 const e = pendingMedia[id];
                 if (e.cleared) {
+                    // Clearing removes the aircraft's CURRENT load, not its history —
+                    // deleting past loads would be deleting the record this page now
+                    // exists to keep. The newest record for that tail is dropped.
+                    const mine = mediaLoadsFor(id);
+                    if (mine.length) loadPatch[mine[mine.length - 1].id] = null;
                     multi[`${id}/media`] = null;
                 } else if (e.parsed && e.parsed.loadedDateUTC) {
-                    // ⚠️ Keyed on loadedDateUTC, NOT on mediaCycle. A DEV record has no
-                    // cycle, and the old guard silently dropped anything without one —
-                    // the save would have looked like it worked and written nothing.
-                    // The cycle fields are written as null in that case, so an aircraft
-                    // moving from a dated load to the default one clears them rather
-                    // than keeping a stale month.
-                    ['mediaCycle', 'mediaDisplay', 'mediaSource', 'loadedDateUTC'].forEach(f => {
-                        multi[`${id}/media/${f}`] = e.parsed[f] || null;
-                    });
+                    // ⚠️ A load is an EVENT, appended — never an overwrite. This is the
+                    // whole point of the change: the previous load, and its Timeline
+                    // entry, survive.
+                    const rid = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+                    const rec = { aircraft: id, loadedAt: e.parsed.loadedDateUTC, loggedAt: stamp };
+                    if (e.parsed.mediaCycle) rec.cycle = e.parsed.mediaCycle;
+                    if (e.parsed.mediaSource) rec.source = e.parsed.mediaSource;
+                    loadPatch[rid] = rec;
+                    loadOps.push({ id: rid, rec });
                 }
                 if (e.comments !== undefined) multi[`${id}/media/comments`] = e.comments || null;
                 // Top level, not under media/ — see the note on UGO_LATEST.
@@ -8790,11 +8982,27 @@
             });
 
             try {
-                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
-                    method: 'PATCH', body: JSON.stringify(multi),
-                });
+                if (Object.keys(loadPatch).length) {
+                    const lres = await fetchWithTimeout(`${FIREBASE_DB_URL}/mediaLoads.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(loadPatch),
+                    });
+                    const ldata = await lres.json();
+                    if (!lres.ok || (ldata && ldata.error)) throw new Error((ldata && ldata.error) || 'load write failed');
+                }
+                const res = Object.keys(multi).length
+                    ? await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(multi),
+                      })
+                    : { ok: true, json: async () => ({}) };
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                // Mirror the log locally — /mediaLoads is POLLED, so without this the
+                // table would redraw from a store that has not heard about the write
+                // yet and the new load would appear to vanish.
+                Object.keys(loadPatch).forEach(rid => {
+                    if (loadPatch[rid] === null) delete mediaLoadsLive[rid];
+                    else mediaLoadsLive[rid] = { ...loadPatch[rid] };
+                });
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
                 pendingMedia = {};
                 mediaEditMode = false;
@@ -13073,17 +13281,36 @@
                                title: 'Entered Service', sub: '' });
                 }
 
-                // --- Media: the actual loaded date from the Media tab ---
-                const media = a.media || {};
-                if (media.loadedDateUTC) {
-                    const misoMatch = media.loadedDateUTC.match(/^(\d{4}-\d{2}-\d{2})/);
-                    if (misoMatch) {
-                        out.push({ iso: misoMatch[1], kind: 'media', tail: a.id, type: a.type,
-                                   location: aircraftLocationOf(a),
-                                   title: media.mediaCycle ? `Media ${cycleToDisplay(media.mediaCycle)}` : 'Media load',
-                                   sub: media.mediaSource || '' });
-                    }
-                }
+                // --- Media: EVERY load this aircraft has taken, not just its current
+                // one. This used to read a.media, which holds only the newest, so the
+                // moment an aircraft took September its August entry disappeared from
+                // the Timeline. A load is an event and every event stays. ---
+                mediaLoadsFor(a.id).forEach(l => {
+                    const misoMatch = String(l.loadedAt || '').match(/^(\d{4}-\d{2}-\d{2})/);
+                    if (!misoMatch) return;
+                    out.push({ iso: misoMatch[1], kind: 'media', tail: a.id, type: a.type,
+                               location: aircraftLocationOf(a),
+                               title: l.cycle ? `Media ${cycleToDisplay(l.cycle)}` : 'Media load',
+                               sub: (l.source || '') + (loadIsLate(l) ? ' · late' : '') });
+                });
+            });
+
+            // --- Media cycle close: one row per cycle, on the day it ended ---
+            // Derived, never stored — the same reasoning as the Activation milestone.
+            // It reports how many aircraft took that cycle and what share of the fleet
+            // that is. ⚠️ Because a late load still counts toward its cycle (the user's
+            // call), this figure can RISE after the close date; it is the cycle's total,
+            // not a frozen snapshot of that day.
+            Object.keys(MEDIA_CYCLES).forEach(cycle => {
+                const w = mediaCycleWindow(cycle);
+                if (!w.end) return;                       // still open, nothing to close
+                const iso = toISODate(w.end);
+                if (!iso) return;
+                const st = cycleStats(cycle);
+                out.push({ iso, kind: 'media', milestone: 'cycle', tail: '', type: '',
+                           location: '',
+                           title: `${cycleToDisplay(cycle)} cycle closed`,
+                           sub: `${st.done} of ${st.scope} aircraft · ${st.pct}%` });
             });
 
             // --- Maintenance + Hardware: the activity records ---

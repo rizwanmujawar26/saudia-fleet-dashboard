@@ -167,6 +167,21 @@
       }
     },
 
+    "mediaLoads": {
+      ".read": true,
+
+      "$load": {
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
+
+        "aircraft": { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "cycle":    { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)" },
+        "loadedAt": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/)" },
+        "source":   { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "loggedAt": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/)" },
+        "$other":   { ".validate": false }
+      }
+    },
+
     "units": {
       ".read": true,
 
