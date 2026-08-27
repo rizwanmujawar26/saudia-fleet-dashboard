@@ -13,6 +13,16 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.70.0 — Software tab: renames, newest-first, and two new filters
+`Installation Date` becomes **Middleware Install Date**, `Base` becomes **Install
+Location** — labels only, the fields are unchanged. The table now opens **newest
+install first** as a build order (not a descending column sort, which would float
+undated aircraft to the top), and the header says `Newest first` in tiny text until a
+column sort takes over. **Status filter removed** at the user's request — the fleet is
+100% completed, so it filtered to everything or nothing; the column stays. **IPHO and
+SES Migration filters added**, built from the values actually present. Cell padding
+8px: the longer labels took the table 32px past its wrapper.
+
 ### v2.69.0 — OTA Patch Date on the Software tab
 The middleware load is followed by a patch pushed over the air; that date and time is
 now a column, `otaPatchUTC` on `/aircraft/{tail}`, with the same age pill the other

@@ -1430,8 +1430,49 @@ Main table (40) + HBC+ table (2). `SW_VERSIONS` is ordered oldest-first and
 the **last entry is "latest"** — add a version there and it gains a widget,
 an edit option, retitles the global card and demotes the previous one. No
 other change needed.
-**Installation Date is column 2 and the default sort**, oldest first
-(`SW_DEFAULT_SORT`), with a `25d` age pill from the same `activationAge()` the
+**Middleware Install Date is column 1** (renamed from *Installation Date*,
+2026-08-28) and **Install Location is column 9** (renamed from *Base*). The field
+behind each is unchanged — `completionDate` and `completionLocation`.
+
+⚠️ **The table opens NEWEST middleware install first** (user, 2026-08-28), not oldest
+— it now answers "what was just done". **It is a BUILD order, not a column sort**, for
+the reason Media and Modem are: descending on a date column floats the "no value"
+sentinel to the TOP, because that sentinel is built for an ascending default. No row
+in this table lacks a `completionDate` today, but **ASD and ASO do**, and they join it
+the moment they go Active. `SW_DEFAULT_SORT` was deleted rather than left pointing at
+an order the table no longer opens in.
+
+**With no column sorted there is no arrow, so the header says `Newest first`** in
+8.5px under the label, and stops saying it the moment a column sort is active. That
+needs the headers to call **`sortAircraftTable()`** rather than `sortTable()` — the
+generic one knows nothing about this note, the same shape as `sortModemTable()`.
+
+⚠️ **The note is RE-CREATED, not just toggled.** `updateSortIndicators()` does
+`th.textContent = label + arrow`, which destroys every child of the header — so a span
+placed in the markup is gone the first time indicators run. `syncAircraftOrderNote()`
+rebuilds it and must therefore run **after** `updateSortIndicators()`. It is keyed by
+**class, never id**: `syncFrozenHeads()` clones the live `<thead>`, and an id in there
+would exist twice in the document.
+
+**Filters are Type, Location, IPHO and SES** (2026-08-28). ⚠️ **Status was removed at
+the user's request** — the whole fleet is completed, so it could only filter to
+everything or to nothing. The Status **column** stays; `row.dataset.status` is left in
+place and is now read by nothing. IPHO and SES are built by `fbPresentOptions()` from
+the values actually **present**, in canonical order, so an option can never filter to
+an empty table — `mg101Status: 'provisioned'` is real, matches nobody today, and
+appears on its own the moment one aircraft has it. `sesMigrationValue()` is the one
+mapping, shared by the filter and the cell so they cannot disagree.
+
+⚠️ **Cell padding on this table is 8px, not the 10px `#hbcTable` keeps.** Eleven
+columns with those two long labels measured **1197px against a 1165px wrapper** — a
+sideways scroll at 1280px. 8px brings it back to exactly 1165. ⚠️ **It is written
+TWICE on purpose**: `#aircraftTable` for the table (an id beats a class, and an id
+rule was already there) and `.sw-compact` for the **floating frozen-head copy**, which
+inherits className and never id. Change them together or the copy pads differently
+from the data under it. **The table fits with 0px to spare — re-measure before adding
+or renaming anything in it.**
+
+Installation date carries a `25d` age pill from the same `activationAge()` the
 Fleet tab uses — deliberately the identical treatment, so the two tables read the
 same way. The field behind it is **`completionDate`**, unchanged; only the column's
 label and position moved. Undated aircraft sort to the end on `99999999` and read

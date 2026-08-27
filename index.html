@@ -652,15 +652,19 @@
             white-space: nowrap;
         }
 
-        #aircraftTable th,
-        #hbcTable th {
-            padding: 12px 10px;
-        }
+        /* The Software table is 8px, the HBC+ table stays 10px. Eleven columns with
+           "Middleware Install Date" and "Install Location" in them measured 1197px
+           against a 1165px wrapper; 8px brings it to exactly 1165. HBC+ has five
+           columns and no such pressure.
+           ⚠️ These are ID rules and therefore do NOT reach the floating frozen-head
+           copy, which inherits className and never id — `.sw-compact` below repeats the
+           value for it. Change the two together or the copy renders at a different
+           padding from the table underneath it. */
+        #aircraftTable th { padding: 12px 8px; }
+        #hbcTable th      { padding: 12px 10px; }
 
-        #aircraftTable td,
-        #hbcTable td {
-            padding: 10px;
-        }
+        #aircraftTable td { padding: 10px 8px; }
+        #hbcTable td      { padding: 10px; }
 
         /* Everything centres so headers sit over their data; only free text reads
            badly that way, so Comments stays left. */
@@ -2092,6 +2096,39 @@
         }
 
         .edit-ota { max-width: 132px; }
+
+        /* The build order has no arrow to explain it, so the header says so. Quiet and
+           sentence case: it is a note about the table, not another column heading. */
+        .th-order {
+            display: block;
+            margin-top: 2px;
+            font-size: 8.5px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            text-transform: none;
+            color: rgba(255, 255, 255, 0.72);
+        }
+
+        /* Hidden once a column sort is active — the arrow explains the order then, and
+           leaving it would state an order the table is no longer in. */
+        .sw-order-col.order-note-off .th-order { display: none; }
+
+        /* Eleven columns, and "Middleware Install Date" and "Install Location" are long
+           labels. At 10px padding the table measured 1197px against a 1165px wrapper —
+           a sideways scroll at 1280px. 8px brings it to exactly 1165. Measured, not
+           guessed; the same lever the Modem tab pulled when thirteen columns had to fit
+           a laptop.
+           ⚠️ This is the CLASS half of the pair. The table itself is padded by the
+           `#aircraftTable` rules further up — an id beats a class, so a class alone
+           could not win — but syncFrozenHeads() copies a table's className and NOT its
+           id, so the floating head copy only ever sees this rule. Both must carry the
+           same value; if they drift, the copy renders at a different padding from the
+           data underneath it, which is the bug that ate the Modem sub-headers. */
+        .sw-compact th,
+        .sw-compact td {
+            padding-left: 8px;
+            padding-right: 8px;
+        }
 
         #fleetTable td:not(.col-comment) {
             white-space: nowrap;
@@ -4662,20 +4699,20 @@
                 </div>
 
                 <div class="table-scroll-wrapper table-freeze">
-                    <table class="aircraft-table" id="aircraftTable">
+                    <table class="aircraft-table sw-compact" id="aircraftTable">
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th class="sortable-th" data-col="1" data-label="Installation Date" onclick="sortTable('aircraftTable', 1)">Installation Date</th>
-                                <th class="sortable-th" data-col="2" data-label="OTA Patch Date" onclick="sortTable('aircraftTable', 2)">OTA Patch Date</th>
-                                <th class="sortable-th" data-col="3" data-label="Aircraft" onclick="sortTable('aircraftTable', 3)">Aircraft</th>
-                                <th class="sortable-th" data-col="4" data-label="Type" onclick="sortTable('aircraftTable', 4)">Type</th>
-                                <th class="sortable-th" data-col="5" data-label="Status" onclick="sortTable('aircraftTable', 5)">Status</th>
-                                <th class="sortable-th" data-col="6" data-label="Middleware" onclick="sortTable('aircraftTable', 6)">Middleware</th>
-                                <th class="sortable-th" data-col="7" data-label="IPHO Mode" onclick="sortTable('aircraftTable', 7)">IPHO Mode</th>
-                                <th class="sortable-th" data-col="8" data-label="SES Migration" onclick="sortTable('aircraftTable', 8)">SES Migration</th>
-                                <th class="sortable-th" data-col="9" data-label="Base" onclick="sortTable('aircraftTable', 9)">Base</th>
-                                <th class="sortable-th col-comment" data-col="10" data-label="Comments" onclick="sortTable('aircraftTable', 10)">Comments</th>
+                                <th class="sortable-th sw-order-col" data-col="1" data-label="Middleware Install Date" onclick="sortAircraftTable(1)">Middleware Install Date<span class="th-order">Newest first</span></th>
+                                <th class="sortable-th" data-col="2" data-label="OTA Patch Date" onclick="sortAircraftTable(2)">OTA Patch Date</th>
+                                <th class="sortable-th" data-col="3" data-label="Aircraft" onclick="sortAircraftTable(3)">Aircraft</th>
+                                <th class="sortable-th" data-col="4" data-label="Type" onclick="sortAircraftTable(4)">Type</th>
+                                <th class="sortable-th" data-col="5" data-label="Status" onclick="sortAircraftTable(5)">Status</th>
+                                <th class="sortable-th" data-col="6" data-label="Middleware" onclick="sortAircraftTable(6)">Middleware</th>
+                                <th class="sortable-th" data-col="7" data-label="IPHO Mode" onclick="sortAircraftTable(7)">IPHO Mode</th>
+                                <th class="sortable-th" data-col="8" data-label="SES Migration" onclick="sortAircraftTable(8)">SES Migration</th>
+                                <th class="sortable-th" data-col="9" data-label="Install Location" onclick="sortAircraftTable(9)">Install Location</th>
+                                <th class="sortable-th col-comment" data-col="10" data-label="Comments" onclick="sortAircraftTable(10)">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="aircraftTableBody">
@@ -6143,8 +6180,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.69.0';
-        const APP_BUILD    = '2026.08.28.01';
+        const APP_VERSION  = '2.70.0';
+        const APP_BUILD    = '2026.08.28.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-08-28T00:00:00Z';
 
@@ -7649,6 +7686,29 @@
             return seen.map(t => ({ v: t, l: TYPE_SHORT_LABEL[t] || t }));
         }
 
+        // SES migration as ONE value, derived from mg101Status — the same mapping the
+        // column renders, so the filter and the cell can never disagree. Absent means
+        // the migration has not started, which the column reads as MG6.
+        function sesMigrationValue(a) {
+            return a && a.mg101Status === 'done' ? 'mg101'
+                 : a && a.mg101Status === 'provisioned' ? 'provisioned'
+                 : 'mg6';
+        }
+
+        // Options for a fixed enum, but listing only the values something actually
+        // HAS, in the canonical order given. An option nothing matches could only
+        // filter to an empty table — the reason the Month filter lists only cycles
+        // that exist. `order` is [[value, label], ...].
+        function fbPresentOptions(list, valueOf, order) {
+            // Same guard as fbTypeOptions: the scope helpers are a mix of arrays and
+            // COUNTS, and a number here throws inside the popover build, leaving the
+            // trigger open with nothing under it.
+            if (!Array.isArray(list)) return [];
+            const present = {};
+            list.forEach(a => { const v = valueOf(a); if (v) present[v] = true; });
+            return order.filter(([v]) => present[v]).map(([v, l]) => ({ v: v, l: l }));
+        }
+
         document.addEventListener('click', e => {
             if (!fbOpenKey) return;
             if (e.target.closest('.fb-pop') || e.target.closest('.fb-trigger')) return;
@@ -7695,15 +7755,20 @@
                         { v: 'Jeddah', l: 'Jeddah' },
                         { v: 'Riyadh', l: 'Riyadh' },
                     ] },
-                    // The table stores only 'completed'; everything else is
-                    // pending, so the row value is normalised to two states
-                    // rather than the filter listing every other string.
-                    { id: 'status', label: 'Status',
-                      rowValue: row => row.dataset.status === 'completed' ? 'completed' : 'pending',
-                      options: [
-                        { v: 'completed', l: 'Completed' },
-                        { v: 'pending', l: 'Scheduled' },
-                      ] },
+                    // Status was dropped on 2026-08-28 (user): the whole fleet is
+                    // completed, so it could only ever filter to everything or to
+                    // nothing. The Status COLUMN stays — it still states the fact.
+                    // Both of these are built from the values actually PRESENT, in
+                    // canonical order, so an option can never filter to an empty
+                    // table — the same reason the Month filter lists only cycles that
+                    // exist. mg101Status: 'provisioned' is real and simply unused
+                    // today; it appears here on its own the moment one aircraft has it.
+                    { id: 'ipho', label: 'IPHO', options: () => fbPresentOptions(
+                        swFleet(), a => a.iphoStatus === 'completed' ? 'enabled' : 'disabled',
+                        [['enabled', 'Enabled'], ['disabled', 'Disabled']]) },
+                    { id: 'ses', label: 'SES', options: () => fbPresentOptions(
+                        swFleet(), a => sesMigrationValue(a),
+                        [['mg6', 'MG6'], ['provisioned', 'Provisioned'], ['mg101', 'MG101']]) },
                 ],
             },
 
@@ -7892,9 +7957,41 @@
         function resetAircraftTable() {
             fbClear('aircraft');
             fbRender('aircraft');
-            delete lastSort['aircraftTable'];
+            delete lastSort['aircraftTable'];   // back to the newest-first build order
             updateSortIndicators('aircraftTable');
             populateAircraftTable();
+        }
+
+        // sortTable() is generic and knows nothing about this table's order note, which
+        // has to stop saying "Newest first" the moment the user sorts by a column.
+        // Wrapping it locally keeps that honest without giving the other tables a hook
+        // they do not need — the same shape as sortModemTable().
+        function sortAircraftTable(col) {
+            sortTable('aircraftTable', col);
+            syncAircraftOrderNote();
+        }
+
+        // ⚠️ The note is RE-CREATED here, not just toggled. updateSortIndicators() sets
+        // `th.textContent = label + arrow`, which destroys every child of the header —
+        // so the span put in the markup is gone the first time the indicators run.
+        // That function is shared by nine tables and its contract is not worth changing
+        // for one note, so this rebuilds it instead. Must therefore run AFTER
+        // updateSortIndicators(), which is how both callers order it.
+        //
+        // ⚠️ Class, never id. syncFrozenHeads() CLONES the live thead for the floating
+        // copy, so an id in there would exist twice in the document; a class comes
+        // along with the clone and stays unique.
+        function syncAircraftOrderNote() {
+            const th = document.querySelector('#aircraftTable thead th[data-col="1"]');
+            if (!th) return;
+            let note = th.querySelector('.th-order');
+            if (!note) {
+                note = document.createElement('span');
+                note.className = 'th-order';
+                th.appendChild(note);
+            }
+            note.textContent = 'Newest first';
+            th.classList.toggle('order-note-off', !!lastSort['aircraftTable']);
         }
 
         function setQuickDate(btn, offsetDays) {
@@ -7973,16 +8070,30 @@
             tbody.innerHTML = '';
             fbRender('aircraft');
 
-            // Built in registration order; the table is then sorted by installation
-            // date below, which is what the # column ends up numbering.
-            const mainFleet = swFleet().sort((a, b) => a.id.localeCompare(b.id));
+            // Newest middleware install first. Undated aircraft go to the END and are
+            // then ordered by registration, so a blank never leads the table and the
+            // blanks themselves are not in an arbitrary order. Doing it HERE rather
+            // than as a descending column sort is what keeps them at the end: the
+            // sentinel a column sort uses is built for an ascending default and would
+            // put them on top.
+            const mainFleet = swFleet().slice().sort((a, b) => {
+                const ka = Number(dateSortKey(toISODate(a.completionDate)) || 0);
+                const kb = Number(dateSortKey(toISODate(b.completionDate)) || 0);
+                if (ka !== kb) return kb - ka;
+                return a.id.localeCompare(b.id);
+            });
 
             mainFleet.forEach((aircraft, idx) => {
                 const row = document.createElement('tr');
                 if (isCompletedStrict(aircraft)) row.classList.add('completed');
-                row.dataset.status = aircraftStatusOf(aircraft);
+                // ⚠️ The dataset key must MATCH the filter's id — fbRowMatch() reads
+                // data-<id> off the row, so a mismatch leaves the filter matching
+                // nothing and hides every row while the footer still counts them.
+                row.dataset.status = aircraftStatusOf(aircraft);   // no filter reads this now; the Status column does
                 row.dataset.type = aircraft.type;
                 row.dataset.location = aircraft.completionLocation || '';
+                row.dataset.ipho = aircraft.iphoStatus === 'completed' ? 'enabled' : 'disabled';
+                row.dataset.ses = sesMigrationValue(aircraft);
 
                 // Comments live in their own column now. They're operational notes, not
                 // faults, so they read as plain text rather than red warnings.
@@ -8118,14 +8229,23 @@
 
             syncTableFreeze();
             applyAircraftFilters();
-            // Oldest installation first until someone picks another column, and
-            // re-applied on every rebuild — this runs again on every live update,
-            // which would otherwise hand the rows back in registration order under an
-            // unchanged arrow. Same pattern as the Fleet table.
-            const as = lastSort['aircraftTable'] || SW_DEFAULT_SORT;
-            lastSort['aircraftTable'] = as;
-            applyTableSort('aircraftTable', as.col, as.dir);
+            // NEWEST middleware install first (user, 2026-08-28) — what has just been
+            // done, rather than what has waited longest. Media and Modem open the same
+            // way.
+            // ⚠️ This is a BUILD order, not a column sort, for the reason those two are:
+            // descending on a date column floats the "no value" sentinel to the TOP,
+            // because that sentinel is built for an ascending default. No aircraft in
+            // this table lacks a completionDate today, but ASD and ASO do, and they
+            // join it the moment they go Active.
+            // ⚠️ A build order and lastSort are mutually exclusive: a column sort is
+            // re-applied only if the USER clicked a header, and Reset drops back here.
+            const as = lastSort['aircraftTable'];
+            if (as) applyTableSort('aircraftTable', as.col, as.dir);
             updateSortIndicators('aircraftTable');
+            renumberVisibleRows('aircraftTable');
+            // With no column sorted there is no arrow to explain the order, so the
+            // header says it — and stops saying it the moment a column sort is active.
+            syncAircraftOrderNote();
             renderSwVersionWidgets();
             populateHbcTable();
         }
@@ -8188,7 +8308,10 @@
         // first — the same shape the Fleet table uses for Activation Date. Undated
         // aircraft carry a 99999999 sort key, so they land at the end rather than
         // the front.
-        const SW_DEFAULT_SORT = { col: 1, dir: 1 };
+        // SW_DEFAULT_SORT is gone (2026-08-28). The Software table opens on a newest-
+        // first BUILD order in populateAircraftTable(), like Media and Modem, so there
+        // is no default column sort to name — and a constant still called "default
+        // sort" would have described an order the table no longer opens in.
 
         function swVersionOf(a) { return a.swVersion || SW_VERSIONS[0]; }
 
