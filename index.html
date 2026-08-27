@@ -6107,10 +6107,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.68.0';
-        const APP_BUILD    = '2026.08.27.02';
+        const APP_VERSION  = '2.68.1';
+        const APP_BUILD    = '2026.08.27.03';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-27T20:21:50Z';
+        const APP_DEPLOYED = '2026-08-27T20:28:21Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -6320,20 +6320,27 @@
                 })
                 .catch(() => populateScheduleTables());
 
-            // These three are read once here and then kept fresh by ONE shared poll
-            // rather than a stream each — see startLowTrafficPoll() for why that
-            // matters to saving.
-            Promise.all(['hardware', 'units', 'activities'].map(n =>
+            // These are read once here and then kept fresh by ONE shared poll rather
+            // than a stream each — see startLowTrafficPoll() for why that matters to
+            // saving.
+            // ⚠️ mediaLoads MUST be in this list. Left to the poll alone it arrived up
+            // to LOW_TRAFFIC_POLL_MS late, and since the Media widgets are built from
+            // it, every monthly card was missing for the first 25 seconds of each page
+            // load — the strip looked broken.
+            Promise.all(['hardware', 'units', 'activities', 'mediaLoads'].map(n =>
                 fetch(`${FIREBASE_DB_URL}/${n}.json`).then(r => r.json()).catch(() => null)
-            )).then(([hw, un, ac]) => {
+            )).then(([hw, un, ac, ml]) => {
                 hardwareLive   = hw || {};
                 unitsLive      = un || {};
                 activitiesLive = ac || {};
+                mediaLoadsLive = ml || {};
                 markDataSync();
+                rebuildAircraftData();     // current media is derived from the log
                 renderHardwarePage();      // fitment is derived from units
                 renderMaintenancePage();   // so is Installed Equipment
                 renderSerialsPage();
-                updateMetrics();           // the Timeline reads activities
+                populateMediaTable();      // widgets and rows both read the log
+                updateMetrics();           // the Timeline reads activities and loads
                 startLowTrafficPoll();
             });
         }
@@ -6402,6 +6409,7 @@
                 hardware:   JSON.stringify(Object.keys(hardwareLive).length ? hardwareLive : null),
                 units:      JSON.stringify(Object.keys(unitsLive).length ? unitsLive : null),
                 activities: JSON.stringify(Object.keys(activitiesLive).length ? activitiesLive : null),
+                mediaLoads: JSON.stringify(Object.keys(mediaLoadsLive).length ? mediaLoadsLive : null),
             };
             setInterval(pollLowTrafficNodes, LOW_TRAFFIC_POLL_MS);
         }
@@ -7642,8 +7650,15 @@
                     { id: 'cycleview', label: 'Cycle', single: true,
                       rowValue: () => mediaCycleView(),
                       options: () => {
+                          // ⚠️ Only cycles DECLARED in MEDIA_CYCLES, plus the two
+                          // out-of-cycle kinds (user, 2026-08-27). Earlier months are
+                          // still recorded, still counted and still have their widget —
+                          // they are simply not offered as a view, because there is no
+                          // window to view them against.
+                          const declared = new Set(Object.keys(MEDIA_CYCLES));
                           const keys = [...new Set(Object.keys(MEDIA_CYCLES)
-                              .concat(mediaLoadEntries().map(loadCycleKey).filter(Boolean)))];
+                              .concat(mediaLoadEntries().map(loadCycleKey)
+                                  .filter(c => c && (declared.has(c) || c === MEDIA_DEV_VIEW || isLightMediaCycle(c)))))];
                           // Months newest first, then the two out-of-cycle kinds — they
                           // are not points in the monthly sequence, so listing them
                           // among the months would misplace them.
@@ -8905,6 +8920,15 @@
                 const c = a.media && a.media.mediaCycle;
                 if (c) live[c] = (live[c] || 0) + 1;
                 else none++;   // a DEV load, or nothing at all
+            });
+
+            // ⚠️ NEVER let a missing log empty the strip. The cards are built from the
+            // load history, so an unfetched or failed /mediaLoads read used to remove
+            // every monthly card. A cycle that any aircraft is currently carrying gets
+            // a card regardless, and its total falls back to the live count — a card
+            // showing the honest live figure beats no card at all.
+            Object.keys(live).forEach(c => {
+                if (totals[c] === undefined) totals[c] = live[c];
             });
 
             const scope = mediaScope() || 1;
