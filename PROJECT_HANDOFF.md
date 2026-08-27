@@ -1,6 +1,8 @@
 # Saudia Connectivity Fleet Status — Project Handoff (v2.68.1, 2026-08-27)
 
-Paste this whole document into a new chat to resume work with full context.
+**To resume work in a new chat, type one word: `RESUME`.** That triggers the protocol
+under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
+`./scripts/resume.sh`, and report where things stand. Nothing needs pasting.
 
 ## Where things stand (read this first)
 
@@ -2193,6 +2195,44 @@ skipped, so an empty-state row is never numbered.
 
 ---
 
+## "RESUME" — the one-word session start
+
+CHECKPOINT's bookend. When the user says **RESUME** (alone or in a sentence), it
+means: *bring yourself fully up to speed on this project and tell me where things
+stand.* Do all three without asking:
+
+1. **Read the two context documents, in this order** — `PROJECT_HANDOFF.md`
+   (start at *Where things stand*), then `DISASTER-RECOVERY.md`.
+2. **Run the state check.** One read-only command covers all of it:
+   ```bash
+   ./scripts/resume.sh
+   ```
+   Release · git state · the 12 deployment checks · live-vs-local `index.html`
+   hash · live figures read fresh from the database · latest snapshot · open items.
+3. **Report briefly** — version and commit, tree clean and pushed, check result,
+   hash match, current figures, and the open items waiting on the user. Then ask
+   what to work on.
+
+⚠️ **The figures in this document are a shape, not a value.** The user edits live,
+which is exactly why `resume.sh` re-reads them; never quote the doc as fact.
+
+⚠️ **If the script flags anything, say so before changing anything.** It exits
+non-zero when the tree is dirty, the branch is out of sync, a check fails, the live
+hash differs, or there is no verifiable snapshot.
+
+**Where the trigger is recorded.** A fresh session only knows what it auto-loads, so
+RESUME is written down in three places deliberately:
+
+| | covers |
+|---|---|
+| `CLAUDE.md` in this repo | any session started **in** the repo — and it is committed, so it survives a clone |
+| the user's project memory (`resume-code-word`) | sessions started from the user's usual working directory |
+| this section | the human-readable source both of those point at |
+
+⚠️ **Keep the three in step.** They are one protocol written three times because
+each is loaded in a different situation; a change to the steps has to land in all
+three, the same way a new node is four edits.
+
 ## "CHECKPOINT" — the one-word session close
 
 When the user says **CHECKPOINT** (alone or in a sentence), it means: *wrap this session
@@ -2213,17 +2253,24 @@ up so it can be resumed cleanly in a fresh chat.* Do all four, in order, without
    tree is clean, everything is pushed, and the live `index.html` hash matches local.
    Never report a deploy from build status alone.
 
-4. **Print the resume prompt** — the block under *Resuming in a new chat* below, with
-   the version, commit and live figures filled in. That is what the user pastes into
-   the next chat.
+4. **Say that the next session starts with the word RESUME**, and name anything
+   left unfinished. Nothing else needs to be carried across by hand — the protocol,
+   the working agreements and the state check all live in the repo now.
 
 ⚠️ **CHECKPOINT is a close-out, not a stopping point.** Finish whatever is in flight
-first, or say plainly what is unfinished so it lands in the resume prompt.
+first, or say plainly what is unfinished so the next session picks it up.
 
 ## Resuming in a new chat
 
-The user pastes this. Keep it current at each CHECKPOINT — the numbers are the parts
-that go stale.
+**The user types one word: `RESUME`.** The protocol is under *"RESUME"* above and is
+auto-loaded from `CLAUDE.md` and the user's project memory, so nothing has to be
+pasted and nothing goes stale between sessions.
+
+⚠️ **The old paste-block is retired.** It carried the version, commit and live
+figures inline, which meant every one of them was wrong the moment the user edited
+anything — and it had to be regenerated at each CHECKPOINT to stay even roughly
+true. `resume.sh` reads all of it live instead. The block below is kept only as a
+**fallback for a session with no repo access**, where the protocol cannot load:
 
 ```
 Resuming the Saudia Connectivity Fleet Status dashboard. Read these two files first,
@@ -2233,9 +2280,7 @@ then /Users/rizwanmujawar/Downloads/saudia-fleet-dashboard/DISASTER-RECOVERY.md
 Start with "Where things stand".
 
 Then confirm the current state before changing anything:
-cd /Users/rizwanmujawar/Downloads/saudia-fleet-dashboard && git log --oneline -5 &&
-./scripts/verify-deployment.sh
-and compare the live index.html hash against local.
+cd /Users/rizwanmujawar/Downloads/saudia-fleet-dashboard && ./scripts/resume.sh
 
 Working agreements:
 - Deploy without asking me — rules first, then the page, and prove it by hash, never
@@ -2245,8 +2290,6 @@ Working agreements:
 - Never use US month-first dates anywhere.
 - When I say CHECKPOINT, do the four-step close-out in the handoff.
 
-Last session closed at v2.68.1, clean tree, everything pushed, 12/12 checks.
-Backup at ~/Documents/fleet-backups/2026-08-27-session-close.
 Open items are under "Open items" in the handoff — don't guess at those.
 ```
 
@@ -2273,15 +2316,20 @@ Full runbook: **`DISASTER-RECOVERY.md`**. In short:
 - **`/editors` is not in the backups** — it is not anonymously readable, by design.
   Keep the uid list outside the repo or a restore leaves nobody able to edit.
 
-Four scripts, all dry-run-first where they can write:
+Six scripts, all dry-run-first where they can write:
 
 | script | does |
 |---|---|
+| `resume.sh` | **the RESUME state check** — release, git, the 12 checks, live hash, live figures, latest snapshot. Read-only |
 | `backup.sh` | snapshot public nodes — no credentials needed |
 | `backup-secrets.sh` | `/editors` + account list (no password material), private dirs only |
 | `restore.sh` | put a snapshot back, checksum-verified |
 | `migrate-project.sh` | move to a new Firebase project |
 | `verify-deployment.sh` | health + enforcement check for any project |
+
+⚠️ **`resume.sh` deliberately carries NO node list** — it delegates node coverage to
+`verify-deployment.sh`. Hardcoding one would have made a new node *five* edits
+instead of four, which is exactly the trap `/mediaLoads` already fell into once.
 
 All honour `FLEET_DB_URL` / `FLEET_PROJECT`, so they work against a new project
 without edits. **The chosen future direction is a new, private Firebase project** —

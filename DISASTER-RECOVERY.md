@@ -284,6 +284,17 @@ refuses to write anywhere inside this repo.
 ./scripts/verify-deployment.sh <project-id>     # defaults to the current one
 ```
 
+For a full picture rather than just enforcement — release, git state, these checks,
+the live-vs-local page hash, live record counts and the latest snapshot — use the
+session-start script, which wraps this one and only ever reads:
+
+```bash
+./scripts/resume.sh
+```
+
+It is also the quickest way to confirm a snapshot exists and is verifiable
+(manifest present) **before** doing anything destructive.
+
 Checks reachability, record counts, and that enforcement holds — `/editors` and
 root not anonymously readable, anonymous writes and unknown nodes rejected. It also
 guards against the over-escaped-regex bug that once blocked every Software save, so
