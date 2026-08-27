@@ -97,30 +97,50 @@ and diff the function list against `git show HEAD:index.html` immediately after.
 
 ---
 
-## Looking things up — do not read the manual
+## Looking things up — never read a whole file
+
+**The two big files are off limits as a whole.** `PROJECT_HANDOFF.md` is ~38k
+tokens and `index.html` is ~178k. Both have a tool that pulls only what you need.
+
+### Documentation — `doc.sh`
 
 ```bash
-./scripts/doc.sh --list           # every section, with its token cost
-./scripts/doc.sh media            # just the Media section  (~1.7k tokens)
-./scripts/doc.sh "sticky header"  # heading match, case-insensitive
+./scripts/doc.sh --list            # every section, with its token cost
+./scripts/doc.sh --grep fmtDate    # WHICH section talks about this
+./scripts/doc.sh media             # pull one section
+./scripts/doc.sh --all media       # every match, not just the first
 ```
 
-Matches headings across the handoff, the runbook and the change log. The sections
-worth knowing exist:
+`--grep` first when you don't know the section name — the term you remember
+(`fmtDate`, `Kontron`, `ex-ASV`) is rarely in a heading.
 
 | when the work touches | pull |
 |---|---|
 | what a node stores | `doc.sh "data model"` |
-| a tab's behaviour | `doc.sh tabs` — ⚠️ the big one, ~10k tokens |
+| one tab | `doc.sh overview` · `software` · `media` · `modem` · `activity` · `hardware` · `serials` · `schedule` · `fleet` · `"4G SIM"` |
 | filters / pills / popovers | `doc.sh "filter bar"` |
 | sorting, tiers, date keys | `doc.sh "table sorting"` |
 | widgets, cards, colour meaning | `doc.sh "widget vocabulary"` |
 | media cycles, DEV, Light Media | `doc.sh "media module"` |
 | LRUs, serials, fitments | `doc.sh "hardware tab"` |
 | frozen heads, pinned layers | `doc.sh "sticky header"` |
-| deploying, gotchas, the checks | `doc.sh "local dev"` |
-| backups, restore, going private | `doc.sh backups` or `DISASTER-RECOVERY.md` |
-| why something is the way it is | `doc.sh "v2.6"` or `git log` |
+| backups, restore, going private | `doc.sh backups` |
+| why something is the way it is | `doc.sh --grep <thing>` then `CHANGELOG.md`, or `git log` |
+
+⚠️ Some topics span two sections — Media has a **tab** section and a **module
+specifics** section. `--all` gets both.
+
+### Code — `fn.sh`
+
+```bash
+./scripts/fn.sh simRowFor          # print that function or constant
+./scripts/fn.sh --list sim         # every declaration matching "sim", with sizes
+./scripts/fn.sh --grep mediaCycle  # every line mentioning it
+./scripts/fn.sh --callers fmtDate  # who calls it
+```
+
+387 functions and 1,222 constants are indexed. It says when a slice is a fallback
+rather than a real declaration end, so a wrong answer announces itself.
 
 ## Local dev
 
@@ -130,8 +150,20 @@ python3 -m http.server 8765
 
 Use the Browser tool's `preview_start {name: "dashboard"}` — direct `navigate` to
 localhost is blocked by policy. **No build, lint or type tooling, deliberately** —
-don't add a toolchain unasked. The stand-in checks are in `doc.sh "local dev"`;
-run them all before a deploy.
+don't add a toolchain unasked.
+
+**Before every deploy:**
+
+```bash
+./scripts/check.sh
+```
+
+JS syntax · rules JSON · duplicate DOM ids · every inline handler defined · no
+`<input type="date">` · no string sort directions · no external assets ·
+`APP_VERSION` · and a diff against HEAD for line and function counts, which is
+what caught a scripted edit that once deleted 19 functions. **It cannot check the
+browser** — that is still on you, and it is where the bugs that pass every other
+check are found.
 
 Rules deploy separately and **must land before the page** when a change adds a
 field, or the page's writes fail with `Permission denied`:

@@ -58,6 +58,46 @@ PY
   exit 0
 fi
 
+# --------------------------------------------------------------- --grep
+# Which SECTION talks about this? Headings rarely contain the term you remember
+# ("fmtDate", "ex-ASV", "Kontron"), so matching headings alone sends you back to
+# reading the whole file — the thing this exists to prevent.
+if [ "${1:-}" = "--grep" ] || [ "${1:-}" = "-g" ]; then
+  shift
+  [ $# -eq 0 ] && { echo "need a term" >&2; exit 1; }
+  python3 - "$*" "${DOCS[@]}" <<'PY'
+import os, re, sys
+term = sys.argv[1]
+rx = re.compile(re.escape(term), re.I)
+total = 0
+for path in sys.argv[2:]:
+    if not os.path.exists(path):
+        continue
+    lines = open(path).read().split('\n')
+    heads = [(i, len(m.group(1)), l[m.end():].strip())
+             for i, l in enumerate(lines)
+             for m in [re.match(r'(#{2,3}) ', l)] if m]
+    cur, hits = None, {}
+    for i, l in enumerate(lines):
+        while heads and heads[0][0] == i:
+            cur = heads.pop(0)
+        if rx.search(l) and cur:
+            hits.setdefault(cur[2], []).append(i + 1)
+    if hits:
+        print('\n\033[1m%s\033[0m' % os.path.basename(path))
+        for title, ls in sorted(hits.items(), key=lambda kv: -len(kv[1])):
+            total += len(ls)
+            print('  \033[36m%3d\033[0m  %-50s  \033[2mline %d\033[0m'
+                  % (len(ls), title[:50], ls[0]))
+if total:
+    print('\n  %d mention(s). Pull one: \033[1m./scripts/doc.sh "<section>"\033[0m\n' % total)
+else:
+    print('no mention of "%s" in the documentation' % term, file=sys.stderr)
+    sys.exit(1)
+PY
+  exit $?
+fi
+
 # --------------------------------------------------------------- section match
 Q="$*"
 found=0
