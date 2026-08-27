@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # One-command session start: everything needed to answer "where do things stand".
 #
-# This is the mechanical half of the RESUME protocol (see PROJECT_HANDOFF.md).
+# This is the mechanical half of the RESUME protocol; CLAUDE.md is the other half
+# and is the ONLY document a session start should read. The handoff is a reference
+# manual — pull sections from it with ./scripts/doc.sh as the work reaches them.
 # It only reads — no writes, no deploys — so it is safe to run repeatedly.
 #
 #   ./scripts/resume.sh
@@ -131,9 +133,9 @@ sed -n '/^### Waiting on the user/,/^### Ideas raised/p' "$ROOT/PROJECT_HANDOFF.
 
 head_ "Result"
 if [ "$warn" -eq 0 ]; then
-  printf '  \033[32mAll clear — safe to start work.\033[0m\n\n'
-  exit 0
+  printf '  \033[32mAll clear — safe to start work.\033[0m\n'
 else
-  printf '  \033[31m%d thing(s) need attention before changing anything.\033[0m\n\n' "$warn"
-  exit 1
+  printf '  \033[31m%d thing(s) need attention before changing anything.\033[0m\n' "$warn"
 fi
+printf '  Reference is on demand: \033[1m./scripts/doc.sh --list\033[0m — never read the handoff whole.\n\n'
+[ "$warn" -eq 0 ] && exit 0 || exit 1
