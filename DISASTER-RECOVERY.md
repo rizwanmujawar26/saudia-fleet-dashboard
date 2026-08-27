@@ -80,6 +80,22 @@ either. Snapshots from that day:
 |---|---|
 | `2026-08-25-before-sim-date-clear` | clearing all SIM `fittedDate` values |
 | `2026-08-25-before-sim-install-backfill` | writing 34 install dates from activation dates |
+| `2026-08-28-before-ota-patch` | writing `otaPatchUTC` to 40 aircraft |
+| `2026-08-28-before-install-date-fix` | moving 6 `completionDate` values back one day |
+
+⚠️ **Why six install dates moved on 2026-08-28.** AS56, AS62, AS63, AS64, ASI and ASR
+each had a `completionDate` one day *after* their OTA patch, which cannot happen — the
+patch follows the load. Every one of the six patches landed between 22:16 and 23:53
+UTC, so the install had been recorded against the local day rather than the UTC one.
+**The OTA stamp is the accurate record** (user, 2026-08-28), so the install date was
+corrected to match, not the other way round. All six now read install and patch on the
+same UTC day.
+
+⚠️ **That change also moved the Modem tab**, because `MSP 5.2.2 Install Date` is
+DERIVED from `completionDate` (`mspDate: a.completionDate`) rather than stored. That is
+the single-source design working as intended — but it means a `completionDate` edit is
+never local to the Software tab. Completion counts are unaffected: `isCompletedStrict`
+reads version and location, never the date.
 
 Take one locally at any time — no credentials needed, it reads the database
 anonymously:
