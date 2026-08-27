@@ -1933,16 +1933,42 @@
            quietest card on the strip: it is an announcement, not progress, and it must
            not compete with the month the fleet is actually on. It also must not borrow
            the amber that means "out of date" — nothing is late about it yet. */
-        /* The cycle's window — when it opened and when the next release closed it.
-           Quiet, because it is the frame around the figure rather than the figure. */
+        /* Under the bar: the window this cycle owned, and how many aircraft ever took
+           it. Both are context for the figure above, so both are quiet — and they sit
+           BELOW the bar because the bar tracks the live count, while these two describe
+           the cycle itself. */
+        .cycle-foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            margin-top: 6px;
+            min-height: 14px;
+        }
+
         .cycle-window {
             font-size: 9px;
             font-weight: 600;
             letter-spacing: 0.2px;
             color: #7b858e;
-            margin: -2px 0 4px;
             font-variant-numeric: tabular-nums;
             white-space: nowrap;
+        }
+
+        /* The cycle's achievement: distinct aircraft that ever took it. Unlike the
+           figure above it never falls, so it reads as a tally rather than a gauge. */
+        .cycle-total {
+            flex: 0 0 auto;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: rgba(15, 32, 45, 0.06);
+            border: 1px solid rgba(15, 32, 45, 0.09);
+            color: #5f6a73;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
         }
 
         .media-widget-light    { background: #f0eefb; border-color: #d5cef1; border-left-color: #6a5acd; }
@@ -6081,10 +6107,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.67.0';
-        const APP_BUILD    = '2026.08.27.01';
+        const APP_VERSION  = '2.68.0';
+        const APP_BUILD    = '2026.08.27.02';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-27T20:02:41Z';
+        const APP_DEPLOYED = '2026-08-27T20:21:50Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -7615,11 +7641,18 @@
                     // because the blanks are how a missed month is spotted.
                     { id: 'cycleview', label: 'Cycle', single: true,
                       rowValue: () => mediaCycleView(),
-                      options: () => Object.keys(MEDIA_CYCLES)
-                          .concat(mediaLoadEntries().map(l => l.cycle).filter(Boolean))
-                          .filter((c, i, arr) => arr.indexOf(c) === i && !isLightMediaCycle(c))
-                          .sort((a, b) => cycleSortKey(b) - cycleSortKey(a))
-                          .map(c => ({ v: c, l: cycleToDisplay(c) })) },
+                      options: () => {
+                          const keys = [...new Set(Object.keys(MEDIA_CYCLES)
+                              .concat(mediaLoadEntries().map(loadCycleKey).filter(Boolean)))];
+                          // Months newest first, then the two out-of-cycle kinds — they
+                          // are not points in the monthly sequence, so listing them
+                          // among the months would misplace them.
+                          const months = keys.filter(c => c !== MEDIA_DEV_VIEW && !isLightMediaCycle(c))
+                              .sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
+                          const special = keys.filter(c => c === MEDIA_DEV_VIEW || isLightMediaCycle(c))
+                              .sort((a, b) => (a === MEDIA_DEV_VIEW ? 1 : 0) - (b === MEDIA_DEV_VIEW ? 1 : 0));
+                          return months.concat(special).map(c => ({ v: c, l: cycleViewLabel(c) }));
+                      } },
                     { id: 'mstatus', label: 'Status', options: [
                         { v: 'latest', l: 'Latest Media' },
                         { v: 'previous', l: 'Previous Media' },
@@ -8573,6 +8606,7 @@
             tbody.innerHTML = '';
             const latest = latestMediaCycle();
             const cycleView = mediaCycleView();
+            mediaViewRendered = cycleView;
             // Editing is about the CURRENT load, so a past-cycle view is read-only —
             // otherwise a save would silently write a new load rather than correcting
             // the historical one being looked at.
@@ -8594,14 +8628,14 @@
                 // aircraft took the cycle being viewed.
                 const viewLoad = cycleView ? cycleLoadFor(aircraft.id, cycleView) : null;
                 const effective = cycleView
-                    ? (viewLoad ? { mediaCycle: viewLoad.cycle, mediaSource: viewLoad.source || '',
+                    ? (viewLoad ? { mediaCycle: viewLoad.cycle || '', mediaSource: viewLoad.source || '',
                                     loadedDateUTC: viewLoad.loadedAt || '' } : {})
                     : (staged && staged.parsed ? staged.parsed : media);
                 // In a cycle view "did it take this cycle" is the only question, so a
                 // load reads as done rather than being aged against the newest cycle —
                 // August is not "older" when August is what you asked to see.
                 const type = cycleView
-                    ? (viewLoad ? 'latest' : 'no_media')
+                    ? (viewLoad ? (isLightMediaCycle(cycleView) ? 'light' : 'latest') : 'no_media')
                     : mediaStatusType({ media: effective }, latest);
 
                 const row = document.createElement('tr');
@@ -8612,7 +8646,8 @@
 
                 const badgeText = type === 'no_media'
                     ? (cycleView ? 'NOT LOADED' : 'NO MEDIA')
-                    : cycleToShort(effective.mediaCycle);
+                    // A DEV load has no cycle to name, so it says what it is.
+                    : (effective.mediaCycle ? cycleToShort(effective.mediaCycle) : 'DEFAULT');
                 const statusCell = `<span class="status-badge ${MEDIA_STATUS_CLASS[type]}">${badgeText}</span>`;
 
                 const loadedCell = editing
@@ -8739,6 +8774,29 @@
         }
 
         // ===== Reading the load history =====
+        // ===== The two out-of-cycle kinds =====
+        // Light Media (0526) and the DEV/default load are not months. They happen
+        // whenever an aircraft is newly activated, so they are counted and filtered
+        // separately and carry their own history exactly like a monthly cycle.
+        // ⚠️ DEV has no cycle code to key on — the rules only accept four digits — so
+        // it takes a pseudo-cycle used for VIEWS and COUNTS only, never stored.
+        const MEDIA_DEV_VIEW = '__dev';
+
+        function loadIsDev(load) {
+            return !load.cycle && MEDIA_DEV_SOURCE.test(load.source || '');
+        }
+
+        // The cycle a load belongs to for filtering and counting: its real cycle, or
+        // the DEV pseudo-cycle.
+        function loadCycleKey(load) {
+            return load.cycle || (loadIsDev(load) ? MEDIA_DEV_VIEW : '');
+        }
+
+        function cycleViewLabel(key) {
+            if (key === MEDIA_DEV_VIEW) return 'No Media';
+            return isLightMediaCycle(key) ? MEDIA_LIGHT_LABEL : cycleToDisplay(key);
+        }
+
         // Which cycle the Media page is looking at. Empty = the current load on each
         // aircraft, which is the default and the page's original behaviour.
         function mediaCycleView() {
@@ -8746,9 +8804,10 @@
             return sel.size ? Array.from(sel)[0] : '';
         }
 
-        // That cycle's load for one aircraft, or null if it never took it.
+        // That cycle's load for one aircraft, or null if it never took it. Reads the
+        // pseudo-cycle too, so the No Media view works like any other.
         function cycleLoadFor(tail, cycle) {
-            return mediaLoadsFor(tail).find(l => l.cycle === cycle) || null;
+            return mediaLoadsFor(tail).find(l => loadCycleKey(l) === cycle) || null;
         }
 
         function mediaLoadEntries() {
@@ -8781,7 +8840,7 @@
         // toward that cycle, so the figure keeps rising after the cycle closes.
         function cycleLoads(cycle) {
             return mediaLoadEntries()
-                .filter(l => l.cycle === cycle)
+                .filter(l => loadCycleKey(l) === cycle)
                 .sort((a, b) => String(b.loadedAt || '').localeCompare(String(a.loadedAt || '')));
         }
 
@@ -8823,37 +8882,58 @@
         function renderMediaWidgets(latest) {
             const grid = document.getElementById('mediaWidgets');
             if (!grid) return;
-            // ⚠️ Counted from the LOAD LOG, not from each aircraft's current cycle.
-            // An aircraft that has moved on to September still took August, and the
-            // August card has to keep saying so — that is the whole point of keeping
-            // the history. Counted as distinct aircraft, so two loads of one cycle by
-            // the same tail are one.
+
+            // TWO figures per cycle, and the difference between them is the point:
+            //   live  — how many aircraft are on this media RIGHT NOW. It falls as they
+            //           move on, which is what the progress bar should track.
+            //   total — how many ever took it. It only rises; it is the cycle's
+            //           achievement and stays true after everyone has moved on.
+            // Both count distinct aircraft, so two loads of one cycle by one tail is
+            // one aircraft.
             const scopeTails = new Set(mediaFleet().map(a => a.id));
-            const counts = {};
+            const totals = {};
             mediaLoadEntries().forEach(l => {
-                if (!l.cycle || !scopeTails.has(l.aircraft)) return;
-                (counts[l.cycle] = counts[l.cycle] || new Set()).add(l.aircraft);
+                const key = loadCycleKey(l);
+                if (!key || !scopeTails.has(l.aircraft)) return;
+                (totals[key] = totals[key] || new Set()).add(l.aircraft);
             });
-            Object.keys(counts).forEach(c => { counts[c] = counts[c].size; });
-            const none = mediaFleet().filter(a => !(a.media && a.media.mediaCycle)).length;
+            Object.keys(totals).forEach(k => { totals[k] = totals[k].size; });
+
+            const live = {};
+            let none = 0;
+            mediaFleet().forEach(a => {
+                const c = a.media && a.media.mediaCycle;
+                if (c) live[c] = (live[c] || 0) + 1;
+                else none++;   // a DEV load, or nothing at all
+            });
 
             const scope = mediaScope() || 1;
-            const card = (label, count, type, size, window) => {
+            const card = (label, key, type, size) => {
+                const count = key === MEDIA_DEV_VIEW ? none : (live[key] || 0);
+                const total = totals[key] || 0;
                 const pct = Math.round((count / scope) * 1000) / 10;
+                const w = key === MEDIA_DEV_VIEW ? { start: '', end: '' } : mediaCycleWindow(key);
+                const win = w.start
+                    ? (w.end ? `${fmtDateShort(w.start)} → ${fmtDateShort(w.end)}`
+                             : `${fmtDateShort(w.start)} → open`)
+                    : '';
                 return `<div class="media-widget media-widget-${type}">
                     <div class="media-widget-head">
-                        <span class="media-widget-label">${label}</span>
+                        <span class="media-widget-label">${escAttr(label)}</span>
                         ${size ? `<span class="media-size-pill">${escAttr(size)}</span>` : ''}
                     </div>
-                    ${window ? `<div class="cycle-window">${escAttr(window)}</div>` : ''}
                     <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${scope}</span><span class="media-widget-pct">${pct}%</span></div>
                     <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
+                    <div class="cycle-foot">
+                        <span class="cycle-window">${win}</span>
+                        <span class="cycle-total" title="Aircraft that have ever taken this media">${total} loaded</span>
+                    </div>
                 </div>`;
             };
 
             // Declared-but-not-yet-loaded cycles join the loaded ones, so a prepared
-            // load is visible at 0/39 before the first aircraft takes it.
-            const loaded = Object.keys(counts);
+            // load is visible before the first aircraft takes it.
+            const loaded = Object.keys(totals).filter(k => k !== MEDIA_DEV_VIEW);
             const cycles = [...new Set(loaded.concat(upcomingMediaCycles(latest)))]
                 .sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
 
@@ -8864,31 +8944,28 @@
                 return c === previousCycle(latest) ? 'previous' : 'older';
             };
 
-            // ⚠️ The baseline leaves the chronology. Every other card is placed by its
-            // cycle date, but Light Media is not a point in the monthly sequence — it
-            // is what an aircraft carries before joining it — so it is pulled out and
-            // ranked SECOND LAST, above only No Media.
+            // ⚠️ The two out-of-cycle kinds leave the chronology. Neither is a point in
+            // the monthly sequence — they happen whenever an aircraft is activated — so
+            // they are pulled out and ranked last: Light Media, then No Media.
             const dated = cycles.filter(c => !isLightMediaCycle(c));
             const light = cycles.filter(isLightMediaCycle);
 
-            // The window a cycle owns, so a card says not just how many but by when.
-            const windowOf = c => {
-                const w = mediaCycleWindow(c);
-                if (!w.start) return '';
-                return w.end ? `${fmtDateShort(w.start)} → ${fmtDateShort(w.end)}`
-                             : `${fmtDateShort(w.start)} → open`;
-            };
+            let html = dated.map(c => card(cycleToDisplay(c), c, typeOf(c), mediaCycleSize(c))).join('');
+            html += light.map(c => card(MEDIA_LIGHT_LABEL, c, 'light', mediaCycleSize(c))).join('');
+            html += card('No Media', MEDIA_DEV_VIEW, 'no_media', '');
 
-            let html = dated.map(c =>
-                card(cycleToDisplay(c), counts[c] || 0, typeOf(c), mediaCycleSize(c), windowOf(c))).join('');
-            html += light.map(c =>
-                card(MEDIA_LIGHT_LABEL, counts[c] || 0, 'light', mediaCycleSize(c), '')).join('');
-
-            if (none) html += card('No Media', none, 'no_media', '', '');
             grid.innerHTML = html || '<div class="media-widget media-widget-no_media"><div class="media-widget-head"><span class="media-widget-label">No Media Data</span></div></div>';
         }
 
+        let mediaViewRendered = '';
+
         function applyMediaFilters() {
+            // ⚠️ A cycle view changes what every ROW MEANS — the date, source and badge
+            // all switch to that cycle — which no row filter can express. It rebuilds
+            // instead. Without this the selector changed nothing at all: apply() only
+            // toggled visibility on rows that were still showing current media.
+            if (mediaCycleView() !== mediaViewRendered) { populateMediaTable(); return; }
+
             document.querySelectorAll('#mediaTableBody tr').forEach(row => {
                 row.style.display = fbRowMatch('media', row) ? '' : 'none';
             });
