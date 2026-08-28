@@ -13,6 +13,13 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.71.0 — Sideways strips reachable with a mouse
+Seven strips scroll horizontally and five hid their scrollbars, so on a laptop
+whatever they hid was unreachable — the Modem table's right-hand columns, and the
+Schedule and Sign in tabs once eleven tabs no longer fit. A vertical wheel now scrolls
+a strip while the pointer is over it, handing the wheel back at either end so the page
+never feels trapped, and anything with a fine pointer gets a thin scrollbar back.
+
 ### v2.70.0 — Software tab: renames, newest-first, and two new filters
 `Installation Date` becomes **Middleware Install Date**, `Base` becomes **Install
 Location** — labels only, the fields are unchanged. The table now opens **newest

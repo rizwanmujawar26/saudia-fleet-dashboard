@@ -4543,6 +4543,81 @@
 
 
 
+
+        /* ---- Reaching what a sideways strip hides, without a touch screen --------
+           Five of these strips set `scrollbar-width: none` so a phone shows a clean
+           row. On a laptop that removed the only visible affordance, and since a
+           mouse wheel scrolls vertically, whatever the strip hid was unreachable —
+           a wide Modem table, or tabs pushed off the end (user, 2026-08-28).
+
+           Gated on `any-pointer: fine`, so a touch screen keeps the clean strip it
+           was designed for and anyone with a mouse gets the bar back.
+           ⚠️ NOT `(hover: hover) and (pointer: fine)`. That asks about the PRIMARY
+           pointer, so a touchscreen laptop — where the mouse is exactly the problem
+           being fixed — reports coarse and would have been left without a scrollbar.
+           `any-pointer` asks whether a fine pointer exists at all, which is the real
+           question here.
+           These rules sit last in the sheet deliberately: a media query adds no
+           specificity, so they win on order alone over the `scrollbar-width: none`
+           declared earlier. */
+        @media (any-pointer: fine) {
+            .tabs,
+            .cal-strip,
+            .tl-controls .tl-kind-pills,
+            .table-scroll-wrapper,
+            .media-widget-strip,
+            .fb-filters,
+            .quick-filters {
+                scrollbar-width: thin;
+                scrollbar-color: rgba(15, 32, 45, 0.28) transparent;
+            }
+
+            /* `display: block` is doing real work — the earlier rules set
+               `display: none` on the webkit scrollbar, and height alone cannot
+               undo that. */
+            .tabs::-webkit-scrollbar,
+            .cal-strip::-webkit-scrollbar,
+            .tl-controls .tl-kind-pills::-webkit-scrollbar,
+            .table-scroll-wrapper::-webkit-scrollbar,
+            .media-widget-strip::-webkit-scrollbar,
+            .fb-filters::-webkit-scrollbar,
+            .quick-filters::-webkit-scrollbar {
+                display: block;
+                height: 8px;
+            }
+
+            .tabs::-webkit-scrollbar-track,
+            .cal-strip::-webkit-scrollbar-track,
+            .tl-controls .tl-kind-pills::-webkit-scrollbar-track,
+            .table-scroll-wrapper::-webkit-scrollbar-track,
+            .media-widget-strip::-webkit-scrollbar-track,
+            .fb-filters::-webkit-scrollbar-track,
+            .quick-filters::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            .tabs::-webkit-scrollbar-thumb,
+            .cal-strip::-webkit-scrollbar-thumb,
+            .tl-controls .tl-kind-pills::-webkit-scrollbar-thumb,
+            .table-scroll-wrapper::-webkit-scrollbar-thumb,
+            .media-widget-strip::-webkit-scrollbar-thumb,
+            .fb-filters::-webkit-scrollbar-thumb,
+            .quick-filters::-webkit-scrollbar-thumb {
+                background: rgba(15, 32, 45, 0.22);
+                border-radius: 999px;
+            }
+
+            .tabs:hover::-webkit-scrollbar-thumb,
+            .cal-strip:hover::-webkit-scrollbar-thumb,
+            .tl-controls .tl-kind-pills:hover::-webkit-scrollbar-thumb,
+            .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
+            .media-widget-strip:hover::-webkit-scrollbar-thumb,
+            .fb-filters:hover::-webkit-scrollbar-thumb,
+            .quick-filters:hover::-webkit-scrollbar-thumb {
+                background: rgba(15, 32, 45, 0.42);
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -6180,8 +6255,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.70.0';
-        const APP_BUILD    = '2026.08.28.02';
+        const APP_VERSION  = '2.71.0';
+        const APP_BUILD    = '2026.08.28.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-08-28T00:00:00Z';
 
@@ -14447,12 +14522,57 @@
             setInterval(renderSysBar, 30000);
         }
 
+        // Every sideways-scrolling strip in the app. They are swipeable on a touch
+        // screen, which is how this went unnoticed: with a mouse there was NO way to
+        // reach what they hid. A wheel only scrolls vertically, and five of these
+        // hide their scrollbar outright (`scrollbar-width: none`), so a wide Modem
+        // table or an overflowing tab strip simply had content that could not be got
+        // at (user, 2026-08-28).
+        const HSCROLL_SELECTOR = '.tabs, .cal-strip, .tl-kind-pills, .table-scroll-wrapper,'
+            + ' .media-widget-strip, .fb-filters, .quick-filters';
+
+        // Translate a vertical wheel into horizontal scroll while the pointer is over
+        // one of them. Delegated from the document because the strips are rebuilt on
+        // every live update — binding per element would silently stop working the
+        // first time a table repopulated.
+        function initHorizontalWheelScroll() {
+            document.addEventListener('wheel', function (e) {
+                // A trackpad two-finger swipe or a tilt wheel already expresses
+                // horizontal intent. Leave those completely alone.
+                if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+                const strip = e.target && e.target.closest ? e.target.closest(HSCROLL_SELECTOR) : null;
+                if (!strip) return;
+
+                const max = strip.scrollWidth - strip.clientWidth;
+                if (max <= 1) return;                       // nothing hidden, nothing to do
+
+                // deltaMode 1 is LINES, not pixels — a wheel reporting lines would
+                // otherwise crawl one pixel per notch.
+                const step = e.deltaMode === 1 ? e.deltaY * 16
+                           : e.deltaMode === 2 ? e.deltaY * strip.clientWidth
+                           : e.deltaY;
+
+                // ⚠️ Hand the wheel back to the PAGE once the strip has run out, or
+                // the pointer resting over a table would trap vertical scrolling and
+                // the page would feel stuck.
+                const atStart = strip.scrollLeft <= 0;
+                const atEnd = strip.scrollLeft >= max - 1;
+                if ((step < 0 && atStart) || (step > 0 && atEnd)) return;
+
+                strip.scrollLeft += step;
+                // Setting scrollLeft fires the strip's own scroll event, which is what
+                // keeps the floating frozen table head aligned over its columns.
+                e.preventDefault();
+            }, { passive: false });
+        }
+
         // Initialize on page load
         window.addEventListener('load', function() {
             loadAuthSession();
             renderHeaderClock();
             setInterval(renderHeaderClock, 1000);
             initStickyHeader();
+            initHorizontalWheelScroll();
             initSysBar();
             initScheduleAddModal();
             initAddActivityModal();

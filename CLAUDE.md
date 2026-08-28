@@ -83,6 +83,7 @@ A close-out, not a stopping point: finish what is in flight or name it unfinishe
 | A date column's `data-sort` goes through `dateSortKey()`, and the undated sentinel needs the **same digit count** as a real key | Table sorting |
 | Never put `x` and `x/field` in one PATCH — Firebase rejects a multi-path update where one path contains another | Saves |
 | Regex in `database.rules.json`: a literal dot is `\\.` — over-escaping fails **silently** and blocked every Software save once | Rules |
+| A new sideways-scrolling strip must join **`HSCROLL_SELECTOR`** and the `any-pointer: fine` scrollbar rule, or it is unreachable with a mouse | Horizontal strips |
 
 ⚠️ **Verify in the browser, and verify the thing the USER sees.** Three bugs
 shipped or nearly shipped in one session that every diff and syntax check passed.

@@ -2099,6 +2099,59 @@ goes **275px → 351px (+28%)**, and 20px comes back at the top.
 - The 768px cut matches the media query the mobile layout already uses; there is one
   block, not two.
 
+## Horizontal strips — reachable without a touch screen
+
+Seven things in this app scroll sideways: `.tabs`, `.cal-strip`, `.tl-kind-pills`,
+`.table-scroll-wrapper`, `.media-widget-strip`, `.fb-filters`, `.quick-filters`.
+
+⚠️ **Until v2.71.0 they were unreachable with a mouse.** They are swipeable on a
+touch screen, which is why it went unnoticed for so long — but a wheel scrolls
+vertically, and **five of the seven set `scrollbar-width: none`** so a phone shows a
+clean row. On a laptop that left no scrollbar to drag and no gesture to make, so
+whatever a strip hid simply could not be got at: the right-hand columns of the Modem
+table, and the **Schedule and Sign in tabs** once eleven tabs no longer fit
+(reproduced at 700px — both were off-screen with no way to reach them).
+
+Two halves, and the first is the one that matters:
+
+| | |
+|---|---|
+| `initHorizontalWheelScroll()` | turns a vertical wheel into horizontal scroll while the pointer is over a strip. Works with any mouse, changes no layout |
+| the `@media (any-pointer: fine)` block | gives the scrollbar back on anything with a mouse, for discoverability |
+
+⚠️ **A new sideways-scrolling strip must be added to BOTH** — `HSCROLL_SELECTOR` in
+the script and the selector lists in that media query — or it is unreachable with a
+mouse all over again. This is the same shape of trap as a new node needing four edits.
+
+⚠️ **The wheel must be handed back at the ends.** If the handler swallowed every
+event, a pointer resting over a table would trap the page and it would feel frozen.
+It calls `preventDefault()` **only** while the strip can still move that way; at
+either end the event passes through and the page scrolls. Verified on all eight
+overflowing strips across five tabs.
+
+⚠️ **A horizontal-intent wheel is left completely alone** (`|deltaX| >= |deltaY|`) —
+a trackpad swipe and a tilt wheel already do the right thing, and intercepting them
+would fight the browser.
+
+⚠️ **`deltaMode` is not always pixels.** A wheel reporting LINES (`1`) or PAGES (`2`)
+would crawl one pixel per notch; both are scaled.
+
+⚠️ **The gate is `any-pointer: fine`, NOT `(hover: hover) and (pointer: fine)`.**
+The latter asks about the *primary* pointer, so a touchscreen laptop — where the
+mouse is exactly the problem being fixed — reports coarse and would have been left
+with no scrollbar. `any-pointer` asks whether a fine pointer exists at all.
+
+**The frozen table head follows for free.** The handler sets `scrollLeft`, which is
+what a scrollbar drag does, and `window.addEventListener('scroll', scheduleFrozenHeads,
+true)` is capture-phase precisely so a wrapper scrolling sideways is heard. No new path.
+
+⚠️ **The in-app browser pane reports a COARSE pointer and no hover**, so the
+scrollbar half of this cannot be verified there — `matchMedia('(any-pointer: fine)')`
+is false in it. The wheel half is verifiable and was verified; the scrollbars need a
+real mouse.
+
+---
+
 ## Sticky header
 
 The header is `position: sticky; top: 0` so the clock and fleet identity stay on
