@@ -6403,8 +6403,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.73.0';
-        const APP_BUILD    = '2026.08.30.01';
+        const APP_VERSION  = '2.74.0';
+        const APP_BUILD    = '2026.08.30.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-08-30T00:00:00Z';
 
@@ -8816,6 +8816,7 @@
                 const opsSince  = opsPick('since');
                 const opsReason = opsPick('reason');
                 const opsEtr    = opsPick('expectedReturn');
+                const opsLoc    = opsPick('location');
                 const opsD      = opsDef(opsState);
 
                 const row = document.createElement('tr');
@@ -8880,6 +8881,7 @@
                             OPS_STATES.map(o => `<option value="${o.value}" ${o.value === opsState ? 'selected' : ''}>${escAttr(o.label)}</option>`).join('')
                         }</select>` + (opsD.out ? `
                         <input type="text" inputmode="numeric" maxlength="10" placeholder="Since dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(opsSince)}" data-id="${a.id}" data-field="ops/since" onchange="handleFleetEdit(this)">
+                        <input class="edit-text ops-loc-input" value="${escAttr(opsLoc)}" maxlength="60" placeholder="Location (e.g. Jeddah)" data-id="${a.id}" data-field="ops/location" onchange="handleFleetEdit(this)">
                         <input class="edit-text ops-reason-input" value="${escAttr(opsReason)}" maxlength="200" placeholder="Reason (optional)" data-id="${a.id}" data-field="ops/reason" onchange="handleFleetEdit(this)">
                         <input type="text" inputmode="numeric" maxlength="10" placeholder="Back by dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(opsEtr)}" data-id="${a.id}" data-field="ops/expectedReturn" onchange="handleFleetEdit(this)">` : '')
                       + `</div>`
@@ -8888,6 +8890,7 @@
                         : `<div class="ops-stack">
                             <span class="status-badge ops-${opsD.css}"${opsD.full ? ` title="${escAttr(opsD.full)}"` : ''}>${opsD.short}</span>
                             ${opsSince ? `<div class="ops-sub"><span class="fleet-date">${escAttr(opsSince)}</span><span class="age-pill ops-age" title="Out of service for this long">${escAttr(activationAge(opsSince) || '0d')}</span></div>` : ''}
+                            ${opsLoc ? `<div class="ops-sub"><span class="fleet-loc${isOutstation(opsLoc) ? ' outstation' : ''}" title="Grounded at ${escAttr(opsLoc)}"><span class="loc-flag">${locationFlag(opsLoc)}</span>${escAttr(locationCode(opsLoc))}</span></div>` : ''}
                             ${opsReason ? `<div class="ops-reason" title="${escAttr(opsReason)}">${escAttr(opsReason)}</div>` : ''}
                             ${opsEtr ? `<div class="ops-etr" title="Expected back in service">↩ ${escAttr(opsEtr)}</div>` : ''}
                           </div>`);
@@ -9053,7 +9056,7 @@
                 if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
                 staged = v;
             } else {
-                staged = (field === 'comments' || field === 'ops/reason') ? el.value.trim() : el.value;
+                staged = (field === 'comments' || field === 'ops/reason' || field === 'ops/location') ? el.value.trim() : el.value;
             }
             pendingFleet[id] = pendingFleet[id] || {};
             pendingFleet[id][field] = staged;
@@ -9073,13 +9076,14 @@
                 if (!opsIsOut(staged) || staged === cur.state) {
                     // Back in service, or back to the state already on record: drop
                     // anything staged so the cell shows the stored period untouched.
-                    delete pf['ops/since']; delete pf['ops/reason']; delete pf['ops/expectedReturn'];
+                    delete pf['ops/since']; delete pf['ops/reason']; delete pf['ops/expectedReturn']; delete pf['ops/location'];
                 } else {
                     // A new period. It starts today unless the user says otherwise, and
                     // carries NONE of the previous one's details — see populateFleetTable.
                     pf['ops/since'] = fmtDate(new Date().toISOString().slice(0, 10));
                     pf['ops/reason'] = '';
                     pf['ops/expectedReturn'] = '';
+                    pf['ops/location'] = '';
                 }
                 populateFleetTable();
             }
@@ -9131,6 +9135,7 @@
                             until: (opsIsOut(next) ? pick('since') : '') || fmtDate(new Date().toISOString().slice(0, 10)),
                         };
                         if (cur.reason) rec.reason = cur.reason;
+                        if (cur.location) rec.location = cur.location;
                         acMulti[`${id}/opsLog/${key}`] = rec;
                         opsArchived[id] = { key, rec };
                     }
@@ -9148,6 +9153,7 @@
                             since: pick('since') || null,
                             reason: pick('reason') || null,
                             expectedReturn: pick('expectedReturn') || null,
+                            location: pick('location') || null,
                         };
                         Object.entries(rec).forEach(([f, v]) => { acMulti[`${id}/ops/${f}`] = v; });
                         opsAfter[id] = rec;
@@ -14085,7 +14091,7 @@
                 if (opsIsOut(ops.state) && toISODate(ops.since)) {
                     const d = opsDef(ops.state);
                     out.push({ iso: toISODate(ops.since), kind: 'operational', opsState: ops.state,
-                               tail: a.id, type: a.type, location: aircraftLocationOf(a),
+                               tail: a.id, type: a.type, location: ops.location || aircraftLocationOf(a),
                                title: `Out of service — ${d.label}`, sub: ops.reason || '' });
                 }
                 Object.values(a.opsLog || {}).forEach(pd => {
@@ -14093,7 +14099,7 @@
                     const sIso = toISODate(pd.since), uIso = toISODate(pd.until);
                     if (sIso) {
                         out.push({ iso: sIso, kind: 'operational', opsState: pd.state,
-                                   tail: a.id, type: a.type, location: aircraftLocationOf(a),
+                                   tail: a.id, type: a.type, location: pd.location || aircraftLocationOf(a),
                                    title: `Out of service — ${d.label}`, sub: pd.reason || '' });
                     }
                     // The return is its own event on its own day — the aircraft coming
@@ -14101,7 +14107,7 @@
                     if (uIso) {
                         const span = dateSpan(pd.since, pd.until);
                         out.push({ iso: uIso, kind: 'operational', opsState: '', opsReturn: true,
-                                   tail: a.id, type: a.type, location: aircraftLocationOf(a),
+                                   tail: a.id, type: a.type, location: pd.location || aircraftLocationOf(a),
                                    title: 'Returned to service',
                                    sub: span ? `${d.label} · ${span}` : d.label });
                     }
@@ -14325,7 +14331,7 @@
                     pinnedEl.style.display = '';
                     pinnedEl.innerHTML = `
                         <div class="tl-pinned-head">
-                            <span class="tl-pinned-title">📌 Pinned — Aircraft On Ground [AOG]</span>
+                            <span class="tl-pinned-title">📌 Pinned — Out of Service</span>
                             <span class="tl-pinned-count">${outNow.length} of ${fleetRoster.length}</span>
                         </div>
                         <ul class="tl-pinned-items">${outNow.map(({ a, o }) => {
@@ -14333,11 +14339,15 @@
                             const typeColor = TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL;
                             const typeLabel = TYPE_SHORT_LABEL[a.type] || a.type;
                             const age = o.since ? dateSpan(o.since, '') : '';
+                            // Where it is grounded: the location entered against the ops
+                            // period, falling back to the aircraft's own location.
+                            const loc = o.location || aircraftLocationOf(a);
                             return `<li class="tl-pin tl-pin-${d.css}">
                                 <div class="tl-row">
                                     <span class="tl-pin-mark" aria-hidden="true">📌</span>
                                     <span class="tl-reg">${escAttr(a.id)}</span>
                                     ${typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : ''}
+                                    ${loc ? `<span class="tl-loc-pill" style="${pillStyle(LOCATION_PILL_COLORS[loc] || NEUTRAL_PILL)}" title="${escAttr(loc)}">📍 ${escAttr(locationCode(loc))}</span>` : ''}
                                     <span class="tl-kind tl-kind-ops tl-kind-ops-${d.css}"${d.full ? ` title="${escAttr(d.full)}"` : ''}>${escAttr(d.short)}</span>
                                     <span class="tl-title">${o.since ? `since ${escAttr(o.since)}` : 'date not set'}</span>
                                     ${age ? `<span class="age-pill" title="Out of service for this long">${escAttr(age)}</span>` : ''}
