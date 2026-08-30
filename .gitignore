@@ -2,3 +2,8 @@
 # it is public, and git history is far harder to walk back than a live database.
 # See DISASTER-RECOVERY.md for where backups should actually go.
 backups/
+
+# Finder writes this into any directory it displays. It is not ours and carries
+# nothing, but untracked it makes resume.sh report a dirty tree at every session
+# start — which is exactly the signal that has to stay meaningful.
+.DS_Store
