@@ -13,6 +13,34 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.72.0 — Operational State: what is out of the fleet, and since when
+The roster could say where an aircraft was in the WiFi programme but not whether it
+was flying, so AOG was being kept as free text in the Comments column. A new
+**Operational State** column on the Fleet tab carries it properly: eight states (In
+Service, AOG, A-Check, C-Check, Scheduled Maintenance, Storage / Parked, Painting,
+Cabin Modification), each with the date it started, an optional reason and an optional
+expected return.
+
+In Service is stored as **nothing at all** — 42 of 44 aircraft are normal at any
+moment, and the rules have no `in_service` value, so coming back writes `ops: null`.
+History survives that: a period is archived into `opsLog` by the same PATCH that
+clears `ops`, and the two nodes are disjoint — open in one, closed in the other — so
+they cannot drift.
+
+The Timeline gained an **Operational** kind and a pinned block above the day list
+showing what is out right now, longest out first. Nothing is pinned by hand: `out:
+true` on the state is the whole rule, so an aircraft pins and unpins itself. The block
+ignores the kind filter deliberately — filtering to Media must not hide two aircraft
+on the ground. A closed period yields two dated rows, going out and coming back, in
+red and green so they never read alike once the kind pill is filtered away.
+
+Two bugs found before release, neither visible on screen. Moving straight from AOG
+into a C-Check carried the AOG's reason and expected return into the new period —
+caught by intercepting the PATCH body rather than reading the table. And the eighth
+column took the Fleet table from exactly fitting at 1280 to 15px over; `.fleet-compact`
+trims the side padding to reclaim 80px, by class rather than id so the floating frozen
+head matches.
+
 ### v2.71.0 — Sideways strips reachable with a mouse
 Seven strips scroll horizontally and five hid their scrollbars, so on a laptop
 whatever they hid was unreachable — the Modem table's right-hand columns, and the

@@ -84,6 +84,9 @@ A close-out, not a stopping point: finish what is in flight or name it unfinishe
 | Never put `x` and `x/field` in one PATCH — Firebase rejects a multi-path update where one path contains another | Saves |
 | Regex in `database.rules.json`: a literal dot is `\\.` — over-escaping fails **silently** and blocked every Software save once | Rules |
 | A new sideways-scrolling strip must join **`HSCROLL_SELECTOR`** and the `any-pointer: fine` scrollbar rule, or it is unreachable with a mouse | Horizontal strips |
+| A new **column** re-measures the table — Fleet fitted 1165px in 1165px at 1280, and one more column overflowed it | Fleet / Software |
+| A changed `ops.state` starts a NEW period — `reason` and `expectedReturn` must not fall through from the one being archived | Operational state |
+| Verify a save by **intercepting the PATCH body**, not by reading the table — both ops bugs were invisible on screen | Saves |
 
 ⚠️ **Verify in the browser, and verify the thing the USER sees.** Three bugs
 shipped or nearly shipped in one session that every diff and syntax check passed.
@@ -119,6 +122,7 @@ tokens and `index.html` is ~178k. Both have a tool that pulls only what you need
 |---|---|
 | what a node stores | `doc.sh "data model"` |
 | one tab | `doc.sh overview` · `software` · `media` · `modem` · `activity` · `hardware` · `serials` · `schedule` · `fleet` · `"4G SIM"` |
+| AOG, checks, what is out of service | `doc.sh "operational state"` |
 | filters / pills / popovers | `doc.sh "filter bar"` |
 | sorting, tiers, date keys | `doc.sh "table sorting"` |
 | widgets, cards, colour meaning | `doc.sh "widget vocabulary"` |

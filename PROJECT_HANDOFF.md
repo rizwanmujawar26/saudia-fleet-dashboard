@@ -153,6 +153,8 @@ adding it to the rules first.
 | `wifiVisibility` | `public` \| `hidden` |
 | `activatedDate` | `DD-Mon-YYYY` |
 | `simRoaming` | `active` \| `inactive` — the SIM subscription, not the card |
+| `ops` | `{ state, since, reason, expectedReturn }` — the CURRENT out-of-service period. **Absent = In Service.** See *Operational state* |
+| `opsLog` | `{ [periodKey]: { state, since, until, reason } }` — CLOSED periods only, written once when a period ends |
 | `modem` | `{ taurus: {commissionedDate, mgId, tid, se4, se2c, notes}, hughes: {commissionedDate, chassisId, esn, notes} }` — **both** modems, see the Modem tab |
 | `ugoVersion` | e.g. `6.3.1`. **Absent = not installed** |
 | `tilesVersion` | e.g. `2.0`. **Absent = not installed** |
@@ -632,6 +634,62 @@ name when something else needs the same shell.
 
 ---
 
+## Operational state — the second axis, and why it is not a third status
+
+`fleetStatus` says where an aircraft is in the **WiFi programme**. `ops.state` says
+whether the **airframe is available today**. They are genuinely independent — an
+Active aircraft can go AOG this morning and be back tonight without its programme
+status moving — so this is not the "one field, not two" situation above. `OPS_STATES`
+defines all eight in one place: In Service, AOG, A-Check, C-Check, Scheduled
+Maintenance, Storage / Parked, Painting, Cabin Modification.
+
+⚠️ **In Service is the ABSENCE of a value, not a stored one.** 42 of 44 aircraft are
+normal at any moment; writing `in_service` to all of them would mean 44 records to
+keep true instead of the two that are actually out. The rules enforce it — the stored
+enum has no `in_service` — and going back in service writes **`ops: null`**.
+
+**`out: true` on the state is the whole definition of "unavailable".** It is what
+gives the Fleet column its badge, the Timeline its pinned entry and the Fleet
+Composition strip its red card. A new state joins all three by being added to
+`OPS_STATES` with that flag — there is nothing else to wire.
+
+### History: two disjoint nodes, so they cannot drift
+
+`ops` holds the OPEN period. `opsLog` holds CLOSED ones. Nothing is ever in both, so
+the pair cannot disagree — which is why this is not the duplicate-field trap. A period
+is archived into `opsLog` by the same PATCH that overwrites or clears `ops`, keyed by
+its own start (`19_aug_2026_aog`), so saving twice rewrites one record instead of
+adding a second.
+
+⚠️ **A CHANGED STATE IS A NEW PERIOD.** The reason and expected return on record
+describe the period being *left*, so they must not fall through into the one being
+started — an aircraft moving from AOG into a C-Check would otherwise inherit "Engine
+borescope finding". Three places enforce it and they must agree: `populateFleetTable`
+(what the cell shows), `handleFleetEdit` (what is staged) and `commitFleetChanges`
+(what is written). This was a real bug, caught by inspecting the PATCH body rather
+than the screen.
+
+⚠️ **`ops: null` and `ops/<field>` are never in the same PATCH** — Firebase rejects a
+multi-path update where one path contains another. `ops` and `opsLog` are *siblings*,
+so archiving beside the clear is fine.
+
+### Where it shows
+
+| | |
+|---|---|
+| Fleet tab | **Operational State** column, 8th, after Status. Badge, then the since-date with a days pill, the reason (clipped, full text in the tooltip) and the expected return. Edit mode offers the date, reason and return **only** while a state that means "out" is chosen, and dates a new period today |
+| Fleet filter bar | **Operational** — In Service plus only the states actually in use, via `fbPresentOptions` |
+| Fleet Composition | a red **Out of Service** card, rendered only when something is out |
+| Timeline | a pinned block above the day list, plus dated `operational` entries — see below |
+
+⚠️ **The Fleet table fitted its viewport exactly before this column** — 1165px inside a
+1165px wrapper at 1280 — and an eighth column took it to 1180. `.fleet-compact` trims
+the side padding from 15px to 11px, reclaiming 80px. **Styled by class, not by
+`#fleetTable`**: the frozen head is a floating copy that inherits `className` and never
+the `id`.
+
+---
+
 ## Timeline — derived, never stored
 
 `timelineActivities()` is the one place the three sources are folded into a
@@ -640,6 +698,7 @@ single shape (`{ iso, kind, tail, type, location, title, sub }`):
 | kind | source | date it uses |
 |---|---|---|
 | **Activation** | `/aircraft` — every Active aircraft that has one. Title is `Entered Service` | `activatedDate` |
+| **Operational** | `/aircraft/{tail}/ops` for the open period, `opsLog` for closed ones. A closed period yields **two** rows — going out, and `Returned to service` on its `until` | `ops.since` · `opsLog.since` / `.until` |
 | Software | `/aircraft` completion fields — `Middleware {swVersion}` for retrofit, `SBC Configuration A.13` for the linefit pair when `beamcfgStatus === 'done'` | `completionDate` |
 | Media | `/aircraft/{tail}/media` | `loadedDateUTC` |
 | Maintenance | `/activities` whose category maps to `maintenance` | `date` |
@@ -657,9 +716,33 @@ The kind filter drives the day counts as well as the rows, so a tile reading
 "2" under Hardware means two hardware activities that day, not two of anything
 else. Default sort is **newest first**. The title carries no count.
 
-Filter pills are **All / Activation / Software / Hardware / Media**. There is no
-Maintenance pill for now — maintenance-kind activities still appear under All, they
-just have no filter of their own until the categories settle.
+Filter pills are **All / Activation / Software / Hardware / Media / Operational**.
+There is no Maintenance pill for now — maintenance-kind activities still appear under
+All, they just have no filter of their own until the categories settle.
+
+### Pinned — what is out of service right now
+
+`#timelinePinned` sits between the calendar strip and the day list and lists every
+Active aircraft whose `ops.state` is an `out: true` state, **longest out first**.
+
+⚠️ **It is built from the roster, NOT from the filtered items**, and is deliberately
+**not subject to the kind filter**. It is a standing banner rather than one of the
+day's activities, so filtering to Media must not be able to hide the fact that two
+aircraft are on the ground.
+
+**Nothing is pinned by hand.** `out: true` on the state is the entire rule, so an
+aircraft pins itself the moment it goes AOG and unpins itself when it is back — there
+is no pin to set, and no stale pin to clear. That was a deliberate call (user,
+2026-08-30) over a manual pin flag.
+
+The same aircraft also appears as a dated row in the list, on the day it went out.
+That is not duplication: the pinned block answers *what is out now*, the dated row
+answers *what happened that day*, and only the second one survives the aircraft
+returning.
+
+⚠️ **Going out and coming back must not read alike.** Under a kind filter the pill is
+hidden, so the two are marked on the ROW — `tl-ops-out` takes a red accent and ⚠,
+`tl-ops-back` takes green and ✔ — the same reasoning as the Activation milestone.
 
 ### Activation is a milestone, and it is DERIVED
 
@@ -1858,7 +1941,9 @@ to completion status. Entries drop off automatically 24h past their slot
 rescheduled rather than vanishing.
 ### 9. Fleet
 
-owns the roster: add / edit / remove, incl. linefit. The
+owns the roster: add / edit / remove, incl. linefit. The **Operational State** column
+is the 8th, after Status — see *Operational state* for the field, the eight values and
+why In Service is stored as nothing at all. The
 **SaudiaWiFi** column shows `wifiVisibility` (Public / Hidden) and edits it, so a
 Fleet save now writes **three** kinds of field: roster fields to `/fleet`, and
 `activatedDate` *and* `wifiVisibility` to `/aircraft`. The Maintenance profile edits

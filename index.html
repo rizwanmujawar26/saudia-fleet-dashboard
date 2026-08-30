@@ -1930,6 +1930,12 @@
         .media-widget-previous .media-widget-fill { background: #1f8fe0; }
 
         .media-widget-older    { background: #fdf4e6; border-color: #f3ddb4; border-left-color: #f0ad4e; }
+        /* Out of Service. The only red card on any strip — it appears at all only when
+           an aircraft is actually out, so red is a statement rather than decoration. */
+        .media-widget-aog      { background: #fdeff0; border-color: #f3c6cb; border-left-color: #dc3545; }
+        .media-widget-aog      .media-widget-pct  { color: #a52834; }
+        .media-widget-aog      .media-widget-fill { background: #dc3545; }
+        .media-widget-aog      .media-size-pill { background: rgba(165, 40, 52, 0.10); color: #a52834; border-color: rgba(165, 40, 52, 0.20); }
         .media-widget-older    .media-widget-pct  { color: #8a5a12; }
         .media-widget-older    .media-widget-fill { background: #f0ad4e; }
 
@@ -2062,6 +2068,67 @@
 
         .fleet-notset { color: #b3bac0; font-style: italic; }
 
+        /* An eleventh column costs width the Fleet table did not have: at 1280 it
+           measured 1165px inside a 1165px wrapper — exactly fitting — and Operational
+           State took it to 1180 and introduced a sideways scroll that was not there
+           before. Trimming the side padding from 15px to 11px reclaims 80px across the
+           eleven columns, which is more than the column needs.
+           ⚠️ Styled by CLASS, not by #fleetTable: the frozen head is a floating copy
+           that inherits className and never the id, so an id rule leaves the header
+           columns a different width from the body's. */
+        .fleet-compact th,
+        .fleet-compact td { padding-left: 11px; padding-right: 11px; }
+
+        /* ===== Operational state ===== */
+        /* IN SERVICE is deliberately the quietest badge on the row: 42 of 44 aircraft
+           show it, so anything louder would drown the two that matter — and it sits
+           beside the solid green ACTIVE badge, which it must not compete with. */
+        .status-badge.ops-in-service  { background: #eef4f0; color: #55705f; }
+        /* AOG is the only solid one. An aircraft on the ground unexpectedly is the
+           single fact on this page that should stop someone scrolling. */
+        .status-badge.ops-aog         { background: #dc3545; color: #fff; }
+        .status-badge.ops-a-check     { background: #e6f0fb; color: #1c5b96; }
+        .status-badge.ops-c-check     { background: #f1ecfa; color: #55408f; }
+        .status-badge.ops-sched-maint { background: #fdf1e3; color: #8a5312; }
+        .status-badge.ops-storage     { background: #eef1f3; color: #55606a; }
+        .status-badge.ops-painting    { background: #e6f7f4; color: #10695c; }
+        .status-badge.ops-cabin-mod   { background: #fbecf5; color: #8a2f68; }
+
+        /* Stacked, not inline — the same fix the OTA column needed. Four facts side by
+           side would push this table past the viewport and reintroduce a sideways
+           scroll on a column that is empty for 42 of 44 rows. */
+        .ops-stack { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+
+        .ops-sub { display: flex; align-items: center; }
+        .ops-sub .fleet-date { font-size: 11.5px; }
+        .ops-age { margin-left: 5px; }
+
+        /* Clipped rather than wrapped: the full text is in the title, and a long reason
+           must not be able to set this column's width. */
+        .ops-reason {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 11px;
+            color: #7a838c;
+            cursor: help;
+        }
+
+        .ops-etr {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #1c5b96;
+            white-space: nowrap;
+        }
+
+        /* Four controls in one cell, stacked, and only while a state that means "out"
+           is selected — In Service shows the dropdown alone. */
+        .ops-edit { display: flex; flex-direction: column; gap: 4px; }
+        .ops-edit .edit-date,
+        .ops-edit .edit-select { max-width: 150px; }
+        .ops-reason-input { max-width: 150px; }
+
         /* The OTA patch time, under its day-first date. A quiet second line rather
            than a second column: the minute matters when reading it, but never enough
            to compete with the date or to widen an already 11-column table. */
@@ -2184,6 +2251,82 @@
             color: #0a5c34;
             /* Not rotated: fonts orient this glyph differently, so a fixed rotation
                points it somewhere sensible in one font and sideways in the next. */
+        }
+
+        /* ===== Operational: out of service, and back again ===== */
+        .tl-kind-operational { background: #fdeff0; color: #a52834; border-color: #f6d2d6; }
+
+        /* Going out takes the red accent, coming back takes the green — the two events
+           are opposites and must not read alike when the kind pill is hidden under a
+           filter. */
+        .tl-ops-out  { box-shadow: inset 3px 0 0 0 #dc3545; background: linear-gradient(90deg, rgba(220, 53, 69, 0.05), rgba(220, 53, 69, 0) 60%); }
+        .tl-ops-back { box-shadow: inset 3px 0 0 0 #28a745; background: linear-gradient(90deg, rgba(40, 167, 69, 0.05), rgba(40, 167, 69, 0) 60%); }
+        .tl-ops-out .tl-reg  { color: #a52834; }
+        .tl-ops-back .tl-reg { color: #0a5c34; }
+        .tl-ops-mark { flex: 0 0 auto; font-size: 12px; line-height: 1; }
+        .tl-ops-out  .tl-ops-mark { color: #dc3545; }
+        .tl-ops-back .tl-ops-mark { color: #28a745; }
+
+        /* The pinned block. A card rather than more rows, because it answers a
+           different question from the list below it — "what is out right now" instead
+           of "what happened that day" — and it stays put while the list is filtered. */
+        .tl-pinned {
+            border: 1px solid #f0d4d8;
+            border-radius: 10px;
+            background: #fffafa;
+            margin: 0 0 14px;
+            overflow: hidden;
+        }
+
+        .tl-pinned-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 12px;
+            background: #fdeff0;
+            border-bottom: 1px solid #f6d2d6;
+        }
+
+        .tl-pinned-title {
+            font-size: 11.5px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            color: #a52834;
+        }
+
+        .tl-pinned-count {
+            font-size: 11px;
+            font-weight: 700;
+            color: #a52834;
+            background: rgba(165, 40, 52, 0.09);
+            border-radius: 6px;
+            padding: 2px 7px;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .tl-pinned-items { list-style: none; margin: 0; padding: 0; }
+        .tl-pinned-items .tl-pin { padding: 8px 12px; }
+        .tl-pinned-items .tl-pin + .tl-pin { border-top: 1px solid #f6e3e5; }
+        .tl-pin-mark { flex: 0 0 auto; font-size: 12px; line-height: 1; }
+
+        /* The state pill in the pinned block carries the same colour as the Fleet
+           column's badge, so the two pages agree at a glance. */
+        .tl-kind-ops-aog         { background: #dc3545; color: #fff;    border-color: #c72c3c; }
+        .tl-kind-ops-a-check     { background: #e6f0fb; color: #1c5b96; border-color: #cfe0f4; }
+        .tl-kind-ops-c-check     { background: #f1ecfa; color: #55408f; border-color: #ddd3f0; }
+        .tl-kind-ops-sched-maint { background: #fdf1e3; color: #8a5312; border-color: #f6ddc0; }
+        .tl-kind-ops-storage     { background: #eef1f3; color: #55606a; border-color: #dde2e6; }
+        .tl-kind-ops-painting    { background: #e6f7f4; color: #10695c; border-color: #c9ebe4; }
+        .tl-kind-ops-cabin-mod   { background: #fbecf5; color: #8a2f68; border-color: #f2d5e6; }
+
+        .tl-etr {
+            font-size: 11px;
+            font-weight: 700;
+            color: #1c5b96;
+            white-space: nowrap;
         }
 
 
@@ -4743,6 +4886,10 @@
                             </div>
                         </div>
                         <div class="cal-strip" id="timelineCalendarStrip"></div>
+                        <!-- What is out of service right now. Sits above the day list and
+                             is NOT subject to the kind filter — it is a standing banner,
+                             not one of the day's activities. -->
+                        <div class="tl-pinned" id="timelinePinned" style="display:none;"></div>
                         <ul class="timeline-items" id="completedDeliveriesList"></ul>
                         <div class="tl-more" id="timelineShowMore" style="display:none;"></div>
                     </div>
@@ -5166,7 +5313,7 @@
                 </div>
 
                 <div class="table-scroll-wrapper table-freeze">
-                    <table class="aircraft-table" id="fleetTable">
+                    <table class="aircraft-table fleet-compact" id="fleetTable">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -5176,8 +5323,9 @@
                                 <th class="sortable-th" data-col="4" data-label="Fit" onclick="sortTable('fleetTable', 4)">Fit</th>
                                 <th class="sortable-th" data-col="5" data-label="Install Site" onclick="sortTable('fleetTable', 5)">Install Site</th>
                                 <th class="sortable-th" data-col="6" data-label="Status" onclick="sortTable('fleetTable', 6)">Status</th>
-                                <th class="sortable-th" data-col="7" data-label="SaudiaWiFi" onclick="sortTable('fleetTable', 7)">SaudiaWiFi</th>
-                                <th class="sortable-th col-comment" data-col="8" data-label="Comments" onclick="sortTable('fleetTable', 8)">Comments</th>
+                                <th class="sortable-th" data-col="7" data-label="Operational State" onclick="sortTable('fleetTable', 7)">Operational State</th>
+                                <th class="sortable-th" data-col="8" data-label="SaudiaWiFi" onclick="sortTable('fleetTable', 8)">SaudiaWiFi</th>
+                                <th class="sortable-th col-comment" data-col="9" data-label="Comments" onclick="sortTable('fleetTable', 9)">Comments</th>
                                 <th id="fleetActionsHead" style="display:none;">Actions</th>
                             </tr>
                         </thead>
@@ -6255,7 +6403,7 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.71.0';
+        const APP_VERSION  = '2.72.0';
         const APP_BUILD    = '2026.08.28.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-08-28T00:00:00Z';
@@ -7929,6 +8077,15 @@
                         { v: 'Active', l: 'Active' },
                         { v: 'inactive', l: 'Inactive' },
                       ] },
+                    // Only the states actually in use, so the dropdown does not list six
+                    // kinds of check that no aircraft is in. In Service is forced in
+                    // because it is always true of somebody and is the useful inverse
+                    // of "show me what is out".
+                    { id: 'ops', label: 'Operational',
+                      options: () => [{ v: 'in_service', l: 'In Service' }].concat(
+                          fbPresentOptions(fleetRoster,
+                              a => opsOf(a.id).state,
+                              OPS_STATES.filter(o => o.out).map(o => [o.value, o.label]))) },
                     // SSID was folded into the Status pill row as ssid:* to keep
                     // one variable. With a set per filter it can be its own axis,
                     // which is what it always was.
@@ -8480,6 +8637,44 @@
             return s ? s.css : 'active';
         }
 
+        // ── Operational state ───────────────────────────────────────────────────────
+        // A SECOND, INDEPENDENT AXIS to fleetStatus. `fleetStatus` says where an
+        // aircraft is in the WiFi programme; this says whether the airframe is
+        // available today. They are genuinely different facts — an Active aircraft can
+        // be AOG this morning and back tonight without its programme status moving —
+        // so this is not the "one field, not two" situation the handoff warns about.
+        //
+        // ⚠️ IN SERVICE IS THE ABSENCE OF A VALUE, not a stored one. 42 of 44 aircraft
+        // are normal at any moment, and writing 'in_service' to all of them would mean
+        // 44 records to keep true instead of the two that are actually out. The rules
+        // enforce it: 'in_service' is not in the stored enum, and going back in service
+        // writes `ops: null`. Everything below therefore treats '' as In Service.
+        //
+        // `out: true` is what makes an aircraft pin itself to the Timeline and count as
+        // unavailable — that one flag is the definition, so a new state joins both by
+        // being added here.
+        const OPS_STATES = [
+            { value: '',                label: 'In Service',            short: 'IN SERVICE',  css: 'in-service',   out: false },
+            { value: 'aog',             label: 'AOG',                   short: 'AOG',         css: 'aog',          out: true, full: 'Aircraft on Ground' },
+            { value: 'a_check',         label: 'A-Check',               short: 'A-CHECK',     css: 'a-check',      out: true },
+            { value: 'c_check',         label: 'C-Check',               short: 'C-CHECK',     css: 'c-check',      out: true },
+            { value: 'scheduled_maint', label: 'Scheduled Maintenance', short: 'SCHED MAINT', css: 'sched-maint',  out: true },
+            { value: 'storage',         label: 'Storage / Parked',      short: 'STORAGE',     css: 'storage',      out: true },
+            { value: 'painting',        label: 'Painting',              short: 'PAINTING',    css: 'painting',     out: true },
+            { value: 'cabin_mod',       label: 'Cabin Modification',    short: 'CABIN MOD',   css: 'cabin-mod',    out: true },
+        ];
+
+        // Reads from aircraftLive rather than the roster: operational state is a
+        // property of the aircraft, like activatedDate, not of the roster entry.
+        function opsOf(id) { return (aircraftLive[id] || {}).ops || {}; }
+        function opsDef(v) { return OPS_STATES.find(s => s.value === (v || '')) || OPS_STATES[0]; }
+        function opsIsOut(v) { return opsDef(v).out; }
+        // The one definition of "not available today", used by the column, the filter,
+        // the widget and the Timeline's pinned block alike.
+        function opsOutFleet() {
+            return fleetRoster.filter(a => opsIsOut(opsOf(a.id).state));
+        }
+
         let fleetEditMode = false;
         let pendingFleet = {};
         // Opens on the operational fleet; All and the other statuses are one click away.
@@ -8605,6 +8800,24 @@
                     ? staged.wifiVisibility
                     : ((aircraftLive[a.id] || {}).wifiVisibility || '');
 
+                // Operational state lives on /aircraft/{tail}/ops, a self-contained group
+                // like `media` — clearing it writes `ops: null` and takes nothing else
+                // with it. Staged under 'ops/<field>' so commitFleetChanges can send the
+                // paths straight to Firebase.
+                const opsCur    = opsOf(a.id);
+                const opsState  = staged['ops/state'] !== undefined ? staged['ops/state'] : (opsCur.state || '');
+                // ⚠️ A DIFFERENT state is a DIFFERENT PERIOD. The reason and expected
+                // return on record describe the period being left, so they must not
+                // fall through into the one being started — an aircraft moving from AOG
+                // into a C-Check would otherwise inherit "Engine borescope finding".
+                const opsFresh  = !!opsCur.state && opsCur.state !== opsState;
+                const opsPick   = f => staged['ops/' + f] !== undefined ? staged['ops/' + f]
+                                     : (opsFresh ? '' : (opsCur[f] || ''));
+                const opsSince  = opsPick('since');
+                const opsReason = opsPick('reason');
+                const opsEtr    = opsPick('expectedReturn');
+                const opsD      = opsDef(opsState);
+
                 const row = document.createElement('tr');
                 row.dataset.type = a.type;
                 row.dataset.fit = fit;
@@ -8612,6 +8825,9 @@
                 row.dataset.fitview = st === 'In Retrofit' ? 'in-retrofit' : fit;
                 row.dataset.fstatus = st;
                 row.dataset.wifi = wifi;
+                // 'in_service' rather than '' — an empty dataset value cannot be
+                // selected by a filter pill, and In Service has to be pickable.
+                row.dataset.ops = opsState || 'in_service';
 
                 const typeCell = editing
                     ? `<select class="edit-select" data-id="${a.id}" data-field="type" onchange="handleFleetEdit(this)">${
@@ -8655,6 +8871,33 @@
                     : (wifi ? `<span class="status-badge wifi-${wifi}">${escAttr(wifiLabel(wifi).toUpperCase())}</span>`
                             : '<span class="fleet-notset">Not set</span>');
 
+                // The date, reason and expected return only exist while an aircraft is
+                // out, so they are only offered while a state that means "out" is
+                // chosen. Picking In Service hides them and clears the record on save.
+                const opsCell = editing
+                    ? `<div class="ops-edit">
+                        <select class="edit-select" data-id="${a.id}" data-field="ops/state" onchange="handleFleetEdit(this)">${
+                            OPS_STATES.map(o => `<option value="${o.value}" ${o.value === opsState ? 'selected' : ''}>${escAttr(o.label)}</option>`).join('')
+                        }</select>` + (opsD.out ? `
+                        <input type="text" inputmode="numeric" maxlength="10" placeholder="Since dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(opsSince)}" data-id="${a.id}" data-field="ops/since" onchange="handleFleetEdit(this)">
+                        <input class="edit-text ops-reason-input" value="${escAttr(opsReason)}" maxlength="200" placeholder="Reason (optional)" data-id="${a.id}" data-field="ops/reason" onchange="handleFleetEdit(this)">
+                        <input type="text" inputmode="numeric" maxlength="10" placeholder="Back by dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(opsEtr)}" data-id="${a.id}" data-field="ops/expectedReturn" onchange="handleFleetEdit(this)">` : '')
+                      + `</div>`
+                    : (!opsD.out
+                        ? '<span class="status-badge ops-in-service">IN SERVICE</span>'
+                        : `<div class="ops-stack">
+                            <span class="status-badge ops-${opsD.css}"${opsD.full ? ` title="${escAttr(opsD.full)}"` : ''}>${opsD.short}</span>
+                            ${opsSince ? `<div class="ops-sub"><span class="fleet-date">${escAttr(opsSince)}</span><span class="age-pill ops-age" title="Out of service for this long">${escAttr(activationAge(opsSince) || '0d')}</span></div>` : ''}
+                            ${opsReason ? `<div class="ops-reason" title="${escAttr(opsReason)}">${escAttr(opsReason)}</div>` : ''}
+                            ${opsEtr ? `<div class="ops-etr" title="Expected back in service">↩ ${escAttr(opsEtr)}</div>` : ''}
+                          </div>`);
+
+                // Out-of-service aircraft group ahead of the rest and, within a state,
+                // the longest-out first — the order somebody actually wants to read.
+                const opsSort = opsD.out
+                    ? '0' + opsD.short + (dateSortKey(toISODate(opsSince)) || '99999999')
+                    : '1';
+
                 const locTitle = (rStart && rEnd) ? `Grounded ${rStart} to ${rEnd}`
                                : (rStart ? `Grounded from ${rStart}` : '');
                 const locCell = editing
@@ -8679,6 +8922,7 @@
                     <td data-sort="${st === 'In Retrofit' ? 'in retrofit' : fit}">${fitCell}</td>
                     <td data-sort="${escAttr((isOutstation(loc) ? '0' : '1') + loc)}">${locCell}</td>
                     <td data-sort="${st === 'Active' ? 'active' : 'inactive'}">${statusCell}</td>
+                    <td class="col-ops" data-sort="${escAttr(opsSort)}">${opsCell}</td>
                     <td data-sort="${escAttr(wifi)}">${wifiCell}</td>
                     <td class="col-comment" data-sort="${escAttr(comments)}">${commentCell}</td>
                     ${actionCell}
@@ -8751,9 +8995,19 @@
                 </div>
             </div>`;
 
+            // Only when something IS out. A tile permanently reading 0 is noise, and the
+            // whole value of this one is that its appearance means something.
+            const outNow = opsOutFleet();
+            const outCard = outNow.length
+                ? card('Out of Service', outNow.length,
+                       [...new Set(outNow.map(a => opsDef(opsOf(a.id).state).short))].join(' · '),
+                       'aog')
+                : '';
+
             grid.innerHTML =
-                  card('Active Fleet', activeCount, 'in service', 'latest')
+                  card('Active Fleet', activeCount, 'activated', 'latest')
                 + card('In Retrofit', retrofitCount, 'not yet activated', 'older')
+                + outCard
                 + ssid;
         }
 
@@ -8794,17 +9048,41 @@
             // Validate BEFORE touching pendingFleet, or a rejected typo still leaves
             // an empty staged record behind for this aircraft.
             let staged;
-            if (field === 'activatedDate') {
+            if (field === 'activatedDate' || field === 'ops/since' || field === 'ops/expectedReturn') {
                 const v = readDateField(el);
                 if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
                 staged = v;
             } else {
-                staged = field === 'comments' ? el.value.trim() : el.value;
+                staged = (field === 'comments' || field === 'ops/reason') ? el.value.trim() : el.value;
             }
             pendingFleet[id] = pendingFleet[id] || {};
             pendingFleet[id][field] = staged;
-            const row = fleetRowOf(id);
-            if (row) row[field] = pendingFleet[id][field];
+            // The roster mirror is for flat roster fields only. An 'ops/…' key would
+            // sit on the roster object as a literal slashed property that nothing
+            // reads — populateFleetTable takes staged ops values from pendingFleet.
+            if (field.indexOf('/') === -1) {
+                const row = fleetRowOf(id);
+                if (row) row[field] = pendingFleet[id][field];
+            }
+
+            // Choosing a state changes which fields the cell offers, so the row has to
+            // be rebuilt. Going out of service with no date yet is dated today rather
+            // than left blank — the common case is "it happened, record it now".
+            if (field === 'ops/state') {
+                const cur = opsOf(id), pf = pendingFleet[id];
+                if (!opsIsOut(staged) || staged === cur.state) {
+                    // Back in service, or back to the state already on record: drop
+                    // anything staged so the cell shows the stored period untouched.
+                    delete pf['ops/since']; delete pf['ops/reason']; delete pf['ops/expectedReturn'];
+                } else {
+                    // A new period. It starts today unless the user says otherwise, and
+                    // carries NONE of the previous one's details — see populateFleetTable.
+                    pf['ops/since'] = fmtDate(new Date().toISOString().slice(0, 10));
+                    pf['ops/reason'] = '';
+                    pf['ops/expectedReturn'] = '';
+                }
+                populateFleetTable();
+            }
             setSyncStatus(`🟡 ${id} staged — press Save`, '#e0a800');
         }
 
@@ -8821,12 +9099,69 @@
             // goes to /aircraft while everything else goes to /fleet. Two nodes, two
             // writes, one Save — the same split the Hardware tab uses for SIM roaming.
             const multi = {}, acMulti = {};
-            ids.forEach(id => Object.entries(pendingFleet[id]).forEach(([f, v]) => {
-                if (f === 'activatedDate' || f === 'wifiVisibility' || f === 'retrofitLocation') {
-                    acMulti[`${id}/${f}`] = v || null; return;
+            // What each aircraft's ops record becomes, kept so the local mirror after a
+            // successful write says the same thing the PATCH did.
+            const opsAfter = {}, opsArchived = {};
+
+            ids.forEach(id => {
+                const p = pendingFleet[id];
+
+                // ── Operational state ────────────────────────────────────────────────
+                if (Object.keys(p).some(f => f.indexOf('ops/') === 0)) {
+                    const cur   = opsOf(id);
+                    const next  = p['ops/state'] !== undefined ? p['ops/state'] : (cur.state || '');
+                    // The same rule the cell displays by: a changed state starts a new
+                    // period, so nothing falls through from the one being archived.
+                    const fresh = !!cur.state && cur.state !== next;
+                    const pick  = f => p['ops/' + f] !== undefined ? p['ops/' + f]
+                                     : (fresh ? '' : (cur[f] || ''));
+
+                    // A period that is ENDING is archived before it is overwritten —
+                    // that archive is the whole out-of-service history, and it is the
+                    // only copy, so it is written in the same PATCH that clears `ops`.
+                    // The key is derived from the period's own start, so saving twice
+                    // rewrites one record rather than adding a second.
+                    if (cur.state && cur.state !== next && cur.since) {
+                        const key = `${cur.since}_${cur.state}`.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+                        const rec = {
+                            state: cur.state,
+                            since: cur.since,
+                            // Ends the day the next state began, or today when the
+                            // aircraft simply came back.
+                            until: (opsIsOut(next) ? pick('since') : '') || fmtDate(new Date().toISOString().slice(0, 10)),
+                        };
+                        if (cur.reason) rec.reason = cur.reason;
+                        acMulti[`${id}/opsLog/${key}`] = rec;
+                        opsArchived[id] = { key, rec };
+                    }
+
+                    if (!opsIsOut(next)) {
+                        // ⚠️ Back in service clears the whole group in ONE path, and
+                        // deliberately never alongside an `ops/<field>` path: Firebase
+                        // rejects a multi-path update where one path contains another.
+                        // `ops` and `opsLog` are siblings, so archiving beside it is fine.
+                        acMulti[`${id}/ops`] = null;
+                        opsAfter[id] = null;
+                    } else {
+                        const rec = {
+                            state: next,
+                            since: pick('since') || null,
+                            reason: pick('reason') || null,
+                            expectedReturn: pick('expectedReturn') || null,
+                        };
+                        Object.entries(rec).forEach(([f, v]) => { acMulti[`${id}/ops/${f}`] = v; });
+                        opsAfter[id] = rec;
+                    }
                 }
-                multi[`${id}/${f}`] = (f === 'comments' && !v) ? null : v;
-            }));
+
+                Object.entries(p).forEach(([f, v]) => {
+                    if (f.indexOf('ops/') === 0) return;          // handled above
+                    if (f === 'activatedDate' || f === 'wifiVisibility' || f === 'retrofitLocation') {
+                        acMulti[`${id}/${f}`] = v || null; return;
+                    }
+                    multi[`${id}/${f}`] = (f === 'comments' && !v) ? null : v;
+                });
+            });
 
             try {
                 if (Object.keys(multi).length) {
@@ -8849,6 +9184,21 @@
                             aircraftLive[id] = aircraftLive[id] || {};
                             if (v) aircraftLive[id][f] = v; else delete aircraftLive[id][f];
                         });
+                    });
+                    // Mirror ops the same way, and in the same order the PATCH applied:
+                    // archive first, then the new state. Without this the Fleet cell and
+                    // the Timeline's pinned block redraw from a store that still holds
+                    // the old value, and a correct save looks like it did nothing.
+                    Object.entries(opsArchived).forEach(([id, { key, rec }]) => {
+                        aircraftLive[id] = aircraftLive[id] || {};
+                        aircraftLive[id].opsLog = { ...(aircraftLive[id].opsLog || {}), [key]: rec };
+                    });
+                    Object.entries(opsAfter).forEach(([id, rec]) => {
+                        aircraftLive[id] = aircraftLive[id] || {};
+                        if (!rec) { delete aircraftLive[id].ops; return; }
+                        const clean = {};
+                        Object.entries(rec).forEach(([f, v]) => { if (v) clean[f] = v; });
+                        aircraftLive[id].ops = clean;
                     });
                 }
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
@@ -13607,6 +13957,8 @@
             { value: 'software', label: 'Software' },
             { value: 'hardware', label: 'Hardware' },
             { value: 'media',    label: 'Media' },
+            // Out-of-service periods. Last because it is the exception, not the work.
+            { value: 'operational', label: 'Operational' },
         ];
 
         function setTimelineSort(dir) {
@@ -13701,6 +14053,38 @@
                                location: aircraftLocationOf(a),
                                title: 'Entered Service', sub: '' });
                 }
+
+                // --- Operational: out-of-service periods, open and closed ---
+                // The open period is derived from /aircraft/{tail}/ops, exactly as
+                // Activation is derived from activatedDate. Closed periods come from
+                // /aircraft/{tail}/opsLog, which is written once when a period ends —
+                // that archive is why "ASV went AOG on 19-Aug" survives ASV coming back,
+                // while the pinned block above the list shows only what is out NOW.
+                const ops = a.ops || {};
+                if (opsIsOut(ops.state) && toISODate(ops.since)) {
+                    const d = opsDef(ops.state);
+                    out.push({ iso: toISODate(ops.since), kind: 'operational', opsState: ops.state,
+                               tail: a.id, type: a.type, location: aircraftLocationOf(a),
+                               title: `Out of service — ${d.label}`, sub: ops.reason || '' });
+                }
+                Object.values(a.opsLog || {}).forEach(pd => {
+                    const d = opsDef(pd.state);
+                    const sIso = toISODate(pd.since), uIso = toISODate(pd.until);
+                    if (sIso) {
+                        out.push({ iso: sIso, kind: 'operational', opsState: pd.state,
+                                   tail: a.id, type: a.type, location: aircraftLocationOf(a),
+                                   title: `Out of service — ${d.label}`, sub: pd.reason || '' });
+                    }
+                    // The return is its own event on its own day — the aircraft coming
+                    // back is the thing anyone reading that day actually wants to see.
+                    if (uIso) {
+                        const span = dateSpan(pd.since, pd.until);
+                        out.push({ iso: uIso, kind: 'operational', opsState: '', opsReturn: true,
+                                   tail: a.id, type: a.type, location: aircraftLocationOf(a),
+                                   title: 'Returned to service',
+                                   sub: span ? `${d.label} · ${span}` : d.label });
+                    }
+                });
 
                 // --- Media: EVERY load this aircraft has taken, not just its current
                 // one. This used to read a.media, which holds only the newest, so the
@@ -13890,9 +14274,16 @@
                 // the row itself rather than relying on a pill that a kind filter
                 // hides. The ✈ carries it when the row is read at a glance.
                 const milestone = x.kind === 'activation';
-                return `<li${milestone ? ' class="tl-milestone"' : ''}>
+                // Out of service and back again are marked on the row for the same
+                // reason a milestone is: under a kind filter the pill is hidden, and
+                // "went AOG" must not read the same as "returned" at a glance.
+                const opsCls = x.kind !== 'operational' ? ''
+                             : (x.opsReturn ? ' tl-ops-back' : ' tl-ops-out');
+                const opsMark = x.kind !== 'operational' ? '' : (x.opsReturn ? '✔' : '⚠');
+                return `<li${milestone ? ' class="tl-milestone"' : (opsCls ? ` class="${opsCls.trim()}"` : '')}>
                     <div class="tl-row">
                         ${milestone ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>' : ''}
+                        ${opsMark ? `<span class="tl-ops-mark" aria-hidden="true">${opsMark}</span>` : ''}
                         <span class="tl-reg">${escAttr(x.tail)}</span>
                         ${typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : ''}
                         ${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}
@@ -13902,6 +14293,51 @@
                     </div>
                 </li>`;
             };
+
+            // ===== Pinned: what is out of service right now =====
+            // Built from the roster, NOT from `items` — this is a standing banner
+            // rather than one of the day's activities, so a kind filter must not be
+            // able to hide the fact that two aircraft are on the ground. Nothing is
+            // pinned by hand: `out: true` on the state is the whole rule, so an
+            // aircraft pins itself when it goes AOG and unpins itself when it is back.
+            const pinnedEl = document.getElementById('timelinePinned');
+            if (pinnedEl) {
+                const outNow = opsOutFleet()
+                    .filter(a => fleetStatusOf(a) === 'Active')       // same scope as the list
+                    .map(a => ({ a, o: opsOf(a.id) }))
+                    .sort((x, y) => (dateSortKey(toISODate(x.o.since)) || '99999999')
+                                    .localeCompare(dateSortKey(toISODate(y.o.since)) || '99999999'));
+
+                if (!outNow.length) {
+                    pinnedEl.style.display = 'none';
+                    pinnedEl.innerHTML = '';
+                } else {
+                    pinnedEl.style.display = '';
+                    pinnedEl.innerHTML = `
+                        <div class="tl-pinned-head">
+                            <span class="tl-pinned-title">📌 Pinned — out of service</span>
+                            <span class="tl-pinned-count">${outNow.length} of ${activeFleet().length}</span>
+                        </div>
+                        <ul class="tl-pinned-items">${outNow.map(({ a, o }) => {
+                            const d = opsDef(o.state);
+                            const typeColor = TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL;
+                            const typeLabel = TYPE_SHORT_LABEL[a.type] || a.type;
+                            const age = o.since ? dateSpan(o.since, '') : '';
+                            return `<li class="tl-pin tl-pin-${d.css}">
+                                <div class="tl-row">
+                                    <span class="tl-pin-mark" aria-hidden="true">📌</span>
+                                    <span class="tl-reg">${escAttr(a.id)}</span>
+                                    ${typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : ''}
+                                    <span class="tl-kind tl-kind-ops tl-kind-ops-${d.css}"${d.full ? ` title="${escAttr(d.full)}"` : ''}>${escAttr(d.short)}</span>
+                                    <span class="tl-title">${o.since ? `since ${escAttr(o.since)}` : 'date not set'}</span>
+                                    ${age ? `<span class="age-pill" title="Out of service for this long">${escAttr(age)}</span>` : ''}
+                                    ${o.reason ? `<span class="tl-sub">${escAttr(o.reason)}</span>` : ''}
+                                    ${o.expectedReturn ? `<span class="tl-etr" title="Expected back in service">↩ ${escAttr(o.expectedReturn)}</span>` : ''}
+                                </div>
+                            </li>`;
+                        }).join('')}</ul>`;
+                }
+            }
 
             // ===== Day list =====
             // A week's worth of days, then the rest behind one control. The count on the
