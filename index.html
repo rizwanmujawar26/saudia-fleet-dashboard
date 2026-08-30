@@ -6403,10 +6403,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.72.0';
-        const APP_BUILD    = '2026.08.28.03';
+        const APP_VERSION  = '2.73.0';
+        const APP_BUILD    = '2026.08.30.01';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-28T00:00:00Z';
+        const APP_DEPLOYED = '2026-08-30T00:00:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -14054,12 +14054,33 @@
                                title: 'Entered Service', sub: '' });
                 }
 
-                // --- Operational: out-of-service periods, open and closed ---
-                // The open period is derived from /aircraft/{tail}/ops, exactly as
-                // Activation is derived from activatedDate. Closed periods come from
-                // /aircraft/{tail}/opsLog, which is written once when a period ends —
-                // that archive is why "ASV went AOG on 19-Aug" survives ASV coming back,
-                // while the pinned block above the list shows only what is out NOW.
+                // (Operational out-of-service entries are emitted below over the WHOLE
+                // roster, not just Active — see the operational pass after this loop, so
+                // an In-Retrofit airframe that is out of service still reaches the
+                // Timeline while its programme work stays hidden.)
+
+                // --- Media: EVERY load this aircraft has taken, not just its current
+                // one. This used to read a.media, which holds only the newest, so the
+                // moment an aircraft took September its August entry disappeared from
+                // the Timeline. A load is an event and every event stays. ---
+                mediaLoadsFor(a.id).forEach(l => {
+                    const misoMatch = String(l.loadedAt || '').match(/^(\d{4}-\d{2}-\d{2})/);
+                    if (!misoMatch) return;
+                    out.push({ iso: misoMatch[1], kind: 'media', tail: a.id, type: a.type,
+                               location: aircraftLocationOf(a),
+                               title: l.cycle ? `Media ${cycleToDisplay(l.cycle)}` : 'Media load',
+                               sub: (l.source || '') + (loadIsLate(l) ? ' · late' : '') });
+                });
+            });
+
+            // --- Operational: out-of-service periods, open and closed ---
+            // Iterated over the WHOLE roster, not just Active. An aircraft that is out
+            // of service pins itself and lands on the Timeline even while it is still In
+            // Retrofit — its programme work stays hidden (the Active-only loop above),
+            // but the airframe being unavailable does not. Open period from
+            // /aircraft/{tail}/ops; closed periods from /aircraft/{tail}/opsLog, which is
+            // why "ASV went AOG on 19-Aug" survives ASV coming back.
+            aircraftData.forEach(a => {
                 const ops = a.ops || {};
                 if (opsIsOut(ops.state) && toISODate(ops.since)) {
                     const d = opsDef(ops.state);
@@ -14084,19 +14105,6 @@
                                    title: 'Returned to service',
                                    sub: span ? `${d.label} · ${span}` : d.label });
                     }
-                });
-
-                // --- Media: EVERY load this aircraft has taken, not just its current
-                // one. This used to read a.media, which holds only the newest, so the
-                // moment an aircraft took September its August entry disappeared from
-                // the Timeline. A load is an event and every event stays. ---
-                mediaLoadsFor(a.id).forEach(l => {
-                    const misoMatch = String(l.loadedAt || '').match(/^(\d{4}-\d{2}-\d{2})/);
-                    if (!misoMatch) return;
-                    out.push({ iso: misoMatch[1], kind: 'media', tail: a.id, type: a.type,
-                               location: aircraftLocationOf(a),
-                               title: l.cycle ? `Media ${cycleToDisplay(l.cycle)}` : 'Media load',
-                               sub: (l.source || '') + (loadIsLate(l) ? ' · late' : '') });
                 });
             });
 
@@ -14303,7 +14311,9 @@
             const pinnedEl = document.getElementById('timelinePinned');
             if (pinnedEl) {
                 const outNow = opsOutFleet()
-                    .filter(a => fleetStatusOf(a) === 'Active')       // same scope as the list
+                    // Every aircraft that is out of service, whatever its programme
+                    // status — an In-Retrofit airframe on a C-Check is still on the
+                    // ground, so it pins here just like an Active one going AOG.
                     .map(a => ({ a, o: opsOf(a.id) }))
                     .sort((x, y) => (dateSortKey(toISODate(x.o.since)) || '99999999')
                                     .localeCompare(dateSortKey(toISODate(y.o.since)) || '99999999'));
@@ -14315,8 +14325,8 @@
                     pinnedEl.style.display = '';
                     pinnedEl.innerHTML = `
                         <div class="tl-pinned-head">
-                            <span class="tl-pinned-title">📌 Pinned — out of service</span>
-                            <span class="tl-pinned-count">${outNow.length} of ${activeFleet().length}</span>
+                            <span class="tl-pinned-title">📌 Pinned — Aircraft On Ground [AOG]</span>
+                            <span class="tl-pinned-count">${outNow.length} of ${fleetRoster.length}</span>
                         </div>
                         <ul class="tl-pinned-items">${outNow.map(({ a, o }) => {
                             const d = opsDef(o.state);
