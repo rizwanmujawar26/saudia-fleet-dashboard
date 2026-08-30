@@ -2444,6 +2444,17 @@ CHECKPOINT's bookend. When the user says **RESUME** (alone or in a sentence), it
 means: *bring yourself fully up to speed on this project and tell me where things
 stand.* Do all three without asking:
 
+0. ⚠️ **`cd` here first — a session does not open in this repo.** New chats open in
+   `/Users/rizwanmujawar/Downloads/Claude Projects/Saudia Reports`, the **NSG IFEC
+   Fleet Portal** — a different app, with its own `index.html` and `scripts/` to
+   mislead you. Nothing below is reachable until you move:
+   ```bash
+   cd /Users/rizwanmujawar/Downloads/saudia-fleet-dashboard
+   ```
+   ⚠️ **This is why RESUME failed on 2026-08-30**, on a checkpoint that was otherwise
+   perfect. A close-out being complete does not make it *reachable*; the `cd` is what
+   makes it so, which is why it is step zero in all three places the protocol lives —
+   here, `CLAUDE.md`, and the assistant's memory.
 1. **Read `CLAUDE.md`** — that is the entire briefing.
 2. **Run the state check.** One read-only command covers all of it:
    ```bash
@@ -2513,6 +2524,12 @@ break-glass procedure), and the handoff stopped being read at all in favour of
 
 When the user says **CHECKPOINT** (alone or in a sentence), it means: *wrap this session
 up so it can be resumed cleanly in a fresh chat.* Do all four, in order, without asking:
+
+0. ⚠️ **`cd` here first** — see the same step under *"RESUME"*. A session opens in the
+   NSG IFEC Fleet Portal directory, not this one.
+   ```bash
+   cd /Users/rizwanmujawar/Downloads/saudia-fleet-dashboard
+   ```
 
 1. **Back up the data.**
    ```bash

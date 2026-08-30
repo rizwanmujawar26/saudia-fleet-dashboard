@@ -19,12 +19,27 @@ front, Firebase Realtime Database behind, live-synced so the team sees one truth
 
 ## The two code words
 
+⚠️ **Both words start with a `cd`, because a session does not open here.** New chats
+open in `/Users/rizwanmujawar/Downloads/Claude Projects/Saudia Reports` — the **NSG
+IFEC Fleet Portal**, a different app (React + Vite + Firestore) with its own
+`index.html` and `scripts/` to mislead you. Nothing in this file is reachable from
+there:
+
+```bash
+cd /Users/rizwanmujawar/Downloads/saudia-fleet-dashboard
+```
+
+On 2026-08-30 a checkpoint was flawless — clean tree, pushed, 12/12, live hash
+matching, full backup — and RESUME still failed in the next chat, because every
+artefact was in this repo while the session was somewhere else. **A perfect close-out
+is not the same as a reachable one.**
+
 ### RESUME — start of session
 
 Means: *get up to speed and tell me where things stand.* Three steps, no asking:
 
-1. **Read this file.** That is the briefing — do **not** read the handoff or the
-   runbook to start a session.
+1. **`cd` here (above), then read this file.** That is the briefing — do **not** read
+   the handoff or the runbook to start a session.
 2. **Run the state check:**
    ```bash
    ./scripts/resume.sh
@@ -45,7 +60,8 @@ failed check, a hash mismatch, or no verifiable snapshot.
 
 Wrap up so the next session resumes cleanly. Four steps, no asking:
 
-1. `FLEET_BACKUP_DIR="$HOME/Documents/fleet-backups/$(date -u +%F)-session-close" ./scripts/backup.sh`
+1. `cd` here (above), then
+   `FLEET_BACKUP_DIR="$HOME/Documents/fleet-backups/$(date -u +%F)-session-close" ./scripts/backup.sh`
    — check the output lists **every** node.
 2. **Update only the sections you touched**, via `./scripts/doc.sh <section>` to
    read them first. Do not open the whole handoff. Record any ⚠️ lesson that cost
