@@ -6,42 +6,52 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-The last session took the app **v2.50.0 → v2.68.1**. Everything below is detail; these
+The last session took the app **v2.68.1 → v2.72.0**. Everything below is detail; these
 are the things that change how you work on it.
 
-**The Modem tab is new and is where most of the work went.** 🛰️ Modem, restricted to
-signed-in users, retrofit only. One row per aircraft: MSP install date, then three
-column groups — MODMAN, Taurus, Hughes — each in its maker's brand colour, with eye
-toggles to hide any of them.
+**The Fleet tab now answers whether an aircraft is FLYING, not just where it is in the
+WiFi programme.** `ops.state` on `/aircraft/{tail}` is a second, independent axis to
+`fleetStatus` — eight values from AOG to Cabin Modification, each with a start date, an
+optional reason and an optional expected return. Read *Operational state* before
+touching it; the two things that surprise people are that **In Service is stored as
+nothing at all** and that history lives in a *second, disjoint* node (`opsLog`) that
+holds only closed periods, so the pair cannot drift.
 
-**Media is now an EVENT LOG, and that is the biggest change to the data model.**
-`/mediaLoads` holds one record per load; the current load is *derived* from the newest
-one. Past loads and their Timeline entries persist, cycles have windows, and the Media
-page can be viewed against any declared cycle.
+**The Timeline gained a pinned block** above the day list, showing what is out of
+service right now. **Nothing is pinned by hand** — `out: true` on the state is the whole
+rule — and it deliberately ignores the kind filter, because filtering to Media must not
+be able to hide two aircraft on the ground.
 
-**Four rules worth knowing before you touch anything:**
+**Before that: sideways strips became reachable with a mouse (v2.71.0)**, the Software
+tab was renamed and refiltered (v2.70.0), and the OTA Patch Date column landed
+(v2.69.0). Six install dates were corrected where they post-dated their own OTA patch.
 
-| | |
-|---|---|
-| **A new node needs FOUR edits** — the rules, and the node lists in `backup.sh`, `restore.sh`, `verify-deployment.sh` | *Backups* |
-| **A "view" that changes what a row MEANS must REBUILD, not re-filter** | *Media / Modem* |
-| **A write to a POLLED node must be mirrored locally**, or the save looks like it vanished | *Media / Modem* |
-| **Style a frozen-head table by CLASS** — the floating copy inherits className, never id | *Sticky header* |
+**Session-start cost is now ~1.2% of the window, not 25%.** `CLAUDE.md` is the whole
+briefing; this file is a ~40,000-token reference pulled one section at a time with
+`./scripts/doc.sh`, and `CHANGELOG.md` holds the release history. **Do not read this
+file whole.** `./scripts/fn.sh` does the same job for `index.html`.
 
-⚠️ **The most expensive habit from that session, twice over: verify in the browser, and
-verify the thing the USER sees.** Three bugs shipped or nearly shipped that every diff
-and syntax check passed — a sort direction given as `'asc'` where the code multiplies by
-it, a filter that changed state but never rebuilt, and a node left out of the initial
-fetch so a whole widget strip was empty for 25 seconds. None were visible in the code.
+**The rules that cost real debugging time are tabulated in `CLAUDE.md`** — that table is
+the canonical list and it grows most sessions. Read it there rather than keeping a
+second copy here that drifts.
 
-⚠️ **And a data-shaped one: nothing was ever actually lost, but it looked like it.**
-A MODMAN save wrote correctly and then redrew from a store that had not heard about it.
-Before concluding data is gone, `curl` the node.
+⚠️ **The most expensive habit, now three sessions running: verify in the browser, and
+verify the thing the USER sees.** Three bugs shipped or nearly shipped in one session
+that every diff and syntax check passed.
 
-**Current live figures** (2026-08-27, re-read them — the user edits constantly):
-44 aircraft, 42 Active, 40 retrofit + 2 linefit. 40 media load records: 35 August,
-1 September, 1 July, 1 Light Media, 2 DEV. 70 units, of which 53 SIM and 4 MODMAN.
-One aircraft (AQB) carries a full modem record.
+⚠️ **And its sharper form, learned on the Operational State work: for anything that
+WRITES, verify the PATCH BODY, not the screen.** Two bugs were caught by stubbing the
+network layer and reading what would have been sent — a period inheriting the previous
+period's reason, and a column silently overflowing the table. Neither was visible on
+screen, and both would have shipped.
+
+⚠️ **Before concluding data is gone, `curl` the node.** A save that redraws from a stale
+local store looks exactly like data loss, and never is.
+
+**Current live figures**: don't trust this line — `./scripts/resume.sh` reads them fresh
+at every session start, because the user edits constantly. As of 2026-08-30 it was 44
+aircraft (42 Active, 2 In Retrofit), 42 retrofit + 2 linefit, 2 aircraft AOG, 40 media
+load records and 106 units.
 
 ---
 
@@ -2801,6 +2811,19 @@ live.
 
 ### Waiting on the user — ask, don't guess
 
+- **⚠️ Exercise one Operational State save from the page.** The ASV/ASAD AOG records
+  were written with the **Firebase CLI, which writes as admin and bypasses
+  `.validate`** — so the data is proven correct but the *page-side* write path has
+  never been exercised against the new `ops` rules. The regexes were validated directly
+  against every value written (including confirming `08-19-2026` is rejected), so this
+  is a low-risk loose end, not a suspected fault. Closing it takes one edit-and-save on
+  the Fleet tab: green means proven, `Permission denied` means one rules deploy.
+  Nothing is at risk either way — a rejected save changes nothing.
+- **Whether the `[AOG] Grounded from …` comments on ASV and ASAD should be cleared.**
+  They predate the Operational State column and now duplicate it, which is exactly how
+  two copies of one fact start to drift. The user said they would edit these later
+  (2026-08-30), so they were left alone. `reason` is `Grounded` on both, also a
+  placeholder the user intends to replace.
 - **Media cycle release dates.** `MEDIA_CYCLES` has August (26-Jul-2026) and September
   (25-Aug-2026). Earlier months have none, so they show a widget and a count but no
   window, no cycle-closed Timeline row, and no entry in the Cycle view. Each new month

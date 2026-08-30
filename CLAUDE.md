@@ -78,6 +78,7 @@ A close-out, not a stopping point: finish what is in flight or name it unfinishe
 | A new node needs **four edits** — the rules, and the node lists in `backup.sh`, `restore.sh`, `verify-deployment.sh` | Backups |
 | A "view" that changes what a row **means** must **rebuild**, not re-filter | Media / Modem |
 | A write to a **polled** node must be mirrored locally, or the save looks like it vanished | Media / Modem |
+| A node left out of the **initial fetch** still streams later — so a whole widget strip sat empty for 25 seconds and nothing errored | Live streams |
 | Style a frozen-head table **by class** — the floating copy inherits `className`, never `id` | Sticky header |
 | `dir` in a sort is a numeric **multiplier** — `'asc'` makes every comparison `NaN` | Table sorting |
 | A date column's `data-sort` goes through `dateSortKey()`, and the undated sentinel needs the **same digit count** as a real key | Table sorting |

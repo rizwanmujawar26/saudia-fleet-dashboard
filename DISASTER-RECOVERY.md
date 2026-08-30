@@ -49,6 +49,17 @@ would silently leave the known-issue register behind.
 A snapshot taken before that write is at
 `2026-08-25-before-issue-rootcause`.
 
+`/aircraft` gained two on 2026-08-30 (v2.72.0): **`ops`**, the aircraft's current
+out-of-service period, and **`opsLog`**, its closed ones. Both live *under* `/aircraft`,
+so they need no change to `backup.sh`, `restore.sh` or `verify-deployment.sh` — the
+four-edit rule applies to a new **top-level** node, and these are not.
+
+⚠️ **`opsLog` is the ONLY copy of out-of-service history.** `ops` holds the open period
+and is overwritten or cleared when it ends; the closed record is archived into `opsLog`
+by that same write. A partial restore that carried `/aircraft` but dropped `opsLog`
+would lose every past AOG and check period with no trace that they had existed, because
+nothing else in the dataset records them.
+
 ### The one gap: `/editors`
 
 `/editors` is readable only by the account it belongs to. That is the point — it
@@ -82,6 +93,7 @@ either. Snapshots from that day:
 | `2026-08-25-before-sim-install-backfill` | writing 34 install dates from activation dates |
 | `2026-08-28-before-ota-patch` | writing `otaPatchUTC` to 40 aircraft |
 | `2026-08-28-before-install-date-fix` | moving 6 `completionDate` values back one day |
+| `2026-08-30-pre-ops-column` | writing the first two `ops` records (ASV, ASAD) |
 
 ⚠️ **Why six install dates moved on 2026-08-28.** AS56, AS62, AS63, AS64, ASI and ASR
 each had a `completionDate` one day *after* their OTA patch, which cannot happen — the
@@ -90,6 +102,15 @@ UTC, so the install had been recorded against the local day rather than the UTC 
 **The OTA stamp is the accurate record** (user, 2026-08-28), so the install date was
 corrected to match, not the other way round. All six now read install and patch on the
 same UTC day.
+
+⚠️ **The 2026-08-30 AOG write was made with the Firebase CLI, not the page.** There is
+no scripted authenticated-write path in this repo — writes normally go through the
+page's sign-in, and the assistant does not handle the user's password. `database:set`
+writes as **admin, which bypasses `.validate`**, so that write proved the data but not
+the rules. The new `ops` regexes were validated directly against every value instead.
+**If you write data this way again, remember the rules are not checking you** — verify
+the values yourself, and diff the whole node against the pre-write snapshot afterwards,
+which is what was done here (0 unintended changes across 44 aircraft).
 
 ⚠️ **That change also moved the Modem tab**, because `MSP 5.2.2 Install Date` is
 DERIVED from `completionDate` (`mspDate: a.completionDate`) rather than stored. That is
