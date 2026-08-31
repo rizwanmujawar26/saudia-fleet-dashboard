@@ -6,8 +6,27 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-The last session took the app **v2.68.1 → v2.72.0**. Everything below is detail; these
+The last session took the app **v2.75.0 → v2.76.4**. Everything below is detail; these
 are the things that change how you work on it.
+
+**There is now an eleventh tab — 📡 Satcom, the MODMAN register — on a new `/modmans`
+node.** It is modelled on the 4G SIM register (one row per physical box: on-wing, spare,
+faulty, removed) but is a DIFFERENT shape from everything else: `/modmans` is a
+**dedicated, authoritative** node whose records STORE status/aircraft/dates directly,
+rather than deriving them from a `/units` fitment the way SIM does. It carries fields
+`/units` has no home for — two Taurus identifier sets (Old + New) and a Hughes MAC —
+which is why it earns its own node despite the project's "no duplicate nodes" rule. It
+was populated once from the user's JSON (87 boxes). ⚠️ **A removal date DERIVES Removed
+status** — see the Satcom tab section. Read the `/modmans` data-model entry and the tab
+section before touching it.
+
+⚠️ **Two follow-on phases were chosen by the user but NOT built** (2026-08-31): (1) make
+the **Modem tab read Kontron/Eclipse from `/modmans`** so those serials have one source,
+and (2) **two-way fitment sync** between Satcom dates and `/units` fitments. Both touch
+the (fragile) Modem tab and were deferred; #2 is moot until install dates are entered.
+See *Open items*.
+
+**Before that** the last session took the app **v2.68.1 → v2.72.0**:
 
 **The Fleet tab now answers whether an aircraft is FLYING, not just where it is in the
 WiFi programme.** `ops.state` on `/aircraft/{tail}` is a second, independent axis to
@@ -303,6 +322,34 @@ meaningfully carry a serial with no date, which is exactly what the backlog need
 `activityId`. **Serials are no longer stored on an activity at all**: Add New
 Activity's Old/New part fields now write to `/units` via `unitWritesForActivity()`.
 
+### `/modmans/{id}` — the MODMAN register, one record per physical box
+
+**The Satcom tab's node, and a deliberate exception to "no duplicate nodes".** Unlike
+the SIM register (which has no node and derives from `/units`), a MODMAN carries
+identifiers `/units` has no field for — two Taurus sets and a Hughes MAC — so it gets a
+dedicated, **authoritative** home. Everything is STORED on the record, not derived:
+
+| field | notes |
+|---|---|
+| `kontronSn` | Kontron S/N — the identity; unique in the register (the Add-MODMAN duplicate check keys on it) |
+| `eclipseSn` | Eclipse S/N |
+| `taurusOldMgId`, `taurusOldTid`, `taurusNewMgId`, `taurusNewTid` | the two Taurus identifier sets |
+| `hnsChassisId`, `hnsEsn`, `hnsMac` | the Hughes trio |
+| `aircraft` | bare tail; shown `ex-TAIL` once removed |
+| `status` | `active` \| `fault` \| `spare` \| `removed` — see the ⚠️ derivation below |
+| `installDate`, `removalDate` | `DD-Mon-YYYY`; drive the days pill and the removed derivation |
+| `notes`, `addedAt` | comment; ISO stamp |
+
+⚠️ **A removal date DERIVES Removed status.** `satcomRows()` returns `status: 'removed'`
+(and `ex-TAIL`) whenever `removalDate` is present, regardless of what is stored — so a
+box that has come off reads correctly even if its stored `status` still says `fault`.
+The three legacy `removed` entries have no dates and keep their stored value. Anything
+picking a status off a Satcom row must read the DERIVED status, never the raw field.
+
+Polled with the other low-traffic nodes; saves are one PATCH of leaf paths to
+`/modmans.json` and are **mirrored locally** (the node is polled, not streamed).
+Registered in all four node lists (rules + backup/restore/verify).
+
 ### `/mediaLoads/{id}` — every media load ever, one record per load
 
 `aircraft`, `cycle` (MMYY, absent on a DEV load), `loadedAt` (ISO), `source`, `loggedAt`.
@@ -454,6 +501,15 @@ dashboard contradicting itself. Both are now derived from exactly one field.
 So an editor sets **Middleware version** and **Completion Location**, and the
 Status badge, row highlight, type cards, station cards, Timeline and global
 widgets all follow. (Verified: one upgrade moves all of them 24 → 25.)
+
+⚠️ **The one deliberate exception: `/modmans` (Satcom, 2026-08-31).** It stores Kontron
+and Eclipse serials that also live in `/units` for the 40 fitted boxes — a knowing
+duplicate, taken because `/modmans` must also hold two Taurus sets and a MAC that
+`/units` cannot, and the user chose a dedicated authoritative node over extending
+`/units`. The duplication is **not yet resolved**: the plan is to have the **Modem tab
+read Kontron/Eclipse from `/modmans`** (Ideas raised but not built), which restores a
+single source. Until then, do not "fix" the two by writing one from the other — that is
+the pending design decision, not a bug.
 
 ### Three populations, one definition each
 
@@ -1203,10 +1259,14 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
 ---
 
-## Tabs (10)
+## Tabs (11)
 
-Public order: **Overview, Software, Media, Fleet, 4G SIM**. Behind sign-in:
+Public order: **Overview, Software, Media, Fleet, 4G SIM, Satcom**. Behind sign-in:
 **Modem, Activity, Hardware, Serials, Schedule**.
+
+**Satcom went in public** (2026-08-31), like the 4G SIM register it is modelled on — it
+carries serials, but so does SIM, and `/units`/`/modmans` are public-read anyway. To
+gate it: add `data-restricted="1"` to its tab button and `'satcom'` to `RESTRICTED_TABS`.
 
 **Schedule became restricted on 2026-08-25** — it is forward-looking work planning and
 the user does not want it public. **4G SIM went public the same day**, once it was
@@ -1482,6 +1542,45 @@ not who *can* read it. Actually restricting it means changing `.read` in the rul
 and signing in before the first read — the migration written up under *Making this
 private* in `DISASTER-RECOVERY.md`, which also has to deal with `connectLiveSync()`
 firing before authentication and with `backup.sh` losing anonymous access.
+
+### Satcom — the MODMAN register
+
+One row per **physical MODMAN box**, read from `/modmans` (see that node's data-model
+entry). Modelled on the 4G SIM register — on-wing, spare, faulty and removed boxes all
+appear, so a spare in the store and a box that came off an airframe are both accounted
+for — but it is a **different shape**: status/aircraft/dates are STORED on the record,
+not derived from a fitment. `satcomRows()` builds the rows (applying any staged edit);
+`populateSatcomTable()` renders them; `renderSatcomWidgets()` draws the four counts;
+`commitSatcomChanges()` saves; `openAddModman()`/`initAddModmanModal()` add a box.
+
+Columns: `# | Install Date (days pill) | Eclipse S/N | Kontron S/N | Taurus Old (MG ID ·
+TID) | Taurus New (MG ID · TID) | Hughes (Chassis ID · ESN · MAC) | Aircraft | Status |
+Removal Date | Comments`. **Grouped two-row headers** name the modules, using the same
+`.has-grouphead` machinery as the Modem tab — Taurus Old is a muted slate, Taurus New the
+Gilat indigo, Hughes its `#005DAC`. `publishGroupHeadHeight()` was generalised to measure
+whichever grouped table is on the **active** tab, so it serves both this and the Modem
+tab. ⚠️ **`data-col` must equal the DOM cell index** — `sortTable()` uses it directly —
+which with grouped headers is easy to get wrong (MAC is column 10, then Aircraft 11 …).
+
+The **group dividers** are a left border on the first column of each group
+(`.satcom-group-start`); the Hughes block is closed on its right by putting that same
+class on the **Aircraft** column, so a line falls after MAC.
+
+⚠️ **A removal date DERIVES Removed status** (v2.76.4). `satcomRows()` returns
+`removed`/`ex-TAIL` whenever a removal date is present, whatever the stored status — the
+user asked for a removal date to mark a box removed rather than having to also set the
+Status dropdown. In edit mode, `handleSatcomEdit()` auto-marks Removed when a removal
+date is typed (and repaints), and clears the removal date when a non-removed status is
+picked, so the two can never contradict. The three legacy `removed` entries have no
+dates and are untouched. **Removed wins over Fault**, the same convention as SIM: a dead
+box that was removed reads REMOVED, with the fault in the comment.
+
+Status colours reuse the SIM badge classes (`sim-active`/`sim-fault`/`sim-unused`/
+`sim-removed`); the active status is labelled **ACTIVE** while the Removal Date column
+shows a small **On-Wing** pill (scoped `#satcomTable .sim-onwing`, `nowrap`, 9px) meaning
+"no removal date yet, still on the aircraft" — the two used to both say On-Wing and read
+as one fact twice. Install Date is the three-tier build order + four date modes the SIM
+register uses; every other column goes through `sortTable()`. **Public** (see Tabs).
 
 ### 1. Overview
 
@@ -2883,6 +2982,18 @@ live.
 
 ### Ideas raised but not built
 
+- **Satcom → Modem: authoritative read (chosen, not built).** The user chose to make
+  `/modmans` the single source and have the **Modem tab read Kontron/Eclipse from it**
+  rather than from `/units`. Deferred because the Modem tab is keyed by aircraft and its
+  save writes `/units` + `/aircraft/modem`; reconciling needs a concrete call — does its
+  MODMAN section become read-only-from-Satcom, and what happens to the 40 `/units` modman
+  units (retire, or leave)? Ask before starting.
+- **Satcom ↔ fitment two-way sync (chosen, not built).** Setting aircraft + install/
+  removal on Satcom should also write the `/units` fitment the Serials/Modem tabs use.
+  Moot until the user starts entering install dates, so parked with the item above.
+- **Faulty-and-removed reads REMOVED, not FAULT.** By the "removed wins" rule a dead box
+  that came off (e.g. m036, "no power, completely dead") shows REMOVED with the fault in
+  the comment. The user was offered the opposite precedence and has not asked for it.
 - **Assigning a Spare from the table is one-way.** The Aircraft picker creates a
   fitment; it cannot *move* a fitted card to another aircraft, because that is a
   removal plus a refit and belongs on the Serials tab. If the SIM page is to be the
