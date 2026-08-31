@@ -3010,6 +3010,15 @@
             color: #0a5c34;
             border: 1px solid #c9e6d5;
         }
+        /* The MODMAN register's Removal Date column is narrow and centred, so the
+           default pill wrapped at the hyphen. Tighter padding, a smaller face and
+           nowrap keep "ON-WING" on one line without touching the SIM tab's pill. */
+        #satcomTable .sim-onwing {
+            padding: 1px 6px;
+            font-size: 9px;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+        }
         .status-badge.roam-global { background: #e6f0fb; color: #1c5b96; }
         .status-badge.roam-local  { background: #f1f3f5; color: #55606a; }
 
@@ -6600,8 +6609,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.76.1';
-        const APP_BUILD    = '2026.08.31.03';
+        const APP_VERSION  = '2.76.2';
+        const APP_BUILD    = '2026.08.31.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-08-31T00:00:00Z';
 
