@@ -13,6 +13,22 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.76.0 — Satcom: the MODMAN register
+A new tab, 📡 Satcom, modelled on the 4G SIM register but listing every physical
+MODMAN box rather than a SIM card. One row per box — on-wing, spare, faulty and
+removed all appear, so a spare in the store and a box that came off an airframe are
+both accounted for. Columns: Install Date (with the days pill), Eclipse S/N, Kontron
+S/N, Taurus Old (MG ID · TID), Taurus New (MG ID · TID), Hughes (Chassis ID · ESN ·
+MAC), Aircraft (`ex-TAIL` once removed), Status, Removal Date, Comments — every one
+editable, plus Add MODMAN. Grouped two-row headers name which numbers belong to
+which module, brand-coloured like the Modem tab (Hughes `#005DAC`), and the unit
+number inside a Chassis ID / TID is promoted the same way. **Backed by a new
+`/modmans` node** — a dedicated, AUTHORITATIVE home for a box's identity: it carries
+two Taurus sets and a MAC that `/units` has no field for, and the Modem tab is to
+read Kontron/Eclipse from it. Populated once from `Modman_Database_merged_v10.json`
+(87 boxes: 41 on-wing, 39 spare, 4 fault, 3 removed). Install/removal dates are
+entered later. The four node-list edits were made (rules + backup/restore/verify).
+
 ### v2.75.0 — Modem table reads clean: content-width columns, one identifier weight
 The Modem table looked chaotic on a wide screen. Two causes, two fixes.
 **Columns stretched.** It inherited `.aircraft-table { width: 100% }` under

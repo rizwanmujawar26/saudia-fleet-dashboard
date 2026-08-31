@@ -2620,6 +2620,28 @@
         .aircraft-table .modem-group-start { border-left: 2px solid #e3e8ec; }
         .aircraft-table thead .modem-group-start { border-left: 2px solid rgba(255, 255, 255, 0.35); }
 
+        /* Satcom (MODMAN register) group heads — same machinery as the Modem tab's
+           master heads: centred, out-specifying `.aircraft-table th`, with a divider
+           starting each block. Taurus New takes Gilat's indigo (the current set),
+           Taurus Old a muted slate-indigo (history), Hughes its own blue — the same
+           #005DAC the Modem tab uses, so the vendor colour is consistent across pages. */
+        .aircraft-table th.satcom-group {
+            text-align: center;
+            font-size: 11px;
+            letter-spacing: 1.2px;
+            padding: 8px 12px;
+            border-left: 2px solid rgba(255, 255, 255, 0.35);
+        }
+        .aircraft-table th.satcom-group-told  { background: #4c4a63; }
+        .aircraft-table th.satcom-group-tnew  { background: #1B115D; }
+        .aircraft-table th.satcom-group-hughes { background: #005DAC; }
+        .aircraft-table .satcom-group-start { border-left: 2px solid #e3e8ec; }
+        .aircraft-table thead .satcom-group-start { border-left: 2px solid rgba(255, 255, 255, 0.35); }
+        /* The register's short values read as columns when centred, headers included —
+           the same choice the SIM register makes. Comments stays left (a sentence). */
+        #satcomTable th, #satcomTable td { text-align: center; }
+        #satcomTable th.col-comment, #satcomTable td.col-comment { text-align: left; }
+
         /* ⚠️ Two header rows cannot share one `top` — they would pin on top of each
            other. The second row sits below the first by its MEASURED height, published
            as --grouphead-h by publishGroupHeadHeight(); a hardcoded number is wrong the
@@ -4875,6 +4897,7 @@
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
                 <button class="tab-button" onclick="switchTab('sim')">📶 4G SIM</button>
+                <button class="tab-button" onclick="switchTab('satcom')">📡 Satcom</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('modem')">🛰️ Modem</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('maintenance')">🛠️ Activity</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('hardware')">🔧 Hardware</button>
@@ -5256,6 +5279,68 @@
                 <p class="bl-hint" id="simCount" style="padding: 0 4px 16px;"></p>
             </div>
 
+            <!-- Satcom — the MODMAN register. One row per PHYSICAL modman box, the same
+                 shape as the 4G SIM register (which lists a physical card): on-wing,
+                 spare, faulty and removed boxes all appear, so a spare in the store and
+                 a box that came off an airframe are both accounted for.
+
+                 It is the AUTHORITATIVE source for a modman's identity — the Modem tab
+                 reads Kontron/Eclipse from here — and it carries fields /units has no
+                 home for: two Taurus identifier sets (Old and New) and the Hughes MAC.
+                 Grouped headers say which numbers belong to which module. -->
+            <div id="satcom" class="tab-content">
+                <div class="media-widget-section">
+                    <span class="filter-group-label">MODMAN Register</span>
+                    <div class="media-widget-strip" id="satcomWidgets"></div>
+                </div>
+
+                <div class="filterbar">
+                    <div class="fb-filters" data-bar="satcom"></div>
+                    <div class="fb-actions">
+                        <button id="satcomAddBtn" class="qf-btn" style="display:none;" onclick="openAddModman()">➕ Add MODMAN</button>
+                        <button id="satcomEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleSatcomEdit()">🔒 Edit</button>
+                        <button id="satcomResetBtn" class="qf-btn" onclick="resetSatcomTable()">↺ Reset</button>
+                    </div>
+                </div>
+
+                <div class="table-scroll-wrapper table-freeze">
+                    <!-- Two header rows: a master head per module, then that module's own
+                         columns beneath it. Taurus carries two sets — an Old MG/TID pair
+                         and a New one — and Hughes carries Chassis ID, ESN and MAC. The
+                         install/removal dates, serials, aircraft and status sit outside
+                         the modules and span both rows, exactly the placement the SIM
+                         register uses. -->
+                    <table class="aircraft-table has-grouphead satcom-table" id="satcomTable">
+                        <thead>
+                            <tr class="satcom-grouphead">
+                                <th rowspan="2">#</th>
+                                <th rowspan="2" class="sortable-th" data-col="1" data-label="Install Date" id="satcomDateHead" onclick="cycleSatcomDateSort()">Install Date</th>
+                                <th rowspan="2" class="sortable-th" data-col="2" data-label="Eclipse S/N" onclick="sortTable('satcomTable', 2)">Eclipse S/N</th>
+                                <th rowspan="2" class="sortable-th" data-col="3" data-label="Kontron S/N" onclick="sortTable('satcomTable', 3)">Kontron S/N</th>
+                                <th colspan="2" class="satcom-group satcom-group-told satcom-told-col">Taurus · Old</th>
+                                <th colspan="2" class="satcom-group satcom-group-tnew satcom-tnew-col">Taurus · New</th>
+                                <th colspan="3" class="satcom-group satcom-group-hughes satcom-hughes-col">Hughes</th>
+                                <th rowspan="2" class="sortable-th" data-col="11" data-label="Aircraft" onclick="sortTable('satcomTable', 11)">Aircraft</th>
+                                <th rowspan="2" class="sortable-th" data-col="12" data-label="Status" onclick="sortTable('satcomTable', 12)">Status</th>
+                                <th rowspan="2" class="sortable-th" data-col="13" data-label="Removal Date" onclick="sortTable('satcomTable', 13)">Removal Date</th>
+                                <th rowspan="2" class="sortable-th col-comment" data-col="14" data-label="Comments" onclick="sortTable('satcomTable', 14)">Comments</th>
+                            </tr>
+                            <tr>
+                                <th class="sortable-th satcom-told-col satcom-group-start" data-col="4" data-label="MG ID" onclick="sortTable('satcomTable', 4)">MG ID</th>
+                                <th class="sortable-th satcom-told-col" data-col="5" data-label="TID" onclick="sortTable('satcomTable', 5)">TID</th>
+                                <th class="sortable-th satcom-tnew-col satcom-group-start" data-col="6" data-label="MG ID" onclick="sortTable('satcomTable', 6)">MG ID</th>
+                                <th class="sortable-th satcom-tnew-col" data-col="7" data-label="TID" onclick="sortTable('satcomTable', 7)">TID</th>
+                                <th class="sortable-th satcom-hughes-col satcom-group-start" data-col="8" data-label="Chassis ID" onclick="sortTable('satcomTable', 8)">Chassis ID</th>
+                                <th class="sortable-th satcom-hughes-col" data-col="9" data-label="ESN" onclick="sortTable('satcomTable', 9)">ESN</th>
+                                <th class="sortable-th satcom-hughes-col" data-col="10" data-label="MAC" onclick="sortTable('satcomTable', 10)">MAC Address</th>
+                            </tr>
+                        </thead>
+                        <tbody id="satcomTableBody"></tbody>
+                    </table>
+                </div>
+                <p class="bl-hint" id="satcomCount" style="padding: 0 4px 16px;"></p>
+            </div>
+
             <!-- Satellite modem commissioning. One row per aircraft in scope, because
                  the blanks ARE the work: an aircraft with no modem on record is what
                  this page exists to surface, the same way the Software tab shows
@@ -5590,6 +5675,83 @@
             <div style="display:flex; gap:10px; margin-top:18px;">
                 <button id="addSimCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="addSimSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Add SIM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add one physical MODMAN box to the register — as a Spare in the store, or
+         fitted to an aircraft straight away. The Kontron S/N is the identity and must
+         be unique; everything else can be filled in later from the table. -->
+    <div id="addModmanOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="act-modal" style="max-width:520px; max-height:88vh; overflow-y:auto;">
+            <h3 style="color:#0a5c34; margin-bottom:6px;">Add MODMAN</h3>
+            <p style="font-size:13px; color:#666; margin-bottom:16px;">Add a box to the register. Only the <b>Kontron S/N</b> is required — the rest can be filled in later from the table.</p>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 14px;">
+                <div>
+                    <label class="add-sched-label">Kontron S/N</label>
+                    <input id="addMmKontron" class="add-sched-input" maxlength="60" placeholder="e.g. 484230001" autocomplete="off">
+                </div>
+                <div>
+                    <label class="add-sched-label">Eclipse S/N</label>
+                    <input id="addMmEclipse" class="add-sched-input" maxlength="60" placeholder="e.g. SN_001" autocomplete="off">
+                </div>
+                <div>
+                    <label class="add-sched-label">Taurus Old — MG ID</label>
+                    <input id="addMmToldMg" class="add-sched-input" maxlength="20" autocomplete="off">
+                </div>
+                <div>
+                    <label class="add-sched-label">Taurus Old — TID</label>
+                    <input id="addMmToldTid" class="add-sched-input" maxlength="20" autocomplete="off">
+                </div>
+                <div>
+                    <label class="add-sched-label">Taurus New — MG ID</label>
+                    <input id="addMmTnewMg" class="add-sched-input" maxlength="20" autocomplete="off">
+                </div>
+                <div>
+                    <label class="add-sched-label">Taurus New — TID</label>
+                    <input id="addMmTnewTid" class="add-sched-input" maxlength="20" autocomplete="off">
+                </div>
+                <div>
+                    <label class="add-sched-label">Hughes — Chassis ID</label>
+                    <input id="addMmChassis" class="add-sched-input" maxlength="60" autocomplete="off">
+                </div>
+                <div>
+                    <label class="add-sched-label">Hughes — ESN</label>
+                    <input id="addMmEsn" class="add-sched-input" maxlength="60" autocomplete="off">
+                </div>
+                <div style="grid-column:1 / -1;">
+                    <label class="add-sched-label">Hughes — MAC Address</label>
+                    <input id="addMmMac" class="add-sched-input" maxlength="60" placeholder="e.g. 00:80:AE:10:A0:22" autocomplete="off">
+                </div>
+            </div>
+
+            <label class="add-sched-label" style="margin-top:14px;">Status</label>
+            <select id="addMmStatus" class="add-sched-input" onchange="syncAddModmanStatus()">
+                <option value="spare">Spare — in the store</option>
+                <option value="active">On-Wing — fitted to an aircraft</option>
+                <option value="fault">Fault</option>
+                <option value="removed">Removed</option>
+            </select>
+
+            <!-- Shown for anything that names an aircraft. Install date is the day the
+                 box went on; it drives the days pill on the table. -->
+            <div id="addMmFitWrap" style="display:none;">
+                <label class="add-sched-label">Aircraft</label>
+                <select id="addMmAircraft" class="add-sched-input"></select>
+
+                <label class="add-sched-label">Install Date <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+                <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="addMmInstall" class="add-sched-input">
+            </div>
+
+            <label class="add-sched-label">Comments</label>
+            <input id="addMmNotes" class="add-sched-input" maxlength="1000" placeholder="Anything worth knowing about this box" autocomplete="off">
+
+            <p id="addModmanError" style="display:none; color:#dc3545; font-size:13px; margin-top:10px;"></p>
+
+            <div style="display:flex; gap:10px; margin-top:18px;">
+                <button id="addModmanCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button id="addModmanSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Add MODMAN</button>
             </div>
         </div>
     </div>
@@ -6309,6 +6471,13 @@
         // Expanding it is one rules line per field: altPartNumber, altSerial, revision
         // and modDots are already declared and simply have no UI yet.
         let unitsLive = {};
+        // The MODMAN (Satcom) register — one record per PHYSICAL modman box, its
+        // identifiers (Eclipse/Kontron serials, Taurus Old+New, Hughes chassis/esn/mac),
+        // status, aircraft and dates. A dedicated node, deliberately: it is the
+        // AUTHORITATIVE source for a modman box (the Modem tab reads Kontron/Eclipse
+        // from here), and it carries fields /units has no home for (two Taurus sets, a
+        // MAC). Polled with the other low-traffic nodes — no seventh EventSource.
+        let modmansLive = {};
         // ===== Media load history =====
         // One record per load: { aircraft, cycle, loadedAt, source, loggedAt }.
         //
@@ -6431,8 +6600,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.75.0';
-        const APP_BUILD    = '2026.08.31.01';
+        const APP_VERSION  = '2.76.0';
+        const APP_BUILD    = '2026.08.31.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-08-31T00:00:00Z';
 
@@ -6651,19 +6820,21 @@
             // to LOW_TRAFFIC_POLL_MS late, and since the Media widgets are built from
             // it, every monthly card was missing for the first 25 seconds of each page
             // load — the strip looked broken.
-            Promise.all(['hardware', 'units', 'activities', 'mediaLoads'].map(n =>
+            Promise.all(['hardware', 'units', 'activities', 'mediaLoads', 'modmans'].map(n =>
                 fetch(`${FIREBASE_DB_URL}/${n}.json`).then(r => r.json()).catch(() => null)
-            )).then(([hw, un, ac, ml]) => {
+            )).then(([hw, un, ac, ml, mm]) => {
                 hardwareLive   = hw || {};
                 unitsLive      = un || {};
                 activitiesLive = ac || {};
                 mediaLoadsLive = ml || {};
+                modmansLive    = mm || {};
                 markDataSync();
                 rebuildAircraftData();     // current media is derived from the log
                 renderHardwarePage();      // fitment is derived from units
                 renderMaintenancePage();   // so is Installed Equipment
                 renderSerialsPage();
                 populateMediaTable();      // widgets and rows both read the log
+                renderSatcomPage();        // the MODMAN register reads /modmans
                 updateMetrics();           // the Timeline reads activities and loads
                 startLowTrafficPoll();
             });
@@ -6702,6 +6873,7 @@
                 units:      d => { unitsLive = d || {}; },
                 activities: d => { activitiesLive = d || {}; },
                 mediaLoads: d => { mediaLoadsLive = d || {}; },
+                modmans:    d => { modmansLive = d || {}; },
             };
             let changed = false;
 
@@ -6722,6 +6894,7 @@
                 renderHardwarePage();
                 renderMaintenancePage();
                 renderSerialsPage();
+                if (!satcomEditMode) renderSatcomPage();  // MODMAN register reads /modmans
                 updateMetrics();          // the Timeline reads activities
             }
         }
@@ -6734,6 +6907,7 @@
                 units:      JSON.stringify(Object.keys(unitsLive).length ? unitsLive : null),
                 activities: JSON.stringify(Object.keys(activitiesLive).length ? activitiesLive : null),
                 mediaLoads: JSON.stringify(Object.keys(mediaLoadsLive).length ? mediaLoadsLive : null),
+                modmans:    JSON.stringify(Object.keys(modmansLive).length ? modmansLive : null),
             };
             setInterval(pollLowTrafficNodes, LOW_TRAFFIC_POLL_MS);
         }
@@ -7490,6 +7664,8 @@
                 populateMediaTable();
             } else if (tabName === 'sim') {
                 renderSimPage();
+            } else if (tabName === 'satcom') {
+                renderSatcomPage();
             } else if (tabName === 'maintenance') {
                 renderMaintenancePage();
             } else if (tabName === 'hardware') {
@@ -8152,6 +8328,22 @@
                         simCards().forEach(c => { if (c.type && seen.indexOf(c.type) === -1) seen.push(c.type); });
                         return seen.map(t => ({ v: t, l: TYPE_SHORT_LABEL[t] || t }));
                     } },
+                ],
+            },
+
+            satcom: {
+                apply: () => applySatcomFilters(),
+                search: 'Search serial, ID or aircraft',
+                // The two worth one click: what is flying and what is in the store.
+                quick: [
+                    { filter: 'satcomstatus', value: 'active', label: 'On-Wing' },
+                    { filter: 'satcomstatus', value: 'spare',  label: 'Spare' },
+                ],
+                filters: [
+                    // One definition — SATCOM_STATUSES drives the badges, the edit
+                    // dropdown and this filter together.
+                    { id: 'satcomstatus', label: 'Status',
+                      options: () => SATCOM_STATUSES.map(x => ({ v: x.value, l: x.label })) },
                 ],
             },
 
@@ -11268,7 +11460,10 @@
         // row's measured height. A hardcoded number is wrong the moment the group
         // label wraps or the breakpoint changes the font.
         function publishGroupHeadHeight() {
-            const first = document.querySelector('.modem-table thead tr:first-child');
+            // Whichever grouped-header table is on the visible tab — both the Modem and
+            // the Satcom register carry a two-row head, and only one is on screen.
+            const first = document.querySelector('.tab-content.active .has-grouphead thead tr:first-child')
+                || document.querySelector('.modem-table thead tr:first-child');
             if (!first) return;
             const h = Math.round(first.getBoundingClientRect().height);
             if (h) document.documentElement.style.setProperty('--grouphead-h', h + 'px');
@@ -11997,6 +12192,457 @@
                     err.style.display = 'block';
                 } finally {
                     btn.disabled = false; btn.textContent = 'Add SIM';
+                }
+            });
+        }
+
+        // ===== Satcom — the MODMAN register ================================
+        // One row per PHYSICAL modman box, read from /modmans. Modelled on the 4G SIM
+        // register (one row per physical card): on-wing, spare, faulty and removed
+        // boxes all appear, so a spare in the store and a box that came off an airframe
+        // are both accounted for.
+        //
+        // ⚠️ Unlike the SIM register, status/aircraft/dates are STORED on the record,
+        // not derived from a fitment. A modman carries identifiers /units has no home
+        // for (two Taurus sets, a Hughes MAC), so it earns a dedicated node — and that
+        // node is the AUTHORITATIVE source for the box's identity: the Modem tab reads
+        // Kontron/Eclipse from here. Keeping status editable is the point — the user
+        // corrects it directly rather than through a fitment.
+        //
+        // ⚠️ /modmans is POLLED, not streamed (no seventh EventSource) — so a save must
+        // mirror into modmansLive locally, or the table redraws from a stale store and
+        // the edit looks like it vanished. Same rule the Media and Modem saves follow.
+        const SATCOM_STATUSES = [
+            { value: 'active',  label: 'On-Wing', badge: 'ON-WING', cls: 'sim-active'  },
+            { value: 'fault',   label: 'Fault',   badge: 'FAULT',   cls: 'sim-fault'   },
+            { value: 'spare',   label: 'Spare',   badge: 'SPARE',   cls: 'sim-unused'  },
+            { value: 'removed', label: 'Removed', badge: 'REMOVED', cls: 'sim-removed' },
+        ];
+
+        // Same three tiers the SIM register sorts in: boxes flying (with a date) lead
+        // and sort by the chosen mode; removed and undated sit behind them; spares last,
+        // because a spare has never been fitted and has nothing to sort by.
+        const SATCOM_TIER = { active: 0, fault: 0, removed: 1, spare: 2 };
+        const SATCOM_DATE_SORTS = [
+            { key: 'date-desc', label: 'Newest first',  arrow: '↓' },
+            { key: 'date-asc',  label: 'Oldest first',  arrow: '↑' },
+            { key: 'days-desc', label: 'Most days',     arrow: '⇊' },
+            { key: 'days-asc',  label: 'Fewest days',   arrow: '⇈' },
+        ];
+        let satcomDateSort = 0;
+        let satcomEditMode = false;
+        let pendingSatcom = {};   // { modmanId: { field: value } }
+
+        function cycleSatcomDateSort() {
+            satcomDateSort = (satcomDateSort + 1) % SATCOM_DATE_SORTS.length;
+            delete lastSort['satcomTable'];
+            populateSatcomTable();
+        }
+
+        function satcomStatusMeta(v) {
+            return SATCOM_STATUSES.find(x => x.value === v) || SATCOM_STATUSES[2];
+        }
+
+        // Days a box has been on wing — today minus install, or the closed span once a
+        // removal date exists. Null when the install date is unknown, which keeps
+        // undated rows out of the days comparison rather than counting them as zero.
+        function satcomDaysOnWing(r) {
+            const iso = toISODate(r.installDate);
+            if (!iso) return null;
+            const from = new Date(iso + 'T00:00:00Z');
+            if (isNaN(from)) return null;
+            const end = r.removalDate ? new Date(toISODate(r.removalDate) + 'T00:00:00Z') : new Date();
+            if (isNaN(end)) return null;
+            return Math.round((end - from) / 86400000);
+        }
+
+        // One row object per modman, with any staged edit already applied so the table
+        // reads the pending value before Save.
+        function satcomRows() {
+            return Object.entries(modmansLive || {}).map(([id, m]) => {
+                const staged = pendingSatcom[id] || {};
+                const pick = k => staged[k] !== undefined ? staged[k] : (m[k] || '');
+                const status = pick('status') || 'spare';
+                const aircraft = pick('aircraft');
+                return {
+                    id, status, aircraft,
+                    eclipseSn: pick('eclipseSn'), kontronSn: pick('kontronSn'),
+                    taurusOldMgId: pick('taurusOldMgId'), taurusOldTid: pick('taurusOldTid'),
+                    taurusNewMgId: pick('taurusNewMgId'), taurusNewTid: pick('taurusNewTid'),
+                    hnsChassisId: pick('hnsChassisId'), hnsEsn: pick('hnsEsn'), hnsMac: pick('hnsMac'),
+                    installDate: pick('installDate'), removalDate: pick('removalDate'),
+                    notes: pick('notes'),
+                    // A removed box is still identified by where it came off.
+                    tailLabel: !aircraft ? '' : (status === 'removed' ? 'ex-' + aircraft : aircraft),
+                };
+            });
+        }
+
+        function satcomScope(status) {
+            return satcomRows().filter(r => r.status === status).length;
+        }
+
+        function renderSatcomWidgets() {
+            const strip = document.getElementById('satcomWidgets');
+            if (!strip) return;
+            const rows = satcomRows();
+            const total = rows.length || 1;
+            const n = st => rows.filter(r => r.status === st).length;
+            const card = (label, count, type) => {
+                const pct = Math.round((count / total) * 1000) / 10;
+                return `<div class="media-widget media-widget-${type}">
+                    <div class="media-widget-head"><span class="media-widget-label">${label}</span></div>
+                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${rows.length}</span><span class="media-widget-pct">${pct}%</span></div>
+                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
+                </div>`;
+            };
+            // Four states that PARTITION the register, so the counts sum to the total —
+            // a spare in the store and a box that came off are both worth a number here,
+            // unlike the SIM strip where Removed was dropped at the user's request.
+            strip.innerHTML =
+                card('On-Wing', n('active'), 'latest') +
+                card('Spare', n('spare'), 'previous') +
+                card('Fault', n('fault'), 'alert') +
+                card('Removed', n('removed'), 'older');
+        }
+
+        function satcomStatusBadge(v) {
+            const e = satcomStatusMeta(v);
+            return `<span class="status-badge ${e.cls}">${e.badge}</span>`;
+        }
+
+        function populateSatcomTable() {
+            const tbody = document.getElementById('satcomTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const editing = satcomEditMode && canEdit();
+            const mode = SATCOM_DATE_SORTS[satcomDateSort].key;
+            const dnum = r => Number(dateSortKey(toISODate(r.installDate)) || 0);
+
+            // Three-tier build order, exactly the SIM register's: a single-column sort
+            // cannot express tiers, so this is built and a click on Install Date
+            // re-enters here rather than going through applyTableSort().
+            const rows = satcomRows().sort((a, b) => {
+                const ta = SATCOM_TIER[a.status] ?? 9, tb = SATCOM_TIER[b.status] ?? 9;
+                const ua = ta === 0 && !a.installDate ? 1 : ta;
+                const ub = tb === 0 && !b.installDate ? 1 : tb;
+                if (ua !== ub) return ua - ub;
+                if (ua === 0) {
+                    if (mode === 'days-desc' || mode === 'days-asc') {
+                        const da = satcomDaysOnWing(a), db = satcomDaysOnWing(b);
+                        if (da !== db) return mode === 'days-desc' ? db - da : da - db;
+                    } else {
+                        const x = dnum(a), y = dnum(b);
+                        if (x !== y) return mode === 'date-desc' ? y - x : x - y;
+                    }
+                    return String(a.kontronSn).localeCompare(String(b.kontronSn));
+                }
+                const x = dnum(a) || Infinity, y = dnum(b) || Infinity;
+                if (x !== y) return x - y;
+                return String(a.kontronSn).localeCompare(String(b.kontronSn));
+            });
+
+            rows.forEach((r, idx) => {
+                const row = document.createElement('tr');
+                row.dataset.satcomstatus = r.status;
+                // The search haystack is the data, not the columns: serials, both Taurus
+                // sets, the Hughes trio, and the tail with its ex- form.
+                row.dataset.search = [r.eclipseSn, r.kontronSn, r.taurusOldMgId, r.taurusOldTid,
+                    r.taurusNewMgId, r.taurusNewTid, r.hnsChassisId, r.hnsEsn, r.hnsMac,
+                    r.tailLabel, r.aircraft].filter(Boolean).join(' ');
+
+                const hasTail = !!r.aircraft;
+                // The install pill measures time on wing — green while it counts up,
+                // amber once a removal date closes the span, neutral for a fault.
+                const servicePill = r.installDate ? dateSpan(r.installDate, r.removalDate || '') : '';
+                const pillTone = r.removalDate ? 'age-pill-closed'
+                    : (r.status === 'active' ? 'age-pill-active' : '');
+
+                const dateCell = (field, value) => {
+                    if (editing) {
+                        return `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(value)}"
+                            data-mm="${escAttr(r.id)}" data-field="${field}" onchange="handleSatcomEdit(this)">`;
+                    }
+                    if (!value) {
+                        // No removal date on a box that is still on the aircraft — say so
+                        // outright rather than an em dash, the way the SIM register does.
+                        return field === 'removalDate' && hasTail && r.status !== 'removed' && r.status !== 'spare'
+                            ? '<span class="sim-onwing">On-Wing</span>'
+                            : '<span class="fleet-notset">—</span>';
+                    }
+                    if (field === 'installDate') {
+                        const pill = servicePill
+                            ? `<span class="age-pill ${pillTone}" title="${escAttr(r.removalDate ? 'Total time on wing — this box has been removed, so the count has stopped' : 'Time on wing so far')}">${servicePill}</span>` : '';
+                        return `<span class="fleet-date">${escAttr(value)}</span>${pill}`;
+                    }
+                    return `<span class="fleet-date">${escAttr(value)}</span>`;
+                };
+
+                // A plain text identifier cell — an input in edit mode, the value
+                // otherwise. `promote` runs the value through modemIdHTML() so the unit
+                // number inside a Chassis ID or TID stands out, exactly as on the Modem
+                // tab; everything else renders plain.
+                const idCell = (field, value, promote) => {
+                    if (editing) {
+                        return `<input class="edit-text" style="width:100%" value="${escAttr(value)}" placeholder="—" data-mm="${escAttr(r.id)}" data-field="${field}" onchange="handleSatcomEdit(this)">`;
+                    }
+                    if (!value) return '<span class="fleet-notset">—</span>';
+                    return promote ? modemIdHTML(value) : escAttr(value);
+                };
+
+                const tailCell = editing
+                    ? `<select class="edit-select" data-mm="${escAttr(r.id)}" data-field="aircraft" onchange="handleSatcomEdit(this)">
+                           <option value="" ${!r.aircraft ? 'selected' : ''}>— not assigned —</option>
+                           ${projectFleet().map(a => `<option value="${escAttr(a.id)}" ${r.aircraft === a.id ? 'selected' : ''}>${escAttr(a.id)}</option>`).join('')}
+                       </select>`
+                    : (r.tailLabel
+                        ? `<strong${r.status === 'removed' ? ' class="sim-ex"' : ''}>${escAttr(r.tailLabel)}</strong>`
+                        : '<span class="fleet-notset">Not fitted</span>');
+
+                const statusCell = editing
+                    ? `<select class="edit-select" data-mm="${escAttr(r.id)}" data-field="status" onchange="handleSatcomEdit(this)">
+                           ${SATCOM_STATUSES.map(x => `<option value="${x.value}" ${r.status === x.value ? 'selected' : ''}>${x.label}</option>`).join('')}
+                       </select>`
+                    : satcomStatusBadge(r.status);
+
+                const noteCell = editing
+                    ? `<input class="edit-text comment-input" value="${escAttr(r.notes)}" placeholder="Add a comment" data-mm="${escAttr(r.id)}" data-field="notes" onchange="handleSatcomEdit(this)">`
+                    : `<span class="comment-text">${r.notes ? escAttr(r.notes) : '—'}</span>`;
+
+                const insSort = dateSortKey(toISODate(r.installDate)) || '99999999';
+                const remSort = dateSortKey(toISODate(r.removalDate)) || '99999999';
+
+                row.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td data-sort="${insSort}">${dateCell('installDate', r.installDate)}</td>
+                    <td data-sort="${escAttr(r.eclipseSn)}">${idCell('eclipseSn', r.eclipseSn, false)}</td>
+                    <td data-sort="${escAttr(r.kontronSn)}">${idCell('kontronSn', r.kontronSn, false)}</td>
+                    <td class="satcom-group-start" data-sort="${escAttr(r.taurusOldMgId)}">${idCell('taurusOldMgId', r.taurusOldMgId, false)}</td>
+                    <td data-sort="${escAttr(r.taurusOldTid)}">${idCell('taurusOldTid', r.taurusOldTid, true)}</td>
+                    <td class="satcom-group-start" data-sort="${escAttr(r.taurusNewMgId)}">${idCell('taurusNewMgId', r.taurusNewMgId, false)}</td>
+                    <td data-sort="${escAttr(r.taurusNewTid)}">${idCell('taurusNewTid', r.taurusNewTid, true)}</td>
+                    <td class="satcom-group-start" data-sort="${escAttr(r.hnsChassisId)}">${idCell('hnsChassisId', r.hnsChassisId, true)}</td>
+                    <td data-sort="${escAttr(r.hnsEsn)}">${idCell('hnsEsn', r.hnsEsn, false)}</td>
+                    <td data-sort="${escAttr(r.hnsMac)}">${idCell('hnsMac', r.hnsMac, false)}</td>
+                    <td data-sort="${escAttr(r.aircraft || 'zzz')}">${tailCell}</td>
+                    <td data-sort="${escAttr(r.status)}">${statusCell}</td>
+                    <td data-sort="${remSort}">${dateCell('removalDate', r.removalDate)}</td>
+                    <td class="col-comment" data-sort="${escAttr(r.notes)}">${noteCell}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            renderSatcomWidgets();
+            fbRender('satcom');
+            syncTableFreeze();
+            publishGroupHeadHeight();
+            applySatcomFilters();
+            const ss = lastSort['satcomTable'];
+            if (ss) applyTableSort('satcomTable', ss.col, ss.dir);
+            updateSortIndicators('satcomTable');
+            // updateSortIndicators writes its own arrow; the mode label goes on after,
+            // only while no column sort is active.
+            const head = document.getElementById('satcomDateHead');
+            if (head && !ss) {
+                const m = SATCOM_DATE_SORTS[satcomDateSort];
+                head.innerHTML = `Install Date <span class="sim-sort-mode">${m.arrow} ${escAttr(m.label)}</span>`;
+                head.title = 'Click to cycle: ' + SATCOM_DATE_SORTS.map(x => x.label).join(' → ');
+            }
+            updateSatcomEditUI();
+        }
+
+        function applySatcomFilters() {
+            document.querySelectorAll('#satcomTableBody tr').forEach(row => {
+                row.style.display = fbRowMatch('satcom', row) ? '' : 'none';
+            });
+            renumberVisibleRows('satcomTable');
+            const shown = Array.from(document.querySelectorAll('#satcomTableBody tr'))
+                .filter(r => r.style.display !== 'none').length;
+            const total = satcomRows().length;
+            setText('satcomCount', `${shown} of ${total} MODMANs`);
+        }
+
+        function resetSatcomTable() {
+            fbClear('satcom');
+            fbRender('satcom');
+            delete lastSort['satcomTable'];
+            satcomDateSort = 0;
+            populateSatcomTable();
+        }
+
+        // ---- edit mode: staged, then one save, like every other table ----
+        function handleSatcomEdit(el) {
+            const id = el.dataset.mm;
+            const field = el.dataset.field;
+            const entry = pendingSatcom[id] || {};
+            if (field === 'installDate' || field === 'removalDate') {
+                const v = readDateField(el);
+                if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
+                entry[field] = v;
+            } else {
+                entry[field] = (el.value || '').trim();
+            }
+            pendingSatcom[id] = entry;
+            setSyncStatus('🟡 MODMAN change staged — press Save', '#e0a800');
+        }
+
+        async function toggleSatcomEdit() {
+            if (satcomEditMode) { await commitSatcomChanges(); return; }
+            if (!canEdit()) { requireSignIn(); return; }
+            satcomEditMode = true;
+            pendingSatcom = {};
+            populateSatcomTable();
+        }
+
+        async function commitSatcomChanges() {
+            const ids = Object.keys(pendingSatcom);
+            if (!ids.length) { satcomEditMode = false; populateSatcomTable(); return; }
+            const token = await getIdToken();
+            if (!token) return;
+
+            // One multi-path PATCH of leaf paths (`<id>/<field>`), the shape every other
+            // save uses. A cleared field is written null so it is removed, not stored
+            // as an empty string the rules would reject.
+            const patch = {};
+            ids.forEach(id => {
+                const e = pendingSatcom[id];
+                Object.keys(e).forEach(field => {
+                    let v = e[field];
+                    // A spare has no aircraft: picking Spare clears the tail so the row
+                    // cannot read as a spare that is still fitted somewhere.
+                    patch[`${id}/${field}`] = (v === '' || v == null) ? null : v;
+                });
+                // Keep aircraft/status coherent: a box set to Spare drops its aircraft.
+                if (e.status === 'spare') patch[`${id}/aircraft`] = null;
+            });
+
+            setSyncStatus('🟡 Saving MODMAN changes...', '#e0a800');
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/modmans.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify(patch),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                // Mirror locally — /modmans is polled, so without this the table redraws
+                // from a store that has not heard about the write and the edit vanishes
+                // until the next poll.
+                ids.forEach(id => {
+                    const m = modmansLive[id] || (modmansLive[id] = {});
+                    const e = pendingSatcom[id];
+                    Object.keys(e).forEach(field => {
+                        const v = e[field];
+                        if (v === '' || v == null) delete m[field]; else m[field] = v;
+                    });
+                    if (e.status === 'spare') delete m.aircraft;
+                });
+                pendingSatcom = {};
+                satcomEditMode = false;
+                populateSatcomTable();
+                // The Modem tab reads Kontron/Eclipse from here — repaint it too.
+                if (typeof renderModemPage === 'function') renderModemPage();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not save MODMAN changes — ${e.message}`, '#dc3545');
+            }
+        }
+
+        function updateSatcomEditUI() {
+            const addBtn = document.getElementById('satcomAddBtn');
+            const editing = satcomEditMode && canEdit();
+            applyEditButton('satcomEditBtn', editing, 'Edit', '💾 Save');
+            if (addBtn) addBtn.style.display = canEdit() ? '' : 'none';
+        }
+
+        function renderSatcomPage() {
+            populateSatcomTable();
+        }
+
+        // ---- Add MODMAN ----
+        function openAddModman() {
+            if (!canEdit()) { requireSignIn(); return; }
+            const overlay = document.getElementById('addModmanOverlay');
+            if (!overlay) return;
+            ['addMmEclipse', 'addMmKontron', 'addMmToldMg', 'addMmToldTid', 'addMmTnewMg',
+             'addMmTnewTid', 'addMmChassis', 'addMmEsn', 'addMmMac', 'addMmNotes']
+                .forEach(x => { const el = document.getElementById(x); if (el) el.value = ''; });
+            document.getElementById('addMmStatus').value = 'spare';
+            document.getElementById('addMmInstall').value = toDMY(new Date().toISOString().slice(0, 10));
+            const acSel = document.getElementById('addMmAircraft');
+            acSel.innerHTML = '<option value="">— not assigned —</option>' +
+                projectFleet().map(a => `<option value="${escAttr(a.id)}">${escAttr(a.id)}</option>`).join('');
+            syncAddModmanStatus();
+            const err = document.getElementById('addModmanError');
+            err.textContent = ''; err.style.display = 'none';
+            overlay.style.display = 'flex';
+            document.getElementById('addMmKontron').focus();
+        }
+
+        // Aircraft and install date only mean something for a box being fitted now.
+        function syncAddModmanStatus() {
+            const wrap = document.getElementById('addMmFitWrap');
+            if (!wrap) return;
+            const s = document.getElementById('addMmStatus').value;
+            wrap.style.display = (s === 'active' || s === 'fault' || s === 'removed') ? '' : 'none';
+        }
+
+        function initAddModmanModal() {
+            const overlay = document.getElementById('addModmanOverlay');
+            if (!overlay) return;
+            const err = document.getElementById('addModmanError');
+            const close = () => { overlay.style.display = 'none'; };
+            document.getElementById('addModmanCancel').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+            document.getElementById('addModmanSave').addEventListener('click', async () => {
+                const val = x => (document.getElementById(x).value || '').trim();
+                const kontron = val('addMmKontron');
+                if (!kontron) { err.textContent = 'A Kontron S/N is required.'; err.style.display = 'block'; return; }
+                // One Kontron serial is one physical box; a duplicate would list it twice.
+                const clash = Object.values(modmansLive || {}).find(m => m.kontronSn === kontron);
+                if (clash) { err.textContent = `${kontron} is already in the register.`; err.style.display = 'block'; return; }
+
+                const status = document.getElementById('addMmStatus').value;
+                const entry = { kontronSn: kontron, status,
+                    addedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z') };
+                const put = (k, v) => { if (v) entry[k] = v; };
+                put('eclipseSn', val('addMmEclipse'));
+                put('taurusOldMgId', val('addMmToldMg')); put('taurusOldTid', val('addMmToldTid'));
+                put('taurusNewMgId', val('addMmTnewMg')); put('taurusNewTid', val('addMmTnewTid'));
+                put('hnsChassisId', val('addMmChassis')); put('hnsEsn', val('addMmEsn')); put('hnsMac', val('addMmMac'));
+                put('notes', val('addMmNotes'));
+
+                if (status !== 'spare') {
+                    const tail = document.getElementById('addMmAircraft').value;
+                    if (tail) entry.aircraft = tail;
+                    const inst = val('addMmInstall');
+                    if (inst) {
+                        const stored = fmtDate(inst);
+                        if (!stored) { err.textContent = 'Install date must be dd-mm-yyyy.'; err.style.display = 'block'; return; }
+                        entry.installDate = stored;
+                    }
+                }
+
+                const token = await getIdToken();
+                if (!token) return;
+                const btn = document.getElementById('addModmanSave');
+                btn.disabled = true; btn.textContent = 'Saving...';
+                const id = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                try {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/modmans/${id}.json?auth=${token}`, {
+                        method: 'PUT', body: JSON.stringify(entry),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                    modmansLive[id] = entry;
+                    close();
+                    populateSatcomTable();
+                    if (typeof renderModemPage === 'function') renderModemPage();
+                    setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                } catch (e) {
+                    err.textContent = `Could not add MODMAN — ${e.message}`;
+                    err.style.display = 'block';
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Add MODMAN';
                 }
             });
         }
@@ -15061,6 +15707,7 @@
             initScheduleAddModal();
             initAddActivityModal();
             initAddSimModal();
+            initAddModmanModal();
             initAddIssueModal();
             initShopReportModal();
             initBaselineModal();

@@ -63,7 +63,7 @@ print('Snapshot integrity: OK (all checksums match)')
 PY
 echo
 
-NODES="fleet aircraft schedule activities hardware units mediaLoads visits"
+NODES="fleet aircraft schedule activities hardware units mediaLoads modmans visits"
 [ -z "$ONLY" ] || NODES="$(echo "$ONLY" | tr ',' ' ')"
 
 echo "Would restore:"
