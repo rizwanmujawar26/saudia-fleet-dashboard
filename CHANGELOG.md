@@ -13,6 +13,23 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.75.0 — Modem table reads clean: content-width columns, one identifier weight
+The Modem table looked chaotic on a wide screen. Two causes, two fixes.
+**Columns stretched.** It inherited `.aircraft-table { width: 100% }` under
+`table-layout: auto`, but unlike the Software tab it has no greedy column to absorb
+surplus width — so `auto` layout shared every spare pixel across all thirteen
+columns and blew the date columns out to ~3× the date inside them. `.modem-table`
+now sets `width: auto`, so the table shrinks to its content and sits left with the
+surplus as empty space rather than stretched columns; the per-column `min-width`
+floors still hold, and the `@media(max-width:900px)` min-width keeps a narrow-screen
+scroll. **Identifiers read as five weights.** A single serial mixed thin 400
+monospace with an 800-weight, 1.08em, extra-letter-spaced promoted digit that jumped
+off the monospace grid, plus leading zeros dimmed to a faint 0.45. Now one solid
+weight for the body (500), a gentle one-step emphasis for the identifying digits
+(700 at the **same** size and spacing, so they stay on the grid), and zeros dimmed
+only lightly (0.55). Duplicate `.modem-id` / `.modem-id b` rules consolidated. CSS
+only — no data, rules or field change.
+
 ### v2.72.0 — Operational State: what is out of the fleet, and since when
 The roster could say where an aircraft was in the WiFi programme but not whether it
 was flying, so AOG was being kept as free text in the Comments column. A new
