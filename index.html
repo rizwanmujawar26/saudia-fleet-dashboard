@@ -6609,8 +6609,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.76.3';
-        const APP_BUILD    = '2026.08.31.05';
+        const APP_VERSION  = '2.76.4';
+        const APP_BUILD    = '2026.08.31.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-08-31T00:00:00Z';
 
@@ -12271,15 +12271,21 @@
             return Object.entries(modmansLive || {}).map(([id, m]) => {
                 const staged = pendingSatcom[id] || {};
                 const pick = k => staged[k] !== undefined ? staged[k] : (m[k] || '');
-                const status = pick('status') || 'spare';
+                const rawStatus = pick('status') || 'spare';
                 const aircraft = pick('aircraft');
+                const removalDate = pick('removalDate');
+                // A removal date means the box has come off — it reads as Removed
+                // (ex-TAIL) whether or not the stored status was updated. The three
+                // legacy removed entries have no dates yet and keep their stored
+                // 'removed', so nothing about them changes.
+                const status = removalDate ? 'removed' : rawStatus;
                 return {
                     id, status, aircraft,
                     eclipseSn: pick('eclipseSn'), kontronSn: pick('kontronSn'),
                     taurusOldMgId: pick('taurusOldMgId'), taurusOldTid: pick('taurusOldTid'),
                     taurusNewMgId: pick('taurusNewMgId'), taurusNewTid: pick('taurusNewTid'),
                     hnsChassisId: pick('hnsChassisId'), hnsEsn: pick('hnsEsn'), hnsMac: pick('hnsMac'),
-                    installDate: pick('installDate'), removalDate: pick('removalDate'),
+                    installDate: pick('installDate'), removalDate,
                     notes: pick('notes'),
                     // A removed box is still identified by where it came off.
                     tailLabel: !aircraft ? '' : (status === 'removed' ? 'ex-' + aircraft : aircraft),
@@ -12484,15 +12490,33 @@
             const id = el.dataset.mm;
             const field = el.dataset.field;
             const entry = pendingSatcom[id] || {};
+            // A removal date and a non-removed status contradict each other. Whichever
+            // the user just set wins, and the other is brought into line — so the row
+            // can never read "Active" beside a removal date, or "Removed" with none.
+            let repaint = false;
             if (field === 'installDate' || field === 'removalDate') {
                 const v = readDateField(el);
                 if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
                 entry[field] = v;
+                // Entering a removal date IS the act of removing the box — mark it
+                // Removed so it reads ex-TAIL at once. Clearing it leaves the status
+                // for the user to set from the dropdown.
+                if (field === 'removalDate') { if (v) entry.status = 'removed'; repaint = true; }
+            } else if (field === 'status') {
+                entry.status = (el.value || '').trim();
+                // Anything but Removed means the box is not off the aircraft, so a
+                // removal date cannot stand — clear it.
+                if (entry.status !== 'removed') entry.removalDate = '';
+                repaint = true;
             } else {
                 entry[field] = (el.value || '').trim();
             }
             pendingSatcom[id] = entry;
             setSyncStatus('🟡 MODMAN change staged — press Save', '#e0a800');
+            // Only a status or removal-date change alters what the row MEANS (the badge,
+            // the ex- prefix, the removal cell), so only those repaint. A repaint of a
+            // plain text field would pull the cursor out mid-typing.
+            if (repaint) populateSatcomTable();
         }
 
         async function toggleSatcomEdit() {

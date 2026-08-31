@@ -13,6 +13,17 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.76.4 — Satcom: a removal date marks the box Removed (ex-TAIL)
+Marking a MODMAN as removed used to mean opening the Status dropdown and choosing
+Removed by hand, on top of setting the aircraft and dates — easy to miss, so a box
+with both dates still read Active. A **removal date now marks the box Removed** on
+its own: the row shows `ex-TAIL` and the REMOVED badge the moment a removal date is
+present (derived in `satcomRows()`, so it holds on load too, not only mid-edit).
+In edit mode, typing a removal date auto-marks Removed and repaints; conversely,
+picking Active/Fault/Spare clears the removal date, so the two can never contradict.
+The three legacy `ex-` entries have no dates yet and are untouched — they keep their
+stored `removed`. No data migration; existing records display correctly by derivation.
+
 ### v2.76.1 — Satcom: Status reads Active, not On-Wing
 The Status badge and the Removal Date pill both said "On-Wing" on a fitted box, which
 read as the same fact twice. Status now reads **ACTIVE** (matching the 4G SIM register),
