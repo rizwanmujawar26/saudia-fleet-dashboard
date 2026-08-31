@@ -13,6 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.76.1 — Satcom: Status reads Active, not On-Wing
+The Status badge and the Removal Date pill both said "On-Wing" on a fitted box, which
+read as the same fact twice. Status now reads **ACTIVE** (matching the 4G SIM register),
+while Removal Date keeps its **On-Wing** pill — the absence of a removal date is what
+says the box is still on the aircraft. Label-only across the badge, the edit dropdown,
+the filter, the quick pill, the widget and the Add-MODMAN dialog; the stored value is
+still `active`, so every fitted box changed at once with no data write.
+
 ### v2.76.0 — Satcom: the MODMAN register
 A new tab, 📡 Satcom, modelled on the 4G SIM register but listing every physical
 MODMAN box rather than a SIM card. One row per box — on-wing, spare, faulty and

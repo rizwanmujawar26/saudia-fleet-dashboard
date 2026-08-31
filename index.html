@@ -5729,7 +5729,7 @@
             <label class="add-sched-label" style="margin-top:14px;">Status</label>
             <select id="addMmStatus" class="add-sched-input" onchange="syncAddModmanStatus()">
                 <option value="spare">Spare — in the store</option>
-                <option value="active">On-Wing — fitted to an aircraft</option>
+                <option value="active">Active — fitted to an aircraft</option>
                 <option value="fault">Fault</option>
                 <option value="removed">Removed</option>
             </select>
@@ -6600,8 +6600,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.76.0';
-        const APP_BUILD    = '2026.08.31.02';
+        const APP_VERSION  = '2.76.1';
+        const APP_BUILD    = '2026.08.31.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-08-31T00:00:00Z';
 
@@ -8336,7 +8336,7 @@
                 search: 'Search serial, ID or aircraft',
                 // The two worth one click: what is flying and what is in the store.
                 quick: [
-                    { filter: 'satcomstatus', value: 'active', label: 'On-Wing' },
+                    { filter: 'satcomstatus', value: 'active', label: 'Active' },
                     { filter: 'satcomstatus', value: 'spare',  label: 'Spare' },
                 ],
                 filters: [
@@ -12213,7 +12213,7 @@
         // mirror into modmansLive locally, or the table redraws from a stale store and
         // the edit looks like it vanished. Same rule the Media and Modem saves follow.
         const SATCOM_STATUSES = [
-            { value: 'active',  label: 'On-Wing', badge: 'ON-WING', cls: 'sim-active'  },
+            { value: 'active',  label: 'Active',  badge: 'ACTIVE',  cls: 'sim-active'  },
             { value: 'fault',   label: 'Fault',   badge: 'FAULT',   cls: 'sim-fault'   },
             { value: 'spare',   label: 'Spare',   badge: 'SPARE',   cls: 'sim-unused'  },
             { value: 'removed', label: 'Removed', badge: 'REMOVED', cls: 'sim-removed' },
@@ -12300,7 +12300,7 @@
             // a spare in the store and a box that came off are both worth a number here,
             // unlike the SIM strip where Removed was dropped at the user's request.
             strip.innerHTML =
-                card('On-Wing', n('active'), 'latest') +
+                card('Active', n('active'), 'latest') +
                 card('Spare', n('spare'), 'previous') +
                 card('Fault', n('fault'), 'alert') +
                 card('Removed', n('removed'), 'older');
