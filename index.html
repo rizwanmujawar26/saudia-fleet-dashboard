@@ -2635,8 +2635,47 @@
         .aircraft-table th.satcom-group-told  { background: #4c4a63; }
         .aircraft-table th.satcom-group-tnew  { background: #1B115D; }
         .aircraft-table th.satcom-group-hughes { background: #005DAC; }
+        /* MODMAN Details masters the identity columns (#, dates, serials); it sits at
+           the table's left edge, so it drops the group's white divider. Commissioning
+           masters the Taurus/Hughes pill pair on its own teal. */
+        .aircraft-table th.satcom-group-details { background: #08492a; border-left: none; }
+        .aircraft-table th.satcom-group-comm    { background: #0f766e; }
         .aircraft-table .satcom-group-start { border-left: 2px solid #e3e8ec; }
         .aircraft-table thead .satcom-group-start { border-left: 2px solid rgba(255, 255, 255, 0.35); }
+        /* The commissioning pair is BOXED: the group's left divider plus a right edge
+           here, with nothing between Taurus and Hughes — one bordered double column. */
+        .aircraft-table .satcom-comm-end { border-right: 2px solid #e3e8ec; }
+        .aircraft-table thead .satcom-comm-end { border-right: 2px solid rgba(255, 255, 255, 0.35); }
+
+        /* Commissioning pills — the ON-WING size (tiny), one green (Done) one amber
+           (To-Do). Editable via a dropdown sized down to match the pills. */
+        #satcomTable .comm-pill {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+        #satcomTable .comm-done { background: #e4f3ea; color: #0a5c34; border-color: #c9e6d5; }
+        #satcomTable .comm-todo { background: #fbeecb; color: #8a5a12; border-color: #f0dca6; }
+        #satcomTable .comm-select { font-size: 10px; padding: 2px 4px; width: auto; min-width: 68px; }
+
+        /* Taurus-New TID and Hughes Chassis ID carry the SAME unit number; when they
+           disagree both are bold + underlined red, with a hover note, so the bad row
+           is findable at a glance. */
+        #satcomTable .satcom-mismatch {
+            text-decoration: underline;
+            text-decoration-color: #b3261e;
+            text-underline-offset: 2px;
+            font-weight: 700;
+            cursor: help;
+        }
+        #satcomTable .satcom-mismatch .modem-id,
+        #satcomTable .satcom-mismatch .modem-id b { color: #b3261e; }
         /* The register's short values read as columns when centred, headers included —
            the same choice the SIM register makes. Comments stays left (a sentence). */
         #satcomTable th, #satcomTable td { text-align: center; }
@@ -5302,6 +5341,10 @@
                     <span class="filter-group-label">MODMAN Register</span>
                     <div class="media-widget-strip" id="satcomWidgets"></div>
                 </div>
+                <div class="media-widget-section">
+                    <span class="filter-group-label">Commissioning · active boxes</span>
+                    <div class="media-widget-strip" id="satcomCommWidgets"></div>
+                </div>
 
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="satcom"></div>
@@ -5322,19 +5365,20 @@
                     <table class="aircraft-table has-grouphead satcom-table" id="satcomTable">
                         <thead>
                             <tr class="satcom-grouphead">
-                                <th rowspan="2">#</th>
-                                <th rowspan="2" class="sortable-th" data-col="1" data-label="Install Date" id="satcomDateHead" onclick="cycleSatcomDateSort()">Install Date</th>
-                                <th rowspan="2" class="sortable-th" data-col="2" data-label="Eclipse S/N" onclick="sortTable('satcomTable', 2)">Eclipse S/N</th>
-                                <th rowspan="2" class="sortable-th" data-col="3" data-label="Kontron S/N" onclick="sortTable('satcomTable', 3)">Kontron S/N</th>
+                                <th colspan="4" class="satcom-group satcom-group-details">MODMAN Details</th>
                                 <th colspan="2" class="satcom-group satcom-group-told satcom-told-col">Taurus · Old</th>
                                 <th colspan="2" class="satcom-group satcom-group-tnew satcom-tnew-col">Taurus · New</th>
                                 <th colspan="3" class="satcom-group satcom-group-hughes satcom-hughes-col">Hughes</th>
                                 <th rowspan="2" class="sortable-th satcom-group-start" data-col="11" data-label="Aircraft" onclick="sortTable('satcomTable', 11)">Aircraft</th>
                                 <th rowspan="2" class="sortable-th" data-col="12" data-label="Status" onclick="sortTable('satcomTable', 12)">Status</th>
                                 <th rowspan="2" class="sortable-th" data-col="13" data-label="Removal Date" onclick="sortTable('satcomTable', 13)">Removal Date</th>
-                                <th rowspan="2" class="sortable-th col-comment" data-col="14" data-label="Comments" onclick="sortTable('satcomTable', 14)">Comments</th>
+                                <th colspan="2" class="satcom-group satcom-group-comm satcom-group-start satcom-comm-end">Commissioning Status</th>
                             </tr>
                             <tr>
+                                <th>#</th>
+                                <th class="sortable-th" data-col="1" data-label="Install Date" id="satcomDateHead" onclick="cycleSatcomDateSort()">Install Date</th>
+                                <th class="sortable-th" data-col="2" data-label="Eclipse S/N" onclick="sortTable('satcomTable', 2)">Eclipse S/N</th>
+                                <th class="sortable-th" data-col="3" data-label="Kontron S/N" onclick="sortTable('satcomTable', 3)">Kontron S/N</th>
                                 <th class="sortable-th satcom-told-col satcom-group-start" data-col="4" data-label="MG ID" onclick="sortTable('satcomTable', 4)">MG ID</th>
                                 <th class="sortable-th satcom-told-col" data-col="5" data-label="TID" onclick="sortTable('satcomTable', 5)">TID</th>
                                 <th class="sortable-th satcom-tnew-col satcom-group-start" data-col="6" data-label="MG ID" onclick="sortTable('satcomTable', 6)">MG ID</th>
@@ -5342,6 +5386,8 @@
                                 <th class="sortable-th satcom-hughes-col satcom-group-start" data-col="8" data-label="Chassis ID" onclick="sortTable('satcomTable', 8)">Chassis ID</th>
                                 <th class="sortable-th satcom-hughes-col" data-col="9" data-label="ESN" onclick="sortTable('satcomTable', 9)">ESN</th>
                                 <th class="sortable-th satcom-hughes-col" data-col="10" data-label="MAC" onclick="sortTable('satcomTable', 10)">MAC Address</th>
+                                <th class="satcom-group-start satcom-comm-col">Taurus</th>
+                                <th class="satcom-comm-end satcom-comm-col">Hughes</th>
                             </tr>
                         </thead>
                         <tbody id="satcomTableBody"></tbody>
@@ -6609,10 +6655,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.76.4';
-        const APP_BUILD    = '2026.08.31.06';
+        const APP_VERSION  = '2.77.0';
+        const APP_BUILD    = '2026.09.01.01';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-08-31T00:00:00Z';
+        const APP_DEPLOYED = '2026-09-01T00:00:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -8343,16 +8389,27 @@
             satcom: {
                 apply: () => applySatcomFilters(),
                 search: 'Search serial, ID or aircraft',
-                // The two worth one click: what is flying and what is in the store.
+                // The four worth one click: what is flying, what is in the store, and
+                // the two commissioning axes — Taurus done and Hughes done. Selecting
+                // both Done pills is "commissioned on both".
                 quick: [
                     { filter: 'satcomstatus', value: 'active', label: 'Active' },
                     { filter: 'satcomstatus', value: 'spare',  label: 'Spare' },
+                    { filter: 'commtaurus',   value: 'done',   label: 'Taurus ✓' },
+                    { filter: 'commhughes',   value: 'done',   label: 'Hughes ✓' },
                 ],
                 filters: [
                     // One definition — SATCOM_STATUSES drives the badges, the edit
                     // dropdown and this filter together.
                     { id: 'satcomstatus', label: 'Status',
                       options: () => SATCOM_STATUSES.map(x => ({ v: x.value, l: x.label })) },
+                    // Two commissioning axes, one per antenna. AND across the two, so
+                    // Taurus=Done + Hughes=Done narrows to boxes done on BOTH, while
+                    // either alone shows everything done on that one.
+                    { id: 'commtaurus', label: 'Taurus Comm.',
+                      options: () => SATCOM_COMM.map(x => ({ v: x.value, l: x.label })) },
+                    { id: 'commhughes', label: 'Hughes Comm.',
+                      options: () => SATCOM_COMM.map(x => ({ v: x.value, l: x.label })) },
                 ],
             },
 
@@ -12228,6 +12285,40 @@
             { value: 'removed', label: 'Removed', badge: 'REMOVED', cls: 'sim-removed' },
         ];
 
+        // Commissioning state, one per antenna (Taurus, Hughes). Two values, shown as
+        // tiny pills and editable in-place. A box's DEFAULT is derived from status —
+        // an on-wing (active) box is taken as commissioned on both, everything else as
+        // To-Do — so the register reads right with no data migration; an explicit
+        // stored value (set via Edit) always wins over the default.
+        const SATCOM_COMM = [
+            { value: 'done', label: 'Done',  cls: 'comm-done' },
+            { value: 'todo', label: 'To-Do', cls: 'comm-todo' },
+        ];
+
+        // The significant number inside a Taurus TID or a Hughes Chassis ID, leading
+        // zeros ignored: 'AERSVA00066HNSJ3' and '66' both yield 66. Null when there is
+        // no number to read (e.g. a placeholder 'XX').
+        function satcomIdNum(v) {
+            const raw = String(v || '');
+            const hns = raw.match(/^(.*?)(\d+)(HNS.*)$/i);
+            let digits;
+            if (hns) { digits = hns[2]; }
+            else {
+                const runs = raw.match(/\d+/g);
+                if (!runs) return null;
+                digits = runs.reduce((a, b) => (b.length >= a.length ? b : a));
+            }
+            const n = parseInt(digits, 10);
+            return isNaN(n) ? null : n;
+        }
+
+        // Taurus-New TID and Hughes Chassis ID encode the SAME unit number. When both
+        // are present and disagree it is a data error the row should flag.
+        function satcomTidMismatch(r) {
+            const a = satcomIdNum(r.taurusNewTid), b = satcomIdNum(r.hnsChassisId);
+            return a != null && b != null && a !== b;
+        }
+
         // Same three tiers the SIM register sorts in: boxes flying (with a date) lead
         // and sort by the chosen mode; removed and undated sit behind them; spares last,
         // because a spare has never been fitted and has nothing to sort by.
@@ -12279,8 +12370,13 @@
                 // legacy removed entries have no dates yet and keep their stored
                 // 'removed', so nothing about them changes.
                 const status = removalDate ? 'removed' : rawStatus;
+                // Commissioning defaults to Done for an on-wing box and To-Do otherwise;
+                // a stored value overrides that default.
+                const defComm = status === 'active' ? 'done' : 'todo';
                 return {
                     id, status, aircraft,
+                    commTaurus: pick('commTaurus') || defComm,
+                    commHughes: pick('commHughes') || defComm,
                     eclipseSn: pick('eclipseSn'), kontronSn: pick('kontronSn'),
                     taurusOldMgId: pick('taurusOldMgId'), taurusOldTid: pick('taurusOldTid'),
                     taurusNewMgId: pick('taurusNewMgId'), taurusNewTid: pick('taurusNewTid'),
@@ -12319,6 +12415,29 @@
                 card('Spare', n('spare'), 'previous') +
                 card('Fault', n('fault'), 'alert') +
                 card('Removed', n('removed'), 'older');
+
+            // Commissioning progress is only meaningful for boxes on wing, so this
+            // strip counts against the ACTIVE population, not the whole register —
+            // Taurus done, Hughes done, and both done.
+            const commStrip = document.getElementById('satcomCommWidgets');
+            if (!commStrip) return;
+            const active = rows.filter(r => r.status === 'active');
+            const aTot = active.length || 1;
+            const commCard = (label, count, type) => {
+                const pct = Math.round((count / aTot) * 1000) / 10;
+                return `<div class="media-widget media-widget-${type}">
+                    <div class="media-widget-head"><span class="media-widget-label">${label}</span></div>
+                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${active.length}</span><span class="media-widget-pct">${pct}%</span></div>
+                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
+                </div>`;
+            };
+            const tDone = active.filter(r => r.commTaurus === 'done').length;
+            const hDone = active.filter(r => r.commHughes === 'done').length;
+            const bDone = active.filter(r => r.commTaurus === 'done' && r.commHughes === 'done').length;
+            commStrip.innerHTML =
+                commCard('Taurus', tDone, 'latest') +
+                commCard('Hughes', hDone, 'previous') +
+                commCard('Both', bDone, 'latest');
         }
 
         function satcomStatusBadge(v) {
@@ -12360,6 +12479,8 @@
             rows.forEach((r, idx) => {
                 const row = document.createElement('tr');
                 row.dataset.satcomstatus = r.status;
+                row.dataset.commtaurus = r.commTaurus;
+                row.dataset.commhughes = r.commHughes;
                 // The search haystack is the data, not the columns: serials, both Taurus
                 // sets, the Hughes trio, and the tail with its ex- form.
                 row.dataset.search = [r.eclipseSn, r.kontronSn, r.taurusOldMgId, r.taurusOldTid,
@@ -12420,9 +12541,25 @@
                        </select>`
                     : satcomStatusBadge(r.status);
 
-                const noteCell = editing
-                    ? `<input class="edit-text comment-input" value="${escAttr(r.notes)}" placeholder="Add a comment" data-mm="${escAttr(r.id)}" data-field="notes" onchange="handleSatcomEdit(this)">`
-                    : `<span class="comment-text">${r.notes ? escAttr(r.notes) : '—'}</span>`;
+                // A commissioning pill per antenna: a tiny Done/To-Do badge in read
+                // mode, a compact dropdown in edit mode.
+                const commCell = (field, value) => {
+                    const meta = SATCOM_COMM.find(x => x.value === value) || SATCOM_COMM[1];
+                    if (editing) {
+                        return `<select class="edit-select comm-select" data-mm="${escAttr(r.id)}" data-field="${field}" onchange="handleSatcomEdit(this)">
+                            ${SATCOM_COMM.map(x => `<option value="${x.value}" ${value === x.value ? 'selected' : ''}>${x.label}</option>`).join('')}
+                        </select>`;
+                    }
+                    return `<span class="comm-pill ${meta.cls}">${meta.label}</span>`;
+                };
+
+                // When the Taurus-New TID and the Hughes Chassis ID disagree, both are
+                // wrapped so they render bold + underlined with a hover note. Edit mode
+                // shows plain inputs, so the flag applies to the read view only.
+                const mism = !editing && satcomTidMismatch(r);
+                const mismWrap = html => mism
+                    ? `<span class="satcom-mismatch" title="TID and Chassis ID Mismatch">${html}</span>`
+                    : html;
 
                 const insSort = dateSortKey(toISODate(r.installDate)) || '99999999';
                 const remSort = dateSortKey(toISODate(r.removalDate)) || '99999999';
@@ -12435,14 +12572,15 @@
                     <td class="satcom-group-start" data-sort="${escAttr(r.taurusOldMgId)}">${idCell('taurusOldMgId', r.taurusOldMgId, false)}</td>
                     <td data-sort="${escAttr(r.taurusOldTid)}">${idCell('taurusOldTid', r.taurusOldTid, true)}</td>
                     <td class="satcom-group-start" data-sort="${escAttr(r.taurusNewMgId)}">${idCell('taurusNewMgId', r.taurusNewMgId, false)}</td>
-                    <td data-sort="${escAttr(r.taurusNewTid)}">${idCell('taurusNewTid', r.taurusNewTid, true)}</td>
-                    <td class="satcom-group-start" data-sort="${escAttr(r.hnsChassisId)}">${idCell('hnsChassisId', r.hnsChassisId, true)}</td>
+                    <td data-sort="${escAttr(r.taurusNewTid)}">${mismWrap(idCell('taurusNewTid', r.taurusNewTid, true))}</td>
+                    <td class="satcom-group-start" data-sort="${escAttr(r.hnsChassisId)}">${mismWrap(idCell('hnsChassisId', r.hnsChassisId, true))}</td>
                     <td data-sort="${escAttr(r.hnsEsn)}">${idCell('hnsEsn', r.hnsEsn, false)}</td>
                     <td data-sort="${escAttr(r.hnsMac)}">${idCell('hnsMac', r.hnsMac, false)}</td>
                     <td class="satcom-group-start" data-sort="${escAttr(r.aircraft || 'zzz')}">${tailCell}</td>
                     <td data-sort="${escAttr(r.status)}">${statusCell}</td>
                     <td data-sort="${remSort}">${dateCell('removalDate', r.removalDate)}</td>
-                    <td class="col-comment" data-sort="${escAttr(r.notes)}">${noteCell}</td>
+                    <td class="satcom-group-start">${commCell('commTaurus', r.commTaurus)}</td>
+                    <td class="satcom-comm-end">${commCell('commHughes', r.commHughes)}</td>
                 `;
                 tbody.appendChild(row);
             });
@@ -12507,6 +12645,11 @@
                 // Anything but Removed means the box is not off the aircraft, so a
                 // removal date cannot stand — clear it.
                 if (entry.status !== 'removed') entry.removalDate = '';
+                repaint = true;
+            } else if (field === 'commTaurus' || field === 'commHughes') {
+                // A pill change repaints so the badge and the commissioning widgets
+                // update at once; it is a dropdown, so no cursor is lost.
+                entry[field] = (el.value || '').trim();
                 repaint = true;
             } else {
                 entry[field] = (el.value || '').trim();
