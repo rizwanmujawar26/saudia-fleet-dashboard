@@ -2692,10 +2692,11 @@
             padding-left: 6px;
             padding-right: 6px;
         }
-        /* Removal Date sits at the front of MODMAN Details now. The head is allowed to
-           wrap ("Removal / Date") so the column is only as wide as its date content —
-           the body cells keep satcom-tight's nowrap so a real date stays on one line. */
-        #satcomTable th.satcom-rem-head {
+        /* Removal Date and IPHO Mode heads are allowed to wrap ("Removal / Date",
+           "IPHO / Mode") so each column is only as wide as its content — the body
+           cells keep satcom-tight's nowrap so a real date or pill stays on one line. */
+        #satcomTable th.satcom-rem-head,
+        #satcomTable th.satcom-ipho-head {
             white-space: normal;
             line-height: 1.15;
             text-align: center;
@@ -2986,6 +2987,9 @@
            fault, and these are the tokens .ver-behind and the SIM REMOVED badge use. */
         .status-badge.ipho-on  { background: #e4f3ea; color: #0a5c34; border: 1px solid #c9e6d5; }
         .status-badge.ipho-off { background: #fdf3e3; color: #8a5a12; border: 1px solid #efd9ae; }
+        /* IPHO does not apply to this row (linefit, not-yet-active, or an off-wing box).
+           Grey, matching the commissioning N/A pill on the same page. */
+        .status-badge.ipho-na  { background: #eef1f4; color: #6b747d; border: 1px solid #dce1e6; }
 
         /* The identifying number inside a chassis id or TID. The emphasis lives in the
            more specific `.modem-table .modem-id b` above (a single weight step, no size
@@ -5390,9 +5394,12 @@
                          and a New one — and Hughes carries Chassis ID, ESN and MAC. The
                          install and removal dates sit together at the front of MODMAN
                          Details (install then removal, so the on-wing span reads left to
-                         right); the serials follow, and Aircraft / Status span both rows
-                         outside the modules. The Removal Date head wraps to two lines so
-                         the column stays as narrow as its date content. -->
+                         right); the serials follow, and Aircraft / Status / IPHO Mode
+                         span both rows outside the modules. IPHO Mode is the aircraft's
+                         top-level iphoStatus, shown only for an active retrofit box —
+                         linefit, not-yet-active and off-wing rows read N/A. The Removal
+                         Date and IPHO Mode heads wrap to two lines so each column stays
+                         as narrow as its content. -->
                     <table class="aircraft-table has-grouphead satcom-table" id="satcomTable">
                         <thead>
                             <tr class="satcom-grouphead">
@@ -5402,6 +5409,7 @@
                                 <th colspan="3" class="satcom-group satcom-group-hughes satcom-hughes-col">Hughes</th>
                                 <th rowspan="2" class="sortable-th satcom-group-start satcom-tight" data-col="12" data-label="Aircraft" onclick="sortTable('satcomTable', 12)">Aircraft</th>
                                 <th rowspan="2" class="sortable-th satcom-tight" data-col="13" data-label="Status" onclick="sortTable('satcomTable', 13)">Status</th>
+                                <th rowspan="2" class="sortable-th satcom-tight satcom-ipho-head" data-col="14" data-label="IPHO Mode" onclick="sortTable('satcomTable', 14)">IPHO Mode</th>
                                 <th colspan="2" class="satcom-group satcom-group-comm satcom-group-start satcom-comm-end">Commissioning Status</th>
                             </tr>
                             <tr>
@@ -6686,8 +6694,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.77.3';
-        const APP_BUILD    = '2026.09.01.04';
+        const APP_VERSION  = '2.78.0';
+        const APP_BUILD    = '2026.09.01.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-01T00:00:00Z';
 
@@ -8449,6 +8457,15 @@
                       options: [
                         { v: 'todo', l: 'To-Do' },
                         { v: 'done', l: 'Done' },
+                      ] },
+                    // IPHO Mode, the aircraft's iphoStatus surfaced per box. Only active
+                    // retrofit boxes carry enabled/disabled; N/A rows read 'na' and match
+                    // neither option, so filtering either value drops them.
+                    { id: 'ipho', label: 'IPHO',
+                      rowValue: row => row.dataset.ipho,
+                      options: [
+                        { v: 'enabled',  l: 'Enabled' },
+                        { v: 'disabled', l: 'Disabled' },
                       ] },
                 ],
             },
@@ -12425,8 +12442,20 @@
                 const notApplicable = status === 'spare' || status === 'removed';
                 const defComm = status === 'active' ? 'done' : 'todo';
                 const comm = k => notApplicable ? 'na' : (pick(k) || defComm);
+                // IPHO Mode is the aircraft's top-level iphoStatus, surfaced on the box
+                // fitted to it. It applies ONLY to an active RETROFIT aircraft: linefit
+                // aircraft (HBC+) do not use IPHO, an aircraft not yet Active has no value
+                // yet, and an off-wing box (spare/removed) is on no aircraft — all read
+                // N/A. A staged edit (pendingSatcom) is read first so the pill updates
+                // before Save, exactly like the status and commissioning cells.
+                const ac = aircraft ? aircraftData.find(x => x.id === aircraft) : null;
+                const iphoApplies = !notApplicable && !!ac
+                    && ac.fit === 'retrofit' && ac.fleetStatus === 'Active';
+                const iphoRaw = staged.iphoStatus !== undefined
+                    ? staged.iphoStatus : (ac ? (ac.iphoStatus || '') : '');
+                const ipho = !iphoApplies ? 'na' : (iphoRaw === 'completed' ? 'enabled' : 'disabled');
                 return {
-                    id, status, aircraft,
+                    id, status, aircraft, ipho,
                     commTaurus: comm('commTaurus'),
                     commHughes: comm('commHughes'),
                     eclipseSn: pick('eclipseSn'), kontronSn: pick('kontronSn'),
@@ -12515,6 +12544,7 @@
                 row.dataset.satcomstatus = r.status;
                 row.dataset.commtaurus = r.commTaurus;
                 row.dataset.commhughes = r.commHughes;
+                row.dataset.ipho = r.ipho;
                 // The search haystack is the data, not the columns: serials, both Taurus
                 // sets, the Hughes trio, and the tail with its ex- form.
                 row.dataset.search = [r.eclipseSn, r.kontronSn, r.taurusOldMgId, r.taurusOldTid,
@@ -12590,6 +12620,20 @@
                     return `<span class="comm-pill ${meta.cls}">${meta.label}</span>`;
                 };
 
+                // IPHO Mode: a tiny green/amber pill (ENABLED / DISABLED), a Disabled/
+                // Enabled dropdown in edit mode. It writes the aircraft's top-level
+                // iphoStatus, not a modman field — commitSatcomChanges routes it to
+                // /aircraft. N/A rows (linefit, not-yet-active, off-wing) show a static
+                // grey pill and offer no dropdown, the same as the commissioning N/A.
+                const iphoCell = (editing && r.ipho !== 'na')
+                    ? `<select class="edit-select" data-mm="${escAttr(r.id)}" data-field="iphoStatus" onchange="handleSatcomEdit(this)">
+                           <option value="" ${r.ipho !== 'enabled' ? 'selected' : ''}>Disabled</option>
+                           <option value="completed" ${r.ipho === 'enabled' ? 'selected' : ''}>Enabled</option>
+                       </select>`
+                    : (r.ipho === 'na'
+                        ? '<span class="status-badge ipho-na">N/A</span>'
+                        : `<span class="status-badge ipho-${r.ipho === 'enabled' ? 'on' : 'off'}">${r.ipho === 'enabled' ? 'ENABLED' : 'DISABLED'}</span>`);
+
                 // When the Taurus-New TID and the Hughes Chassis ID disagree, both are
                 // wrapped so they render bold + underlined with a hover note. Edit mode
                 // shows plain inputs, so the flag applies to the read view only.
@@ -12616,6 +12660,7 @@
                     <td data-sort="${escAttr(r.hnsMac)}">${idCell('hnsMac', r.hnsMac, false)}</td>
                     <td class="satcom-group-start satcom-tight" data-sort="${escAttr(r.aircraft || 'zzz')}">${tailCell}</td>
                     <td class="satcom-tight" data-sort="${escAttr(r.status)}">${statusCell}</td>
+                    <td class="satcom-tight" data-sort="${escAttr(r.ipho)}">${iphoCell}</td>
                     <td class="satcom-group-start satcom-tight">${commCell('commTaurus', r.commTaurus)}</td>
                     <td class="satcom-comm-end satcom-tight">${commCell('commHughes', r.commHughes)}</td>
                 `;
@@ -12683,9 +12728,11 @@
                 // removal date cannot stand — clear it.
                 if (entry.status !== 'removed') entry.removalDate = '';
                 repaint = true;
-            } else if (field === 'commTaurus' || field === 'commHughes') {
+            } else if (field === 'commTaurus' || field === 'commHughes' || field === 'iphoStatus') {
                 // A pill change repaints so the badge and the commissioning widgets
-                // update at once; it is a dropdown, so no cursor is lost.
+                // update at once; it is a dropdown, so no cursor is lost. iphoStatus is
+                // staged here too, but it lands on the AIRCRAFT at Save, not the modman —
+                // commitSatcomChanges pulls it out and writes it to /aircraft.
                 entry[field] = (el.value || '').trim();
                 repaint = true;
             } else {
@@ -12716,11 +12763,24 @@
             // One multi-path PATCH of leaf paths (`<id>/<field>`), the shape every other
             // save uses. A cleared field is written null so it is removed, not stored
             // as an empty string the rules would reject.
+            //
+            // iphoStatus is the one field that is NOT a modman field — it lives on the
+            // aircraft (/aircraft/{tail}/iphoStatus, the same field the Software tab
+            // uses). It is pulled out into its own /aircraft patch keyed by the box's
+            // tail, exactly as the Modem tab routes its aircraft-side fields.
             const patch = {};
+            const aircraftPatch = {};
             ids.forEach(id => {
                 const e = pendingSatcom[id];
+                const tail = (e.aircraft !== undefined ? e.aircraft : (modmansLive[id] || {}).aircraft) || '';
                 Object.keys(e).forEach(field => {
                     let v = e[field];
+                    if (field === 'iphoStatus') {
+                        // Needs a tail to land on; an off-wing box can never reach here
+                        // because its IPHO cell is a static N/A with no dropdown.
+                        if (tail) aircraftPatch[`${tail}/iphoStatus`] = (v === '' || v == null) ? null : v;
+                        return;
+                    }
                     // A spare has no aircraft: picking Spare clears the tail so the row
                     // cannot read as a spare that is still fitted somewhere.
                     patch[`${id}/${field}`] = (v === '' || v == null) ? null : v;
@@ -12731,28 +12791,50 @@
 
             setSyncStatus('🟡 Saving MODMAN changes...', '#e0a800');
             try {
-                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/modmans.json?auth=${token}`, {
-                    method: 'PATCH', body: JSON.stringify(patch),
-                });
-                const data = await res.json();
-                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                if (Object.keys(patch).length) {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/modmans.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(patch),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                }
+                // The IPHO write lands on /aircraft, a separate node from /modmans.
+                if (Object.keys(aircraftPatch).length) {
+                    const ares = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(aircraftPatch),
+                    });
+                    const adata = await ares.json();
+                    if (!ares.ok || (adata && adata.error)) throw new Error((adata && adata.error) || 'IPHO write failed');
+                }
                 // Mirror locally — /modmans is polled, so without this the table redraws
                 // from a store that has not heard about the write and the edit vanishes
-                // until the next poll.
+                // until the next poll. iphoStatus is mirrored onto aircraftLive, not the
+                // modman, because that is where it lives and where satcomRows reads it.
                 ids.forEach(id => {
                     const m = modmansLive[id] || (modmansLive[id] = {});
                     const e = pendingSatcom[id];
+                    const tail = (e.aircraft !== undefined ? e.aircraft : m.aircraft) || '';
                     Object.keys(e).forEach(field => {
                         const v = e[field];
+                        if (field === 'iphoStatus') {
+                            if (!tail) return;
+                            const a = aircraftLive[tail] || (aircraftLive[tail] = {});
+                            if (v === '' || v == null) delete a.iphoStatus; else a.iphoStatus = v;
+                            return;
+                        }
                         if (v === '' || v == null) delete m[field]; else m[field] = v;
                     });
                     if (e.status === 'spare') delete m.aircraft;
                 });
                 pendingSatcom = {};
                 satcomEditMode = false;
+                if (Object.keys(aircraftPatch).length) rebuildAircraftData();
                 populateSatcomTable();
-                // The Modem tab reads Kontron/Eclipse from here — repaint it too.
+                // The Modem tab reads Kontron/Eclipse from here — repaint it too. IPHO is
+                // shown on the Software tab and the Modem tab, so repaint those on an IPHO
+                // change so every view of the same field agrees at once.
                 if (typeof renderModemPage === 'function') renderModemPage();
+                if (Object.keys(aircraftPatch).length && typeof populateAircraftTable === 'function') populateAircraftTable();
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (e) {
                 setSyncStatus(`🔴 Could not save MODMAN changes — ${e.message}`, '#dc3545');

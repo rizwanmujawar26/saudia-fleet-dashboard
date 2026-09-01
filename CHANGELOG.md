@@ -13,6 +13,19 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.78.0 — Satcom: IPHO Mode column
+Adds an **IPHO Mode** column to the MODMAN register, between Status and the
+Commissioning group. It shows the aircraft's existing top-level **`iphoStatus`** (the
+same field the Software and Modem tabs use — one source of truth, no new field): a
+tiny green **ENABLED** / amber **DISABLED** pill, editable in Edit mode via a dropdown
+that writes `/aircraft/{tail}/iphoStatus`. `commitSatcomChanges` now splits that field
+into a second `/aircraft` PATCH and mirrors it onto `aircraftLive`, repainting the
+Software and Modem tabs too. IPHO applies only to **active retrofit** boxes; linefit
+(HBC+), not-yet-active, and off-wing (spare/removed/unassigned) rows read a grey
+**N/A** and offer no dropdown. A new **IPHO** dropdown filter (Enabled / Disabled) sits
+beside Commissioning. No data migration: the four disabled tails (AS56, AS59, ASR, ASI)
+are already `iphoStatus`-null, every other active retrofit aircraft already `completed`.
+
 ### v2.77.3 — Satcom: reworked filter bar
 The quick pills become **Active · Spare · Removed · To-Do** (the Taurus ✓ / Hughes ✓
 tick pills are gone). The two per-antenna commissioning dropdowns (**Taurus Comm.**,
