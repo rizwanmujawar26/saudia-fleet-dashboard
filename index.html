@@ -652,10 +652,12 @@
             white-space: nowrap;
         }
 
-        /* The Software table is 8px, the HBC+ table stays 10px. Eleven columns with
-           "Middleware Install Date" and "Install Location" in them measured 1197px
-           against a 1165px wrapper; 8px brings it to exactly 1165. HBC+ has five
-           columns and no such pressure.
+        /* The Software table is 8px, the HBC+ table stays 10px. The 8px dates from
+           when this table had eleven columns and measured 1197px against a 1165px
+           wrapper; IPHO and SES were dropped on 2026-09-01 so it is now nine columns
+           with room to spare, but 8px is kept so the table and its frozen-head copy
+           stay in step. The #hbcTable rules are retained for the future dedicated
+           HBC+ page — no #hbcTable is on this tab now.
            ⚠️ These are ID rules and therefore do NOT reach the floating frozen-head
            copy, which inherits className and never id — `.sw-compact` below repeats the
            value for it. Change the two together or the copy renders at a different
@@ -5062,15 +5064,13 @@
                             <tr>
                                 <th>#</th>
                                 <th class="sortable-th sw-order-col" data-col="1" data-label="Middleware Install Date" onclick="sortAircraftTable(1)">Middleware Install Date<span class="th-order">Newest first</span></th>
-                                <th class="sortable-th" data-col="2" data-label="OTA Patch Date" onclick="sortAircraftTable(2)">OTA Patch Date</th>
+                                <th class="sortable-th" data-col="2" data-label="OTA PATCH#2" onclick="sortAircraftTable(2)">OTA PATCH#2</th>
                                 <th class="sortable-th" data-col="3" data-label="Aircraft" onclick="sortAircraftTable(3)">Aircraft</th>
                                 <th class="sortable-th" data-col="4" data-label="Type" onclick="sortAircraftTable(4)">Type</th>
                                 <th class="sortable-th" data-col="5" data-label="Status" onclick="sortAircraftTable(5)">Status</th>
                                 <th class="sortable-th" data-col="6" data-label="Middleware" onclick="sortAircraftTable(6)">Middleware</th>
-                                <th class="sortable-th" data-col="7" data-label="IPHO Mode" onclick="sortAircraftTable(7)">IPHO Mode</th>
-                                <th class="sortable-th" data-col="8" data-label="SES Migration" onclick="sortAircraftTable(8)">SES Migration</th>
-                                <th class="sortable-th" data-col="9" data-label="Install Location" onclick="sortAircraftTable(9)">Install Location</th>
-                                <th class="sortable-th col-comment" data-col="10" data-label="Comments" onclick="sortAircraftTable(10)">Comments</th>
+                                <th class="sortable-th" data-col="7" data-label="Install Location" onclick="sortAircraftTable(7)">Install Location</th>
+                                <th class="sortable-th col-comment" data-col="8" data-label="Comments" onclick="sortAircraftTable(8)">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="aircraftTableBody">
@@ -5079,23 +5079,11 @@
                     </table>
                 </div>
 
-                <h3 class="section-heading">HBC+ Aircraft</h3>
-                <div class="table-scroll-wrapper table-freeze">
-                    <table class="aircraft-table hbc-table" id="hbcTable">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th class="sortable-th" data-col="1" data-label="Aircraft" onclick="sortTable('hbcTable', 1)">Aircraft</th>
-                                <th class="sortable-th" data-col="2" data-label="BEAMCFG" onclick="sortTable('hbcTable', 2)">BEAMCFG</th>
-                                <th class="sortable-th" data-col="3" data-label="Date" onclick="sortTable('hbcTable', 3)">Date</th>
-                                <th class="sortable-th col-comment" data-col="4" data-label="Comments" onclick="sortTable('hbcTable', 4)">Comments</th>
-                            </tr>
-                        </thead>
-                        <tbody id="hbcTableBody">
-                            <!-- Populated by JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
+                <!-- HBC+ table removed from the Software tab on 2026-09-01 (user): this
+                     page now covers only the retrofit active fleet's software. The HBC+
+                     data (/fleet linefit aircraft + beamcfgStatus) is untouched, and
+                     populateHbcTable()/hbcFleet() are kept for a future dedicated HBC+
+                     page. Re-add a <table id="hbcTable"> there and the renderer will fill it. -->
             </div>
 
 
@@ -6695,10 +6683,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.80.1';
-        const APP_BUILD    = '2026.09.01.08';
+        const APP_VERSION  = '2.81.0';
+        const APP_BUILD    = '2026.09.01.09';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-09-01T14:45:00Z';
+        const APP_DEPLOYED = '2026-09-01T16:00:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -7788,8 +7776,11 @@
                 value = v || null;
             }
             // Empty means "no value" for these — null removes the field rather than
-            // storing an empty string, which the rules reject anyway.
-            if (['iphoStatus', 'mg101Status', 'completionLocation', 'beamcfgStatus', 'note'].includes(field)) value = value.trim ? (value.trim() || null) : (value || null);
+            // storing an empty string, which the rules reject anyway. (iphoStatus and
+            // mg101Status left this list on 2026-09-01 with the IPHO/SES columns — this
+            // handler no longer edits them; IPHO is normalised by the Modem/Satcom
+            // handlers. beamcfgStatus stays for the retained populateHbcTable() editor.)
+            if (['completionLocation', 'beamcfgStatus', 'note'].includes(field)) value = value.trim ? (value.trim() || null) : (value || null);
             // Edit Mode stages changes locally; nothing hits Firebase until Save is clicked.
             stageChange(id, field, value);
             populateAircraftTable();
@@ -8300,15 +8291,6 @@
             return seen.map(t => ({ v: t, l: TYPE_SHORT_LABEL[t] || t }));
         }
 
-        // SES migration as ONE value, derived from mg101Status — the same mapping the
-        // column renders, so the filter and the cell can never disagree. Absent means
-        // the migration has not started, which the column reads as MG6.
-        function sesMigrationValue(a) {
-            return a && a.mg101Status === 'done' ? 'mg101'
-                 : a && a.mg101Status === 'provisioned' ? 'provisioned'
-                 : 'mg6';
-        }
-
         // Options for a fixed enum, but listing only the values something actually
         // HAS, in the canonical order given. An option nothing matches could only
         // filter to an empty table — the reason the Month filter lists only cycles
@@ -8363,6 +8345,9 @@
         const FILTER_BARS = {
             aircraft: {
                 apply: () => applyAircraftFilters(),
+                // Free-text over registration and software version (plus type and
+                // install location) — rows carry data-search, built in populateAircraftTable().
+                search: 'Search aircraft or software version',
                 filters: [
                     { id: 'type', label: 'Type', options: () => fbTypeOptions(swFleet()) },
                     { id: 'location', label: 'Location', options: [
@@ -8372,17 +8357,11 @@
                     // Status was dropped on 2026-08-28 (user): the whole fleet is
                     // completed, so it could only ever filter to everything or to
                     // nothing. The Status COLUMN stays — it still states the fact.
-                    // Both of these are built from the values actually PRESENT, in
-                    // canonical order, so an option can never filter to an empty
-                    // table — the same reason the Month filter lists only cycles that
-                    // exist. mg101Status: 'provisioned' is real and simply unused
-                    // today; it appears here on its own the moment one aircraft has it.
-                    { id: 'ipho', label: 'IPHO', options: () => fbPresentOptions(
-                        swFleet(), a => a.iphoStatus === 'completed' ? 'enabled' : 'disabled',
-                        [['enabled', 'Enabled'], ['disabled', 'Disabled']]) },
-                    { id: 'ses', label: 'SES', options: () => fbPresentOptions(
-                        swFleet(), a => sesMigrationValue(a),
-                        [['mg6', 'MG6'], ['provisioned', 'Provisioned'], ['mg101', 'MG101']]) },
+                    // IPHO and SES filters (and their columns) were removed on
+                    // 2026-09-01 (user): this page now tracks only the software
+                    // components. IPHO stays filterable/editable on the Modem and
+                    // Satcom tabs; SES/MG101 (mg101Status) is retained in the data for
+                    // a future dedicated page and simply not surfaced here.
                 ],
             },
 
@@ -8763,8 +8742,9 @@
                 row.dataset.status = aircraftStatusOf(aircraft);   // no filter reads this now; the Status column does
                 row.dataset.type = aircraft.type;
                 row.dataset.location = aircraft.completionLocation || '';
-                row.dataset.ipho = aircraft.iphoStatus === 'completed' ? 'enabled' : 'disabled';
-                row.dataset.ses = sesMigrationValue(aircraft);
+                // What the search box matches: registration, software version, type and
+                // install location — "the aircraft or software version" the box promises.
+                row.dataset.search = [aircraft.id, swVersionOf(aircraft), TYPE_SHORT_LABEL[aircraft.type] || aircraft.type, aircraft.completionLocation || ''].join(' ');
 
                 // Comments live in their own column now. They're operational notes, not
                 // faults, so they read as plain text rather than red warnings.
@@ -8790,33 +8770,6 @@
                 } else {
                     middlewareCell = `<span class="status-badge sw-${isLatest ? 'latest' : 'old'}">${ver}</span>`;
                 }
-
-                const iphoDone = aircraft.iphoStatus === 'completed';
-                let iphoCell;
-                if (editMode) {
-                    iphoCell = `<select class="edit-select" data-id="${aircraft.id}" data-field="iphoStatus" onchange="handleAircraftEdit(this)">
-                        <option value="" ${!iphoDone ? 'selected' : ''}>Disabled</option>
-                        <option value="completed" ${iphoDone ? 'selected' : ''}>Enabled</option>
-                    </select>`;
-                } else {
-                    iphoCell = `<span class="system-indicator system-${iphoDone ? 'completed' : 'pending'}"></span>${iphoDone ? 'Enabled' : 'Disabled'}`;
-                }
-                const iphoSort = iphoDone ? 'completed' : 'pending';
-
-                // The column reports which modem generation the aircraft is on, so the
-                // labels name it: not-yet-migrated reads MG6, migrated reads MG101.
-                const mg101Label = aircraft.mg101Status === 'done' ? 'MG101' : aircraft.mg101Status === 'provisioned' ? 'Provisioned' : 'MG6';
-                let mg101Cell;
-                if (editMode) {
-                    mg101Cell = `<select class="edit-select" data-id="${aircraft.id}" data-field="mg101Status" onchange="handleAircraftEdit(this)">
-                        <option value="" ${!aircraft.mg101Status ? 'selected' : ''}>MG6</option>
-                        <option value="provisioned" ${aircraft.mg101Status === 'provisioned' ? 'selected' : ''}>Provisioned</option>
-                        <option value="done" ${aircraft.mg101Status === 'done' ? 'selected' : ''}>MG101</option>
-                    </select>`;
-                } else {
-                    mg101Cell = `<span class="system-indicator system-${aircraft.mg101Status === 'done' ? 'completed' : 'pending'}"></span>${mg101Label}`;
-                }
-                const mg101Sort = aircraft.mg101Status === 'done' ? 2 : aircraft.mg101Status === 'provisioned' ? 1 : 0;
 
                 const dateSort = dateSortKey(toISODate(aircraft.completionDate)) || '99999999';
                 let dateCell;
@@ -8890,8 +8843,6 @@
                     <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
                     <td data-sort="${statusSort}">${statusCell}</td>
                     <td data-sort="${ver}">${middlewareCell}</td>
-                    <td data-sort="${iphoSort}">${iphoCell}</td>
-                    <td data-sort="${mg101Sort}">${mg101Cell}</td>
                     <td data-sort="${loc}">${locCell}</td>
                     <td class="col-comment" data-sort="${escAttr(aircraft.note || '')}">${commentCell}</td>
                 `;
@@ -8918,7 +8869,9 @@
             // header says it — and stops saying it the moment a column sort is active.
             syncAircraftOrderNote();
             renderSwVersionWidgets();
-            populateHbcTable();
+            // HBC+ table was pulled off the Software tab on 2026-09-01 (user) for a
+            // future dedicated page. populateHbcTable()/hbcFleet() are kept for that
+            // reuse; nothing on this tab renders it now.
         }
 
         // ===== Fleet roster: add aircraft from the app =====

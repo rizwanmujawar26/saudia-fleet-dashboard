@@ -13,6 +13,32 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.81.0 — Software tab: software-only, IPHO/SES and HBC+ removed, search added
+At the user's instruction (2026-09-01): the Software tab now tracks only the
+retrofit active fleet's software components.
+
+**Removed.** The IPHO Mode and SES Migration columns and their two filters, plus
+the now-dead `sesMigrationValue()` and the `iphoStatus`/`mg101Status` entries in
+`handleAircraftEdit()`'s normaliser. IPHO stays filterable/editable on the Modem
+and Satcom tabs (its own handlers); `mg101Status` is untouched in the data but has
+**no editor anywhere now** — it awaits a home on a future modem/SES page. The
+`row.dataset.ipho`/`.ses` also went.
+
+**HBC+ table pulled off this tab** — heading and `#hbcTable` markup removed, and the
+`populateHbcTable()` call dropped from the render path. `populateHbcTable()` and
+`hbcFleet()` are **kept** and the `/fleet` linefit data is untouched, for a future
+dedicated HBC+ page. The `#hbcTable` CSS is retained for that reuse.
+
+**Renamed.** OTA Patch Date → **OTA PATCH#2** (label + data-label; field unchanged).
+
+**Added.** A free-text search box on the filter bar (`search:` on the aircraft bar),
+matching registration and software version — plus type and install location — off a
+new `row.dataset.search`, the same mechanism the SIM/Satcom/Modem bars use.
+
+The table is nine columns now (was eleven); the 8px compaction is kept but no longer
+needed for fit. Verified in-browser: headers, row render, edit-mode render, search
+and column sort all correct, no console errors.
+
 ### v2.80.1 — signOut: also drop the Satcom tab out of Edit Mode
 `signOut()` reset every Edit Mode flag except `satcomEditMode` — the same gap that
 once left the SIM page in Edit Mode across a sign-out, showing inputs nobody could
