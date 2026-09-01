@@ -1680,8 +1680,8 @@ below); the quick pills are single-select per axis (see *Filter bar → Quick pi
 
 **IPHO (v2.78.0 as "IPHO Mode"; moved into the Commissioning box and renamed "IPHO" in
 v2.79.0).** A column showing the **aircraft's top-level `iphoStatus`** (the
-SAME field the Software tab's IPHO Mode and the Modem tab use — one source of truth, not a
-modman field). It is now the leftmost column of the Commissioning Status box (see the box
+SAME field the Modem tab uses — one source of truth, not a modman field; the Software
+tab's own IPHO Mode column was removed on 2026-09-01, see below). It is now the leftmost column of the Commissioning Status box (see the box
 paragraph above), still `data-col=14` and still sortable. `satcomRows()` looks up the
 box's tail in `aircraftData`: a tiny green
 **ENABLED** / amber **DISABLED** pill (`#satcomTable .status-badge.ipho-on/off`, auto-9px)
@@ -1696,8 +1696,9 @@ pattern the Modem tab uses. Filter: an **IPHO** dropdown (`ipho`, Enabled/Disabl
 Commissioning; `na` rows match neither. **No data migration was needed** — the 4 tails the
 user wants Disabled (AS56, AS59, ASR, ASI) were already null and every other active
 retrofit aircraft already `completed`. ⚠️ **User direction (2026-09-01):** Satcom is to
-become the single source of truth for `iphoStatus`; the Software IPHO control and the whole
-Modem tab are to be **removed** (not done yet).
+become the single source of truth for `iphoStatus`; the **Software IPHO control was
+removed on 2026-09-01** (with the SES column, when the Software tab became
+software-only). The **whole Modem tab** is still to be removed (not done yet).
 
 ⚠️ **TID ↔ Chassis-ID check (v2.77).** Taurus-New TID and Hughes Chassis ID encode the
 same unit number; `satcomIdNum()` reads the significant digits (leading zeros ignored, the
@@ -1749,13 +1750,20 @@ removed** (2026-08-23) — six cards restating what the table below already says
 ⚠️ The strip holds two wrapper spans set to `display: contents`, because the version
 card and the station cards come from different render functions; that is what makes
 all three direct flex children so they size as one row.
-Main table (40) + HBC+ table (2). `SW_VERSIONS` is ordered oldest-first and
-the **last entry is "latest"** — add a version there and it gains a widget,
-an edit option, retitles the global card and demotes the previous one. No
+Main table only — the retrofit active fleet's software. `SW_VERSIONS` is ordered
+oldest-first and the **last entry is "latest"** — add a version there and it gains a
+widget, an edit option, retitles the global card and demotes the previous one. No
 other change needed.
+⚠️ **The HBC+ table was pulled off this tab on 2026-09-01** (user) for a future
+dedicated HBC+ page. The `<h3>` heading and `#hbcTable` markup are gone and the
+`populateHbcTable()` call was dropped from the render path — but `populateHbcTable()`
+and `hbcFleet()` are **kept**, the `#hbcTable` CSS is **kept**, and the `/fleet`
+linefit data is untouched. Re-add a `<table id="hbcTable">` on the new page and the
+renderer fills it unchanged.
 **Middleware Install Date is column 1** (renamed from *Installation Date*,
-2026-08-28) and **Install Location is column 9** (renamed from *Base*). The field
-behind each is unchanged — `completionDate` and `completionLocation`.
+2026-08-28) and **Install Location is column 7** (renamed from *Base*; it was column
+9 before IPHO/SES were removed on 2026-09-01). The field behind each is unchanged —
+`completionDate` and `completionLocation`.
 
 ⚠️ **The table opens NEWEST middleware install first** (user, 2026-08-28), not oldest
 — it now answers "what was just done". **It is a BUILD order, not a column sort**, for
@@ -1777,32 +1785,37 @@ rebuilds it and must therefore run **after** `updateSortIndicators()`. It is key
 **class, never id**: `syncFrozenHeads()` clones the live `<thead>`, and an id in there
 would exist twice in the document.
 
-**Filters are Type, Location, IPHO and SES** (2026-08-28). ⚠️ **Status was removed at
-the user's request** — the whole fleet is completed, so it could only filter to
-everything or to nothing. The Status **column** stays; `row.dataset.status` is left in
-place and is now read by nothing. IPHO and SES are built by `fbPresentOptions()` from
-the values actually **present**, in canonical order, so an option can never filter to
-an empty table — `mg101Status: 'provisioned'` is real, matches nobody today, and
-appears on its own the moment one aircraft has it. `sesMigrationValue()` is the one
-mapping, shared by the filter and the cell so they cannot disagree.
+**Filters are Type and Location, plus a free-text search box** (IPHO and SES were
+removed on 2026-09-01). ⚠️ **Status was removed at the user's request (2026-08-28)** —
+the whole fleet is completed, so it could only filter to everything or to nothing. The
+Status **column** stays; `row.dataset.status` is left in place and is now read by
+nothing. ⚠️ **The IPHO and SES filters and their columns went on 2026-09-01** (user):
+this tab now tracks only the software components. `sesMigrationValue()` was deleted with
+them. IPHO stays filterable/editable on the Modem and Satcom tabs; `mg101Status` (the
+SES/MG101 field) is left in the data but has **no editor anywhere now** — it awaits a
+home on a future modem/SES page.
+The **search box** is `search:` on the aircraft bar; rows carry `row.dataset.search`
+(registration + software version + type + install location), the same mechanism the
+SIM/Satcom/Modem bars use. `fbPresentOptions()` stays — the Fleet bar still uses it.
 
-⚠️ **Cell padding on this table is 8px, not the 10px `#hbcTable` keeps.** Eleven
-columns with those two long labels measured **1197px against a 1165px wrapper** — a
-sideways scroll at 1280px. 8px brings it back to exactly 1165. ⚠️ **It is written
-TWICE on purpose**: `#aircraftTable` for the table (an id beats a class, and an id
-rule was already there) and `.sw-compact` for the **floating frozen-head copy**, which
-inherits className and never id. Change them together or the copy pads differently
-from the data under it. **The table fits with 0px to spare — re-measure before adding
-or renaming anything in it.**
+⚠️ **Cell padding on this table is 8px, not the 10px `#hbcTable` keeps.** It dates from
+when the table had **eleven** columns and measured **1197px against a 1165px wrapper**;
+dropping IPHO/SES on 2026-09-01 left **nine** columns with room to spare, so the 8px is
+no longer needed for fit but is **kept** so the table and its frozen-head copy match.
+⚠️ **It is written TWICE on purpose**: `#aircraftTable` for the table (an id beats a
+class, and an id rule was already there) and `.sw-compact` for the **floating
+frozen-head copy**, which inherits className and never id. Change them together or the
+copy pads differently from the data under it.
 
 Installation date carries a `25d` age pill from the same `activationAge()` the
 Fleet tab uses — deliberately the identical treatment, so the two tables read the
 same way. The field behind it is **`completionDate`**, unchanged; only the column's
 label and position moved. Undated aircraft sort to the end on `99999999` and read
 *Not set*, which today is exactly the four still behind on middleware.
-**OTA Patch Date is column 3**, immediately after Installation Date, because the
-patch is pushed over the air *after* the middleware load — the two read as one
-sequence. Field is **`otaPatchUTC`** on `/aircraft/{tail}`, top level beside
+**OTA PATCH#2 is column 2** (renamed from *OTA Patch Date* on 2026-09-01),
+immediately after Middleware Install Date, because the patch is pushed over the air
+*after* the middleware load — the two read as one sequence. Only the label changed;
+the field is still **`otaPatchUTC`** on `/aircraft/{tail}`, top level beside
 `completionDate` rather than nested, for the same reason `ugoVersion` is.
 
 ⚠️ **It is a full ISO stamp, so it carries the Media table's two traps**, which the
@@ -2370,8 +2383,9 @@ sections (Build / Data / Usage).
 
 The HBC+ exclusion note that the old footer carried was moved to the Overview's
 `.footnote` block, and then removed altogether at the user's request in v2.7.0.
-The same fact is still stated in the Software tab's HBC+ table title and in the
-Project Objectives list, so nothing was lost.
+The same fact is still stated in the Project Objectives list, so nothing was lost.
+(The Software tab's HBC+ table, which also carried it, was removed on 2026-09-01 for
+a future dedicated HBC+ page.)
 
 ---
 
