@@ -6,8 +6,26 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-The last session took the app **v2.77.1 → v2.78.0**, all on the Satcom tab. Everything
-below is detail; these are the things that change how you work on it.
+The last session took the app **v2.78.0 → v2.79.0**. Everything below is detail; these
+are the things that change how you work on it.
+
+**Quick pills are single-select now, everywhere (v2.79.0).** The one change that reaches
+beyond Satcom: a quick pill no longer toggles its value into the set additively — a click
+shows ONLY that value, replacing whatever its axis held (per-axis: Active↔Spare↔Removed
+replace each other), and re-clicking the lit pill clears its axis. Pills on *different*
+axes still combine (Active + To-Do, Active + Global). `fbQuickToggle` is the whole change;
+the dropdowns (`fbPick`) are untouched and remain the place for multi-select within an
+axis. Read *Filter bar → Quick pills* before touching any bar's pills.
+
+**Satcom: IPHO moved into the Commissioning box, and To-Do broadened (v2.79.0).** IPHO
+Mode was renamed **IPHO** and folded into the **Commissioning Status** box as its leftmost
+column, which now spans three (IPHO · Taurus · Hughes) — header/border only, no body cell
+reordered, so every `data-col` is unchanged. The Commissioning `comm` axis now reads
+**To-Do** when either antenna is To-Do **OR** the aircraft has IPHO Disabled, so a
+fully-commissioned box with IPHO still off surfaces under To-Do; both the pill and the
+dropdown pick this up (one `rowValue`). ⚠️ **Still open:** Satcom is to become the single
+source of truth for IPHO — the Software IPHO control and the whole Modem tab are to be
+**removed** (not done yet). Read the Satcom tab section before touching.
 
 **Satcom Removal Date, filter bar and IPHO Mode (v2.77.2–v2.78.0).** Three Satcom changes:
 (1) **Removal Date** moved to the front of MODMAN Details, between Install and Eclipse S/N,
