@@ -6,8 +6,20 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-The last session took the app **v2.78.0 → v2.79.0**. Everything below is detail; these
+The last session took the app **v2.80.1 → v2.81.0**. Everything below is detail; these
 are the things that change how you work on it.
+
+**Software tab is software-only now (v2.81.0).** At the user's instruction (2026-09-01)
+the Software tab was reshaped to track only the retrofit active fleet's software: the
+**IPHO Mode and SES Migration columns and their filters were removed** (with the dead
+`sesMigrationValue()` and `row.dataset.ipho/.ses`); the **HBC+ table was pulled off**
+this tab for a future dedicated page — `populateHbcTable()`/`hbcFleet()` and the
+`#hbcTable` CSS are **kept**, the `/fleet` linefit data is untouched; **OTA Patch Date
+was renamed OTA PATCH#2** (label only); and a **free-text search box** was added
+(registration + software version + type + location, via `row.dataset.search`). ⚠️ IPHO
+stays editable on the Modem/Satcom tabs, but **`mg101Status` (SES/MG101) now has no
+editor anywhere** — the data is intact, awaiting a home on a future modem/SES page. The
+table is nine columns now (was eleven). Read the Software tab section before touching.
 
 **Quick pills are single-select now, everywhere (v2.79.0).** The one change that reaches
 beyond Satcom: a quick pill no longer toggles its value into the set additively — a click
@@ -24,8 +36,9 @@ reordered, so every `data-col` is unchanged. The Commissioning `comm` axis now r
 **To-Do** when either antenna is To-Do **OR** the aircraft has IPHO Disabled, so a
 fully-commissioned box with IPHO still off surfaces under To-Do; both the pill and the
 dropdown pick this up (one `rowValue`). ⚠️ **Still open:** Satcom is to become the single
-source of truth for IPHO — the Software IPHO control and the whole Modem tab are to be
-**removed** (not done yet). Read the Satcom tab section before touching.
+source of truth for IPHO. The **Software IPHO control was removed on 2026-09-01** (v2.81.0);
+the **whole Modem tab is still to be removed** (not done yet). Read the Satcom tab section
+before touching.
 
 **Satcom Removal Date, filter bar and IPHO Mode (v2.77.2–v2.78.0).** Three Satcom changes:
 (1) **Removal Date** moved to the front of MODMAN Details, between Install and Eclipse S/N,
@@ -35,8 +48,9 @@ Removed/To-Do; the two per-antenna commissioning filters collapsed into one comb
 the aircraft's existing top-level `iphoStatus` (same field as Software/Modem — not new),
 editable from Satcom via a **cross-entity write to `/aircraft`**, with a grey N/A for
 linefit/not-yet-active/off-wing rows and an IPHO dropdown filter. ⚠️ **User direction:**
-Satcom becomes the single source of truth for IPHO — the Software IPHO control and the
-Modem tab are to be **removed** (not done yet). Read the Satcom tab section before touching.
+Satcom becomes the single source of truth for IPHO — the **Software IPHO control was
+removed on 2026-09-01** (v2.81.0); the **Modem tab is still to be removed** (not done
+yet). Read the Satcom tab section before touching.
 
 **Satcom now tracks commissioning (v2.77).** The old Comments column is gone; in its place
 a boxed **Commissioning Status** double column (Taurus · Hughes), each a tiny Done/To-Do
@@ -3127,6 +3141,16 @@ live.
 
 ### Ideas raised but not built
 
+- **Dedicated HBC+ page (chosen, not built).** The HBC+ table was pulled off the
+  Software tab on 2026-09-01 for a page of its own. `populateHbcTable()` and `hbcFleet()`
+  are kept and the `/fleet` linefit data is untouched — a new tab with a `<table
+  id="hbcTable">` and a render call is all it needs. Where it lives and whether it stays
+  behind sign-in is the user's call.
+- **A home for the SES/MG101 editor (raised, not built).** Removing the Software tab's
+  SES column took the **only** editor for `mg101Status` with it; the data is intact but
+  now uneditable in-app. It fits the standing direction to make Satcom/Modem own the
+  modem-generation fields — decide whether it lands on Satcom, the Modem tab, or the
+  future dedicated page. Ask before starting.
 - **Satcom → Modem: authoritative read (chosen, not built).** The user chose to make
   `/modmans` the single source and have the **Modem tab read Kontron/Eclipse from it**
   rather than from `/units`. Deferred because the Modem tab is keyed by aircraft and its
