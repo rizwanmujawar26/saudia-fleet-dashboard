@@ -943,8 +943,9 @@ in step, which is why the axes had started to drift into each other.
 `fbSel(bar, id)` returns a `Set`. **Empty = All.** Encoding "no filter" as an
 empty set rather than a magic `''` value is what lets `fbActiveCount()`, the
 `has-value` styling and the badge all work without knowing anything about a
-particular filter. Multi-select falls out of it for free — which is the feature
-that was asked for.
+particular filter. Multi-select in the **dropdowns** falls out of it for free. (The
+quick **pills** are deliberately single-select on top of the same Set — see *Quick
+pills* below — so the two surfaces read one state but behave differently.)
 
 Two call shapes:
 
@@ -1027,10 +1028,18 @@ quick: [
 ],
 ```
 
-**They are not a separate filter.** Each pill toggles a value in the same `Set` its
+**They are not a separate filter.** Each pill drives a value in the same `Set` its
 dropdown drives, so the two can never disagree — clicking *Spare* turns the pill green
-*and* the Status trigger reads `Status: Spare`. Toggling is additive, like the menus:
-Active + Spare is both, Active + Global is the intersection.
+*and* the Status trigger reads `Status: Spare`.
+
+⚠️ **Pills are single-select PER AXIS (v2.79.0, user).** A click shows ONLY that value,
+*replacing* whatever the axis held — so `Active` then `Spare` lands on just Spare in one
+click, not two (the old additive toggle made you deselect Active first, which the user
+called out as friction). Re-clicking the lit pill clears its axis (back to All). Pills on
+*different* axes still combine — `Active` + `Global`, `Active` + `To-Do` — because
+`fbQuickToggle` only ever clears the ONE axis it was given. **Multi-select within an axis
+now lives only in the dropdowns** (`fbPick`, unchanged), which is the whole point of the
+split: pills for a fast single jump, the checkbox menu for combining values.
 
 ⚠️ **Shown only above 980px, and that number is MEASURED.** Four pills (264px), three
 dropdowns (267px) and three action buttons (268px) plus gaps and padding need 855px of
@@ -1584,31 +1593,36 @@ not derived from a fitment. `satcomRows()` builds the rows (applying any staged 
 `populateSatcomTable()` renders them; `renderSatcomWidgets()` draws the one widget row;
 `commitSatcomChanges()` saves; `openAddModman()`/`initAddModmanModal()` add a box.
 
-Columns (v2.78): `# | Install Date (days pill) | Removal Date | Eclipse S/N | Kontron S/N
+Columns (v2.79): `# | Install Date (days pill) | Removal Date | Eclipse S/N | Kontron S/N
 | Taurus Old (MG ID · TID) | Taurus New (MG ID · TID) | Hughes (Chassis ID · ESN · MAC) |
-Aircraft | Status | IPHO Mode | Commissioning (Taurus · Hughes)`. Comments was **removed**
-(v2.77) and replaced by the Commissioning pair. **Removal Date moved** (v2.77.2) from the
-far end to the front of MODMAN Details, between Install Date and Eclipse S/N, so install →
-removal reads left to right; its head wraps to two lines (`.satcom-rem-head`) to stay as
-narrow as a date. **IPHO Mode added** (v2.78.0) between Status and Commissioning — see its
-own paragraph below. **Grouped two-row headers** name the modules with the
-`.has-grouphead` machinery — Taurus Old a muted slate, Taurus New Gilat indigo, Hughes
-`#005DAC`, plus two v2.77 masters: **MODMAN Details** (`.satcom-group-details`, `#08492a`,
-now `colspan=5` over `#`/install/removal/serials) and **Commissioning Status**
-(`.satcom-group-comm`, teal `#0f766e`).
+Aircraft | Status | Commissioning Status (IPHO · Taurus · Hughes)`. Comments was
+**removed** (v2.77) and replaced by the Commissioning pair. **Removal Date moved**
+(v2.77.2) from the far end to the front of MODMAN Details, between Install Date and Eclipse
+S/N, so install → removal reads left to right; its head wraps to two lines
+(`.satcom-rem-head`) to stay as narrow as a date. **IPHO** (added v2.78.0 as a standalone
+"IPHO Mode" column) **moved INTO the Commissioning Status box** (v2.79.0, user) as its
+leftmost sub-column and was renamed just "IPHO" — the box now spans **three** columns
+(IPHO · Taurus · Hughes); see its own paragraph below. **Grouped two-row headers** name
+the modules with the `.has-grouphead` machinery — Taurus Old a muted slate, Taurus New
+Gilat indigo, Hughes `#005DAC`, plus two v2.77 masters: **MODMAN Details**
+(`.satcom-group-details`, `#08492a`, now `colspan=5` over `#`/install/removal/serials) and
+**Commissioning Status** (`.satcom-group-comm`, teal `#0f766e`, now `colspan=3`).
 `publishGroupHeadHeight()` measures whichever grouped table is on the **active** tab.
 ⚠️ **`data-col` must equal the DOM cell index** — `sortTable()` uses it directly — so the
 body td order is authoritative (0-indexed): Install 1, Removal 2, Eclipse 3, Kontron 4,
-Taurus-Old 5/6, Taurus-New 7/8, Hughes 9/10/11, Aircraft 12, Status 13, IPHO Mode 14,
-then the two commissioning cells 15/16 (those two are NOT sortable — no `data-col`).
-Any column insert/move re-numbers every `data-col` and `sortTable(...)` arg after it.
+Taurus-Old 5/6, Taurus-New 7/8, Hughes 9/10/11, Aircraft 12, Status 13, IPHO 14, then the
+two commissioning cells 15/16 (those two are NOT sortable — no `data-col`; IPHO at 14 IS
+sortable). v2.79 moved IPHO's *header* into the Commissioning box but did **not** reorder
+any body cell, so every `data-col` is unchanged. Any column insert/move re-numbers every
+`data-col` and `sortTable(...)` arg after it.
 
 The **group dividers** are a left border on the first column of each group
 (`.satcom-group-start`); the Hughes block is closed on its right by that same class on the
-**Aircraft** column. The **Commissioning pair is a boxed double column** (v2.77):
-`.satcom-group-start` on its left edge (the Taurus cell) and `.satcom-comm-end` (a right
-border) on its right (the Hughes cell), with nothing between — one box, two borderless
-inner columns.
+**Aircraft** column. The **Commissioning Status is a boxed triple column** (v2.79, was a
+double before IPHO joined): `.satcom-group-start` on its left edge — now the **IPHO** cell,
+moved there from the Taurus cell in both head and body — and `.satcom-comm-end` (a right
+border) on the Hughes cell, with the Taurus cell borderless between them: one box, three
+inner columns (IPHO sortable, the two commissioning pills not).
 
 ⚠️ **A removal date DERIVES Removed status** (v2.76.4). `satcomRows()` returns
 `removed`/`ex-TAIL` whenever a removal date is present, whatever the stored status — the
@@ -1639,13 +1653,19 @@ and Both were dropped at the user's request.
 **Active · Spare · Removed · To-Do**; the two per-antenna commissioning filters/pills
 (`commtaurus`/`commhughes`, `Taurus ✓`/`Hughes ✓`) were **dropped** for one combined
 **Commissioning** dropdown — a derived `comm` axis (`rowValue`): `todo` if EITHER antenna
-is To-Do (so To-Do surfaces anything not fully commissioned), else `done`, else `na`; the
-dropdown offers To-Do/Done and `na` rows match neither. Bar filters are now **Status +
-Commissioning + IPHO** (see below).
+is To-Do **OR the aircraft has IPHO Disabled** (v2.79, user — so To-Do surfaces anything
+not fully commissioned *and* anything with IPHO still off, including a box whose antennas
+are both Done), else `done`, else `na`; the dropdown offers To-Do/Done and `na` rows match
+neither. Because the To-Do quick pill and this dropdown both read the one `rowValue`, the
+broadened rule drives both. Bar filters are now **Status + Commissioning + IPHO** (see
+below); the quick pills are single-select per axis (see *Filter bar → Quick pills*).
 
-**IPHO Mode (v2.78.0).** A column showing the **aircraft's top-level `iphoStatus`** (the
+**IPHO (v2.78.0 as "IPHO Mode"; moved into the Commissioning box and renamed "IPHO" in
+v2.79.0).** A column showing the **aircraft's top-level `iphoStatus`** (the
 SAME field the Software tab's IPHO Mode and the Modem tab use — one source of truth, not a
-modman field). `satcomRows()` looks up the box's tail in `aircraftData`: a tiny green
+modman field). It is now the leftmost column of the Commissioning Status box (see the box
+paragraph above), still `data-col=14` and still sortable. `satcomRows()` looks up the
+box's tail in `aircraftData`: a tiny green
 **ENABLED** / amber **DISABLED** pill (`#satcomTable .status-badge.ipho-on/off`, auto-9px)
 only for an **active retrofit** aircraft; **grey N/A** (`.ipho-na`) for linefit (HBC+),
 not-yet-active (In Retrofit), and off-wing (spare/removed/unassigned) rows. Editable in
