@@ -6,8 +6,19 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-The last session took the app **v2.76.4 → v2.77.1**. Everything below is detail; these
-are the things that change how you work on it.
+The last session took the app **v2.77.1 → v2.78.0**, all on the Satcom tab. Everything
+below is detail; these are the things that change how you work on it.
+
+**Satcom Removal Date, filter bar and IPHO Mode (v2.77.2–v2.78.0).** Three Satcom changes:
+(1) **Removal Date** moved to the front of MODMAN Details, between Install and Eclipse S/N,
+head wrapping to two lines. (2) **Filter bar reworked** — quick pills are now Active/Spare/
+Removed/To-Do; the two per-antenna commissioning filters collapsed into one combined
+**Commissioning** dropdown (To-Do/Done, derived). (3) **IPHO Mode column** added, showing
+the aircraft's existing top-level `iphoStatus` (same field as Software/Modem — not new),
+editable from Satcom via a **cross-entity write to `/aircraft`**, with a grey N/A for
+linefit/not-yet-active/off-wing rows and an IPHO dropdown filter. ⚠️ **User direction:**
+Satcom becomes the single source of truth for IPHO — the Software IPHO control and the
+Modem tab are to be **removed** (not done yet). Read the Satcom tab section before touching.
 
 **Satcom now tracks commissioning (v2.77).** The old Comments column is gone; in its place
 a boxed **Commissioning Status** double column (Taurus · Hughes), each a tiny Done/To-Do
@@ -1573,17 +1584,24 @@ not derived from a fitment. `satcomRows()` builds the rows (applying any staged 
 `populateSatcomTable()` renders them; `renderSatcomWidgets()` draws the one widget row;
 `commitSatcomChanges()` saves; `openAddModman()`/`initAddModmanModal()` add a box.
 
-Columns (v2.77): `# | Install Date (days pill) | Eclipse S/N | Kontron S/N | Taurus Old
-(MG ID · TID) | Taurus New (MG ID · TID) | Hughes (Chassis ID · ESN · MAC) | Aircraft |
-Status | Removal Date | Commissioning (Taurus · Hughes)`. Comments was **removed** and
-replaced by the Commissioning pair. **Grouped two-row headers** name the modules with the
+Columns (v2.78): `# | Install Date (days pill) | Removal Date | Eclipse S/N | Kontron S/N
+| Taurus Old (MG ID · TID) | Taurus New (MG ID · TID) | Hughes (Chassis ID · ESN · MAC) |
+Aircraft | Status | IPHO Mode | Commissioning (Taurus · Hughes)`. Comments was **removed**
+(v2.77) and replaced by the Commissioning pair. **Removal Date moved** (v2.77.2) from the
+far end to the front of MODMAN Details, between Install Date and Eclipse S/N, so install →
+removal reads left to right; its head wraps to two lines (`.satcom-rem-head`) to stay as
+narrow as a date. **IPHO Mode added** (v2.78.0) between Status and Commissioning — see its
+own paragraph below. **Grouped two-row headers** name the modules with the
 `.has-grouphead` machinery — Taurus Old a muted slate, Taurus New Gilat indigo, Hughes
 `#005DAC`, plus two v2.77 masters: **MODMAN Details** (`.satcom-group-details`, `#08492a`,
-over `#`/dates/serials) and **Commissioning Status** (`.satcom-group-comm`, teal `#0f766e`).
+now `colspan=5` over `#`/install/removal/serials) and **Commissioning Status**
+(`.satcom-group-comm`, teal `#0f766e`).
 `publishGroupHeadHeight()` measures whichever grouped table is on the **active** tab.
 ⚠️ **`data-col` must equal the DOM cell index** — `sortTable()` uses it directly — so the
-body td order is authoritative: MAC 10, Aircraft 11, Status 12, Removal 13, then the two
-commissioning cells 14/15 (they are NOT sortable — no `data-col`).
+body td order is authoritative (0-indexed): Install 1, Removal 2, Eclipse 3, Kontron 4,
+Taurus-Old 5/6, Taurus-New 7/8, Hughes 9/10/11, Aircraft 12, Status 13, IPHO Mode 14,
+then the two commissioning cells 15/16 (those two are NOT sortable — no `data-col`).
+Any column insert/move re-numbers every `data-col` and `sortTable(...)` arg after it.
 
 The **group dividers** are a left border on the first column of each group
 (`.satcom-group-start`); the Hughes block is closed on its right by that same class on the
@@ -1612,11 +1630,36 @@ register uses; every other column goes through `sortTable()`. **Public** (see Ta
 `SATCOM_COMM` is the two EDITABLE states (`done` green, `todo` amber); a third, `na` grey
 (`SATCOM_COMM_NA`, via `satcomCommMeta()`), is **derived** for spare/removed boxes and
 wins over any stored value — a box off an aircraft has no commissioning state, so it shows
-a static N/A pill and offers no dropdown (only an on-wing box is editable). `na` is
-filterable (`commtaurus`/`commhughes` filters, plus `Taurus ✓`/`Hughes ✓` quick pills) but
+a static N/A pill and offers no dropdown (only an on-wing box is editable). It is
 **never written**, so the rules stay `done|todo`. `renderSatcomWidgets()` is now **one row**
 of five: Active/Spare/Removed (/register) and Taurus Comm./Hughes Comm. (/active) — Fault
 and Both were dropped at the user's request.
+
+**Filter bar (v2.77.3).** Reworked at the user's instruction. Quick pills are now
+**Active · Spare · Removed · To-Do**; the two per-antenna commissioning filters/pills
+(`commtaurus`/`commhughes`, `Taurus ✓`/`Hughes ✓`) were **dropped** for one combined
+**Commissioning** dropdown — a derived `comm` axis (`rowValue`): `todo` if EITHER antenna
+is To-Do (so To-Do surfaces anything not fully commissioned), else `done`, else `na`; the
+dropdown offers To-Do/Done and `na` rows match neither. Bar filters are now **Status +
+Commissioning + IPHO** (see below).
+
+**IPHO Mode (v2.78.0).** A column showing the **aircraft's top-level `iphoStatus`** (the
+SAME field the Software tab's IPHO Mode and the Modem tab use — one source of truth, not a
+modman field). `satcomRows()` looks up the box's tail in `aircraftData`: a tiny green
+**ENABLED** / amber **DISABLED** pill (`#satcomTable .status-badge.ipho-on/off`, auto-9px)
+only for an **active retrofit** aircraft; **grey N/A** (`.ipho-na`) for linefit (HBC+),
+not-yet-active (In Retrofit), and off-wing (spare/removed/unassigned) rows. Editable in
+Edit mode (Disabled/Enabled dropdown, `data-field="iphoStatus"`); a staged value overrides
+the aircraft value so the pill updates before Save. ⚠️ **Cross-entity write:**
+`commitSatcomChanges()` splits `iphoStatus` out of the `/modmans` PATCH into a **second
+`/aircraft` PATCH** keyed by tail (Enabled→`completed`, Disabled→`null`), mirrors it onto
+`aircraftLive`, `rebuildAircraftData()`s, and repaints the Software + Modem tabs — the same
+pattern the Modem tab uses. Filter: an **IPHO** dropdown (`ipho`, Enabled/Disabled) beside
+Commissioning; `na` rows match neither. **No data migration was needed** — the 4 tails the
+user wants Disabled (AS56, AS59, ASR, ASI) were already null and every other active
+retrofit aircraft already `completed`. ⚠️ **User direction (2026-09-01):** Satcom is to
+become the single source of truth for `iphoStatus`; the Software IPHO control and the whole
+Modem tab are to be **removed** (not done yet).
 
 ⚠️ **TID ↔ Chassis-ID check (v2.77).** Taurus-New TID and Hughes Chassis ID encode the
 same unit number; `satcomIdNum()` reads the significant digits (leading zeros ignored, the
@@ -1625,10 +1668,12 @@ differ both cells render bold + underlined red (`.satcom-mismatch`) with a "TID 
 ID Mismatch" hover note. Read-view only. Real mismatches exist (AS66, ASAC, ASAD).
 
 **Column width (v2.77).** To cut horizontal scroll the STATUS badge was shrunk to the pill
-scale (`#satcomTable .status-badge`, 9px) and Aircraft/Status/Removal/Commissioning were
-pulled to content width with `.satcom-tight` (`white-space:nowrap; width:1%`); table cell
-padding is `7px 9px`. ⚠️ `width:1%` + `nowrap` is the shrink-to-content idiom — it does not
-mean 1% wide.
+scale (`#satcomTable .status-badge`, 9px) and Removal/Aircraft/Status/IPHO Mode/Commissioning
+were pulled to content width with `.satcom-tight` (`white-space:nowrap; width:1%`); table
+cell padding is `7px 9px`. The Removal Date and IPHO Mode heads override that nowrap
+(`.satcom-rem-head`, `.satcom-ipho-head`, `white-space:normal`) so the head wraps to two
+lines while the body pill/date stays on one. ⚠️ `width:1%` + `nowrap` is the
+shrink-to-content idiom — it does not mean 1% wide.
 
 ### 1. Overview
 
