@@ -13,6 +13,16 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.77.2 — Satcom: Removal Date moved beside Install Date
+The Removal Date column moves from the far end (beside Status) into the front of
+**MODMAN Details**, sitting between Install Date and Eclipse S/N so install → removal
+reads left to right — the on-wing span the two dates describe. Its header wraps to
+two lines (`satcom-rem-head`, `white-space: normal`) so the column stays only as wide
+as its date content, while the body cells keep `satcom-tight`'s nowrap. Purely a
+column reorder: `data-col` / `onclick` indices renumbered across the shifted columns
+(Eclipse S/N→3 … MAC→11, Aircraft→12, Status→13, Removal Date→2), and the matching
+`<td>` moved in `populateSatcomTable`. No data or rules change.
+
 ### v2.77.1 — Satcom: one widget row, N/A commissioning, tighter columns
 Follow-up to v2.77.0 on the user's feedback. The two widget strips collapse to **one
 row** — Active · Spare · Removed · Taurus Comm. · Hughes Comm. (Fault and Both dropped;

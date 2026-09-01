@@ -2692,6 +2692,14 @@
             padding-left: 6px;
             padding-right: 6px;
         }
+        /* Removal Date sits at the front of MODMAN Details now. The head is allowed to
+           wrap ("Removal / Date") so the column is only as wide as its date content —
+           the body cells keep satcom-tight's nowrap so a real date stays on one line. */
+        #satcomTable th.satcom-rem-head {
+            white-space: normal;
+            line-height: 1.15;
+            text-align: center;
+        }
         /* The STATUS badge shrinks to the ON-WING / Done pill scale, so its column need
            not be wide. Scoped to this table so the other tabs' badges are untouched. */
         #satcomTable .status-badge {
@@ -5380,33 +5388,35 @@
                     <!-- Two header rows: a master head per module, then that module's own
                          columns beneath it. Taurus carries two sets — an Old MG/TID pair
                          and a New one — and Hughes carries Chassis ID, ESN and MAC. The
-                         install/removal dates, serials, aircraft and status sit outside
-                         the modules and span both rows, exactly the placement the SIM
-                         register uses. -->
+                         install and removal dates sit together at the front of MODMAN
+                         Details (install then removal, so the on-wing span reads left to
+                         right); the serials follow, and Aircraft / Status span both rows
+                         outside the modules. The Removal Date head wraps to two lines so
+                         the column stays as narrow as its date content. -->
                     <table class="aircraft-table has-grouphead satcom-table" id="satcomTable">
                         <thead>
                             <tr class="satcom-grouphead">
-                                <th colspan="4" class="satcom-group satcom-group-details">MODMAN Details</th>
+                                <th colspan="5" class="satcom-group satcom-group-details">MODMAN Details</th>
                                 <th colspan="2" class="satcom-group satcom-group-told satcom-told-col">Taurus · Old</th>
                                 <th colspan="2" class="satcom-group satcom-group-tnew satcom-tnew-col">Taurus · New</th>
                                 <th colspan="3" class="satcom-group satcom-group-hughes satcom-hughes-col">Hughes</th>
-                                <th rowspan="2" class="sortable-th satcom-group-start satcom-tight" data-col="11" data-label="Aircraft" onclick="sortTable('satcomTable', 11)">Aircraft</th>
-                                <th rowspan="2" class="sortable-th satcom-tight" data-col="12" data-label="Status" onclick="sortTable('satcomTable', 12)">Status</th>
-                                <th rowspan="2" class="sortable-th satcom-tight" data-col="13" data-label="Removal Date" onclick="sortTable('satcomTable', 13)">Removal Date</th>
+                                <th rowspan="2" class="sortable-th satcom-group-start satcom-tight" data-col="12" data-label="Aircraft" onclick="sortTable('satcomTable', 12)">Aircraft</th>
+                                <th rowspan="2" class="sortable-th satcom-tight" data-col="13" data-label="Status" onclick="sortTable('satcomTable', 13)">Status</th>
                                 <th colspan="2" class="satcom-group satcom-group-comm satcom-group-start satcom-comm-end">Commissioning Status</th>
                             </tr>
                             <tr>
                                 <th>#</th>
                                 <th class="sortable-th" data-col="1" data-label="Install Date" id="satcomDateHead" onclick="cycleSatcomDateSort()">Install Date</th>
-                                <th class="sortable-th" data-col="2" data-label="Eclipse S/N" onclick="sortTable('satcomTable', 2)">Eclipse S/N</th>
-                                <th class="sortable-th" data-col="3" data-label="Kontron S/N" onclick="sortTable('satcomTable', 3)">Kontron S/N</th>
-                                <th class="sortable-th satcom-told-col satcom-group-start" data-col="4" data-label="MG ID" onclick="sortTable('satcomTable', 4)">MG ID</th>
-                                <th class="sortable-th satcom-told-col" data-col="5" data-label="TID" onclick="sortTable('satcomTable', 5)">TID</th>
-                                <th class="sortable-th satcom-tnew-col satcom-group-start" data-col="6" data-label="MG ID" onclick="sortTable('satcomTable', 6)">MG ID</th>
-                                <th class="sortable-th satcom-tnew-col" data-col="7" data-label="TID" onclick="sortTable('satcomTable', 7)">TID</th>
-                                <th class="sortable-th satcom-hughes-col satcom-group-start" data-col="8" data-label="Chassis ID" onclick="sortTable('satcomTable', 8)">Chassis ID</th>
-                                <th class="sortable-th satcom-hughes-col" data-col="9" data-label="ESN" onclick="sortTable('satcomTable', 9)">ESN</th>
-                                <th class="sortable-th satcom-hughes-col" data-col="10" data-label="MAC" onclick="sortTable('satcomTable', 10)">MAC Address</th>
+                                <th class="sortable-th satcom-tight satcom-rem-head" data-col="2" data-label="Removal Date" onclick="sortTable('satcomTable', 2)">Removal Date</th>
+                                <th class="sortable-th" data-col="3" data-label="Eclipse S/N" onclick="sortTable('satcomTable', 3)">Eclipse S/N</th>
+                                <th class="sortable-th" data-col="4" data-label="Kontron S/N" onclick="sortTable('satcomTable', 4)">Kontron S/N</th>
+                                <th class="sortable-th satcom-told-col satcom-group-start" data-col="5" data-label="MG ID" onclick="sortTable('satcomTable', 5)">MG ID</th>
+                                <th class="sortable-th satcom-told-col" data-col="6" data-label="TID" onclick="sortTable('satcomTable', 6)">TID</th>
+                                <th class="sortable-th satcom-tnew-col satcom-group-start" data-col="7" data-label="MG ID" onclick="sortTable('satcomTable', 7)">MG ID</th>
+                                <th class="sortable-th satcom-tnew-col" data-col="8" data-label="TID" onclick="sortTable('satcomTable', 8)">TID</th>
+                                <th class="sortable-th satcom-hughes-col satcom-group-start" data-col="9" data-label="Chassis ID" onclick="sortTable('satcomTable', 9)">Chassis ID</th>
+                                <th class="sortable-th satcom-hughes-col" data-col="10" data-label="ESN" onclick="sortTable('satcomTable', 10)">ESN</th>
+                                <th class="sortable-th satcom-hughes-col" data-col="11" data-label="MAC" onclick="sortTable('satcomTable', 11)">MAC Address</th>
                                 <th class="satcom-group-start satcom-comm-col satcom-tight">Taurus</th>
                                 <th class="satcom-comm-end satcom-comm-col satcom-tight">Hughes</th>
                             </tr>
@@ -6676,8 +6686,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.77.1';
-        const APP_BUILD    = '2026.09.01.02';
+        const APP_VERSION  = '2.77.2';
+        const APP_BUILD    = '2026.09.01.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-01T00:00:00Z';
 
@@ -12585,6 +12595,7 @@
                 row.innerHTML = `
                     <td>${idx + 1}</td>
                     <td data-sort="${insSort}">${dateCell('installDate', r.installDate)}</td>
+                    <td class="satcom-tight" data-sort="${remSort}">${dateCell('removalDate', r.removalDate)}</td>
                     <td data-sort="${escAttr(r.eclipseSn)}">${idCell('eclipseSn', r.eclipseSn, false)}</td>
                     <td data-sort="${escAttr(r.kontronSn)}">${idCell('kontronSn', r.kontronSn, false)}</td>
                     <td class="satcom-group-start" data-sort="${escAttr(r.taurusOldMgId)}">${idCell('taurusOldMgId', r.taurusOldMgId, false)}</td>
@@ -12596,7 +12607,6 @@
                     <td data-sort="${escAttr(r.hnsMac)}">${idCell('hnsMac', r.hnsMac, false)}</td>
                     <td class="satcom-group-start satcom-tight" data-sort="${escAttr(r.aircraft || 'zzz')}">${tailCell}</td>
                     <td class="satcom-tight" data-sort="${escAttr(r.status)}">${statusCell}</td>
-                    <td class="satcom-tight" data-sort="${remSort}">${dateCell('removalDate', r.removalDate)}</td>
                     <td class="satcom-group-start satcom-tight">${commCell('commTaurus', r.commTaurus)}</td>
                     <td class="satcom-comm-end satcom-tight">${commCell('commHughes', r.commHughes)}</td>
                 `;
