@@ -2676,6 +2676,31 @@
         }
         #satcomTable .satcom-mismatch .modem-id,
         #satcomTable .satcom-mismatch .modem-id b { color: #b3261e; }
+        /* N/A commissioning — grey. A spare or removed box is not on an aircraft, so a
+           commissioning state does not apply and is shown, not editable. */
+        #satcomTable .comm-na { background: #eef1f4; color: #6b747d; border-color: #dce1e6; }
+
+        /* Tighter register = less horizontal scroll. Smaller cell padding and face
+           overall, and the Aircraft / Status / Removal / Commissioning columns pulled
+           in to their title/content width — nowrap + width:1% shrinks an auto-layout
+           column to its minimum, so nothing is wider than it needs to be. */
+        #satcomTable th, #satcomTable td { padding: 7px 9px; }
+        #satcomTable td { font-size: 12.5px; }
+        #satcomTable th.satcom-tight, #satcomTable td.satcom-tight {
+            white-space: nowrap;
+            width: 1%;
+            padding-left: 6px;
+            padding-right: 6px;
+        }
+        /* The STATUS badge shrinks to the ON-WING / Done pill scale, so its column need
+           not be wide. Scoped to this table so the other tabs' badges are untouched. */
+        #satcomTable .status-badge {
+            padding: 1px 6px;
+            font-size: 9px;
+            letter-spacing: 0.2px;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
         /* The register's short values read as columns when centred, headers included —
            the same choice the SIM register makes. Comments stays left (a sentence). */
         #satcomTable th, #satcomTable td { text-align: center; }
@@ -5338,12 +5363,8 @@
                  Grouped headers say which numbers belong to which module. -->
             <div id="satcom" class="tab-content">
                 <div class="media-widget-section">
-                    <span class="filter-group-label">MODMAN Register</span>
+                    <span class="filter-group-label">MODMAN Register &amp; Commissioning</span>
                     <div class="media-widget-strip" id="satcomWidgets"></div>
-                </div>
-                <div class="media-widget-section">
-                    <span class="filter-group-label">Commissioning · active boxes</span>
-                    <div class="media-widget-strip" id="satcomCommWidgets"></div>
                 </div>
 
                 <div class="filterbar">
@@ -5369,9 +5390,9 @@
                                 <th colspan="2" class="satcom-group satcom-group-told satcom-told-col">Taurus · Old</th>
                                 <th colspan="2" class="satcom-group satcom-group-tnew satcom-tnew-col">Taurus · New</th>
                                 <th colspan="3" class="satcom-group satcom-group-hughes satcom-hughes-col">Hughes</th>
-                                <th rowspan="2" class="sortable-th satcom-group-start" data-col="11" data-label="Aircraft" onclick="sortTable('satcomTable', 11)">Aircraft</th>
-                                <th rowspan="2" class="sortable-th" data-col="12" data-label="Status" onclick="sortTable('satcomTable', 12)">Status</th>
-                                <th rowspan="2" class="sortable-th" data-col="13" data-label="Removal Date" onclick="sortTable('satcomTable', 13)">Removal Date</th>
+                                <th rowspan="2" class="sortable-th satcom-group-start satcom-tight" data-col="11" data-label="Aircraft" onclick="sortTable('satcomTable', 11)">Aircraft</th>
+                                <th rowspan="2" class="sortable-th satcom-tight" data-col="12" data-label="Status" onclick="sortTable('satcomTable', 12)">Status</th>
+                                <th rowspan="2" class="sortable-th satcom-tight" data-col="13" data-label="Removal Date" onclick="sortTable('satcomTable', 13)">Removal Date</th>
                                 <th colspan="2" class="satcom-group satcom-group-comm satcom-group-start satcom-comm-end">Commissioning Status</th>
                             </tr>
                             <tr>
@@ -5386,8 +5407,8 @@
                                 <th class="sortable-th satcom-hughes-col satcom-group-start" data-col="8" data-label="Chassis ID" onclick="sortTable('satcomTable', 8)">Chassis ID</th>
                                 <th class="sortable-th satcom-hughes-col" data-col="9" data-label="ESN" onclick="sortTable('satcomTable', 9)">ESN</th>
                                 <th class="sortable-th satcom-hughes-col" data-col="10" data-label="MAC" onclick="sortTable('satcomTable', 10)">MAC Address</th>
-                                <th class="satcom-group-start satcom-comm-col">Taurus</th>
-                                <th class="satcom-comm-end satcom-comm-col">Hughes</th>
+                                <th class="satcom-group-start satcom-comm-col satcom-tight">Taurus</th>
+                                <th class="satcom-comm-end satcom-comm-col satcom-tight">Hughes</th>
                             </tr>
                         </thead>
                         <tbody id="satcomTableBody"></tbody>
@@ -6655,8 +6676,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.77.0';
-        const APP_BUILD    = '2026.09.01.01';
+        const APP_VERSION  = '2.77.1';
+        const APP_BUILD    = '2026.09.01.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-01T00:00:00Z';
 
@@ -8407,9 +8428,9 @@
                     // Taurus=Done + Hughes=Done narrows to boxes done on BOTH, while
                     // either alone shows everything done on that one.
                     { id: 'commtaurus', label: 'Taurus Comm.',
-                      options: () => SATCOM_COMM.map(x => ({ v: x.value, l: x.label })) },
+                      options: () => [...SATCOM_COMM, SATCOM_COMM_NA].map(x => ({ v: x.value, l: x.label })) },
                     { id: 'commhughes', label: 'Hughes Comm.',
-                      options: () => SATCOM_COMM.map(x => ({ v: x.value, l: x.label })) },
+                      options: () => [...SATCOM_COMM, SATCOM_COMM_NA].map(x => ({ v: x.value, l: x.label })) },
                 ],
             },
 
@@ -12290,10 +12311,17 @@
         // an on-wing (active) box is taken as commissioned on both, everything else as
         // To-Do — so the register reads right with no data migration; an explicit
         // stored value (set via Edit) always wins over the default.
+        // The two EDITABLE states. A third, N/A, is derived (never chosen) for boxes
+        // that are not on an aircraft — see the derivation in satcomRows().
         const SATCOM_COMM = [
             { value: 'done', label: 'Done',  cls: 'comm-done' },
             { value: 'todo', label: 'To-Do', cls: 'comm-todo' },
         ];
+        const SATCOM_COMM_NA = { value: 'na', label: 'N/A', cls: 'comm-na' };
+        function satcomCommMeta(v) {
+            return v === 'na' ? SATCOM_COMM_NA
+                : (SATCOM_COMM.find(x => x.value === v) || SATCOM_COMM[1]);
+        }
 
         // The significant number inside a Taurus TID or a Hughes Chassis ID, leading
         // zeros ignored: 'AERSVA00066HNSJ3' and '66' both yield 66. Null when there is
@@ -12370,13 +12398,18 @@
                 // legacy removed entries have no dates yet and keep their stored
                 // 'removed', so nothing about them changes.
                 const status = removalDate ? 'removed' : rawStatus;
-                // Commissioning defaults to Done for an on-wing box and To-Do otherwise;
-                // a stored value overrides that default.
+                // Commissioning only applies to a box ON an aircraft. A spare (never
+                // fitted) or a removed box (come off) reads N/A, whatever is stored —
+                // the same "derive, don't trust the raw field" rule the status uses.
+                // Otherwise it defaults to Done for an on-wing box and To-Do for a
+                // fault, and any stored value overrides that default.
+                const notApplicable = status === 'spare' || status === 'removed';
                 const defComm = status === 'active' ? 'done' : 'todo';
+                const comm = k => notApplicable ? 'na' : (pick(k) || defComm);
                 return {
                     id, status, aircraft,
-                    commTaurus: pick('commTaurus') || defComm,
-                    commHughes: pick('commHughes') || defComm,
+                    commTaurus: comm('commTaurus'),
+                    commHughes: comm('commHughes'),
                     eclipseSn: pick('eclipseSn'), kontronSn: pick('kontronSn'),
                     taurusOldMgId: pick('taurusOldMgId'), taurusOldTid: pick('taurusOldTid'),
                     taurusNewMgId: pick('taurusNewMgId'), taurusNewTid: pick('taurusNewTid'),
@@ -12397,47 +12430,29 @@
             const strip = document.getElementById('satcomWidgets');
             if (!strip) return;
             const rows = satcomRows();
-            const total = rows.length || 1;
-            const n = st => rows.filter(r => r.status === st).length;
-            const card = (label, count, type) => {
-                const pct = Math.round((count / total) * 1000) / 10;
-                return `<div class="media-widget media-widget-${type}">
-                    <div class="media-widget-head"><span class="media-widget-label">${label}</span></div>
-                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${rows.length}</span><span class="media-widget-pct">${pct}%</span></div>
-                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
-                </div>`;
-            };
-            // Four states that PARTITION the register, so the counts sum to the total —
-            // a spare in the store and a box that came off are both worth a number here,
-            // unlike the SIM strip where Removed was dropped at the user's request.
-            strip.innerHTML =
-                card('Active', n('active'), 'latest') +
-                card('Spare', n('spare'), 'previous') +
-                card('Fault', n('fault'), 'alert') +
-                card('Removed', n('removed'), 'older');
-
-            // Commissioning progress is only meaningful for boxes on wing, so this
-            // strip counts against the ACTIVE population, not the whole register —
-            // Taurus done, Hughes done, and both done.
-            const commStrip = document.getElementById('satcomCommWidgets');
-            if (!commStrip) return;
             const active = rows.filter(r => r.status === 'active');
-            const aTot = active.length || 1;
-            const commCard = (label, count, type) => {
-                const pct = Math.round((count / aTot) * 1000) / 10;
+            const n = st => rows.filter(r => r.status === st).length;
+            // One row of cards. The register counts (Active/Spare/Removed) are against
+            // the whole register; the two commissioning cards are against the ACTIVE
+            // population, because commissioning only applies to a box on wing. Each
+            // card prints its own denominator, so the mixed bases stay clear.
+            const card = (label, count, denom, type) => {
+                const d = denom || 1;
+                const pct = Math.round((count / d) * 1000) / 10;
                 return `<div class="media-widget media-widget-${type}">
                     <div class="media-widget-head"><span class="media-widget-label">${label}</span></div>
-                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${active.length}</span><span class="media-widget-pct">${pct}%</span></div>
+                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${denom}</span><span class="media-widget-pct">${pct}%</span></div>
                     <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
                 </div>`;
             };
             const tDone = active.filter(r => r.commTaurus === 'done').length;
             const hDone = active.filter(r => r.commHughes === 'done').length;
-            const bDone = active.filter(r => r.commTaurus === 'done' && r.commHughes === 'done').length;
-            commStrip.innerHTML =
-                commCard('Taurus', tDone, 'latest') +
-                commCard('Hughes', hDone, 'previous') +
-                commCard('Both', bDone, 'latest');
+            strip.innerHTML =
+                card('Active', n('active'), rows.length, 'latest') +
+                card('Spare', n('spare'), rows.length, 'previous') +
+                card('Removed', n('removed'), rows.length, 'older') +
+                card('Taurus Comm.', tDone, active.length, 'latest') +
+                card('Hughes Comm.', hDone, active.length, 'previous');
         }
 
         function satcomStatusBadge(v) {
@@ -12544,8 +12559,11 @@
                 // A commissioning pill per antenna: a tiny Done/To-Do badge in read
                 // mode, a compact dropdown in edit mode.
                 const commCell = (field, value) => {
-                    const meta = SATCOM_COMM.find(x => x.value === value) || SATCOM_COMM[1];
-                    if (editing) {
+                    const meta = satcomCommMeta(value);
+                    // N/A is derived from status and is not a thing you set, so those
+                    // rows show a static pill even in edit mode — only an on-wing box
+                    // offers the Done/To-Do dropdown.
+                    if (editing && value !== 'na') {
                         return `<select class="edit-select comm-select" data-mm="${escAttr(r.id)}" data-field="${field}" onchange="handleSatcomEdit(this)">
                             ${SATCOM_COMM.map(x => `<option value="${x.value}" ${value === x.value ? 'selected' : ''}>${x.label}</option>`).join('')}
                         </select>`;
@@ -12576,11 +12594,11 @@
                     <td class="satcom-group-start" data-sort="${escAttr(r.hnsChassisId)}">${mismWrap(idCell('hnsChassisId', r.hnsChassisId, true))}</td>
                     <td data-sort="${escAttr(r.hnsEsn)}">${idCell('hnsEsn', r.hnsEsn, false)}</td>
                     <td data-sort="${escAttr(r.hnsMac)}">${idCell('hnsMac', r.hnsMac, false)}</td>
-                    <td class="satcom-group-start" data-sort="${escAttr(r.aircraft || 'zzz')}">${tailCell}</td>
-                    <td data-sort="${escAttr(r.status)}">${statusCell}</td>
-                    <td data-sort="${remSort}">${dateCell('removalDate', r.removalDate)}</td>
-                    <td class="satcom-group-start">${commCell('commTaurus', r.commTaurus)}</td>
-                    <td class="satcom-comm-end">${commCell('commHughes', r.commHughes)}</td>
+                    <td class="satcom-group-start satcom-tight" data-sort="${escAttr(r.aircraft || 'zzz')}">${tailCell}</td>
+                    <td class="satcom-tight" data-sort="${escAttr(r.status)}">${statusCell}</td>
+                    <td class="satcom-tight" data-sort="${remSort}">${dateCell('removalDate', r.removalDate)}</td>
+                    <td class="satcom-group-start satcom-tight">${commCell('commTaurus', r.commTaurus)}</td>
+                    <td class="satcom-comm-end satcom-tight">${commCell('commHughes', r.commHughes)}</td>
                 `;
                 tbody.appendChild(row);
             });
