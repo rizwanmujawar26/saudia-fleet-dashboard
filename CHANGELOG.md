@@ -13,6 +13,36 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.77.1 — Satcom: one widget row, N/A commissioning, tighter columns
+Follow-up to v2.77.0 on the user's feedback. The two widget strips collapse to **one
+row** — Active · Spare · Removed · Taurus Comm. · Hughes Comm. (Fault and Both dropped;
+register counts are /register, the two commissioning counts /active). Commissioning
+gains a derived **N/A** (grey) state for spare and removed boxes: a box not on an
+aircraft has no commissioning state, so To-Do was wrong. N/A is derived from status in
+`satcomRows()` (it WINS over any stored value, like the Removed derivation), shown as a
+static pill and **not editable** — only an on-wing box offers the Done/To-Do dropdown.
+N/A is filterable but **never stored**, so the rules stayed `done|todo` and did not need
+redeploying. Space: the STATUS badge shrank to the ON-WING/Done pill scale (9px, scoped
+to `#satcomTable`), and Aircraft/Status/Removal/Commissioning were pulled to their
+content width (`.satcom-tight` = `nowrap` + `width:1%`) with table padding cut from
+`12px 15px` to `7px 9px`, to reduce horizontal scrolling.
+
+### v2.77.0 — Satcom: Commissioning Status replaces Comments
+The **Comments** column was replaced by a boxed **Commissioning Status** group split into
+**Taurus** and **Hughes** — a bordered double column (`.satcom-comm-end` right edge +
+group-start left edge, borderless between), each a tiny Done (green) / To-Do (amber)
+pill, editable in place via a compact dropdown. Commissioning is **derived** by default
+(active → Done, else To-Do) with a stored value overriding, so the register read right
+with no migration. Two new `/modmans` fields, `commTaurus`/`commHughes` (`done|todo`),
+were added to `database.rules.json` and **deployed before the page** — `$other` is
+`validate:false`, so an unlisted field is rejected and a save would have failed with
+Permission denied. A new **"Commissioning · active boxes"** widget strip (Taurus /
+Hughes / Both, /active) and two filter axes (commtaurus / commhughes) plus quick pills
+were added, and the first four identity columns got a **MODMAN Details** master header.
+Also a **TID ↔ Chassis-ID check**: when Taurus-New TID and Hughes Chassis ID encode
+different unit numbers (leading zeros ignored via `satcomIdNum()`), both render bold +
+underlined red with a "TID and Chassis ID Mismatch" hover note (`satcomTidMismatch()`).
+
 ### v2.76.4 — Satcom: a removal date marks the box Removed (ex-TAIL)
 Marking a MODMAN as removed used to mean opening the Status dropdown and choosing
 Removed by hand, on top of setting the aircraft and dates — easy to miss, so a box

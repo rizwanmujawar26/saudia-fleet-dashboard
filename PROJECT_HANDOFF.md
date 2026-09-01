@@ -6,8 +6,17 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-The last session took the app **v2.75.0 → v2.76.4**. Everything below is detail; these
+The last session took the app **v2.76.4 → v2.77.1**. Everything below is detail; these
 are the things that change how you work on it.
+
+**Satcom now tracks commissioning (v2.77).** The old Comments column is gone; in its place
+a boxed **Commissioning Status** double column (Taurus · Hughes), each a tiny Done/To-Do
+pill editable in place, backed by two new `/modmans` fields `commTaurus`/`commHughes`
+(`done|todo`, allowlisted in the rules). Spare/removed boxes derive a static grey **N/A**
+(commissioning does not apply off-wing) and cannot be edited; `na` is never stored. Widgets
+are one row (Active/Spare/Removed + Taurus/Hughes Comm.), and a **TID ↔ Chassis-ID mismatch
+check** flags rows where Taurus-New TID and the Hughes Chassis ID disagree. Read the Satcom
+tab section before touching it.
 
 **There is now an eleventh tab — 📡 Satcom, the MODMAN register — on a new `/modmans`
 node.** It is modelled on the 4G SIM register (one row per physical box: on-wing, spare,
@@ -338,13 +347,24 @@ dedicated, **authoritative** home. Everything is STORED on the record, not deriv
 | `aircraft` | bare tail; shown `ex-TAIL` once removed |
 | `status` | `active` \| `fault` \| `spare` \| `removed` — see the ⚠️ derivation below |
 | `installDate`, `removalDate` | `DD-Mon-YYYY`; drive the days pill and the removed derivation |
-| `notes`, `addedAt` | comment; ISO stamp |
+| `commTaurus`, `commHughes` | commissioning per antenna, `done` \| `todo` (v2.77) — stored only as an OVERRIDE; see the ⚠️ below |
+| `notes`, `addedAt` | comment (no longer shown — the Comments column became Commissioning in v2.77.0); ISO stamp |
 
 ⚠️ **A removal date DERIVES Removed status.** `satcomRows()` returns `status: 'removed'`
 (and `ex-TAIL`) whenever `removalDate` is present, regardless of what is stored — so a
 box that has come off reads correctly even if its stored `status` still says `fault`.
 The three legacy `removed` entries have no dates and keep their stored value. Anything
 picking a status off a Satcom row must read the DERIVED status, never the raw field.
+
+⚠️ **Commissioning is mostly DERIVED, and stores only an override.** `satcomRows()`
+returns `commTaurus`/`commHughes` = `na` for a spare or removed box (a box not on an
+aircraft has no commissioning state — this WINS over any stored value), else the stored
+value, else the default (`active` → `done`, otherwise `todo`). Only an on-wing box is
+editable, so **`na` is never written** and the rules stay `done|todo`. ⚠️ Adding these
+two fields needed a `database.rules.json` edit **first** — `/modmans/$modman` ends with
+`"$other": { ".validate": false }`, so any field not in the allowlist is rejected and
+the save fails with Permission denied. A new MODMAN field = a rules edit, deployed
+before the page.
 
 Polled with the other low-traffic nodes; saves are one PATCH of leaf paths to
 `/modmans.json` and are **mirrored locally** (the node is polled, not streamed).
@@ -1550,21 +1570,27 @@ entry). Modelled on the 4G SIM register — on-wing, spare, faulty and removed b
 appear, so a spare in the store and a box that came off an airframe are both accounted
 for — but it is a **different shape**: status/aircraft/dates are STORED on the record,
 not derived from a fitment. `satcomRows()` builds the rows (applying any staged edit);
-`populateSatcomTable()` renders them; `renderSatcomWidgets()` draws the four counts;
+`populateSatcomTable()` renders them; `renderSatcomWidgets()` draws the one widget row;
 `commitSatcomChanges()` saves; `openAddModman()`/`initAddModmanModal()` add a box.
 
-Columns: `# | Install Date (days pill) | Eclipse S/N | Kontron S/N | Taurus Old (MG ID ·
-TID) | Taurus New (MG ID · TID) | Hughes (Chassis ID · ESN · MAC) | Aircraft | Status |
-Removal Date | Comments`. **Grouped two-row headers** name the modules, using the same
-`.has-grouphead` machinery as the Modem tab — Taurus Old is a muted slate, Taurus New the
-Gilat indigo, Hughes its `#005DAC`. `publishGroupHeadHeight()` was generalised to measure
-whichever grouped table is on the **active** tab, so it serves both this and the Modem
-tab. ⚠️ **`data-col` must equal the DOM cell index** — `sortTable()` uses it directly —
-which with grouped headers is easy to get wrong (MAC is column 10, then Aircraft 11 …).
+Columns (v2.77): `# | Install Date (days pill) | Eclipse S/N | Kontron S/N | Taurus Old
+(MG ID · TID) | Taurus New (MG ID · TID) | Hughes (Chassis ID · ESN · MAC) | Aircraft |
+Status | Removal Date | Commissioning (Taurus · Hughes)`. Comments was **removed** and
+replaced by the Commissioning pair. **Grouped two-row headers** name the modules with the
+`.has-grouphead` machinery — Taurus Old a muted slate, Taurus New Gilat indigo, Hughes
+`#005DAC`, plus two v2.77 masters: **MODMAN Details** (`.satcom-group-details`, `#08492a`,
+over `#`/dates/serials) and **Commissioning Status** (`.satcom-group-comm`, teal `#0f766e`).
+`publishGroupHeadHeight()` measures whichever grouped table is on the **active** tab.
+⚠️ **`data-col` must equal the DOM cell index** — `sortTable()` uses it directly — so the
+body td order is authoritative: MAC 10, Aircraft 11, Status 12, Removal 13, then the two
+commissioning cells 14/15 (they are NOT sortable — no `data-col`).
 
 The **group dividers** are a left border on the first column of each group
-(`.satcom-group-start`); the Hughes block is closed on its right by putting that same
-class on the **Aircraft** column, so a line falls after MAC.
+(`.satcom-group-start`); the Hughes block is closed on its right by that same class on the
+**Aircraft** column. The **Commissioning pair is a boxed double column** (v2.77):
+`.satcom-group-start` on its left edge (the Taurus cell) and `.satcom-comm-end` (a right
+border) on its right (the Hughes cell), with nothing between — one box, two borderless
+inner columns.
 
 ⚠️ **A removal date DERIVES Removed status** (v2.76.4). `satcomRows()` returns
 `removed`/`ex-TAIL` whenever a removal date is present, whatever the stored status — the
@@ -1581,6 +1607,28 @@ shows a small **On-Wing** pill (scoped `#satcomTable .sim-onwing`, `nowrap`, 9px
 "no removal date yet, still on the aircraft" — the two used to both say On-Wing and read
 as one fact twice. Install Date is the three-tier build order + four date modes the SIM
 register uses; every other column goes through `sortTable()`. **Public** (see Tabs).
+
+**Commissioning (v2.77).** Two pills per box, one per antenna, tiny (the ON-WING scale).
+`SATCOM_COMM` is the two EDITABLE states (`done` green, `todo` amber); a third, `na` grey
+(`SATCOM_COMM_NA`, via `satcomCommMeta()`), is **derived** for spare/removed boxes and
+wins over any stored value — a box off an aircraft has no commissioning state, so it shows
+a static N/A pill and offers no dropdown (only an on-wing box is editable). `na` is
+filterable (`commtaurus`/`commhughes` filters, plus `Taurus ✓`/`Hughes ✓` quick pills) but
+**never written**, so the rules stay `done|todo`. `renderSatcomWidgets()` is now **one row**
+of five: Active/Spare/Removed (/register) and Taurus Comm./Hughes Comm. (/active) — Fault
+and Both were dropped at the user's request.
+
+⚠️ **TID ↔ Chassis-ID check (v2.77).** Taurus-New TID and Hughes Chassis ID encode the
+same unit number; `satcomIdNum()` reads the significant digits (leading zeros ignored, the
+run before `HNS` for a chassis) and `satcomTidMismatch()` flags a disagreement. When they
+differ both cells render bold + underlined red (`.satcom-mismatch`) with a "TID and Chassis
+ID Mismatch" hover note. Read-view only. Real mismatches exist (AS66, ASAC, ASAD).
+
+**Column width (v2.77).** To cut horizontal scroll the STATUS badge was shrunk to the pill
+scale (`#satcomTable .status-badge`, 9px) and Aircraft/Status/Removal/Commissioning were
+pulled to content width with `.satcom-tight` (`white-space:nowrap; width:1%`); table cell
+padding is `7px 9px`. ⚠️ `width:1%` + `nowrap` is the shrink-to-content idiom — it does not
+mean 1% wide.
 
 ### 1. Overview
 
