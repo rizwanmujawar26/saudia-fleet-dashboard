@@ -13,6 +13,11 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.80.1 — signOut: also drop the Satcom tab out of Edit Mode
+`signOut()` reset every Edit Mode flag except `satcomEditMode` — the same gap that
+once left the SIM page in Edit Mode across a sign-out, showing inputs nobody could
+save. Added `satcomEditMode` to the reset (2026-09-01).
+
 ### v2.80.0 — Auto-reload an open tab when a newer build is deployed
 At the user's instruction (2026-09-01): colleagues leave the dashboard open for days
 and never reload, so they keep running whatever build they first loaded and never see

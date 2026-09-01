@@ -6695,10 +6695,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.80.0';
-        const APP_BUILD    = '2026.09.01.07';
+        const APP_VERSION  = '2.80.1';
+        const APP_BUILD    = '2026.09.01.08';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-09-01T14:30:00Z';
+        const APP_DEPLOYED = '2026-09-01T14:45:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -7460,8 +7460,8 @@
             editMode = scheduleEditMode = mediaEditMode = false;
             maintEditMode = hwEditMode = fleetEditMode = serialsEditMode = false;
             // simEditMode was missing here — the SIM page stayed in Edit Mode across a
-            // sign-out, showing inputs nobody could save.
-            simEditMode = modemEditMode = false;
+            // sign-out, showing inputs nobody could save. satcomEditMode had the same gap.
+            simEditMode = modemEditMode = satcomEditMode = false;
             updateAuthUI();
             renderAll();
         }
