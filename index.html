@@ -2692,11 +2692,11 @@
             padding-left: 6px;
             padding-right: 6px;
         }
-        /* Removal Date and IPHO Mode heads are allowed to wrap ("Removal / Date",
-           "IPHO / Mode") so each column is only as wide as its content — the body
-           cells keep satcom-tight's nowrap so a real date or pill stays on one line. */
-        #satcomTable th.satcom-rem-head,
-        #satcomTable th.satcom-ipho-head {
+        /* The Removal Date head is allowed to wrap ("Removal / Date") so the column is
+           only as wide as its content — the body cell keeps satcom-tight's nowrap so a
+           real date stays on one line. (IPHO's head is now one short word inside the
+           Commissioning Status box, so it no longer needs the two-line treatment.) */
+        #satcomTable th.satcom-rem-head {
             white-space: normal;
             line-height: 1.15;
             text-align: center;
@@ -5394,12 +5394,13 @@
                          and a New one — and Hughes carries Chassis ID, ESN and MAC. The
                          install and removal dates sit together at the front of MODMAN
                          Details (install then removal, so the on-wing span reads left to
-                         right); the serials follow, and Aircraft / Status / IPHO Mode
-                         span both rows outside the modules. IPHO Mode is the aircraft's
-                         top-level iphoStatus, shown only for an active retrofit box —
-                         linefit, not-yet-active and off-wing rows read N/A. The Removal
-                         Date and IPHO Mode heads wrap to two lines so each column stays
-                         as narrow as its content. -->
+                         right); the serials follow, and Aircraft / Status span both rows
+                         outside the modules. The Commissioning Status box now holds THREE
+                         columns — IPHO, then the Taurus and Hughes commissioning pills
+                         (user, 2026-09-01). IPHO is the aircraft's top-level iphoStatus,
+                         shown only for an active retrofit box — linefit, not-yet-active
+                         and off-wing rows read N/A. The Removal Date head wraps to two
+                         lines so its column stays as narrow as its content. -->
                     <table class="aircraft-table has-grouphead satcom-table" id="satcomTable">
                         <thead>
                             <tr class="satcom-grouphead">
@@ -5409,8 +5410,7 @@
                                 <th colspan="3" class="satcom-group satcom-group-hughes satcom-hughes-col">Hughes</th>
                                 <th rowspan="2" class="sortable-th satcom-group-start satcom-tight" data-col="12" data-label="Aircraft" onclick="sortTable('satcomTable', 12)">Aircraft</th>
                                 <th rowspan="2" class="sortable-th satcom-tight" data-col="13" data-label="Status" onclick="sortTable('satcomTable', 13)">Status</th>
-                                <th rowspan="2" class="sortable-th satcom-tight satcom-ipho-head" data-col="14" data-label="IPHO Mode" onclick="sortTable('satcomTable', 14)">IPHO Mode</th>
-                                <th colspan="2" class="satcom-group satcom-group-comm satcom-group-start satcom-comm-end">Commissioning Status</th>
+                                <th colspan="3" class="satcom-group satcom-group-comm satcom-group-start satcom-comm-end">Commissioning Status</th>
                             </tr>
                             <tr>
                                 <th>#</th>
@@ -5425,7 +5425,8 @@
                                 <th class="sortable-th satcom-hughes-col satcom-group-start" data-col="9" data-label="Chassis ID" onclick="sortTable('satcomTable', 9)">Chassis ID</th>
                                 <th class="sortable-th satcom-hughes-col" data-col="10" data-label="ESN" onclick="sortTable('satcomTable', 10)">ESN</th>
                                 <th class="sortable-th satcom-hughes-col" data-col="11" data-label="MAC" onclick="sortTable('satcomTable', 11)">MAC Address</th>
-                                <th class="satcom-group-start satcom-comm-col satcom-tight">Taurus</th>
+                                <th class="sortable-th satcom-group-start satcom-comm-col satcom-tight" data-col="14" data-label="IPHO" onclick="sortTable('satcomTable', 14)">IPHO</th>
+                                <th class="satcom-comm-col satcom-tight">Taurus</th>
                                 <th class="satcom-comm-end satcom-comm-col satcom-tight">Hughes</th>
                             </tr>
                         </thead>
@@ -6694,8 +6695,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.78.0';
-        const APP_BUILD    = '2026.09.01.05';
+        const APP_VERSION  = '2.79.0';
+        const APP_BUILD    = '2026.09.01.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-01T00:00:00Z';
 
@@ -7886,8 +7887,16 @@
         }
 
         function fbQuickToggle(barId, filterId, value) {
+            // Quick pills are single-select PER AXIS (user, 2026-09-01): a click shows
+            // ONLY that value, replacing whatever the axis held, so switching sets is one
+            // click rather than deselect-then-select. Re-clicking the lit pill clears its
+            // axis (back to All). Other axes are untouched, so cross-axis pills still
+            // combine (Active + Global, Active + To-Do). The dropdowns keep multi-select —
+            // combining WITHIN an axis lives there now.
             const sel = fbSel(barId, filterId);
-            if (sel.has(value)) sel.delete(value); else sel.add(value);
+            const wasSole = sel.size === 1 && sel.has(value);
+            sel.clear();
+            if (!wasSole) sel.add(value);
             fbApply(barId);
             fbRender(barId);
         }
@@ -8447,11 +8456,14 @@
                       options: () => SATCOM_STATUSES.map(x => ({ v: x.value, l: x.label })) },
                     // Commissioning as ONE axis across both antennas (replaced the two
                     // per-antenna filters, 2026-09-01). A box reads To-Do if EITHER
-                    // antenna is still To-Do, Done only when neither is — so the To-Do
-                    // pill surfaces anything not fully commissioned. N/A boxes
-                    // (spare/removed) fall through to 'na' and match neither option.
+                    // antenna is still To-Do OR the aircraft has IPHO Disabled (user,
+                    // 2026-09-01 — To-Do now surfaces anything not fully commissioned AND
+                    // anything with IPHO still off); Done only when neither holds. The
+                    // broadened rule drives BOTH the To-Do quick pill and this dropdown's
+                    // To-Do option, since both read this one rowValue. N/A boxes
+                    // (spare/removed, IPHO N/A) fall through to 'na' and match neither.
                     { id: 'comm', label: 'Commissioning',
-                      rowValue: row => (row.dataset.commtaurus === 'todo' || row.dataset.commhughes === 'todo')
+                      rowValue: row => (row.dataset.commtaurus === 'todo' || row.dataset.commhughes === 'todo' || row.dataset.ipho === 'disabled')
                           ? 'todo'
                           : ((row.dataset.commtaurus === 'done' || row.dataset.commhughes === 'done') ? 'done' : 'na'),
                       options: [
@@ -12660,8 +12672,8 @@
                     <td data-sort="${escAttr(r.hnsMac)}">${idCell('hnsMac', r.hnsMac, false)}</td>
                     <td class="satcom-group-start satcom-tight" data-sort="${escAttr(r.aircraft || 'zzz')}">${tailCell}</td>
                     <td class="satcom-tight" data-sort="${escAttr(r.status)}">${statusCell}</td>
-                    <td class="satcom-tight" data-sort="${escAttr(r.ipho)}">${iphoCell}</td>
-                    <td class="satcom-group-start satcom-tight">${commCell('commTaurus', r.commTaurus)}</td>
+                    <td class="satcom-group-start satcom-tight" data-sort="${escAttr(r.ipho)}">${iphoCell}</td>
+                    <td class="satcom-tight">${commCell('commTaurus', r.commTaurus)}</td>
                     <td class="satcom-comm-end satcom-tight">${commCell('commHughes', r.commHughes)}</td>
                 `;
                 tbody.appendChild(row);

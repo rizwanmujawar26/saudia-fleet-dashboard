@@ -13,6 +13,29 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.79.0 — Satcom: IPHO into the Commissioning box; single-select quick pills
+Two changes at the user's instruction (2026-09-01).
+
+**Satcom.** IPHO Mode is renamed **IPHO** and moves *inside* the Commissioning Status
+box, which now spans **three** columns — IPHO · Taurus · Hughes. Header only: the
+`Commissioning Status` master goes `colspan=2`→`3`, IPHO drops its standalone
+`rowspan=2` cell in the top row and becomes the box's left sub-column (`data-col=14`,
+still sortable), and the box's left border (`.satcom-group-start`) moves from the Taurus
+cell onto IPHO in both head and body — no body cell was reordered, so every `data-col`
+is unchanged. The `.satcom-ipho-head` two-line wrap is gone (one short word now).
+
+**To-Do broadened.** The Commissioning `comm` axis now reads **To-Do** when either
+antenna is still To-Do **OR** the aircraft has **IPHO Disabled** — so To-Do surfaces a
+fully-commissioned box whose IPHO is still off. Because the quick pill and the
+Commissioning dropdown both read this one `rowValue`, both pick it up.
+
+**Quick pills go single-select (global).** `fbQuickToggle` no longer toggles a value
+into the set additively; a click now shows **only** that value, replacing whatever the
+axis held (per-axis: Active↔Spare↔Removed replace each other), and re-clicking the lit
+pill clears its axis (back to All). Pills on different axes still combine (Active +
+To-Do, Active + Global). Multi-select within an axis now lives only in the dropdowns.
+Applies to every bar with pills (4G SIM, Satcom).
+
 ### v2.78.0 — Satcom: IPHO Mode column
 Adds an **IPHO Mode** column to the MODMAN register, between Status and the
 Commissioning group. It shows the aircraft's existing top-level **`iphoStatus`** (the
