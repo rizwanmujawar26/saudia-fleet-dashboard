@@ -95,6 +95,23 @@ n="$(grep -coE '<(script|link)[^>]+(src|href)="https?://' "$TMP/markup.html" | t
 v="$(grep -m1 "APP_VERSION" "$PAGE" | sed "s/.*'\(.*\)'.*/\1/")"
 [ -n "$v" ] && ok "APP_VERSION present" "v$v" || bad "APP_VERSION MISSING"
 
+# version.json is what an already-open tab polls to learn a newer build shipped. It
+# must match APP_BUILD in the page, or open tabs are told the wrong build is live —
+# or none. Stamp it with scripts/version-stamp.sh.
+b="$(grep -m1 "APP_BUILD" "$PAGE" | sed "s/.*'\(.*\)'.*/\1/")"
+vj="$ROOT/version.json"
+if [ ! -f "$vj" ]; then
+  bad "version.json MISSING" "run ./scripts/version-stamp.sh"
+else
+  vjb="$(python3 -c "import json;print(json.load(open('$vj')).get('build',''))" 2>/dev/null)"
+  vjv="$(python3 -c "import json;print(json.load(open('$vj')).get('version',''))" 2>/dev/null)"
+  if [ "$vjb" = "$b" ] && [ "$vjv" = "$v" ]; then
+    ok "version.json in sync" "build $b"
+  else
+    bad "version.json STALE" "has $vjb/$vjv, page is $b/$v — run ./scripts/version-stamp.sh"
+  fi
+fi
+
 # ---------------------------------------------------------------- 6. edit sanity
 # A scripted edit once produced a 17-million-line file and another deleted 19
 # functions. Both were caught by comparing against HEAD straight afterwards.

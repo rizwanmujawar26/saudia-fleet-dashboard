@@ -6695,10 +6695,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.79.0';
-        const APP_BUILD    = '2026.09.01.06';
+        const APP_VERSION  = '2.80.0';
+        const APP_BUILD    = '2026.09.01.07';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-09-01T00:00:00Z';
+        const APP_DEPLOYED = '2026-09-01T14:30:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -7005,6 +7005,90 @@
                 modmans:    JSON.stringify(Object.keys(modmansLive).length ? modmansLive : null),
             };
             setInterval(pollLowTrafficNodes, LOW_TRAFFIC_POLL_MS);
+        }
+
+        // ===== Stale-page guard: reload a tab when a newer build is deployed =====
+        // The DATA on this page is already live — the streams and the low-traffic poll
+        // keep every figure current without a refresh. The PAGE ITSELF is not: the HTML
+        // and this script are whatever the browser loaded when the tab was opened. A
+        // colleague who leaves the dashboard open for days keeps running that build and
+        // never sees a deploy — new columns, fixes, layout — until they reload by hand,
+        // which they don't. This closes that gap.
+        //
+        // version.json ships in the SAME GitHub Pages deploy as this file and carries
+        // APP_BUILD, stamped by scripts/version-stamp.sh (check.sh fails the deploy if it
+        // drifts, so it cannot lie). We fetch it on a timer and whenever the tab is
+        // refocused; when it names a build other than the one running, we reload.
+        //
+        // ⚠️ A plain reload does NOT beat the Pages HTML cache. GitHub Pages serves the
+        // page with Cache-Control: max-age=600, so for up to ten minutes a reload can
+        // hand back the SAME stale file and achieve nothing. Reloading to ?v=<build> — a
+        // URL the cache has never seen — forces the fresh copy. The guard compares the
+        // running build against the deployed one, so it is self-correcting: if a stale
+        // file ever loads anyway, the next check simply reloads again.
+        //
+        // ⚠️ Auto-reload WAITS while an edit is open. Yanking the page out from under a
+        // half-typed AOG note or an open Edit Mode would lose it. isSafeToReload() gates
+        // every reload, and a pending reload fires the moment the last edit closes.
+        const VERSION_POLL_MS = 60000;
+        let versionReloadPending = '';   // the deployed build we owe a reload to, or ''
+
+        function isSafeToReload() {
+            // In Edit Mode on any tab, a modal open, or the caret in a field: someone may
+            // have unsaved input. Any one of these defers the reload.
+            if (editMode || scheduleEditMode || mediaEditMode || maintEditMode ||
+                hwEditMode || fleetEditMode || serialsEditMode || simEditMode ||
+                modemEditMode || satcomEditMode) return false;
+            const modalOpen = Array.from(document.querySelectorAll('[id$="Overlay"]'))
+                .some(el => getComputedStyle(el).display !== 'none');
+            if (modalOpen) return false;
+            const a = document.activeElement;
+            if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' ||
+                      a.tagName === 'SELECT' || a.isContentEditable)) return false;
+            return true;
+        }
+
+        function reloadToBuild(build) {
+            // A fresh URL the HTML cache has never seen — see the max-age note above.
+            location.replace(location.pathname + '?v=' + encodeURIComponent(build));
+        }
+
+        async function checkForNewBuild() {
+            if (versionReloadPending) {              // already know; just take a safe moment
+                if (isSafeToReload()) reloadToBuild(versionReloadPending);
+                return;
+            }
+            let deployed;
+            try {
+                const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+                if (!res.ok) return;                 // 404 mid-deploy — the next check retries
+                deployed = (await res.json()).build;
+            } catch (e) { return; }                  // offline / CDN blip — harmless, retry later
+            if (!deployed || deployed === APP_BUILD) return;
+
+            versionReloadPending = deployed;
+            if (isSafeToReload()) reloadToBuild(deployed);
+        }
+
+        function startVersionWatch() {
+            // A tab the cache served with ?v= already runs the right build, so the first
+            // check merely confirms it — nothing fires unless the deployed build differs.
+            setInterval(checkForNewBuild, VERSION_POLL_MS);
+
+            // Someone returning to a long-idle tab should land on the current page at
+            // once, not up to a minute later.
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') checkForNewBuild();
+            });
+            window.addEventListener('focus', checkForNewBuild);
+
+            // While a reload is owed, take the first safe moment after the open edit
+            // closes. Cheap, and only does anything while a reload is genuinely pending.
+            setInterval(() => {
+                if (versionReloadPending && isSafeToReload()) reloadToBuild(versionReloadPending);
+            }, 3000);
+
+            checkForNewBuild();
         }
 
         // A write that hangs is worse than a write that fails: the button sits on
@@ -16024,6 +16108,7 @@
             updateScheduleEditUI();
             renderObjectives();
             connectLiveSync();
+            startVersionWatch();   // reload the tab when a newer build is deployed
 
             // Update timer every minute
             updateTimeRemaining();

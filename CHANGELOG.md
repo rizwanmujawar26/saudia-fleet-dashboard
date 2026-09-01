@@ -13,6 +13,30 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.80.0 — Auto-reload an open tab when a newer build is deployed
+At the user's instruction (2026-09-01): colleagues leave the dashboard open for days
+and never reload, so they keep running whatever build they first loaded and never see
+a deploy. The *data* was always live (streams + the low-traffic poll); the *page* was
+not.
+
+**How.** A tiny `version.json` ships in the same GitHub Pages deploy as `index.html`,
+stamped from `APP_BUILD` by `scripts/version-stamp.sh`. Every open tab polls it every
+60s — and on tab refocus/visibility — and when it names a build other than the one
+running, the tab reloads. The reload navigates to `?v=<build>`, a URL the Pages HTML
+cache (`Cache-Control: max-age=600`) has never seen, because a plain reload can be
+served the same stale file for up to ten minutes. The check compares running vs
+deployed build, so it self-corrects: a stale load just reloads again.
+
+**Guarded.** Auto-reload waits while an edit is open — any tab in Edit Mode, any modal
+(`[id$="Overlay"]`) open, or the caret in a field defers it (`isSafeToReload()`), and
+the queued reload fires the instant the edit closes. So no half-typed AOG note is lost.
+
+**New deploy step.** `check.sh` now fails if `version.json` has drifted from `APP_BUILD`
+— run `./scripts/version-stamp.sh` after every version bump. version.json is derived
+from the page, so it cannot lie about what shipped. Note: tabs already open at deploy
+time do not yet carry the watcher — they pick it up on their next manual reload, and
+auto-reload from then on.
+
 ### v2.79.0 — Satcom: IPHO into the Commissioning box; single-select quick pills
 Two changes at the user's instruction (2026-09-01).
 
