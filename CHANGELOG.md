@@ -13,6 +13,32 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.82.0 — Modem and Schedule tabs removed
+At the user's instruction (2026-09-02). Satcom (the `/modmans` register) is now the
+single reference for modem commissioning, so the Modem tab — a failed experiment —
+was retired, and the forward-looking Schedule tab was no longer needed.
+
+**Removed (Modem tab).** The 🛰️ tab button and `#modem` panel, ~21 modem-only
+functions (`populateModemTable`, `renderModemPage`, `commitModemChanges`,
+`renderModemWidgets`, the column-toggle set, `modemFleet`/`modemRows`, `stackedDate`,
+etc.), the `modem` entry in `FILTER_BARS`, and all modem-table CSS. **Kept and shared
+with Satcom:** `modemIdHTML()`, the `.modem-id`/`.modem-id-dim` base CSS, the IPHO
+badge CSS, and `publishGroupHeadHeight()`.
+
+**Removed (Schedule tab).** The 📅 tab button and `#schedule` panel, ~19
+schedule-only functions, the Add-Entry modal, the `station-*`/`time-*` CSS, the
+`/schedule` **live `EventSource` stream** and the per-minute `updateTimeRemaining`
+`setInterval` (a forever-running timer, now gone — a small efficiency win). The
+**`/schedule` node was deleted** from Firebase (backed up first), its rules block
+removed, and its entry dropped from `backup.sh`, `restore.sh` and
+`verify-deployment.sh`.
+
+**Modem DATA kept, deliberately.** `/aircraft/{tail}/modem`, the MODMAN fields in
+`/units`, and the `/modmans` node are all untouched; the `modem` rules block stays
+declared and inert (like `se4`), so nothing is orphaned and re-adding a view would be
+UI-only. IPHO editing continues on Software and Satcom. Net: 16,071 → ~14,530 lines,
+40 functions removed, one live stream and one interval freed.
+
 ### v2.81.0 — Software tab: software-only, IPHO/SES and HBC+ removed, search added
 At the user's instruction (2026-09-01): the Software tab now tracks only the
 retrofit active fleet's software components.

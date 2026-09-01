@@ -106,24 +106,6 @@
       }
     },
 
-    "schedule": {
-      ".read": true,
-
-      "$entry": {
-        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
-
-        "aircraft":    { ".validate": "newData.isString() && newData.val().length <= 12" },
-        "date":        { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
-        "time":        { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}:[0-9]{2}$/)" },
-        "workpackage": { ".validate": "newData.isString() && newData.val().length <= 200" },
-        "wo_flags":    { ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9 \\/+_-]{0,32}$/)" },
-        "station":     { ".validate": "newData.isString() && newData.val().matches(/^(JED|RUH)$/)" },
-        "status":      { ".validate": "newData.isString() && newData.val().matches(/^(scheduled|in-progress|completed|postponed)$/)" },
-
-        "$other":      { ".validate": false }
-      }
-    },
-
     "activities": {
       ".read": true,
 

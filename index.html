@@ -736,34 +736,6 @@
             background: #137a49;
         }
 
-        .time-remaining {
-            font-weight: 600;
-            padding: 4px 8px;
-            border-radius: 4px;
-            display: inline-block;
-            font-size: 12px;
-        }
-
-        .time-countdown {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .time-completed {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .time-critical {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .time-tbd {
-            background: #e9ecef;
-            color: #6c757d;
-        }
-
         .aircraft-table td {
             padding: 12px 15px;
             border-bottom: 1px solid #e0e0e0;
@@ -2603,25 +2575,6 @@
         .status-badge.sim-removed { background: #fdf3e3; color: #8a5a12; border: 1px solid #efd9ae; }
         .status-badge.sim-fault   { background: #fdecee; color: #a52834; border: 1px solid #f5c9ce; }
 
-        /* The master head over each modem's own columns. It is not sortable — there is
-           nothing to sort a group by — so it deliberately carries no .sortable-th and
-           never gets an arrow from updateSortIndicators(). */
-        /* ⚠️ Must out-specify `.aircraft-table th` (0,1,1), which sets the header's
-           background and a left text-align — a bare .modem-group loses to it and the
-           master head renders left-aligned in the plain header green. */
-        .aircraft-table th.modem-group {
-            text-align: center;
-            font-size: 11px;
-            letter-spacing: 1.2px;
-            padding: 8px 15px;
-            border-left: 2px solid rgba(255, 255, 255, 0.35);
-        }
-
-        /* The first column of each group takes the same divider, so the two modems
-           read as two blocks rather than one run of thirteen columns. */
-        .aircraft-table .modem-group-start { border-left: 2px solid #e3e8ec; }
-        .aircraft-table thead .modem-group-start { border-left: 2px solid rgba(255, 255, 255, 0.35); }
-
         /* Satcom (MODMAN register) group heads — same machinery as the Modem tab's
            master heads: centred, out-specifying `.aircraft-table th`, with a divider
            starting each block. Taurus New takes Gilat's indigo (the current set),
@@ -2725,265 +2678,6 @@
             top: calc(var(--sticky-top) + var(--filterbar-h, 52px) + var(--grouphead-h, 28px));
         }
 
-        /* A single-modem view hides the other modem's identifier columns outright,
-           rather than showing a column of "n/a". One class on the table drives it, and
-           the frozen-head copy inherits the rule because it is cloned from the live
-           <thead> with its classes intact. */
-        /* ===== Modem table: one type scale, everything centred =====
-           The row had five different sizes in it and read as noise. There are now
-           exactly three: the VALUE (11.5px), its UNIT or qualifier (8.5px, quieter),
-           and the HEADER (10px). Nothing else sets a size.
-
-           Everything is centre-aligned — header, sub-header and value alike — so each
-           column reads as a single vertical line rather than three ragged edges, and a
-           short value in a wide column still sits under its own heading. */
-        .modem-table th,
-        .modem-table td {
-            padding: 5px 10px;
-            text-align: center;
-            vertical-align: middle;
-        }
-
-        .modem-table td { font-size: 11.5px; }
-
-        .modem-table th {
-            font-size: 10px;
-            letter-spacing: 0.4px;
-            line-height: 1.2;
-            /* Sub-headers WRAP rather than forcing a column as wide as their longest
-               word — the head is two rows tall, so the second line is free, and the
-               column can then size to its values instead of its label. */
-            white-space: normal;
-        }
-
-        /* The comment column's left alignment does not apply here — this table has
-           none, and a centred column is the rule. */
-        .modem-table td.col-comment { text-align: center; }
-
-        /* Identifiers are monospaced and tabular so a transposed digit is findable and
-           columns of numbers line up on their digits. ONE weight for the whole string
-           (500 — solid, not the thin 400 it inherited), so a serial reads as a single
-           even run rather than a ragged mix of weights. This is the single source for
-           .modem-id; the standalone block lower down only adds the shared family/colour. */
-        .modem-table .modem-id {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            font-size: 11.5px;
-            font-weight: 500;
-            font-variant-numeric: tabular-nums;
-            letter-spacing: 0.2px;
-            color: #2c3238;
-        }
-        /* The identifying digits get a GENTLE emphasis — one weight step and nothing
-           else. No size bump and no extra letter-spacing, so the digits stay on the
-           same monospace grid as the rest of the string instead of jumping out of it,
-           which is what made the row read as chaotic. */
-        .modem-table .modem-id b {
-            font-weight: 700;
-            font-size: 1em;
-            letter-spacing: 0.2px;
-        }
-
-        /* A unit is not the value. It rides after the figure at the quiet size so the
-           eye lands on the number first — 8 dBm, not 8 DBM. */
-        .unit-sfx {
-            font-size: 8.5px;
-            font-weight: 600;
-            color: #8a939c;
-            letter-spacing: 0.2px;
-            font-family: inherit;
-        }
-
-        /* A date and its age, stacked and centred. The pill goes UNDER the date rather
-           than beside it, which is what lets a date column be the width of a date. */
-        .stack-date {
-            display: block;
-            font-size: 11.5px;
-            font-weight: 600;
-            color: #2c3238;
-            white-space: nowrap;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .age-pill.stack-age {
-            margin-left: 0;
-            margin-top: 2px;
-            padding: 0 5px;
-            font-size: 8.5px;
-            vertical-align: 0;
-        }
-
-        /* Registration and type read as ONE fact — "AQB, an A330" — so they share a
-           line, centred, with the type quieter beside it. */
-        .stack-top {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
-
-        .stack-reg {
-            font-weight: 700;
-            font-size: 12px;
-            color: #1f2937;
-            letter-spacing: 0.2px;
-        }
-
-        /* The Type column was removed to save width, so the type rides here instead.
-           ⚠️ The row still carries data-type, so the Type FILTER is unaffected — this
-           is a display change, not a data one. */
-        .type-mini {
-            display: inline-block;
-            padding: 0 4px;
-            border-radius: 3px;
-            background: #eef1f4;
-            border: 1px solid #e0e5ea;
-            color: #6b747d;
-            font-size: 8.5px;
-            font-weight: 700;
-            letter-spacing: 0.2px;
-            white-space: nowrap;
-        }
-
-        /* IPHO is one of two states and sits in a narrow column, so the pill is sized
-           to the column rather than the other way round — the quiet size, minimal
-           padding, no letter-spacing to push it wider. */
-        .modem-table .status-badge.mini-badge {
-            padding: 1px 6px;
-            font-size: 8.5px;
-            font-weight: 700;
-            letter-spacing: 0.2px;
-            border-radius: 8px;
-        }
-
-        /* ===== Column widths =====
-           A floor per column, sized to its VALUES so the column never collapses below
-           what it holds; content above that grows it naturally. With the headers now
-           wrapping, the label no longer sets the width — the data does.
-           ⚠️ min-width on the body cell, not `width` on the <th>: under
-           `table-layout: auto` a th width is only a hint and was being overridden,
-           which is how a 16-character chassis id ended up in an 88px column.
-           ⚠️ And not a <colgroup>: the eye toggles can remove three column groups, and
-           a colgroup is a fixed list of columns. nth-child counts DOM position, so a
-           hidden group does not shift these. */
-
-        /* ⚠️ width:auto, NOT the inherited .aircraft-table width:100%. This table has
-           no greedy column (the Software tab's Comments) to absorb surplus width, so
-           under auto layout width:100% shared every spare pixel across all thirteen
-           columns and blew the date columns out to ~3x the date inside them. Shrinking
-           the table to its content makes each column exactly as wide as its values (the
-           min-widths below are the floors); the table sits left with the surplus as
-           empty space rather than as stretched columns. The @media(max-width:900px)
-           min-width:900px still forces a horizontal scroll on a narrow screen. */
-        .modem-table { width: auto; }
-
-        .modem-table tbody td:nth-child(1)  { min-width: 26px;  }   /* # */
-        .modem-table tbody td:nth-child(2)  { min-width: 74px;  }   /* MSP date + pill */
-        .modem-table tbody td:nth-child(3)  { min-width: 96px;  }   /* reg + type pill */
-        .modem-table tbody td:nth-child(4)  { min-width: 86px;  }   /* install date */
-        .modem-table tbody td:nth-child(5)  { min-width: 92px;  }   /* Kontron S/N, 9 ch */
-        .modem-table tbody td:nth-child(6)  { min-width: 58px;  }   /* Eclipse S/N, 2-3 */
-        .modem-table tbody td:nth-child(7)  { min-width: 66px;  }   /* modem output */
-        .modem-table tbody td:nth-child(8)  { min-width: 86px;  }   /* Taurus comm date */
-        .modem-table tbody td:nth-child(9)  { min-width: 74px;  }   /* IPHO */
-        .modem-table tbody td:nth-child(10) { min-width: 52px;  }   /* MG ID */
-        .modem-table tbody td:nth-child(11) { min-width: 52px;  }   /* TID */
-        .modem-table tbody td:nth-child(12) { min-width: 86px;  }   /* Hughes comm date */
-        .modem-table tbody td:nth-child(13) { min-width: 148px; }   /* chassis id, 16 ch */
-        .modem-table tbody td:nth-child(14) { min-width: 84px;  }   /* ESN */
-
-        /* Inputs fill the column they are in rather than carrying a width of their own,
-           so the box is exactly as wide as its value has room to be, and the layout does
-           not reflow between viewing and editing.
-           ⚠️ `.edit-date` sets min-width:104px globally, which overrode every date
-           column here and was why a date field was wider than the date inside it. */
-        .modem-table .edit-text,
-        .modem-table .edit-date,
-        .modem-table .edit-select {
-            width: 100%;
-            min-width: 0;
-            box-sizing: border-box;
-            font-size: 11px;
-            padding: 3px 4px;
-            text-align: center;
-        }
-
-        /* A serial is read off a label and typed back in, so it stays monospaced and
-           tabular in the input too — a transposed digit should be findable while
-           editing, not only afterwards. */
-        .modem-table td .edit-text {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            letter-spacing: 0;
-        }
-        .modem-table td .edit-date { font-family: inherit; }
-
-        /* One class per hidden group, set from modemColsHidden. Independent, so any
-           combination is expressible — MODMAN with Hughes alone, all three off, and so
-           on — which the old single-select view could not do. */
-        .modem-hide-modman .modem-modman-col,
-        .modem-hide-taurus .modem-taurus-col,
-        .modem-hide-hughes .modem-hughes-col { display: none; }
-
-        /* The eye toggles. Same pill geometry as .qf-btn beside them, so the bar reads
-           as one row of controls; only the state colour and the icon change. */
-        .modem-coltoggles {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex: 0 0 auto;
-        }
-
-        .modem-coltoggle {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .modem-eye { font-size: 12px; line-height: 1; }
-
-        /* On is the resting state and reads as ordinary. Off is the exception, so it
-           steps back to grey and strikes the label — the button says at a glance that
-           something is being withheld. */
-        .modem-coltoggle.is-on  { background: #eaf2ec; border-color: #c9e0d2; color: #235c3c; }
-        .modem-coltoggle.is-off { background: #f1f3f5; border-color: #dfe3e7; color: #98a1a9; }
-        .modem-coltoggle.is-off { text-decoration: line-through; text-decoration-color: rgba(152, 161, 169, 0.6); }
-        .modem-coltoggle.is-off .modem-eye { text-decoration: none; display: inline-block; }
-
-        @media (max-width: 700px) {
-            /* The toggles wrap under the filters rather than squeezing them out. */
-            .modem-coltoggles { flex-wrap: wrap; }
-        }
-
-        /* The Modem column goes with them. Under a single-modem view every row is
-           that modem, so the badge only restates the view — the same reason the
-           Timeline hides its kind pill under a kind filter. It returns under Both. */
-        .modem-view-taurus .modem-slot-col,
-        .modem-view-hughes .modem-slot-col { display: none; }
-
-        /* Modem vendors. Two names for the same kind of box, so they take two
-           neutral-but-distinct hues rather than green/red — neither vendor is a
-           better state to be in, and colour here identifies rather than judges. */
-        /* The two groups are tinted rather than badged — the master head is the one
-           place the vendor is named, so it is the one place that needs the colour. */
-        /* Each group takes its MAKER's brand colour, sampled from the official logo
-           artwork rather than eyeballed. Taurus is Gilat's SkyEdge IV aero modem, so
-           the group wears Gilat's indigo; Hughes wears the Hughes blue.
-             #1B115D — Gilat wordmark, commons Gilat_logo.svg
-             #005DAC — Hughes logo, commons Hughes_Communications_logo.svg, which the
-                       published brand palettes independently agree on
-           White on them measures 16.34:1 and 6.64:1, both well past AA.
-           ⚠️ Colours only, deliberately NO logo artwork: this page carries no external
-           assets by design, and third-party marks are not ours to embed. */
-        .aircraft-table th.modem-group-modman { background: #005083; }
-        .aircraft-table th.modem-group-taurus { background: #1B115D; }
-        .aircraft-table th.modem-group-hughes { background: #005DAC; }
-
-        /* Kontron's own teal, as the MODMAN group's left accent. The header takes the
-           wordmark blue, which is close enough to the Hughes blue (ΔE 17.8) that the
-           two groups are deliberately NOT adjacent — Gilat's indigo sits between them —
-           and the teal edge gives the group a second, unmistakable cue. */
-        .aircraft-table .modem-modman-col.modem-group-start { border-left: 2px solid #46b294; }
-        .aircraft-table thead th.modem-modman-col { border-left-color: #46b294; }
-
         /* IPHO is one of two states, so it reads as a pill like every other status on
            the page. Amber for Disabled, not red: it is work outstanding rather than a
            fault, and these are the tokens .ver-behind and the SIM REMOVED badge use. */
@@ -2993,11 +2687,10 @@
            Grey, matching the commissioning N/A pill on the same page. */
         .status-badge.ipho-na  { background: #eef1f4; color: #6b747d; border: 1px solid #dce1e6; }
 
-        /* The identifying number inside a chassis id or TID. The emphasis lives in the
-           more specific `.modem-table .modem-id b` above (a single weight step, no size
-           change) — the heavy 800/1.12em/0.4px treatment read as "too bold" and pushed
-           the digits off the monospace grid. Leading zeros are dimmed rather than
-           dropped, but only lightly (0.55, not a faint 0.45) so the string stays even. */
+        /* The identifying digits inside a chassis id or TID get a gentle emphasis — one
+           weight step, no size change, so they stay on the monospace grid. Leading zeros
+           are dimmed rather than dropped (0.55) so the string still reads even.
+           Shared by the Satcom register via modemIdHTML(). */
         .modem-id b { font-weight: 700; }
         .modem-id-dim { opacity: 0.55; }
 
@@ -4279,35 +3972,6 @@
             color: #666;
         }
 
-        /* Station Section */
-        .station-section {
-            margin-bottom: 40px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #0a5c34;
-        }
-
-        .station-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #0a5c34;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .station-badge {
-            display: inline-block;
-            background: #0a5c34;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
         /* Filters */
         .filter-section {
             display: flex;
@@ -4985,11 +4649,9 @@
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
                 <button class="tab-button" onclick="switchTab('sim')">📶 4G SIM</button>
                 <button class="tab-button" onclick="switchTab('satcom')">📡 Satcom</button>
-                <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('modem')">🛰️ Modem</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('maintenance')">🛠️ Activity</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('hardware')">🔧 Hardware</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('serials')">🏷️ Serials</button>
-                <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('schedule')">📅 Schedule</button>
                 <!-- The way back in for a signed-out viewer. It sits where the hidden
                      tabs would be, because that is where someone looks for them. -->
                 <button class="tab-button tab-signin" id="tabSignInBtn"
@@ -5235,80 +4897,6 @@
                 <p class="bl-hint" id="srCount" style="padding: 0 4px 16px;"></p>
             </div>
 
-            <!-- Schedule Tab -->
-            <div id="schedule" class="tab-content">
-                <h2 style="color: #0a5c34; margin-bottom: 20px;">Software Loading Schedule</h2>
-
-                <div class="filter-section">
-                    <div class="filter-group">
-                        <label class="filter-label">Filter by Station:</label>
-                        <select onchange="filterStation(this.value)">
-                            <option value="">All Stations</option>
-                            <option value="JED">Jeddah (JED)</option>
-                            <option value="RUH">Riyadh (RUH)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="table-actions-row">
-                    <button id="scheduleAddBtn" class="qf-btn" style="display:none;" onclick="openScheduleAdd()">➕ Add Entry</button>
-                    <button id="scheduleEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleScheduleEdit()">🔒 Edit Schedule</button>
-                </div>
-
-                <div id="scheduleContent">
-                    <div class="station-section">
-                        <div class="station-title">
-                            ✈️ Jeddah Station (JED)
-                            <span class="station-badge">UTC/Zulu</span>
-                        </div>
-                        <div class="table-scroll-wrapper table-freeze">
-                        <table class="aircraft-table sortable-table">
-                            <thead>
-                                <tr>
-                                    <th onclick="sortTable('jedTable', 0)">Aircraft&nbsp;↕</th>
-                                    <th onclick="sortTable('jedTable', 1)">Planned Date&nbsp;↕</th>
-                                    <th onclick="sortTable('jedTable', 2)">Planned Time (UTC)&nbsp;↕</th>
-                                    <th onclick="sortTable('jedTable', 3)">Time Remaining&nbsp;↕</th>
-                                    <th onclick="sortTable('jedTable', 4)">Workpackage&nbsp;↕</th>
-                                    <th onclick="sortTable('jedTable', 5)">WO / Flags&nbsp;↕</th>
-                                    <th onclick="sortTable('jedTable', 6)">Status&nbsp;↕</th>
-                                </tr>
-                            </thead>
-                            <tbody id="jedTable">
-                                <!-- Populated by JavaScript -->
-                            </tbody>
-                        </table>
-                        </div>
-                    </div>
-
-                    <div class="station-section">
-                        <div class="station-title">
-                            ✈️ Riyadh Station (RUH)
-                            <span class="station-badge">UTC/Zulu</span>
-                        </div>
-                        <div class="table-scroll-wrapper table-freeze">
-                        <table class="aircraft-table sortable-table">
-                            <thead>
-                                <tr>
-                                    <th onclick="sortTable('ruhTable', 0)">Aircraft&nbsp;↕</th>
-                                    <th onclick="sortTable('ruhTable', 1)">Planned Date&nbsp;↕</th>
-                                    <th onclick="sortTable('ruhTable', 2)">Planned Time (UTC)&nbsp;↕</th>
-                                    <th onclick="sortTable('ruhTable', 3)">Time Remaining&nbsp;↕</th>
-                                    <th onclick="sortTable('ruhTable', 4)">Workpackage&nbsp;↕</th>
-                                    <th onclick="sortTable('ruhTable', 5)">WO / Flags&nbsp;↕</th>
-                                    <th onclick="sortTable('ruhTable', 6)">Status&nbsp;↕</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ruhTable">
-                                <!-- Populated by JavaScript -->
-                            </tbody>
-                        </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Fleet Tab -->
             <!-- 4G SIM Tab — the SIM card register.
                  Rows come from /units where lruId is a SIM: one row per CARD, showing
                  its latest fitment. There is no separate SIM collection, deliberately —
@@ -5422,75 +5010,6 @@
                     </table>
                 </div>
                 <p class="bl-hint" id="satcomCount" style="padding: 0 4px 16px;"></p>
-            </div>
-
-            <!-- Satellite modem commissioning. One row per aircraft in scope, because
-                 the blanks ARE the work: an aircraft with no modem on record is what
-                 this page exists to surface, the same way the Software tab shows
-                 "Not set" rather than hiding the aircraft.
-
-                 Taurus and Hughes carry completely different identifiers, so their
-                 columns are both present and each row fills the pair its modem uses.
-                 They are NOT split into two tables: the vendor does not map onto fit
-                 or programme (ASBB is linefit-Taurus, ASC is retrofit-Hughes), so a
-                 split would be arbitrary and would leave uncommissioned aircraft in
-                 neither table. The Modem filter gives a single-vendor view in one
-                 click instead. -->
-            <div id="modem" class="tab-content">
-                <div class="media-widget-section">
-                    <span class="filter-group-label">Modem Commissioning</span>
-                    <div class="media-widget-strip" id="modemWidgets"></div>
-                </div>
-
-                <div class="filterbar">
-                    <div class="fb-filters" data-bar="modem"></div>
-                    <div class="fb-actions">
-                        <button id="modemEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleModemEdit()">🔒 Edit</button>
-                        <button id="modemResetBtn" class="qf-btn" onclick="resetModemTable()">↺ Reset</button>
-                    </div>
-                </div>
-
-                <div class="table-scroll-wrapper table-freeze">
-                    <!-- Two header rows: a master head per modem, then that modem's own
-                         columns beneath it. The Modem column is gone — MG ID and TID say
-                         Taurus, Chassis ID and ESN say Hughes, so a badge repeating it was
-                         a column of noise. Each modem owns its OWN commissioning date,
-                         because they are commissioned separately. -->
-                    <table class="aircraft-table has-grouphead modem-table" id="modemTable">
-                        <thead>
-                            <tr class="modem-grouphead">
-                                <th rowspan="2">#</th>
-                                <th rowspan="2" class="sortable-th" data-col="1" data-label="MSP 5.2.2 Install Date" onclick="sortModemTable(1)">MSP 5.2.2 Install Date</th>
-                                <!-- Type has no column of its own: it rides beside the
-                                     registration as a pill. The FILTER still works —
-                                     the row keeps its data-type. -->
-                                <th rowspan="2" class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortModemTable(2)">Aircraft</th>
-                                <!-- MODMAN comes FIRST: it is the chassis, and Taurus and
-                                     Hughes are the two modems inside it. Placing it here
-                                     also keeps the Kontron blue clear of the Hughes blue,
-                                     with the Gilat indigo between them. -->
-                                <th colspan="4" class="modem-group modem-group-modman modem-modman-col">MODMAN</th>
-                                <th colspan="4" class="modem-group modem-group-taurus modem-taurus-col">Taurus</th>
-                                <th colspan="3" class="modem-group modem-group-hughes modem-hughes-col">Hughes</th>
-                            </tr>
-                            <tr>
-                                <th class="sortable-th modem-modman-col" data-col="3" data-label="Install Date" onclick="sortModemTable(3)">Install Date</th>
-                                <th class="sortable-th modem-modman-col" data-col="4" data-label="Kontron S/N" onclick="sortModemTable(4)">Kontron S/N</th>
-                                <th class="sortable-th modem-modman-col" data-col="5" data-label="Eclipse S/N" onclick="sortModemTable(5)">Eclipse S/N</th>
-                                <th class="sortable-th modem-modman-col" data-col="6" data-label="Modem Output" onclick="sortModemTable(6)">Modem Output</th>
-                                <th class="sortable-th modem-taurus-col" data-col="7" data-label="Comm. Date" onclick="sortModemTable(7)">Comm. Date</th>
-                                <th class="sortable-th modem-taurus-col" data-col="8" data-label="IPHO" onclick="sortModemTable(8)">IPHO</th>
-                                <th class="sortable-th modem-taurus-col" data-col="9" data-label="MG ID" onclick="sortModemTable(9)">MG ID</th>
-                                <th class="sortable-th modem-taurus-col" data-col="10" data-label="TID" onclick="sortModemTable(10)">TID</th>
-                                <th class="sortable-th modem-hughes-col" data-col="11" data-label="Comm. Date" onclick="sortModemTable(11)">Comm. Date</th>
-                                <th class="sortable-th modem-hughes-col" data-col="12" data-label="Chassis ID" onclick="sortModemTable(12)">Chassis ID</th>
-                                <th class="sortable-th modem-hughes-col" data-col="13" data-label="ESN" onclick="sortModemTable(13)">ESN</th>
-                            </tr>
-                        </thead>
-                        <tbody id="modemTableBody"></tbody>
-                    </table>
-                </div>
-                <p class="bl-hint" id="modemCount" style="padding: 0 4px 16px;"></p>
             </div>
 
             <div id="fleet" class="tab-content">
@@ -6073,51 +5592,6 @@
         </div>
     </div>
 
-    <div id="addSchedOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-        <div style="background:white; border-radius:10px; padding:28px; width:90%; max-width:420px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-            <h3 style="color:#0a5c34; margin-bottom:16px;">Add Schedule Entry</h3>
-            <label class="add-sched-label">Aircraft</label>
-            <input id="addSchedAircraft" class="add-sched-input" placeholder="e.g. AS55" autocomplete="off">
-            <div style="display:flex; gap:10px;">
-                <div style="flex:1;">
-                    <label class="add-sched-label">Planned Date</label>
-                    <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="addSchedDate" class="add-sched-input">
-                </div>
-                <div style="flex:1;">
-                    <label class="add-sched-label">Time (UTC)</label>
-                    <input type="time" id="addSchedTime" class="add-sched-input">
-                </div>
-            </div>
-            <div style="display:flex; gap:10px;">
-                <div style="flex:1;">
-                    <label class="add-sched-label">Station</label>
-                    <select id="addSchedStation" class="add-sched-input">
-                        <option value="JED">Jeddah (JED)</option>
-                        <option value="RUH">Riyadh (RUH)</option>
-                    </select>
-                </div>
-                <div style="flex:1;">
-                    <label class="add-sched-label">Status</label>
-                    <select id="addSchedStatus" class="add-sched-input">
-                        <option value="scheduled">Scheduled</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="postponed">Postponed</option>
-                    </select>
-                </div>
-            </div>
-            <label class="add-sched-label">Workpackage</label>
-            <input id="addSchedWorkpackage" class="add-sched-input" placeholder="e.g. Middleware 2.1.0 Update" autocomplete="off">
-            <label class="add-sched-label">WO / Flags <span style="text-transform:none; font-weight:400;">(optional)</span></label>
-            <input id="addSchedWoFlags" class="add-sched-input" placeholder="e.g. 33110433" autocomplete="off">
-            <div id="addSchedError" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
-            <div style="display:flex; gap:10px; margin-top:6px;">
-                <button id="addSchedCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
-                <button id="addSchedSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Add Entry</button>
-            </div>
-        </div>
-    </div>
-
     <script>
 
         // Aircraft data with all fleet information
@@ -6175,34 +5649,6 @@
             { id: 'AQL', type: 'A330-343', station: 'JED' },
             { id: 'AQB', type: 'A330-343', station: 'RUH' },
         ];
-
-        // Schedule — a standalone forward-looking plan, not a historical record.
-        // Entries live in Firebase at /schedule/{id} and are added and edited from the
-        // Schedule tab itself (signed-in editors only); nothing here is hardcoded.
-        // Entries are dropped automatically once they are more than SCHEDULE_GRACE_MS
-        // past their slot — see isMissedSchedule.
-        //
-        // DATE FORMAT: always DD-Mon-YYYY (e.g. 16-Aug-2026), matching completionDate
-        // everywhere else. Never M/D/YYYY — month-first numeric dates are not used in
-        // the region this dashboard serves and read as the wrong day.
-        let scheduleLive = {};
-
-        // An overdue slot stays on the board for a day rather than vanishing the moment
-        // it slips, so it can actually be noticed and rescheduled.
-        const SCHEDULE_GRACE_MS = 24 * 60 * 60 * 1000;
-
-        const SCHEDULE_STATUSES = [
-            { value: 'scheduled', label: 'Scheduled' },
-            { value: 'in-progress', label: 'In Progress' },
-            { value: 'completed', label: 'Completed' },
-            { value: 'postponed', label: 'Postponed' },
-        ];
-
-        function scheduleEntries() {
-            return Object.entries(scheduleLive)
-                .map(([id, e]) => ({ id, ...e }))
-                .sort((a, b) => (toISODate(a.date) + ' ' + (a.time || '')).localeCompare(toISODate(b.date) + ' ' + (b.time || '')));
-        }
 
         // ===== Maintenance activities =====
         // /activities/{id} is the single record of work done on an aircraft. The
@@ -6683,8 +6129,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.81.0';
-        const APP_BUILD    = '2026.09.01.09';
+        const APP_VERSION  = '2.82.0';
+        const APP_BUILD    = '2026.09.02.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-01T16:00:00Z';
 
@@ -6759,8 +6205,7 @@
             if (editMode) {
                 // Freeze the Software table while someone is mid-edit so incoming
                 // live updates can't overwrite their staged changes. Everything else
-                // (Overview, Schedule) keeps updating normally.
-                populateScheduleTables();
+                // (Overview) keeps updating normally.
                 updateMetrics();
                 return;
             }
@@ -6770,10 +6215,8 @@
             if (!mediaEditMode) populateMediaTable();
             if (!maintEditMode) renderMaintenancePage();
             if (!simEditMode) renderSimPage();
-            if (!modemEditMode) renderModemPage();
             if (!hwEditMode) renderHardwarePage();
             renderSerialsPage();
-            populateScheduleTables();
             updateMetrics();
         }
 
@@ -6886,15 +6329,6 @@
                 .then(r => r.json())
                 .then(data => { setFleetRoster(data); renderAll(); startFleetStream(); })
                 .catch(() => { /* keep the embedded fallback roster */ });
-
-            fetch(`${FIREBASE_DB_URL}/schedule.json`)
-                .then(r => r.json())
-                .then(data => {
-                    scheduleLive = data || {};
-                    populateScheduleTables();
-                    startScheduleStream();
-                })
-                .catch(() => populateScheduleTables());
 
             // These are read once here and then kept fresh by ONE shared poll rather
             // than a stream each — see startLowTrafficPoll() for why that matters to
@@ -7024,9 +6458,9 @@
         function isSafeToReload() {
             // In Edit Mode on any tab, a modal open, or the caret in a field: someone may
             // have unsaved input. Any one of these defers the reload.
-            if (editMode || scheduleEditMode || mediaEditMode || maintEditMode ||
+            if (editMode || mediaEditMode || maintEditMode ||
                 hwEditMode || fleetEditMode || serialsEditMode || simEditMode ||
-                modemEditMode || satcomEditMode) return false;
+                satcomEditMode) return false;
             const modalOpen = Array.from(document.querySelectorAll('[id$="Overlay"]'))
                 .some(el => getComputedStyle(el).display !== 'none');
             if (modalOpen) return false;
@@ -7098,12 +6532,6 @@
                 .finally(() => clearTimeout(t));
         }
 
-        function applySchedulePathUpdate(type, path, data) {
-            scheduleLive = applyStreamEvent(scheduleLive, type, path, data);
-            // Do not yank the inputs out from under someone mid-edit.
-            if (!scheduleEditMode) populateScheduleTables();
-        }
-
         function startFleetStream() {
             const es = new EventSource(`${FIREBASE_DB_URL}/fleet.json`);
             const onMsg = () => {
@@ -7111,13 +6539,6 @@
                     .then(d => { setFleetRoster(d); renderAll(); })
                     .catch(() => {});
             };
-            es.addEventListener('put', onMsg);
-            es.addEventListener('patch', onMsg);
-        }
-
-        function startScheduleStream() {
-            const es = new EventSource(`${FIREBASE_DB_URL}/schedule.json`);
-            const onMsg = e => applySchedulePathUpdate(JSON.parse(e.data).path, JSON.parse(e.data).data);
             es.addEventListener('put', onMsg);
             es.addEventListener('patch', onMsg);
         }
@@ -7445,11 +6866,11 @@
             sessionStorage.removeItem(AUTH_SESSION_KEY);
             // Every page drops out of Edit Mode with the session — otherwise a tab left
             // open in Edit Mode would still be showing inputs nobody can save.
-            editMode = scheduleEditMode = mediaEditMode = false;
+            editMode = mediaEditMode = false;
             maintEditMode = hwEditMode = fleetEditMode = serialsEditMode = false;
             // simEditMode was missing here — the SIM page stayed in Edit Mode across a
             // sign-out, showing inputs nobody could save. satcomEditMode had the same gap.
-            simEditMode = modemEditMode = satcomEditMode = false;
+            simEditMode = satcomEditMode = false;
             updateAuthUI();
             renderAll();
         }
@@ -7639,13 +7060,10 @@
         // curl. Actually restricting the data means changing `.read` in
         // database.rules.json and signing in before the first read — the migration
         // written up under "Making this private" in DISASTER-RECOVERY.md.
-        // Schedule joined these on 2026-08-25 — it is forward-looking work planning
-        // and the user does not want it public. `sim` was here while the page was
-        // being settled and went PUBLIC on 2026-08-25 once it was signed off; editing
-        // it still needs sign-in, like every other page.
-        // 'modem' is here at the user's request while the page is still settling —
-        // it is a normal public-shaped page and moving it out is one edit here.
-        const RESTRICTED_TABS = ['modem', 'maintenance', 'hardware', 'serials', 'schedule'];
+        // `sim` was here while the page was being settled and went PUBLIC on
+        // 2026-08-25 once it was signed off; editing it still needs sign-in, like
+        // every other page.
+        const RESTRICTED_TABS = ['maintenance', 'hardware', 'serials'];
 
         // The trust boundary is the editor allowlist, the same one canEdit() uses — an
         // account that is not on it can sign in but is not recognised, and revealing the
@@ -7715,13 +7133,11 @@
             applyTabVisibility();
             updateSysUserChip();
             applyEditButton('editModeBtn', editMode && canEdit(), 'Edit', '💾 Save');
-            updateScheduleEditUI();
             updateMediaEditUI();
             updateMaintEditUI();
             updateHwEditUI();
             updateFleetEditUI();
             updateSimEditUI();
-            updateModemEditUI();
             renderSerialsPage();
         }
 
@@ -7842,8 +7258,6 @@
                 renderHardwarePage();
             } else if (tabName === 'serials') {
                 renderSerialsPage();
-            } else if (tabName === 'schedule') {
-                populateScheduleTables();
             }
         }
 
@@ -8545,26 +7959,6 @@
                 ],
             },
 
-            // Type and the search box, and nothing else (user, 2026-08-26). Which
-            // COLUMNS are on screen is NOT a filter and is deliberately not declared
-            // here — see MODEM_COL_GROUPS and the eye toggles beside this bar.
-            modem: {
-                apply: () => applyModemFilters(),
-                search: 'Search aircraft, serial, MG ID, TID, ESN',
-                // The column show/hide toggles. Not filters — they change which columns
-                // exist, not which rows match — but they belong beside the filters, so
-                // the bar renders them between the Type trigger and the search box.
-                extra: () => modemColTogglesHTML(),
-                filters: [
-                    // Follows the fleet rather than listing types with no aircraft.
-                    { id: 'type', label: 'Type', options: () => {
-                        const seen = [];
-                        modemRows().forEach(r => { if (r.acType && seen.indexOf(r.acType) === -1) seen.push(r.acType); });
-                        return seen.map(t => ({ v: t, l: TYPE_SHORT_LABEL[t] || t }));
-                    } },
-                ],
-            },
-
             // The Overview timeline's kind filter. It is PILLS at most widths — an
             // exclusive four-way choice reads better as a segmented row than as a menu
             // — and collapses to this dropdown only when the control row runs out of
@@ -8615,7 +8009,7 @@
         // sortTable() is generic and knows nothing about this table's order note, which
         // has to stop saying "Newest first" the moment the user sorts by a column.
         // Wrapping it locally keeps that honest without giving the other tables a hook
-        // they do not need — the same shape as sortModemTable().
+        // they do not need.
         function sortAircraftTable(col) {
             sortTable('aircraftTable', col);
             syncAircraftOrderNote();
@@ -11214,56 +10608,6 @@
                 split;
         }
 
-        // ===== Satellite modem commissioning =====
-        // The MODMAN carries TWO modems and every aircraft has both — a Taurus and a
-        // Hughes, commissioned on their OWN dates and identified by completely
-        // different numbers. So a row is an AIRCRAFT and each modem gets its own
-        // column group under a master head.
-        //
-        // ⚠️ There is deliberately NO "modem" column. MG ID and TID say Taurus;
-        // Chassis ID and ESN say Hughes. A badge repeating what the columns already
-        // state is a column of noise — the same reasoning that hides the Timeline's
-        // kind pill under a kind filter.
-        //
-        // Stored at /aircraft/{tail}/modem/{slot}, so the page rides the /aircraft
-        // stream that already exists: the connection budget allows no seventh
-        // EventSource, and a node of its own would have needed one or a poll.
-        //
-        // ⚠️ IPHO is the EXISTING top-level `iphoStatus`, not a new modem field. It is
-        // already carried on 34 aircraft and already edited on the Software tab, and a
-        // second home for it would drift exactly the way the old duplicated status
-        // fields did. This page is a second VIEW of one fact, like activatedDate being
-        // editable on both Fleet and Activity.
-        const MODEM_SLOTS = [
-            { value: 'taurus', label: 'Taurus', fields: ['mgId', 'tid'] },
-            { value: 'hughes', label: 'Hughes', fields: ['chassisId', 'esn'] },
-        ];
-
-        // Taurus commissioning date — column 3, the first date on the row, oldest
-        // first. It is not column 2 the way every other table's date is, because the
-        // dates live INSIDE their modem's group and Aircraft/Type come first.
-        // ⚠️ `dir` is a numeric MULTIPLIER (1 asc / -1 desc). applyTableSort does
-        // `dir * (a - b)`, so a string makes every comparison NaN and the rows come
-        // back in build order with no error anywhere.
-        // ⚠️ This table opens on MSP 5.2.2 INSTALL DATE, NEWEST FIRST (user,
-        // 2026-08-26) — deliberately not the "date column, oldest first" every other
-        // table uses. MSP shipped inside Middleware 2.1.0 and is the software that
-        // talks to the modem, so its install is the reference point for major software
-        // activity on this page, and the most recent one leads.
-        //
-        // It stays the BUILD order rather than a column sort, for the reason it always
-        // was: descending on the column would float the "Not set" sentinel to the TOP,
-        // since that sentinel is built for an ascending default.
-        // ⚠️ A build order and lastSort are mutually exclusive: the sort is re-applied
-        // ONLY if the user clicked a header, and Reset drops back to this order.
-        function modemMspKey(r) {
-            return Number(dateSortKey(toISODate(r.mspDate)) || 0);
-        }
-
-        let modemEditMode = false;
-        let pendingModem = {};        // { tail: { "<relative path>": value } }
-        let modemViewRendered = '';
-
         // A chassis id reads AERSVA00064HNSJ3 and its TID carries the same number: the
         // run of digits before "HNS" is what identifies the unit, and everything around
         // it repeats across the fleet. So that number is promoted — bold and a shade
@@ -11299,576 +10643,16 @@
                 lead ? `<span class="modem-id-dim">${escAttr(lead)}</span>` : ''
             }<b>${escAttr(sig)}</b>${escAttr(tail)}</span>`;
         }
-
-        function modemSlotLabel(v) {
-            const e = MODEM_SLOTS.find(x => x.value === v);
-            return e ? e.label : '';
-        }
-
-        // ===== Column groups: three independent show/hide toggles =====
-        // Not filters. Every aircraft has all three, so there is nothing to filter out
-        // — these decide which COLUMNS are on screen, and each is independent, which
-        // the old single-select "view" could not express (it could show one modem or
-        // both, never MODMAN with Hughes alone).
-        //
-        // Hidden is the exception, so the map records only what is HIDDEN and an absent
-        // key means visible: the default is everything on, with no state to initialise.
-        const MODEM_COL_GROUPS = [
-            { id: 'modman', label: 'MODMAN' },
-            { id: 'taurus', label: 'Taurus' },
-            { id: 'hughes', label: 'Hughes' },
-        ];
-        let modemColsHidden = {};
-
-        function modemColVisible(id) {
-            return !modemColsHidden[id];
-        }
-
-        // What the table was last built against. A toggle changes which columns EXIST,
-        // so it must rebuild rather than re-filter rows.
-        function modemColSignature() {
-            return MODEM_COL_GROUPS.map(g => (modemColVisible(g.id) ? '1' : '0')).join('');
-        }
-
-        function toggleModemCol(id) {
-            if (modemColsHidden[id]) delete modemColsHidden[id];
-            else modemColsHidden[id] = true;
-            // populateModemTable() calls fbRender, which repaints the toggles with
-            // their new state — they live inside the bar now.
-            populateModemTable();
-        }
-
-        // An open eye for a column group that is on screen, a crossed one for a group
-        // that is not — the icon states what you are looking at, and the label says
-        // which columns it governs.
-        function modemColTogglesHTML() {
-            return `<span class="modem-coltoggles">` + MODEM_COL_GROUPS.map(g => {
-                const on = modemColVisible(g.id);
-                return `<button class="qf-btn modem-coltoggle ${on ? 'is-on' : 'is-off'}"
-                            aria-pressed="${on ? 'true' : 'false'}"
-                            title="${on ? 'Hide' : 'Show'} the ${escAttr(g.label)} columns"
-                            onclick="toggleModemCol('${g.id}')"><span class="modem-eye">${on ? '👁' : '🚫'}</span>${escAttr(g.label)}</button>`;
-            }).join('') + `</span>`;
-        }
-
-        // ⚠️ RETROFIT ONLY (user, 2026-08-26) — swFleet(), the same population the
-        // Software and Media pages count. The A321XLR linefit pair carry their own
-        // equipment and are configured by SBC, not by this MODMAN-and-two-modems
-        // arrangement, so including them put two aircraft on the page whose rows could
-        // never be filled in.
-        function modemFleet() {
-            return swFleet();
-        }
-
-        function modemRows() {
-            return modemRowsUnsorted().sort((a, b) => {
-                const ka = modemMspKey(a), kb = modemMspKey(b);
-                // Newest first; an aircraft with no MSP install date has nothing to
-                // place it by and falls to the end rather than the top.
-                if (ka !== kb) return kb - ka;
-                return a.id.localeCompare(b.id);
-            });
-        }
-
-        function modemRowsUnsorted() {
-            return modemFleet().map(a => {
-                const staged = pendingModem[a.id] || {};
-                // A staged value is keyed by the path it will be written to, so the
-                // row reads the pending edit and the save needs no second mapping.
-                const pick = (path, stored) => staged[path] !== undefined ? staged[path] : (stored || '');
-                const m = a.modem || {};
-                const t = m.taurus || {}, h = m.hughes || {};
-                return {
-                    id: a.id,
-                    acType: a.type || '',
-                    // Straight from the roster — the same field and the same pill the
-                    // Fleet tab's Activation Date column uses, so the two never differ.
-                    activatedDate: a.activatedDate || '',
-                    // MSP 5.2.2 shipped as part of Middleware 2.1.0, so its install date
-                    // IS the software completion date — the very field the Software tab
-                    // shows as Installation Date. Read, never copied: a second stored
-                    // date for one event could only drift.
-                    mspDate: a.completionDate || '',
-                    ipho: pick('iphoStatus', a.iphoStatus),
-                    // ⚠️ MODMAN is read from /units, NOT from /aircraft. It is a
-                    // physical box with serials and a fitment, which is exactly what
-                    // /units is the single source for — and two of them are already on
-                    // record there. A second home under /aircraft/modem would have
-                    // duplicated data the register already holds.
-                    //   Kontron S/N -> unit.serial      (the primary serial)
-                    //   Eclipse S/N -> unit.altSerial   (declared for exactly this and
-                    //                                    unused until now)
-                    //   Installed   -> fitment.fittedDate
-                    modman: (() => {
-                        const lruId = fitOf(a) === 'linefit' ? 'lf_modman' : 'modman';
-                        const at = fittedUnitAt(lruId, a.id, undefined);
-                        return {
-                            lruId,
-                            unitId: at ? at.unit.id : '',
-                            fitmentId: at ? at.fitment.id : '',
-                            kontronSn:     pick('modman/kontronSn',     at ? at.unit.serial : ''),
-                            eclipseSn:     pick('modman/eclipseSn',     at ? at.unit.altSerial : ''),
-                            installedDate: pick('modman/installedDate', at ? at.fitment.fittedDate : ''),
-                            // Measured for THIS installation, so it lives on the
-                            // fitment beside fittedDate — move the box to another
-                            // aircraft and the reading is re-taken, not inherited.
-                            outputDbm:     pick('modman/outputDbm',     at ? at.fitment.outputDbm : ''),
-                        };
-                    })(),
-                    taurus: {
-                        commissionedDate: pick('modem/taurus/commissionedDate', t.commissionedDate),
-                        mgId: pick('modem/taurus/mgId', t.mgId),
-                        tid:  pick('modem/taurus/tid', t.tid),
-                    },
-                    hughes: {
-                        commissionedDate: pick('modem/hughes/commissionedDate', h.commissionedDate),
-                        chassisId: pick('modem/hughes/chassisId', h.chassisId),
-                        esn: pick('modem/hughes/esn', h.esn),
-                    },
-                };
-            });
-        }
-
-        // Commissioned means a DATE is on record — the same reasoning that makes
-        // Software completion require a location as well as a version.
-        function modemDone(r, slot) {
-            return !!r[slot].commissionedDate;
-        }
-
-        function renderModemWidgets() {
-            const strip = document.getElementById('modemWidgets');
-            if (!strip) return;
-            const rows = modemRows();
-            const total = rows.length;
-
-            const card = (label, count, type) => {
-                const pct = total ? Math.round((count / total) * 1000) / 10 : 0;
-                return `<div class="media-widget media-widget-${type}">
-                    <div class="media-widget-head"><span class="media-widget-label">${label}</span></div>
-                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${total}</span><span class="media-widget-pct">${pct}%</span></div>
-                    <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
-                </div>`;
-            };
-
-            // Three states that PARTITION the fleet, so the counts sum to the aircraft
-            // rather than double-counting an airframe under each modem.
-            // ⚠️ They do NOT follow the column toggles. The toggles decide what is on
-            // screen; the strip describes the DATA, and hiding a column does not
-            // uncommission a modem.
-            const n = rows.map(r => (modemDone(r, 'taurus') ? 1 : 0) + (modemDone(r, 'hughes') ? 1 : 0));
-            const full = n.filter(x => x === 2).length;
-            const part = n.filter(x => x === 1).length;
-            const none = n.filter(x => x === 0).length;
-            strip.innerHTML =
-                card('Both Commissioned', full, 'latest') +
-                card('One Outstanding', part, part ? 'older' : 'no_media') +
-                // Grey, not alert red: this is the un-started backlog rather than a
-                // fault, and red would put the largest number on an unfilled page in
-                // alarm colours.
-                card('Neither Started', none, 'no_media');
-        }
-
-        // One date, two lines: the short form on top, its age beneath. Everything on
-        // this page uses it, so the four date columns are all the width of a date and
-        // no wider.
-        function stackedDate(v, why) {
-            const age = activationAge(v);
-            return `<span class="stack-date">${escAttr(fmtDateShort(v))}</span>${
-                age ? `<span class="age-pill stack-age" title="${escAttr(why)}">${age}</span>` : ''}`;
-        }
-
-        function populateModemTable() {
-            const tbody = document.getElementById('modemTableBody');
-            const table = document.getElementById('modemTable');
-            if (!tbody || !table) return;
-            const sig = modemColSignature();
-            const prevSig = modemViewRendered;
-            modemViewRendered = sig;
-            // Which column GROUPS are on screen is pure CSS off these classes. The
-            // frozen-head copy inherits them because that copy is cloned from the live
-            // <thead> with its classes intact.
-            MODEM_COL_GROUPS.forEach(g =>
-                table.classList.toggle(`modem-hide-${g.id}`, !modemColVisible(g.id)));
-
-            tbody.innerHTML = '';
-            const editing = modemEditMode && canEdit();
-
-            modemRows().forEach((r, idx) => {
-                const row = document.createElement('tr');
-                row.dataset.type = r.acType;
-                row.dataset.search = [r.id, r.taurus.mgId, r.taurus.tid, r.hughes.chassisId,
-                                      r.hughes.esn, r.modman.kontronSn, r.modman.eclipseSn]
-                    .filter(Boolean).join(' ');
-
-                const dateCell = (slot) => {
-                    const v = r[slot].commissionedDate;
-                    const path = `modem/${slot}/commissionedDate`;
-                    if (editing) {
-                        return `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(v)}"
-                                    data-modem="${escAttr(r.id)}" data-field="${path}" onchange="handleModemEdit(this)">`;
-                    }
-                    return v ? stackedDate(v, 'Time since commissioning')
-                             : '<span class="fleet-notset">Not set</span>';
-                };
-
-                // ⚠️ Only TID and Chassis ID get the promoted number, and that is the
-                // point of it: they carry the SAME unit number (TID 64 against chassis
-                // AERSVA00064HNSJ3), so emphasising both is what lets the eye pair them
-                // across the row. MG ID and ESN are bare numbers with nothing to pick
-                // out — bolding those too would leave every cell bold and nothing
-                // standing out at all.
-                const MODEM_PROMOTED = ['tid', 'chassisId'];
-                const idCell = (slot, field) => {
-                    const v = r[slot][field];
-                    if (!editing) {
-                        if (!v) return '<span class="fleet-notset">—</span>';
-                        return MODEM_PROMOTED.includes(field)
-                            ? modemIdHTML(v)
-                            : `<span class="modem-id">${escAttr(v)}</span>`;
-                    }
-                    return `<input class="edit-text" maxlength="40" value="${escAttr(v)}" placeholder="—"
-                                data-modem="${escAttr(r.id)}" data-field="modem/${slot}/${field}" onchange="handleModemEdit(this)">`;
-                };
-
-                // MODMAN cells write to /units, so they carry the modman/* paths that
-                // commitModemChanges routes there rather than to /aircraft.
-                const mmDateCell = editing
-                    ? `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(r.modman.installedDate)}"
-                           data-modem="${escAttr(r.id)}" data-field="modman/installedDate" onchange="handleModemEdit(this)">`
-                    : (r.modman.installedDate
-                        ? stackedDate(r.modman.installedDate, 'Time since MODMAN install')
-                        : '<span class="fleet-notset">Not set</span>');
-
-                // Stored as a bare number so it stays sortable and editable; the unit
-                // is TYPOGRAPHY, not data. Entering "8" reads back as 8 dBm, with the
-                // unit set quieter than the figure so the eye lands on the value.
-                const mmOutputCell = editing
-                    ? `<input class="edit-text" inputmode="decimal" maxlength="7" value="${escAttr(r.modman.outputDbm)}" placeholder="dBm"
-                           data-modem="${escAttr(r.id)}" data-field="modman/outputDbm" onchange="handleModemEdit(this)">`
-                    : (r.modman.outputDbm
-                        ? `<span class="modem-id">${escAttr(r.modman.outputDbm)}<span class="unit-sfx">&nbsp;dBm</span></span>`
-                        : '<span class="fleet-notset">—</span>');
-
-                const mmSnCell = (field) => {
-                    const v = r.modman[field];
-                    if (!editing) {
-                        return v ? modemIdHTML(v) : '<span class="fleet-notset">—</span>';
-                    }
-                    return `<input class="edit-text" maxlength="60" value="${escAttr(v)}" placeholder="—"
-                                data-modem="${escAttr(r.id)}" data-field="modman/${field}" onchange="handleModemEdit(this)">`;
-                };
-
-                // IPHO writes the TOP-LEVEL iphoStatus, the same field and the same
-                // Enabled/Disabled vocabulary the Software tab uses.
-                const iphoDone = r.ipho === 'completed';
-                const iphoCell = editing
-                    ? `<select class="edit-select" data-modem="${escAttr(r.id)}" data-field="iphoStatus" onchange="handleModemEdit(this)">
-                           <option value="" ${!iphoDone ? 'selected' : ''}>Disabled</option>
-                           <option value="completed" ${iphoDone ? 'selected' : ''}>Enabled</option>
-                       </select>`
-                    // A pill, not a dot-and-text pair: this column says one of two
-                    // things and a badge says it in one object. Amber for Disabled
-                    // rather than red — it is work outstanding, not a fault.
-                    : `<span class="status-badge mini-badge ipho-${iphoDone ? 'on' : 'off'}">${iphoDone ? 'ENABLED' : 'DISABLED'}</span>`;
-
-                // Undated sorts to the END on the 8-digit sentinel, never the front.
-                const ds = slot => dateSortKey(toISODate(r[slot].commissionedDate)) || '99999999';
-
-                // Read-only here, like a spare's date cells on the SIM register: it is
-                // one fact with one home, edited on the Software tab.
-                const mspSort = dateSortKey(toISODate(r.mspDate)) || '99999999';
-                // Two lines, not one: the date on top and its days pill beneath. A pill
-                // sitting BESIDE a date is what made every date column ~60px wider than
-                // the date needs, and there are four of them on this row.
-                const mspCell = r.mspDate
-                    ? stackedDate(r.mspDate, 'Time since MSP 5.2.2 install')
-                    : '<span class="fleet-notset">Not set</span>';
-
-                row.innerHTML = `
-                    <td>${idx + 1}</td>
-                    <td data-sort="${mspSort}" title="Installed with Middleware 2.1.0 — edited on the Software tab">${mspCell}</td>
-                    <td data-sort="${escAttr(r.id)}" title="${r.activatedDate ? `In service since ${escAttr(r.activatedDate)}` : ''}"><span class="stack-top"><span class="stack-reg">${escAttr(r.id)}</span>${
-                        r.acType ? `<span class="type-mini">${escAttr(TYPE_SHORT_LABEL[r.acType] || r.acType)}</span>` : ''
-                    }</span></td>
-
-                    <td class="modem-modman-col modem-group-start" data-sort="${dateSortKey(toISODate(r.modman.installedDate)) || '99999999'}">${mmDateCell}</td>
-                    <td class="modem-modman-col" data-sort="${escAttr(r.modman.kontronSn)}">${mmSnCell('kontronSn')}</td>
-                    <td class="modem-modman-col" data-sort="${escAttr(r.modman.eclipseSn)}">${mmSnCell('eclipseSn')}</td>
-                    <td class="modem-modman-col" data-sort="${escAttr(r.modman.outputDbm)}">${mmOutputCell}</td>
-
-                    <td class="modem-taurus-col modem-group-start" data-sort="${ds('taurus')}">${dateCell('taurus')}</td>
-                    <td class="modem-taurus-col" data-sort="${iphoDone ? 'completed' : 'pending'}">${iphoCell}</td>
-                    <td class="modem-taurus-col" data-sort="${escAttr(r.taurus.mgId)}">${idCell('taurus', 'mgId')}</td>
-                    <td class="modem-taurus-col" data-sort="${escAttr(r.taurus.tid)}">${idCell('taurus', 'tid')}</td>
-
-                    <td class="modem-hughes-col modem-group-start" data-sort="${ds('hughes')}">${dateCell('hughes')}</td>
-                    <td class="modem-hughes-col" data-sort="${escAttr(r.hughes.chassisId)}">${idCell('hughes', 'chassisId')}</td>
-                    <td class="modem-hughes-col" data-sort="${escAttr(r.hughes.esn)}">${idCell('hughes', 'esn')}</td>
-                `;
-                tbody.appendChild(row);
-            });
-
-            renderModemWidgets();
-            fbRender('modem');
-            syncTableFreeze();
-            publishGroupHeadHeight();
-            applyModemFilters();
-            // Re-applied on EVERY rebuild, not set once: these run again on every live
-            // update, and without this a teammate's edit hands the rows back in build
-            // order while the header still shows its arrow.
-            // Hiding a group drops any column sort the user had chosen — that column
-            // may have just left the screen — which returns the table to the build
-            // order.
-            if (prevSig && prevSig !== sig) delete lastSort['modemTable'];
-            // Only re-apply a sort the user actually clicked. Left alone the rows keep
-            // the activation order above, which no single-column sort can express.
-            const sm = lastSort['modemTable'];
-            if (sm) applyTableSort('modemTable', sm.col, sm.dir);
-            updateSortIndicators('modemTable');
-            updateModemEditUI();
-        }
-
         // The second header row pins BELOW the first, so its offset is the first
         // row's measured height. A hardcoded number is wrong the moment the group
         // label wraps or the breakpoint changes the font.
         function publishGroupHeadHeight() {
-            // Whichever grouped-header table is on the visible tab — both the Modem and
-            // the Satcom register carry a two-row head, and only one is on screen.
-            const first = document.querySelector('.tab-content.active .has-grouphead thead tr:first-child')
-                || document.querySelector('.modem-table thead tr:first-child');
+            // The Satcom register carries a two-row head; measure whichever grouped
+            // head is on the visible tab.
+            const first = document.querySelector('.tab-content.active .has-grouphead thead tr:first-child');
             if (!first) return;
             const h = Math.round(first.getBoundingClientRect().height);
             if (h) document.documentElement.style.setProperty('--grouphead-h', h + 'px');
-        }
-
-        // sortTable() is generic and knows nothing about this page's footer note, which
-        // has to stop saying "newest activation first" the moment the user sorts by a
-        // column. Wrapping it keeps that honest without giving the other eight tables a
-        // hook they do not need — the same way the SIM date header calls its own
-        // handler rather than sortTable().
-        function sortModemTable(col) {
-            sortTable('modemTable', col);
-            applyModemFilters();
-        }
-
-        function applyModemFilters() {
-            // A toggle swaps which COLUMNS exist, which no row filter can express, so
-            // it rebuilds instead. Guarded on the rendered signature so that typing in
-            // the search box — which calls apply on every keystroke — re-filters rows
-            // only and never pulls focus out of the box.
-            if (modemColSignature() !== modemViewRendered) { populateModemTable(); return; }
-
-            document.querySelectorAll('#modemTableBody tr').forEach(row => {
-                row.style.display = fbRowMatch('modem', row) ? '' : 'none';
-            });
-            renumberVisibleRows('modemTable');
-            const shown = Array.from(document.querySelectorAll('#modemTableBody tr'))
-                .filter(r => r.style.display !== 'none').length;
-            // With no column sorted there is no arrow to explain the order, so the
-            // footer says it outright rather than leaving it a mystery.
-            const order = lastSort['modemTable'] ? '' : ' · newest MSP install first';
-            setText('modemCount', `${shown} of ${modemRowsUnsorted().length} aircraft${order}`);
-        }
-
-        function resetModemTable() {
-            fbClear('modem');
-            // Reset is "back to default", and the default is every column on screen.
-            modemColsHidden = {};
-            fbRender('modem');
-            delete lastSort['modemTable'];
-            populateModemTable();
-        }
-
-        // ---- edit mode: staged, then one save, like every other table ----
-        // data-field carries the path RELATIVE TO THE AIRCRAFT, so one handler covers
-        // both modems and the top-level iphoStatus with no branching on which is which.
-        function handleModemEdit(el) {
-            const id = el.dataset.modem;
-            const path = el.dataset.field;
-            const entry = pendingModem[id] || {};
-
-            if (path === 'modman/installedDate' || path.endsWith('/commissionedDate')) {
-                const v = readDateField(el);
-                // ⚠️ Return WITHOUT staging on a bad date. Staging false would clear a
-                // date that was already good — the check happens before the record is
-                // touched, never after.
-                if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
-                entry[path] = v;
-            } else {
-                entry[path] = (el.value || '').trim();
-            }
-            pendingModem[id] = entry;
-            setSyncStatus('🟡 Modem change staged — press Save', '#e0a800');
-        }
-
-        async function toggleModemEdit() {
-            if (modemEditMode) { await commitModemChanges(); return; }
-            if (!canEdit()) { requireSignIn(); return; }
-            modemEditMode = true;
-            pendingModem = {};
-            populateModemTable();
-        }
-
-        async function commitModemChanges() {
-            const ids = Object.keys(pendingModem);
-            if (!ids.length) { modemEditMode = false; populateModemTable(); return; }
-            const token = await getIdToken();
-            if (!token) return;
-
-            // Two nodes, because MODMAN is a physical box: its serials and its fitted
-            // date belong to /units, everything else to /aircraft. The staged keys say
-            // which — anything under modman/ is a unit write.
-            // ⚠️ Leaf paths only — never `modem` or `modem/<slot>` alongside a field
-            // beneath it; Firebase rejects a multi-path update where one path
-            // contains another.
-            const patch = {};
-            const unitPatch = {};
-            const byId = {};
-            modemRows().forEach(r => { byId[r.id] = r; });
-            const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-            const MM_FIELD = { kontronSn: 'serial', eclipseSn: 'altSerial' };
-            // What the /units write does, kept so it can be mirrored into unitsLive
-            // afterwards: [{ unitId, fitId, lruId, tail, isNew, unit:{}, fitted }]
-            const unitOps = [];
-
-            ids.forEach(id => {
-                const e = pendingModem[id];
-                const row = byId[id];
-
-                // Aircraft-side fields go straight through.
-                Object.keys(e).forEach(path => {
-                    if (path.startsWith('modman/')) return;
-                    patch[`${id}/${path}`] = e[path] === '' ? null : e[path];
-                });
-
-                // MODMAN is gathered per aircraft FIRST and written once. Emitting it
-                // field by field is what produced the bug below.
-                const mm = {};
-                Object.keys(e).forEach(path => {
-                    if (path.startsWith('modman/')) mm[path.slice('modman/'.length)] = e[path];
-                });
-                if (!row || !Object.keys(mm).length) return;
-
-                const hasDate = mm.installedDate !== undefined;
-                const fitted = hasDate ? (mm.installedDate || null) : undefined;
-                const unitFields = {};
-                Object.keys(MM_FIELD).forEach(k => {
-                    if (mm[k] !== undefined) unitFields[MM_FIELD[k]] = mm[k] === '' ? null : mm[k];
-                });
-                // Fitment-level, like the date — not a unit field.
-                const hasOut = mm.outputDbm !== undefined;
-                const outVal = hasOut ? (mm.outputDbm || null) : undefined;
-
-                if (row.modman.unitId) {
-                    const unitId = row.modman.unitId, fitId = row.modman.fitmentId;
-                    Object.keys(unitFields).forEach(f => { unitPatch[`${unitId}/${f}`] = unitFields[f]; });
-                    if (hasDate) unitPatch[`${unitId}/fitments/${fitId}/fittedDate`] = fitted;
-                    if (hasOut)  unitPatch[`${unitId}/fitments/${fitId}/outputDbm`]  = outVal;
-                    unitOps.push({ unitId, fitId, isNew: false, unit: unitFields, hasDate, fitted, hasOut, outVal });
-                    return;
-                }
-
-                // No MODMAN on record for this aircraft yet: mint the unit and its
-                // fitment in the same shape Record Installed writes, so the box reads
-                // identically on the Serials and Hardware tabs.
-                //
-                // ⚠️ ONE object, not an object plus paths inside it. Writing
-                // `<unit>/fitments/<fit>` alongside `<unit>/fitments/<fit>/fittedDate`
-                // is a multi-path update where one path CONTAINS another, which
-                // Firebase rejects outright — it would have failed the whole save the
-                // first time someone typed a serial and a date together.
-                const unitId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-                const fitId  = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-                const fit = { aircraft: id, state: 'on_wing', loggedAt: stamp };
-                if (fitted) fit.fittedDate = fitted;
-                if (outVal) fit.outputDbm = outVal;
-                const unit = { lruId: row.modman.lruId, addedAt: stamp, fitments: { [fitId]: fit } };
-                Object.keys(unitFields).forEach(f => { if (unitFields[f] != null) unit[f] = unitFields[f]; });
-                unitPatch[unitId] = unit;
-                row.modman.unitId = unitId;
-                row.modman.fitmentId = fitId;
-                unitOps.push({ unitId, fitId, isNew: true, unit, hasDate, fitted, hasOut, outVal });
-            });
-
-            setSyncStatus('🟡 Saving modem changes...', '#e0a800');
-            try {
-                if (Object.keys(unitPatch).length) {
-                    const ures = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
-                        method: 'PATCH', body: JSON.stringify(unitPatch),
-                    });
-                    const udata = await ures.json();
-                    if (!ures.ok || (udata && udata.error)) throw new Error((udata && udata.error) || 'unit write failed');
-                }
-                const res = Object.keys(patch).length
-                    ? await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft.json?auth=${token}`, {
-                        method: 'PATCH', body: JSON.stringify(patch),
-                      })
-                    : { ok: true, json: async () => ({}) };
-                const data = await res.json();
-                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                // Mirror locally so the table is right before the stream echoes back.
-                // ⚠️ MIRROR THE /units WRITE TOO. Skipping it is what made a saved
-                // MODMAN serial vanish: the write succeeded, but the table re-rendered
-                // straight afterwards from a unitsLive that still knew nothing about
-                // it, and /units is POLLED rather than streamed — so the columns sat
-                // blank until the next poll came round. The data was never lost.
-                unitOps.forEach(op => {
-                    if (op.isNew) {
-                        unitsLive[op.unitId] = JSON.parse(JSON.stringify(op.unit));
-                        return;
-                    }
-                    const u = unitsLive[op.unitId];
-                    if (!u) return;
-                    Object.keys(op.unit).forEach(f => {
-                        if (op.unit[f] == null) delete u[f]; else u[f] = op.unit[f];
-                    });
-                    const f = (u.fitments || {})[op.fitId];
-                    if (f && op.hasDate) {
-                        if (op.fitted) f.fittedDate = op.fitted; else delete f.fittedDate;
-                    }
-                    if (f && op.hasOut) {
-                        if (op.outVal) f.outputDbm = op.outVal; else delete f.outputDbm;
-                    }
-                });
-
-                ids.forEach(id => {
-                    const a = aircraftLive[id] || (aircraftLive[id] = {});
-                    Object.keys(pendingModem[id]).forEach(path => {
-                        // MODMAN was mirrored above, from unitOps.
-                        if (path.startsWith('modman/')) return;
-                        const v = pendingModem[id][path];
-                        const parts = path.split('/');
-                        let node = a;
-                        for (let k = 0; k < parts.length - 1; k++) node = node[parts[k]] || (node[parts[k]] = {});
-                        const leaf = parts[parts.length - 1];
-                        if (v === '') delete node[leaf]; else node[leaf] = v;
-                    });
-                    // A modem whose every field was cleared should not linger as {}.
-                    ['taurus', 'hughes'].forEach(sl => {
-                        if (a.modem && a.modem[sl] && !Object.keys(a.modem[sl]).length) delete a.modem[sl];
-                    });
-                    if (a.modem && !Object.keys(a.modem).length) delete a.modem;
-                });
-                pendingModem = {};
-                modemEditMode = false;
-                rebuildAircraftData();
-                populateModemTable();
-                // IPHO is shown on the Software tab too, and it may have just changed.
-                populateAircraftTable();
-                // A MODMAN write lands in /units, which these two read.
-                if (unitOps.length) { renderSerialsPage(); renderHardwarePage(); }
-                setSyncStatus('🟢 Live — synced with your team', '#28a745');
-            } catch (e) {
-                setSyncStatus(`🔴 Could not save modem changes — ${e.message}`, '#dc3545');
-            }
-        }
-
-        function updateModemEditUI() {
-            applyEditButton('modemEditBtn', modemEditMode && canEdit(), 'Edit', '💾 Save');
-        }
-
-        function renderModemPage() {
-            populateModemTable();
         }
 
         function simStatusBadge(v) {
@@ -12879,10 +11663,8 @@
                 satcomEditMode = false;
                 if (Object.keys(aircraftPatch).length) rebuildAircraftData();
                 populateSatcomTable();
-                // The Modem tab reads Kontron/Eclipse from here — repaint it too. IPHO is
-                // shown on the Software tab and the Modem tab, so repaint those on an IPHO
-                // change so every view of the same field agrees at once.
-                if (typeof renderModemPage === 'function') renderModemPage();
+                // IPHO is also shown on the Software tab, so repaint it on an IPHO change
+                // so every view of the same field agrees at once.
                 if (Object.keys(aircraftPatch).length && typeof populateAircraftTable === 'function') populateAircraftTable();
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (e) {
@@ -12980,7 +11762,6 @@
                     modmansLive[id] = entry;
                     close();
                     populateSatcomTable();
-                    if (typeof renderModemPage === 'function') renderModemPage();
                     setSyncStatus('🟢 Live — synced with your team', '#28a745');
                 } catch (e) {
                     err.textContent = `Could not add MODMAN — ${e.message}`;
@@ -14397,308 +13178,8 @@
             updateSortIndicators('hbcTable');
         }
 
-        // Single parser for every schedule date, so the format is defined in exactly
-        // one place. Accepts DD-Mon-YYYY (via toISODate) plus HH:MM, both UTC.
-        function parseScheduleUTC(dateStr, timeStr) {
-            const iso = toISODate(dateStr);
-            if (!iso) return null;
-            const [year, month, day] = iso.split('-').map(Number);
-            const [hours, minutes] = (timeStr || '00:00').split(':').map(Number);
-            return new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
-        }
-
-        function calculateTimeRemaining(dateStr, timeStr) {
-            const scheduledDate = parseScheduleUTC(dateStr, timeStr);
-            if (!scheduledDate) return 'Date TBD';
-            const now = new Date();
-
-            const diffMs = scheduledDate - now;
-
-            if (diffMs < 0) {
-                // Event has passed
-                const absDiffMs = Math.abs(diffMs);
-                const days = Math.floor(absDiffMs / (1000 * 60 * 60 * 24));
-                const hrs = Math.floor((absDiffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const mins = Math.floor((absDiffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-                if (days > 0) return `${days}d ${hrs}h ago`;
-                if (hrs > 0) return `${hrs}h ${mins}m ago`;
-                return `${mins}m ago`;
-            } else {
-                // Event is in the future
-                const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-                const hrs = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-                if (days > 0) return `${days}d ${hrs}h left`;
-                if (hrs > 0) return `${hrs}h ${mins}m left`;
-                return `${mins}m left`;
-            }
-        }
-
-        function getTimeRemainingClass(dateStr, timeStr) {
-            const scheduledDate = parseScheduleUTC(dateStr, timeStr);
-            if (!scheduledDate) return 'time-tbd';
-            const now = new Date();
-
-            const diffMs = scheduledDate - now;
-
-            if (diffMs < 0) {
-                return 'time-completed';
-            }
-
-            const hoursLeft = diffMs / (1000 * 60 * 60);
-            if (hoursLeft < 4) {
-                return 'time-critical';
-            }
-
-            return 'time-countdown';
-        }
-
-        // Past its slot, but still inside the grace window — show it, flagged.
-        function isOverdueSchedule(dateStr, timeStr) {
-            const scheduledDate = parseScheduleUTC(dateStr, timeStr);
-            if (!scheduledDate) return false;
-            return Date.now() > scheduledDate.getTime();
-        }
-
-        // Only drop an entry once it's a full day past its slot, so an overdue job
-        // stays visible long enough to be rescheduled rather than silently vanishing.
-        function isMissedSchedule(dateStr, timeStr) {
-            const scheduledDate = parseScheduleUTC(dateStr, timeStr);
-            if (!scheduledDate) return false;
-            return Date.now() > scheduledDate.getTime() + SCHEDULE_GRACE_MS;
-        }
-
-        function populateScheduleTables() {
-            const jedTableBody = document.getElementById('jedTable');
-            const ruhTableBody = document.getElementById('ruhTable');
-            jedTableBody.innerHTML = '';
-            ruhTableBody.innerHTML = '';
-
-            // Schedule is a standalone, forward-looking plan — not a historical record.
-            // Entries whose date has already passed are dropped automatically here,
-            // so the page always shows only what's still upcoming with no manual
-            // pruning needed. It's also deliberately not cross-referenced against
-            // aircraftData, since a schedule entry tracks its own workpackage, not
-            // overall aircraft completion.
-            const upcoming = scheduleEntries().filter(item => !item.date || !isMissedSchedule(item.date, item.time));
-            const editing = scheduleEditMode && canEdit();
-
-            upcoming.forEach(item => {
-                const row = document.createElement('tr');
-                const overdue = item.date && isOverdueSchedule(item.date, item.time);
-                if (overdue) row.classList.add('sched-overdue-row');
-
-                const timeRemaining = calculateTimeRemaining(item.date, item.time);
-                const timeClass = getTimeRemainingClass(item.date, item.time);
-
-                if (editing) {
-                    const statusOpts = SCHEDULE_STATUSES
-                        .map(s => `<option value="${s.value}" ${item.status === s.value ? 'selected' : ''}>${s.label}</option>`).join('');
-                    const stationOpts = ['JED', 'RUH']
-                        .map(s => `<option value="${s}" ${item.station === s ? 'selected' : ''}>${s}</option>`).join('');
-                    row.innerHTML = `
-                        <td><input class="edit-text sched-ac" value="${escAttr(item.aircraft)}" data-id="${item.id}" data-field="aircraft" onchange="handleScheduleEdit(this)"></td>
-                        <td class="sched-date"><input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(item.date)}" data-id="${item.id}" data-field="date" onchange="handleScheduleEdit(this)"></td>
-                        <td class="sched-date"><input type="time" class="edit-date" value="${escAttr(item.time || '')}" data-id="${item.id}" data-field="time" onchange="handleScheduleEdit(this)"></td>
-                        <td><select class="edit-select" data-id="${item.id}" data-field="station" onchange="handleScheduleEdit(this)">${stationOpts}</select></td>
-                        <td><input class="edit-text sched-wp" value="${escAttr(item.workpackage)}" data-id="${item.id}" data-field="workpackage" onchange="handleScheduleEdit(this)"></td>
-                        <td><input class="edit-text sched-wo" value="${escAttr(item.wo_flags || '')}" data-id="${item.id}" data-field="wo_flags" onchange="handleScheduleEdit(this)"></td>
-                        <td class="sched-status-cell">
-                            <select class="edit-select" data-id="${item.id}" data-field="status" onchange="handleScheduleEdit(this)">${statusOpts}</select>
-                            <button class="sched-del-btn" title="Delete this entry" onclick="deleteScheduleEntry('${item.id}')">🗑</button>
-                        </td>
-                    `;
-                } else {
-                    row.innerHTML = `
-                        <td><strong>${item.aircraft || '—'}</strong></td>
-                        <td class="sched-date">${item.date || 'TBD'}</td>
-                        <td class="sched-date">${item.time ? item.time + ' Z' : '—'}</td>
-                        <td><span class="time-remaining ${timeClass}" data-date="${item.date || ''}" data-time="${item.time || ''}">${timeRemaining}</span></td>
-                        <td>${item.workpackage || '—'}</td>
-                        <td class="sched-wo-cell">${item.wo_flags || '—'}</td>
-                        <td>${scheduleStatusBadge(item, overdue)}</td>
-                    `;
-                }
-
-                if (item.station === 'JED') jedTableBody.appendChild(row);
-                else ruhTableBody.appendChild(row);
-            });
-
-            const emptyRow = () => '<tr><td colspan="7" style="text-align:center; color:#999; padding:20px;">No upcoming work packages</td></tr>';
-            if (!jedTableBody.children.length) jedTableBody.innerHTML = emptyRow();
-            if (!ruhTableBody.children.length) ruhTableBody.innerHTML = emptyRow();
-
-            updateScheduleEditUI();
-        }
-
-        function scheduleStatusBadge(item, overdue) {
-            if (!item.date) return '<span class="status-badge status-not-started">Date TBD</span>';
-            // An entry still marked "scheduled" after its slot is the thing worth
-            // surfacing — that's what the 24h grace window exists for.
-            if (overdue && (!item.status || item.status === 'scheduled')) {
-                return '<span class="status-badge status-overdue">⚠ Overdue</span>';
-            }
-            const s = SCHEDULE_STATUSES.find(x => x.value === item.status) || SCHEDULE_STATUSES[0];
-            const cls = { 'scheduled': 'status-scheduled', 'in-progress': 'status-in-progress', 'completed': 'status-completed', 'postponed': 'status-not-started' }[s.value];
-            return `<span class="status-badge ${cls}">${s.label}</span>`;
-        }
-
-        // ===== Schedule editing (same auth + rules as the Aircraft Status table) =====
-        let scheduleEditMode = false;
-
         function escAttr(v) {
             return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        }
-
-        async function toggleScheduleEdit() {
-            if (scheduleEditMode) {
-                scheduleEditMode = false;
-                populateScheduleTables();
-                return;
-            }
-            if (!canEdit()) { requireSignIn(); return; }
-            scheduleEditMode = true;
-            populateScheduleTables();
-        }
-
-        function updateScheduleEditUI() {
-            const btn = document.getElementById('scheduleEditBtn');
-            const addBtn = document.getElementById('scheduleAddBtn');
-            if (!btn) return;
-
-            const editing = scheduleEditMode && canEdit();
-            applyEditButton('scheduleEditBtn', editing, 'Edit Schedule', '✓ Done');
-            if (addBtn) addBtn.style.display = editing ? '' : 'none';
-
-            // Edit mode swaps the read-only countdown column for the station picker.
-            document.querySelectorAll('#scheduleContent thead tr').forEach(tr => {
-                const th = tr.cells[3];
-                if (th) th.textContent = editing ? 'Station' : 'Time Remaining ↕';
-            });
-        }
-
-        async function saveScheduleField(id, patch) {
-            const token = await getIdToken();
-            if (!token) return false;
-            try {
-                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/schedule/${id}.json?auth=${token}`, {
-                    method: 'PATCH',
-                    body: JSON.stringify(patch),
-                });
-                const data = await res.json();
-                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                setSyncStatus('🟢 Live — synced with your team', '#28a745');
-                return true;
-            } catch (e) {
-                setSyncStatus(`🔴 Could not save schedule — ${e.message}`, '#dc3545');
-                return false;
-            }
-        }
-
-        function handleScheduleEdit(el) {
-            const id = el.dataset.id;
-            const field = el.dataset.field;
-            let value = el.value;
-            // The box speaks dd-mm-yyyy; the database and the page speak DD-Mon-YYYY.
-            if (field === 'date') {
-                const v = readDateField(el);
-                if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
-                value = v;
-            }
-            if (!value && (field === 'date' || field === 'time')) return; // rules reject empty
-            scheduleLive[id] = { ...(scheduleLive[id] || {}), [field]: value };
-            saveScheduleField(id, { [field]: value });
-        }
-
-        async function deleteScheduleEntry(id) {
-            const entry = scheduleLive[id] || {};
-            const label = `${entry.aircraft || 'this entry'} on ${entry.date || 'TBD'}`;
-            if (!confirm(`Delete the scheduled work package for ${label}?`)) return;
-            const token = await getIdToken();
-            if (!token) return;
-            try {
-                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/schedule/${id}.json?auth=${token}`, { method: 'DELETE' });
-                if (!res.ok) throw new Error('delete failed');
-                delete scheduleLive[id];
-                populateScheduleTables();
-                setSyncStatus('🟢 Live — synced with your team', '#28a745');
-            } catch (e) {
-                setSyncStatus(`🔴 Could not delete — ${e.message}`, '#dc3545');
-            }
-        }
-
-        function openScheduleAdd() {
-            const today = new Date();
-            document.getElementById('addSchedAircraft').value = '';
-            document.getElementById('addSchedDate').value = toDMY(today.toISOString().slice(0, 10));
-            document.getElementById('addSchedTime').value = '20:00';
-            document.getElementById('addSchedStation').value = 'JED';
-            document.getElementById('addSchedWorkpackage').value = '';
-            document.getElementById('addSchedWoFlags').value = '';
-            document.getElementById('addSchedStatus').value = 'scheduled';
-            const err = document.getElementById('addSchedError');
-            err.textContent = '';
-            err.style.display = 'none';
-            document.getElementById('addSchedOverlay').style.display = 'flex';
-            document.getElementById('addSchedAircraft').focus();
-        }
-
-        function initScheduleAddModal() {
-            const overlay = document.getElementById('addSchedOverlay');
-            const err = document.getElementById('addSchedError');
-            document.getElementById('addSchedCancel').addEventListener('click', () => { overlay.style.display = 'none'; });
-            document.getElementById('addSchedSave').addEventListener('click', async () => {
-                const entry = {
-                    aircraft: document.getElementById('addSchedAircraft').value.trim().toUpperCase(),
-                    date: fmtDate(document.getElementById('addSchedDate').value),
-                    time: document.getElementById('addSchedTime').value,
-                    station: document.getElementById('addSchedStation').value,
-                    workpackage: document.getElementById('addSchedWorkpackage').value.trim(),
-                    wo_flags: document.getElementById('addSchedWoFlags').value.trim(),
-                    status: document.getElementById('addSchedStatus').value,
-                };
-                if (!entry.aircraft || !entry.workpackage || !entry.date || !entry.time) {
-                    err.textContent = 'Aircraft, date, time and workpackage are all required.';
-                    err.style.display = 'block';
-                    return;
-                }
-                const token = await getIdToken();
-                if (!token) return;
-                const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-                try {
-                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/schedule/${id}.json?auth=${token}`, {
-                        method: 'PUT',
-                        body: JSON.stringify(entry),
-                    });
-                    const data = await res.json();
-                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                    scheduleLive[id] = entry;
-                    overlay.style.display = 'none';
-                    populateScheduleTables();
-                    setSyncStatus('🟢 Live — synced with your team', '#28a745');
-                } catch (e) {
-                    err.textContent = `Could not add entry — ${e.message}`;
-                    err.style.display = 'block';
-                }
-            });
-        }
-
-        function filterStation(station) {
-            const jedSection = document.querySelectorAll('.station-section')[0];
-            const ruhSection = document.querySelectorAll('.station-section')[1];
-
-            if (station === 'JED') {
-                jedSection.style.display = '';
-                ruhSection.style.display = 'none';
-            } else if (station === 'RUH') {
-                jedSection.style.display = 'none';
-                ruhSection.style.display = '';
-            } else {
-                jedSection.style.display = '';
-                ruhSection.style.display = '';
-            }
         }
 
         // sortTable tries parseFloat before falling back to a string compare, and
@@ -14799,16 +13280,6 @@
             });
         }
 
-        function updateTimeRemaining() {
-            // Update all time remaining cells
-            document.querySelectorAll('.time-remaining').forEach(cell => {
-                const date = cell.getAttribute('data-date');
-                const time = cell.getAttribute('data-time');
-                cell.textContent = calculateTimeRemaining(date, time);
-                cell.className = `time-remaining ${getTimeRemainingClass(date, time)}`;
-            });
-        }
-
         function setText(id, text) {
             const el = document.getElementById(id);
             if (el) el.textContent = text;
@@ -14820,7 +13291,7 @@
         }
 
         // Single source of truth for every number/list on the page — derived from
-        // aircraftData + scheduleLive, called after every load and every live update.
+        // aircraftData, called after every load and every live update.
         // "Completed" for all counting/reporting purposes: status=completed AND a completion
         // location has been recorded (single consistent definition, used everywhere on the page).
         // Completion derives from the software the aircraft actually runs. It used to
@@ -16048,7 +14519,6 @@
             initStickyHeader();
             initHorizontalWheelScroll();
             initSysBar();
-            initScheduleAddModal();
             initAddActivityModal();
             initAddSimModal();
             initAddModmanModal();
@@ -16058,14 +14528,9 @@
             initRemovalModal();
             initAddAircraftModal();
             updateAuthUI();
-            updateScheduleEditUI();
             renderObjectives();
             connectLiveSync();
             startVersionWatch();   // reload the tab when a newer build is deployed
-
-            // Update timer every minute
-            updateTimeRemaining();
-            setInterval(updateTimeRemaining, 60000);
         });
     </script>
 </body>

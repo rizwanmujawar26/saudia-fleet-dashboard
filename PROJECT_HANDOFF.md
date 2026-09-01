@@ -6,8 +6,20 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-The last session took the app **v2.80.1 → v2.81.0**. Everything below is detail; these
+This session took the app **v2.81.0 → v2.82.0**. Everything below is detail; these
 are the things that change how you work on it.
+
+**The Modem and Schedule tabs were removed (v2.82.0, 2026-09-02).** At the user's
+instruction: Satcom (the `/modmans` register) is the single reference for modem
+commissioning, so the Modem tab was a failed experiment, and the forward-looking
+Schedule was no longer needed. Removed: both tab buttons and panels, every modem-only
+and schedule-only function (~40), the modem `FILTER_BARS` entry, the `/schedule` live
+stream and its per-minute countdown timer, and all their CSS. **The `/schedule` node
+was deleted** (backed up first) along with its rules and its entry in
+`backup.sh`/`restore.sh`/`verify-deployment.sh`. **Modem DATA was kept**:
+`/aircraft/{tail}/modem`, the MODMAN fields in `/units`, the `/modmans` node, and the
+`modem` rules block (declared and inert, like `se4`). Satcom is untouched — it still
+uses the shared `modemIdHTML()`, the IPHO badge CSS, and `publishGroupHeadHeight()`.
 
 **Software tab is software-only now (v2.81.0).** At the user's instruction (2026-09-01)
 the Software tab was reshaped to track only the retrofit active fleet's software: the
@@ -17,7 +29,7 @@ this tab for a future dedicated page — `populateHbcTable()`/`hbcFleet()` and t
 `#hbcTable` CSS are **kept**, the `/fleet` linefit data is untouched; **OTA Patch Date
 was renamed OTA PATCH#2** (label only); and a **free-text search box** was added
 (registration + software version + type + location, via `row.dataset.search`). ⚠️ IPHO
-stays editable on the Modem/Satcom tabs, but **`mg101Status` (SES/MG101) now has no
+stays editable on the Satcom tab, but **`mg101Status` (SES/MG101) now has no
 editor anywhere** — the data is intact, awaiting a home on a future modem/SES page. The
 table is nine columns now (was eleven). Read the Software tab section before touching.
 
@@ -36,9 +48,9 @@ reordered, so every `data-col` is unchanged. The Commissioning `comm` axis now r
 **To-Do** when either antenna is To-Do **OR** the aircraft has IPHO Disabled, so a
 fully-commissioned box with IPHO still off surfaces under To-Do; both the pill and the
 dropdown pick this up (one `rowValue`). ⚠️ **Still open:** Satcom is to become the single
-source of truth for IPHO. The **Software IPHO control was removed on 2026-09-01** (v2.81.0);
-the **whole Modem tab is still to be removed** (not done yet). Read the Satcom tab section
-before touching.
+source of truth for IPHO. The **Software IPHO control was removed on 2026-09-01** (v2.81.0)
+and the **whole Modem tab on 2026-09-02** (v2.82.0), so Satcom now owns IPHO. Read the
+Satcom tab section before touching.
 
 **Satcom Removal Date, filter bar and IPHO Mode (v2.77.2–v2.78.0).** Three Satcom changes:
 (1) **Removal Date** moved to the front of MODMAN Details, between Install and Eclipse S/N,
@@ -49,8 +61,8 @@ the aircraft's existing top-level `iphoStatus` (same field as Software/Modem —
 editable from Satcom via a **cross-entity write to `/aircraft`**, with a grey N/A for
 linefit/not-yet-active/off-wing rows and an IPHO dropdown filter. ⚠️ **User direction:**
 Satcom becomes the single source of truth for IPHO — the **Software IPHO control was
-removed on 2026-09-01** (v2.81.0); the **Modem tab is still to be removed** (not done
-yet). Read the Satcom tab section before touching.
+removed on 2026-09-01** (v2.81.0) and the **Modem tab on 2026-09-02** (v2.82.0). Read
+the Satcom tab section before touching.
 
 **Satcom now tracks commissioning (v2.77).** The old Comments column is gone; in its place
 a boxed **Commissioning Status** double column (Taurus · Hughes), each a tiny Done/To-Do
@@ -72,11 +84,10 @@ was populated once from the user's JSON (87 boxes). ⚠️ **A removal date DERI
 status** — see the Satcom tab section. Read the `/modmans` data-model entry and the tab
 section before touching it.
 
-⚠️ **Two follow-on phases were chosen by the user but NOT built** (2026-08-31): (1) make
-the **Modem tab read Kontron/Eclipse from `/modmans`** so those serials have one source,
-and (2) **two-way fitment sync** between Satcom dates and `/units` fitments. Both touch
-the (fragile) Modem tab and were deferred; #2 is moot until install dates are entered.
-See *Open items*.
+⚠️ **A follow-on phase was chosen by the user but NOT built** (2026-08-31): **two-way
+fitment sync** between Satcom dates and `/units` fitments. (An earlier chosen phase —
+the Modem tab reading Kontron/Eclipse from `/modmans` — is moot now the Modem tab is
+gone.) The sync is moot until install dates are entered. See *Open items*.
 
 **Before that** the last session took the app **v2.68.1 → v2.72.0**:
 
@@ -129,8 +140,8 @@ load records and 106 units.
 ## What this is
 
 A single-file HTML dashboard for Saudia's wireless IFEC fleet: software
-(middleware) loading, monthly media loading, the maintenance schedule, and the
-fleet roster itself. Hosted free on GitHub Pages, live-synced via Firebase
+(middleware) loading, monthly media loading, and the fleet roster itself.
+Hosted free on GitHub Pages, live-synced via Firebase
 Realtime Database so the whole team sees the same data instantly.
 
 - **Live site:** https://rizwanmujawar26.github.io/saudia-fleet-dashboard/
@@ -153,7 +164,7 @@ Live data (read from the database **2026-08-25**, verified at session close):
 - **40 is the Software and Media denominator.** 38 on Middleware 2.1.0 — behind:
   **AS59, AS76** (2.0.0) — and 35 on the August 2026 media cycle
 - `activatedDate` set on **42** — every aircraft except the two in retrofit
-- 24 schedule entries, 11 activities, 1 hardware record, **67 units**, 1 allowlisted editor
+- 11 activities, 1 hardware record, **67 units**, 1 allowlisted editor
 - Of the 67 units, **53 are SIM cards**: 39 Active, 1 Fault, 5 Spare, 8 Removed.
   Roaming: 10 Global, 40 Local, 3 unset
 
@@ -236,7 +247,7 @@ adding it to the rules first.
 | `simRoaming` | `active` \| `inactive` — the SIM subscription, not the card |
 | `ops` | `{ state, since, reason, expectedReturn }` — the CURRENT out-of-service period. **Absent = In Service.** See *Operational state* |
 | `opsLog` | `{ [periodKey]: { state, since, until, reason } }` — CLOSED periods only, written once when a period ends |
-| `modem` | `{ taurus: {commissionedDate, mgId, tid, se4, se2c, notes}, hughes: {commissionedDate, chassisId, esn, notes} }` — **both** modems, see the Modem tab |
+| `modem` | `{ taurus: {commissionedDate, mgId, tid, se4, se2c, notes}, hughes: {commissionedDate, chassisId, esn, notes} }` — **both** modems. Data retained; the Modem tab that edited it was removed 2026-09-02 (v2.82.0), rules kept declared and inert |
 | `ugoVersion` | e.g. `6.3.1`. **Absent = not installed** |
 | `tilesVersion` | e.g. `2.0`. **Absent = not installed** |
 
@@ -277,11 +288,6 @@ to mean the same thing operationally, collapse them — do not keep both in sync
 
 `media.comments` is deliberately separate from `note` so editing one cannot
 clobber the other.
-
-### `/schedule/{id}` — forward-looking work packages
-
-`aircraft`, `date` (DD-Mon-YYYY), `time` (HH:MM), `workpackage`, `wo_flags`,
-`station` (JED/RUH), `status` (`scheduled|in-progress|completed|postponed`).
 
 ### `/editors/{uid}` — allowlist, readable only by that uid, never client-writable
 
@@ -1115,10 +1121,8 @@ instead — `Show`, then `Show: Media`.
 
 ### What is not converted
 
-- **Serials and Schedule** still use native `<select>`s and a search input. They
-  were never part of the space problem, and Schedule filters whole station
-  *sections* rather than table rows, so it needs its own match. Bringing them onto
-  the component is the obvious next step.
+- **Serials** still uses a native `<select>` and a search input. It was never part
+  of the space problem. Bringing it onto the component is the obvious next step.
 
 ### Fleet gained an axis
 
@@ -1136,13 +1140,12 @@ Every data table opens on a **date column, oldest first**, placed second right a
 `#`. That is deliberate: the question these pages answer is "what happened when", and
 the oldest row is the one that has been waiting longest.
 
-⚠️ **Two tabs are deliberate exceptions.** **Modem** opens on *MSP 5.2.2 install date,
-newest first* and **Media** on *loading date, newest first* — both ask what has just
-arrived rather than what has waited longest.
+⚠️ **One tab is a deliberate exception.** **Media** opens on *loading date, newest
+first* — it asks what has just arrived rather than what has waited longest.
 
-⚠️ **Neither could be a column sort, for the same reason**: descending on a date column
+⚠️ **It could not be a column sort, for the same reason**: descending on a date column
 puts the "no value" sentinel at the TOP, because that sentinel is built for the
-ascending default. Both are **build orders** with `lastSort` applied only when the user
+ascending default. It is a **build order** with `lastSort` applied only when the user
 clicks a header — the move the SIM tiers already made.
 
 | table | opens on | constant |
@@ -1151,7 +1154,6 @@ clicks a header — the move the SIM tiers already made.
 | Media | Loading Date, **NEWEST first** — a build order, not a column | `mediaLoadKey()` |
 | Fleet | Activation Date (`activatedDate`) | `FLEET_DEFAULT_SORT` |
 | 4G SIM | Installation Date (fitment `fittedDate`) | tiers — see below |
-| Modem | **MSP 5.2.2 Install Date, NEWEST first** — a build order | `modemMspKey()` |
 
 ### Four rules that apply to every one of them
 
@@ -1331,25 +1333,29 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
 ---
 
-## Tabs (11)
+## Tabs (9)
 
 Public order: **Overview, Software, Media, Fleet, 4G SIM, Satcom**. Behind sign-in:
-**Modem, Activity, Hardware, Serials, Schedule**.
+**Activity, Hardware, Serials**.
 
 **Satcom went in public** (2026-08-31), like the 4G SIM register it is modelled on — it
 carries serials, but so does SIM, and `/units`/`/modmans` are public-read anyway. To
 gate it: add `data-restricted="1"` to its tab button and `'satcom'` to `RESTRICTED_TABS`.
 
-**Schedule became restricted on 2026-08-25** — it is forward-looking work planning and
-the user does not want it public. **4G SIM went public the same day**, once it was
-signed off; it was restricted only while it was being built. Editing it still needs
-sign-in, like every other page — the tab gate governs who *browses*, never who writes.
+**4G SIM went public on 2026-08-25**, once it was signed off; it was restricted only
+while it was being built. Editing it still needs sign-in, like every other page — the
+tab gate governs who *browses*, never who writes.
 
-**Every tab below is its own `###` heading**, so one can be pulled without the other
-nine: `./scripts/doc.sh modem`. They were a numbered list until 2026-08-28, which
-meant any tab question cost the whole 667-line section (~10.7k tokens); Media is now
-~320 and Modem ~3.8k. ⚠️ **Keep them as headings.** Folding one back into a list
-takes the granularity away from all of them.
+**The Modem and Schedule tabs were removed on 2026-09-02** — Satcom (the `/modmans`
+register) is now the single reference for modem commissioning, and the forward-looking
+schedule was no longer needed. The `/schedule` node was deleted; the modem data at
+`/aircraft/{tail}/modem` was kept (its rules stay declared and inert, like `se4`).
+
+**Every tab below is its own `###` heading**, so one can be pulled without the
+others: `./scripts/doc.sh media`. They were a numbered list until 2026-08-28, which
+meant any tab question cost the whole section; Media is now ~320 tokens. ⚠️ **Keep
+them as headings.** Folding one back into a list takes the granularity away from all
+of them.
 
 ### 4G SIM — the SIM card register
 
@@ -1705,8 +1711,8 @@ Edit mode (Disabled/Enabled dropdown, `data-field="iphoStatus"`); a staged value
 the aircraft value so the pill updates before Save. ⚠️ **Cross-entity write:**
 `commitSatcomChanges()` splits `iphoStatus` out of the `/modmans` PATCH into a **second
 `/aircraft` PATCH** keyed by tail (Enabled→`completed`, Disabled→`null`), mirrors it onto
-`aircraftLive`, `rebuildAircraftData()`s, and repaints the Software + Modem tabs — the same
-pattern the Modem tab uses. Filter: an **IPHO** dropdown (`ipho`, Enabled/Disabled) beside
+`aircraftLive`, `rebuildAircraftData()`s, and repaints the Software tab. Filter: an
+**IPHO** dropdown (`ipho`, Enabled/Disabled) beside
 Commissioning; `na` rows match neither. **No data migration was needed** — the 4 tails the
 user wants Disabled (AS56, AS59, ASR, ASI) were already null and every other active
 retrofit aircraft already `completed`. ⚠️ **User direction (2026-09-01):** Satcom is to
@@ -1805,12 +1811,12 @@ the whole fleet is completed, so it could only filter to everything or to nothin
 Status **column** stays; `row.dataset.status` is left in place and is now read by
 nothing. ⚠️ **The IPHO and SES filters and their columns went on 2026-09-01** (user):
 this tab now tracks only the software components. `sesMigrationValue()` was deleted with
-them. IPHO stays filterable/editable on the Modem and Satcom tabs; `mg101Status` (the
+them. IPHO stays filterable/editable on the Satcom tab; `mg101Status` (the
 SES/MG101 field) is left in the data but has **no editor anywhere now** — it awaits a
 home on a future modem/SES page.
 The **search box** is `search:` on the aircraft bar; rows carry `row.dataset.search`
 (registration + software version + type + install location), the same mechanism the
-SIM/Satcom/Modem bars use. `fbPresentOptions()` stays — the Fleet bar still uses it.
+SIM/Satcom bars use. `fbPresentOptions()` stays — the Fleet bar still uses it.
 
 ⚠️ **Cell padding on this table is 8px, not the 10px `#hbcTable` keeps.** It dates from
 when the table had **eleven** columns and measured **1197px against a 1165px wrapper**;
@@ -1883,259 +1889,7 @@ UGO and TILES are editable in the tab's Edit mode; an empty box clears the field
 which is how an aircraft is marked as not having it at all. A value that does not
 match the rules' pattern is refused at the input and never staged, so it cannot take
 the atomic save down with it.
-### 4. Modem
-
-satellite modem commissioning.
-
-⚠️ **The MODMAN carries TWO modems and every aircraft has both** (user,
-2026-08-25) — a Taurus *and* a Hughes, commissioned on their **own dates** and
-identified by completely different numbers. An earlier build had a single `type`
-field choosing between them, which could not represent an aircraft at all.
-
-**A row is an AIRCRAFT**, with each modem's columns under its own **master head**
-— a two-row `<thead>`: **MODMAN** over `Installed / Kontron S/N / Eclipse S/N`,
-Taurus over `Commissioned Date / IPHO / MG ID / TID`, Hughes over
-`Commissioned Date / Chassis ID / ESN`, and `# / MSP 5.2.2 Install Date / Aircraft /
-Type` spanning both rows. **Comments were removed from both modems** (user,
-2026-08-26); the `notes` fields stay declared and inert like `se4`/`se2c`.
-
-⚠️ **Scope is `swFleet()` — Active RETROFIT only** (user, 2026-08-26). The A321XLR
-linefit pair carry their own equipment and are configured by SBC, not by this
-MODMAN-and-two-modems arrangement, so they were two rows that could never be filled
-in. It was `activeFleet()` until then.
-
-⚠️ **MODMAN reads `/units`, NOT `/aircraft`** — and that is the point. It is a
-physical box with serials and a fitment, exactly what `/units` is the single source
-for, and boxes were **already on record there** (serial `44` on AQB, `226` on ASBB).
-Storing them under `/aircraft/{tail}/modem` would have been a second home for data
-the register already held, with the page showing blanks beside it.
-
-| column | field |
-|---|---|
-| Kontron S/N | `unit.serial` |
-| Eclipse S/N | `unit.altSerial` — declared for exactly this, unused until now |
-| Installed | the fitment's `fittedDate` |
-
-Editing writes back: an aircraft that already has a MODMAN patches that unit, one
-that does not gets a unit **and** fitment minted in the shape Record Installed uses.
-⚠️ **The save is therefore TWO PATCHes**, one per node, split on whether the staged
-key starts `modman/`. The local mirror skips those keys — the poll brings `/units`
-back.
-
-**MODMAN is placed FIRST**, before Taurus: it is the chassis and the two modems sit
-inside it. It also keeps the Kontron blue clear of the Hughes blue, which are closer
-than the other pairing (ΔE 17.8 against 35.3), with the Gilat indigo between them —
-and it stays visible under either single-modem view, because filtering to Taurus
-does not stop the box being the box.
-
-⚠️ **SE4 and SE2c are NOT tracked here** (user, 2026-08-25). They are **fleet-wide
-settings**, not per-aircraft facts — the Overview's *Project Objectives* already
-states them once (`SE2c: 8c = 101 · b0 = 101K · 4c = 0`, `SE4: No changes`), so a
-column would have been 42 identical cells. The rules keep `se4`/`se2c` **declared
-and inert**, the way `lifecycle` is: no record ever carried them, so nothing is
-orphaned and bringing them back would be a UI change only.
-
-**The group heads wear their MAKER's brand colour**, sampled from the official logo
-artwork rather than eyeballed. Taurus is **Gilat's SkyEdge IV** aero modem — the
-line Hughes competes with — so it takes Gilat's indigo **`#1B115D`** (the wordmark
-in commons `Gilat_logo.svg`); Hughes takes **`#005DAC`** (commons
-`Hughes_Communications_logo.svg`, which the published brand palettes agree on); the
-MODMAN is Kontron's, so it takes **`#005083`** with **`#46b294`** as its left accent
-(both from commons `Kontron_logo.svg`). The teal edge is a second cue that does not
-depend on telling two blues apart. White on them is 16.34:1, 6.64:1 and 8.48:1 —
-all past AA.
-⚠️ **Colours only, never logo artwork.** The page carries **no external assets** by
-design, so a mark could only be inlined as a data URI — and third-party trademarks
-are not ours to embed on that basis. **Each modem keeps its own commissioning
-date.** Scope is `modemFleet()` (currently `activeFleet()`). ⚠️ **The blanks are
-the point**: a modem with no date is what the page exists to surface, the same way
-the Software tab shows *Not set* rather than hiding the aircraft. To include the
-two still In Retrofit, `modemFleet()` is the one line.
-
-⚠️ **There is deliberately no Modem column.** MG ID and TID say Taurus; Chassis ID
-and ESN say Hughes. A badge repeating what the columns already state is a column of
-noise — the same reasoning that hides the Timeline's kind pill under a kind filter.
-
-⚠️ **IPHO is the EXISTING top-level `iphoStatus`**, not a new modem field. It is
-already on 34 aircraft and already edited on the **Software** tab, so a second home
-would drift exactly the way the old duplicated status fields did. This page is a
-second *view* of one fact, like `activatedDate` on Fleet and Activity — which is
-why a save here also repaints the Software table. **Staged edits are keyed by the
-path relative to the aircraft** (`modem/taurus/mgId`, `iphoStatus`), so one handler
-covers both modems and the top-level field with no branching, and the save is a
-join.
-
-Stored at **`/aircraft/{tail}/modem`**, so the page rides the `/aircraft` stream
-that already exists — the connection budget allows no seventh `EventSource`, and a
-node of its own would have needed one or a poll. Every field belongs to the modem,
-so they **nest**: clearing writes `modem: null` and correctly takes all of them.
-That is the opposite of `ugoVersion`/`tilesVersion`, which sit at top level
-precisely because clearing `media` must not take them.
-⚠️ Never put `modem` and `modem/<field>` in the same PATCH — Firebase rejects a
-multi-path update where one path contains another. `commitModemChanges()` emits
-field paths only.
-
-**`MODEM_TYPES` is the one definition** — badges, edit dropdown and filter
-together — and **`MODEM_FIELDS`** says which identifiers each vendor carries:
-Taurus `mgId`, `tid`, `se4`, `se2c`; Hughes `chassisId`, `esn`.
-
-**The filter bar is Type and the search box, and nothing else** (user, 2026-08-26).
-Which columns are on screen is **not a filter** and is deliberately not declared in
-`FILTER_BARS`.
-
-**Three eye toggles — MODMAN / Taurus / Hughes.** 👁 when that group is on screen,
-🚫 greyed and struck through when it is not. `MODEM_COL_GROUPS` is the definition;
-`modemColsHidden` records **only what is hidden**, so the default is everything
-visible with no state to initialise, and Reset restores it. They are
-**independent**, which the old single-select "view" could not be — MODMAN with
-Hughes alone, or all three off, are now expressible. One class per hidden group
-(`.modem-hide-<id>`) drives it in **CSS**, and the frozen-head copy inherits them
-because that copy is cloned from the live `<thead>` with its classes intact.
-
-**The search box matches MODMAN serials too**, and keeps matching while that column
-is hidden — the haystack is the data, not the columns.
-
-⚠️ **Widgets do NOT follow the toggles.** They describe the data; hiding a column
-does not uncommission a modem.
-
-**Modem Output** is stored as a BARE NUMBER on the fitment beside `fittedDate` —
-measured for this installation, so moving the box re-measures rather than inherits.
-The unit is **typography, not data**: entering `8` reads back as `8 dBm` with the
-unit quieter than the figure. The rules take an optional sign and up to two decimals
-and **reject `8dBm`**, so the unit can never be stored.
-⚠️ `data-sort` carries the raw number — `sortTable` parseFloats it, and a zero-padded
-key turned `-8` into `000000-8`, which reads as 0.
-
-⚠️ **Saving a MODMAN edit writes /units, and that write MUST be mirrored.** It was
-not, so a saved serial appeared to vanish: the write succeeded, the table redrew from
-a `unitsLive` that had not heard about it, and `/units` is polled. **The data was
-never lost.** `unitOps` records what the unit write did and replays it locally.
-
-⚠️ **A new MODMAN is written as ONE object.** Writing `<unit>/fitments/<fit>` and
-`<unit>/fitments/<fit>/fittedDate` together is a multi-path update where one path
-contains another, which Firebase rejects — it would have failed the whole save the
-first time anyone typed a serial and a date together.
-
-**Column widths are a MIN-WIDTH on the body cells**, sized to the values.
-⚠️ `width` on a `<th>` under `table-layout: auto` is only a hint and was overridden —
-a 16-character chassis id ended up in an 88px column. And **not** a `<colgroup>`: the
-eye toggles can remove three column groups and a colgroup is a fixed list of columns.
-`nth-child` counts DOM position, so a hidden group does not shift them.
-
-**One type scale**: 10px headers, 11.5px values, 8.5px qualifiers, 12px registration,
-and a 1.08em bump on an identifier's promoted digits. Everything centred.
-
-**Compact layout** (user, 2026-08-26). Thirteen columns have to fit a laptop, and
-the Hughes group was falling off the right. **1195px → 977px**, which fits from
-1152px of viewport upward. What bought it, in order of size:
-
-| | saving |
-|---|---|
-| cell padding 15px → 8px each side | ~180px across the row |
-| each date stacked ABOVE its days pill instead of beside it | ~60px × 4 columns |
-| the Type column removed | ~71px |
-| `Commissioned` → `Comm. Date` on the two sub-heads | ~38px × 2 |
-| type 14px → 12px, headers → 10.5px | the rest |
-
-⚠️ **A single long word cannot wrap**, so `Commissioned` forced its column 117px
-wide against a 60px date. Giving the label a space lets it break onto two short
-lines inside a head that is already two rows tall.
-
-⚠️ **`fmtDateShort()` is DISPLAY ONLY.** `DD-Mon-YYYY` → `DD-Mon-YY`; the stored
-value, the sort key and every handler keep the full form. It is still **day-first** —
-shortening the year is not an excuse to reorder the parts.
-
-⚠️ **The Type column is gone but the Type FILTER is not.** The row still carries
-`data-type`; the type shows as a tiny pill under the registration, beside the
-in-service age.
-
-**`MSP 5.2.2 Install Date` is the first column, between `#` and Aircraft**, in the
-ungrouped section so it sits outside both modem groups and spans the two header
-rows. ⚠️ **It is DERIVED from `completionDate`, not stored.** MSP 5.2.2 shipped as
-part of Middleware 2.1.0, so its install *is* the software completion date — the
-field the Software tab labels *Installation Date*. A second stored date for one
-event could only drift. It is **read-only here** and says so on hover; the Software
-tab stays the one place it is edited.
-
-⚠️ **This table opens on MSP INSTALL DATE, NEWEST FIRST** (user, 2026-08-26) —
-deliberately *not* the "date column, oldest first" rule the other tables follow. MSP
-is the software that talks to the modem, so its install is the reference point for
-major software activity here, and the most recent leads. (It opened on *activation*
-date from 2026-08-25 until the MSP column arrived; the activation pill stays on the
-Aircraft cell, since the two dates answer different questions.)
-
-It is the **build order** rather than a column sort, for the reason it always was:
-descending on the column would float the "Not set" sentinel to the **top**, since
-that sentinel is built for an ascending default. ⚠️ **A build order and `lastSort` are mutually
-exclusive**: a column sort is re-applied only if the user clicked a header, and both
-Reset and a view change drop back to activation order. That is also why there is no
-per-view default any more — activation is an aircraft-level order, identical in
-every view.
-
-⚠️ **With no column sorted there is no arrow to explain the order**, so the footer
-says it: `· newest activation first`, dropped the moment a column sort is active.
-Keeping that honest needs the headers to call **`sortModemTable()`**, not
-`sortTable()` — the generic one knows nothing about this page's footer. Wrapping
-locally beats giving the other eight tables a hook they do not need, the same shape
-as the SIM date header calling `cycleSimDateSort()`.
-
-⚠️ **Two header rows cannot share one sticky `top`** — they pin on top of each
-other. The second sits below the first by `--grouphead-h`, measured and published by
-`publishGroupHeadHeight()`; a hardcoded number is wrong the moment the label wraps.
-The head's hairline `::after` is scoped to `thead tr:last-child`, or the group row
-draws a line through the middle of the header.
-
-⚠️ **`.modem-group` must out-specify `.aircraft-table th`** (0,1,1), which sets the
-header background and a left text-align. A bare class loses, and the master head
-renders left-aligned in the plain header green. White on the two group tints
-measures 4.77:1 and 5.73:1 — both AA.
-
-⚠️ **`applyModemFilters()` must tell a view change from a search keystroke.**
-`fbSearchInput()` calls the bar's `apply` on **every character**, and a rebuild
-there would pull focus out of the search box; a view change, by contrast, *must*
-rebuild because the columns differ. It is guarded on `modemViewRendered`.
-
-⚠️ **The row's dataset key must be `data-view`, matching the filter's id.**
-`fbRowMatch()` reads `data-<id>` off the row, so naming it anything else leaves the
-View filter matching nothing and **hiding every row** — which is what it did, with
-the footer reading "0 of 42" while 42 rows sat in the DOM.
-
-**The aircraft cell carries the Fleet tab's activation age pill** — the same
-`activatedDate` and the same `activationAge()`, so the two pages cannot disagree.
-
-**IPHO is a pill**, green `ENABLED` / amber `DISABLED`. Amber rather than red: not
-yet set is work outstanding, not a fault. ⚠️ Only this page — the **Software** tab's
-IPHO column keeps the dot-and-text convention it shares with its neighbours.
-
-**`modemIdHTML()` promotes the unit number inside TID and Chassis ID.** A chassis
-reads `AERSVA00064HNSJ3` and its TID is `64`: the run of digits before `HNS`
-identifies the unit and everything around it repeats across the fleet, so it goes
-bold and a shade larger while the leading zeros **dim rather than disappear** —
-reading the value off a label still needs them. The same treatment
-`simSerialHTML()` gives a SIM serial's last six digits.
-⚠️ **Only TID and Chassis ID, and that is the point**: they carry the *same* number,
-so emphasising both is what lets the eye pair them across the row. MG ID (`101`) and
-ESN (`17501546`) are bare numbers with nothing to pick out — promoting those too
-would leave every cell bold and nothing standing out at all.
-⚠️ It returns **markup**, so it is for the cell only; `data-sort` and `data-search`
-keep the raw value.
-
-**Widgets follow the view**, so every figure counts the population beneath it: per
-modem, **Commissioned** and **Awaiting**, which sum to the fleet. Under *both*,
-**Both Commissioned / One Outstanding / Neither Started**, which **partition the
-aircraft** rather than double-counting an airframe under each modem.
-⚠️ Neither Started takes **grey, not alert red** — it is the un-started backlog,
-not a fault, and red would put the largest number on an unfilled page in alarm
-colours.
-
-**Commissioned means a DATE is on record**, not merely identifiers typed — the same
-reasoning that makes Software completion require a location as well as a version.
-
-⚠️ **Restricted for now at the user's request** (2026-08-25) while the page
-settles. It is an ordinary public-shaped page; moving it out is one edit to
-`RESTRICTED_TABS`.
-
-### 5. Activity
+### 4. Activity
 
  (tab id is still `maintenance`, like Software's is still `aircraft`)
 — the **active** fleet only (`fleetStatus === 'active'`), the same
@@ -2187,12 +1941,12 @@ the `mflag` dataset value is `serviceable`.
 Filters are Aircraft Type and Maintenance status. There is no station filter —
 the tab is about the retrofit and its systems, not which base an aircraft flies
 from. Base Station is one of the profile fields.
-### 6. Hardware
+### 5. Hardware
 
 the LRU catalogue on the left in two fit groups, the selected unit
 on the right: profile, known issues, fitment, removed units. See *Hardware tab*
 above. Serials are derived from `/activities` and never stored here.
-### 7. Serials
+### 6. Serials
 
 the data-gathering surface for `/units`. One flat table, one row
 per *fitment*, with **Record Installed** and **Record Removed** above it and CSV
@@ -2200,13 +1954,7 @@ export. Deliberately not another two-pane shell: the job is getting serials in
 and completing dates later, not navigating a hierarchy. The date fields are
 editable in place — that is where the backlog gets finished — and the "Dates
 Outstanding" widget is the progress bar for it.
-### 8. Schedule
-
-standalone forward-looking plan, deliberately **not** linked
-to completion status. Entries drop off automatically 24h past their slot
-(`SCHEDULE_GRACE_MS`); in that window they show `⚠ Overdue` so they can be
-rescheduled rather than vanishing.
-### 9. Fleet
+### 7. Fleet
 
 owns the roster: add / edit / remove, incl. linefit. The **Operational State** column
 is the 8th, after Status — see *Operational state* for the field, the eight values and
@@ -2916,8 +2664,8 @@ point:
 | signed in, editing | `💾 Save` (`✓ Done` where the page saves as it goes) | amber |
 
 **Signing in never opens Edit Mode.** It only unlocks the buttons; a page stays
-read-only until its own Edit is pressed. Seven pages use this — Software, Media,
-Activity, Hardware, Serials, Schedule, Fleet.
+read-only until its own Edit is pressed. Six pages use this — Software, Media,
+Activity, Hardware, Serials, Fleet.
 
 **Authentication lives in exactly two places, neither of them a page:**
 
@@ -2961,9 +2709,9 @@ handler replaced all 42 aircraft with the two fields that had just changed, stor
 under literal slash-bearing keys. `rebuildAircraftData()` then found no aircraft and
 every figure on the page read **zero** until someone reloaded by hand.
 
-`applyStreamEvent(store, type, path, data)` is now the one implementation, used by
-both `/aircraft` and `/schedule`: a `patch` applies each key as its own path, a `put`
-replaces at the path, and `null` deletes rather than storing null.
+`applyStreamEvent(store, type, path, data)` is the one implementation, used by
+`/aircraft`: a `patch` applies each key as its own path, a `put` replaces at the path,
+and `null` deletes rather than storing null.
 
 **`aircraftStoreLooksBroken()` is the backstop.** If a stream event ever leaves the
 store empty while the roster has aircraft, or holding a key containing `/`, the node
@@ -2980,9 +2728,10 @@ every `EventSource` holds one open for as long as the page lives. Reads at load
 happen before the streams establish, so page load looks fine — it is the *writes
 afterwards* that queue and hang, with no error, because they were never sent.
 
-The page currently holds **three** streams (`/aircraft`, `/fleet`, `/schedule`) and
-polls the rest. Keep it there. If a node needs live sync, retire a stream or fold it
-into `pollLowTrafficNodes()`.
+The page currently holds **two** streams (`/aircraft`, `/fleet`) and polls the rest —
+the `/schedule` stream was retired with the Schedule tab on 2026-09-02, freeing a slot.
+Keep it lean. If a node needs live sync, retire a stream or fold it into
+`pollLowTrafficNodes()`.
 
 ## Local dev workflow
 
@@ -3112,17 +2861,6 @@ live.
 - **Whether the cycle-closed Timeline figure should freeze.** It currently rises when a
   late load lands, per the user's call that a late load still counts toward its cycle.
 
-- **The Modem backlog.** One aircraft (**AQB**) carries a full record; the other 41
-  are empty. That is the data-entry job, and the page is built to show it — every
-  undated modem reads *Not set* rather than being hidden.
-- **Whether the Modem tab should stay behind sign-in.** Restricted at the user's
-  request while it settles; it is built as an ordinary public page and moving it out
-  is one edit to `RESTRICTED_TABS`.
-- **Whether Modem scope should include the two aircraft In Retrofit.** It is
-  `activeFleet()` today, matching the other operational pages — but commissioning is
-  retrofit-time work, so the argument for `fleetRoster` is real. `modemFleet()` is the
-  one line.
-
 - **The linefit equipment list is still a placeholder** — 7 of its 8 entries. CWAP
   is now confirmed (`lf_cwap`, ×3); the other seven mirror the retrofit set so the
   pane is usable. Whether the linefit pair carry a Waveguide Adapter or Coax Cable
@@ -3149,17 +2887,11 @@ live.
 - **A home for the SES/MG101 editor (raised, not built).** Removing the Software tab's
   SES column took the **only** editor for `mg101Status` with it; the data is intact but
   now uneditable in-app. It fits the standing direction to make Satcom/Modem own the
-  modem-generation fields — decide whether it lands on Satcom, the Modem tab, or the
-  future dedicated page. Ask before starting.
-- **Satcom → Modem: authoritative read (chosen, not built).** The user chose to make
-  `/modmans` the single source and have the **Modem tab read Kontron/Eclipse from it**
-  rather than from `/units`. Deferred because the Modem tab is keyed by aircraft and its
-  save writes `/units` + `/aircraft/modem`; reconciling needs a concrete call — does its
-  MODMAN section become read-only-from-Satcom, and what happens to the 40 `/units` modman
-  units (retire, or leave)? Ask before starting.
+  modem-generation fields — decide whether it lands on Satcom or the future dedicated
+  page. Ask before starting.
 - **Satcom ↔ fitment two-way sync (chosen, not built).** Setting aircraft + install/
-  removal on Satcom should also write the `/units` fitment the Serials/Modem tabs use.
-  Moot until the user starts entering install dates, so parked with the item above.
+  removal on Satcom should also write the `/units` fitment the Serials tab uses.
+  Moot until the user starts entering install dates.
 - **Faulty-and-removed reads REMOVED, not FAULT.** By the "removed wins" rule a dead box
   that came off (e.g. m036, "no power, completely dead") shows REMOVED with the fault in
   the comment. The user was offered the opposite precedence and has not asked for it.
