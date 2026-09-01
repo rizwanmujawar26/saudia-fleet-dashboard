@@ -13,6 +13,16 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.77.3 — Satcom: reworked filter bar
+The quick pills become **Active · Spare · Removed · To-Do** (the Taurus ✓ / Hughes ✓
+tick pills are gone). The two per-antenna commissioning dropdowns (**Taurus Comm.**,
+**Hughes Comm.**) collapse into a single **Commissioning** dropdown offering **To-Do**
+and **Done**, so the bar is now just **Status + Commissioning**. Commissioning is a
+derived axis: a box reads To-Do if **either** antenna is still To-Do (so the To-Do pill
+surfaces anything not fully commissioned), Done when neither is, and N/A boxes
+(spare/removed) match neither. Per-antenna Done filtering was dropped on the user's
+instruction. No data or rules change.
+
 ### v2.77.2 — Satcom: Removal Date moved beside Install Date
 The Removal Date column moves from the far end (beside Status) into the front of
 **MODMAN Details**, sitting between Install Date and Eclipse S/N so install → removal

@@ -6686,8 +6686,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.77.2';
-        const APP_BUILD    = '2026.09.01.03';
+        const APP_VERSION  = '2.77.3';
+        const APP_BUILD    = '2026.09.01.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-01T00:00:00Z';
 
@@ -8420,27 +8420,36 @@
             satcom: {
                 apply: () => applySatcomFilters(),
                 search: 'Search serial, ID or aircraft',
-                // The four worth one click: what is flying, what is in the store, and
-                // the two commissioning axes — Taurus done and Hughes done. Selecting
-                // both Done pills is "commissioned on both".
+                // The four worth one click: what is flying, what is in the store, what
+                // has come off, and what still needs commissioning. Each toggles a value
+                // in the same Set its dropdown drives, so pill and dropdown stay in step.
+                // (Was Active/Spare + the two per-antenna Done pills; the tick pills and
+                // per-antenna axes were dropped for one combined Commissioning axis on
+                // the user's instruction, 2026-09-01.)
                 quick: [
-                    { filter: 'satcomstatus', value: 'active', label: 'Active' },
-                    { filter: 'satcomstatus', value: 'spare',  label: 'Spare' },
-                    { filter: 'commtaurus',   value: 'done',   label: 'Taurus ✓' },
-                    { filter: 'commhughes',   value: 'done',   label: 'Hughes ✓' },
+                    { filter: 'satcomstatus', value: 'active',  label: 'Active' },
+                    { filter: 'satcomstatus', value: 'spare',   label: 'Spare' },
+                    { filter: 'satcomstatus', value: 'removed', label: 'Removed' },
+                    { filter: 'comm',         value: 'todo',    label: 'To-Do' },
                 ],
                 filters: [
                     // One definition — SATCOM_STATUSES drives the badges, the edit
                     // dropdown and this filter together.
                     { id: 'satcomstatus', label: 'Status',
                       options: () => SATCOM_STATUSES.map(x => ({ v: x.value, l: x.label })) },
-                    // Two commissioning axes, one per antenna. AND across the two, so
-                    // Taurus=Done + Hughes=Done narrows to boxes done on BOTH, while
-                    // either alone shows everything done on that one.
-                    { id: 'commtaurus', label: 'Taurus Comm.',
-                      options: () => [...SATCOM_COMM, SATCOM_COMM_NA].map(x => ({ v: x.value, l: x.label })) },
-                    { id: 'commhughes', label: 'Hughes Comm.',
-                      options: () => [...SATCOM_COMM, SATCOM_COMM_NA].map(x => ({ v: x.value, l: x.label })) },
+                    // Commissioning as ONE axis across both antennas (replaced the two
+                    // per-antenna filters, 2026-09-01). A box reads To-Do if EITHER
+                    // antenna is still To-Do, Done only when neither is — so the To-Do
+                    // pill surfaces anything not fully commissioned. N/A boxes
+                    // (spare/removed) fall through to 'na' and match neither option.
+                    { id: 'comm', label: 'Commissioning',
+                      rowValue: row => (row.dataset.commtaurus === 'todo' || row.dataset.commhughes === 'todo')
+                          ? 'todo'
+                          : ((row.dataset.commtaurus === 'done' || row.dataset.commhughes === 'done') ? 'done' : 'na'),
+                      options: [
+                        { v: 'todo', l: 'To-Do' },
+                        { v: 'done', l: 'Done' },
+                      ] },
                 ],
             },
 
