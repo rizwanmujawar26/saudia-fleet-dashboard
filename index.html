@@ -4727,12 +4727,13 @@
                                 <th>#</th>
                                 <th class="sortable-th sw-order-col" data-col="1" data-label="Middleware Install Date" onclick="sortAircraftTable(1)">Middleware Install Date<span class="th-order">Newest first</span></th>
                                 <th class="sortable-th" data-col="2" data-label="OTA PATCH#2" onclick="sortAircraftTable(2)">OTA PATCH#2</th>
-                                <th class="sortable-th" data-col="3" data-label="Aircraft" onclick="sortAircraftTable(3)">Aircraft</th>
-                                <th class="sortable-th" data-col="4" data-label="Type" onclick="sortAircraftTable(4)">Type</th>
-                                <th class="sortable-th" data-col="5" data-label="Status" onclick="sortAircraftTable(5)">Status</th>
-                                <th class="sortable-th" data-col="6" data-label="Middleware" onclick="sortAircraftTable(6)">Middleware</th>
-                                <th class="sortable-th" data-col="7" data-label="Install Location" onclick="sortAircraftTable(7)">Install Location</th>
-                                <th class="sortable-th col-comment" data-col="8" data-label="Comments" onclick="sortAircraftTable(8)">Comments</th>
+                                <th class="sortable-th" data-col="3" data-label="OTA PATCH#3" onclick="sortAircraftTable(3)">OTA PATCH#3</th>
+                                <th class="sortable-th" data-col="4" data-label="Aircraft" onclick="sortAircraftTable(4)">Aircraft</th>
+                                <th class="sortable-th" data-col="5" data-label="Type" onclick="sortAircraftTable(5)">Type</th>
+                                <th class="sortable-th" data-col="6" data-label="Status" onclick="sortAircraftTable(6)">Status</th>
+                                <th class="sortable-th" data-col="7" data-label="Middleware" onclick="sortAircraftTable(7)">Middleware</th>
+                                <th class="sortable-th" data-col="8" data-label="Install Location" onclick="sortAircraftTable(8)">Install Location</th>
+                                <th class="sortable-th col-comment" data-col="9" data-label="Comments" onclick="sortAircraftTable(9)">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="aircraftTableBody">
@@ -6129,7 +6130,7 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.83.0';
+        const APP_VERSION  = '2.84.0';
         const APP_BUILD    = '2026.09.02.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-01T16:00:00Z';
@@ -7186,7 +7187,7 @@
                 if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
                 value = v || null;
             }
-            if (field === 'otaPatchUTC') {
+            if (field === 'otaPatchUTC' || field === 'otaPatch3UTC') {
                 const v = readOtaField(el);
                 if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy hh:mm (UTC) — that is not a date and time', '#dc3545'); return; }
                 value = v || null;
@@ -8216,6 +8217,28 @@
                     otaCell = '<span class="fleet-notset">Not set</span>';
                 }
 
+                // OTA Patch #3: a second over-the-air patch, sitting directly after
+                // Patch #2. Identical shape to Patch #2 in every respect — a full ISO
+                // stamp field (otaPatch3UTC), the same fourteen-nine sentinel, the same
+                // sliced date/age/time stack — so the two columns read as one sequence
+                // and carry the same two traps the other date columns do not.
+                const ota3 = aircraft.otaPatch3UTC || '';
+                const ota3Sort = ota3 ? dateSortKey(ota3) : '99999999999999';
+                let ota3Cell;
+                if (editMode) {
+                    ota3Cell = `<input type="text" maxlength="16" placeholder="dd-mm-yyyy hh:mm" autocomplete="off" class="edit-date edit-ota" data-id="${aircraft.id}" data-field="otaPatch3UTC" value="${toOtaInput(ota3)}" onchange="handleAircraftEdit(this)" title="UTC. Empty clears the patch date.">`;
+                } else if (ota3) {
+                    const ota3Age = activationAge(ota3.slice(0, 10));
+                    ota3Cell = `<div class="ota-stack">`
+                        + `<span class="fleet-date">${escAttr(fmtDate(ota3.slice(0, 10)) || '')}</span>`
+                        + `<div class="ota-sub">`
+                        + (ota3Age ? `<span class="age-pill age-pill-tight" title="Time since OTA patch">${ota3Age}</span>` : '')
+                        + `<span class="ota-time">${escAttr(ota3.slice(11, 16))} UTC</span>`
+                        + `</div></div>`;
+                } else {
+                    ota3Cell = '<span class="fleet-notset">Not set</span>';
+                }
+
                 const loc = aircraft.completionLocation || '';
                 const locWarning = (swVersionOf(aircraft) === latestSwVersion() && !loc) ? `<div class="loc-warning">⚠ needed to count as done</div>` : '';
                 let locCell;
@@ -8233,6 +8256,7 @@
                     <td>${idx + 1}</td>
                     <td data-sort="${dateSort}">${dateCell}</td>
                     <td data-sort="${otaSort}">${otaCell}</td>
+                    <td data-sort="${ota3Sort}">${ota3Cell}</td>
                     <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong></td>
                     <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
                     <td data-sort="${statusSort}">${statusCell}</td>
