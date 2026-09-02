@@ -6129,7 +6129,7 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.82.0';
+        const APP_VERSION  = '2.83.0';
         const APP_BUILD    = '2026.09.02.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-01T16:00:00Z';
@@ -13562,7 +13562,11 @@
                     const misoMatch = String(l.loadedAt || '').match(/^(\d{4}-\d{2}-\d{2})/);
                     if (!misoMatch) return;
                     out.push({ iso: misoMatch[1], kind: 'media', tail: a.id, type: a.type,
-                               location: aircraftLocationOf(a),
+                               // Media loading is independent of location. A load is not done
+                               // "at" a place the way software completion or an ops period is,
+                               // and nothing about it is stored with a location — so it carries
+                               // no pill and must NOT inherit the install/base station fallback.
+                               location: '',
                                title: l.cycle ? `Media ${cycleToDisplay(l.cycle)}` : 'Media load',
                                sub: (l.source || '') + (loadIsLate(l) ? ' · late' : '') });
                 });
