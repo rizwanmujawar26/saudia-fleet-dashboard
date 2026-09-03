@@ -6197,8 +6197,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.93.0';
-        const APP_BUILD    = '2026.09.04.01';
+        const APP_VERSION  = '2.94.0';
+        const APP_BUILD    = '2026.09.04.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -7404,6 +7404,11 @@
             return bar.filters.every(f => {
                 const sel = fbSel(barId, f.id);
                 if (sel.size === 0) return true;
+                // A filter can own a bespoke test — the satcom Commissioning axis ORs
+                // per-module states across three different dataset fields, which the
+                // single-value model cannot express. Otherwise it is membership against
+                // rowValue (or the like-named dataset key).
+                if (f.rowMatch) return f.rowMatch(row, sel);
                 return sel.has(String(f.rowValue ? f.rowValue(row) : (row.dataset[f.id] || '')));
             });
         }
@@ -7479,6 +7484,29 @@
             const wasSole = sel.size === 1 && sel.has(value);
             sel.clear();
             if (!wasSole) sel.add(value);
+            fbExclusiveClear(barId, filterId);
+            fbApply(barId);
+            fbRender(barId);
+        }
+
+        // Some bars carry a whole-bar-exclusive quick pill (satcom's To-Do): picking a
+        // value on any OTHER axis clears it, so it can only ever be lit on its own (user,
+        // 2026-09-04). No-op for every bar without an `exclusive` axis.
+        function fbExclusiveClear(barId, filterId) {
+            const bar = FILTER_BARS[barId];
+            if (bar && bar.exclusive && filterId !== bar.exclusive) fbSel(barId, bar.exclusive).clear();
+        }
+
+        // The satcom To-Do pill: a whole-bar-exclusive shortcut. Clicking it clears every
+        // other filter and shows only the boxes needing attention (either antenna To-Do,
+        // or IPHO Disabled); clicking the lit pill clears it, back to All (user, 2026-09-04).
+        function satcomTodoPick(barId) {
+            const bar = FILTER_BARS[barId];
+            const wasOn = fbSel(barId, 'todo').has('yes');
+            // Clear the filter AXES but keep the free-text search — it narrows whatever is
+            // shown and is orthogonal to the pills (typing never clears To-Do either).
+            bar.filters.forEach(f => fbSel(barId, f.id).clear());
+            if (!wasOn) fbSel(barId, 'todo').add('yes');
             fbApply(barId);
             fbRender(barId);
         }
@@ -7773,6 +7801,8 @@
             } else {
                 sel.delete(value);
             }
+            // Choosing any dropdown value clears a whole-bar-exclusive pill (satcom To-Do).
+            fbExclusiveClear(barId, filterId);
             fbApply(barId);
             fbSyncOpen(barId, filterId);
         }
@@ -8033,48 +8063,57 @@
             satcom: {
                 apply: () => applySatcomFilters(),
                 search: 'Search serial, ID or aircraft',
-                // The four worth one click: what is flying, what is in the store, what
-                // has come off, and what still needs commissioning. Each toggles a value
-                // in the same Set its dropdown drives, so pill and dropdown stay in step.
-                // (Was Active/Spare + the two per-antenna Done pills; the tick pills and
-                // per-antenna axes were dropped for one combined Commissioning axis on
-                // the user's instruction, 2026-09-01.)
+                // To-Do is whole-bar exclusive: picking any other axis clears it, and
+                // picking it clears the whole bar (user, 2026-09-04).
+                exclusive: 'todo',
+                // Active/Spare/Removed toggle the Status axis; To-Do is a bespoke,
+                // whole-bar-exclusive shortcut to "everything needing attention" (see its
+                // hidden `todo` axis below). All four now behave as one radio group — the
+                // three share the Status axis, and To-Do clears (and is cleared by)
+                // everything, so exactly one can be lit at a time.
                 quick: [
                     { filter: 'satcomstatus', value: 'active',  label: 'Active' },
                     { filter: 'satcomstatus', value: 'spare',   label: 'Spare' },
                     { filter: 'satcomstatus', value: 'removed', label: 'Removed' },
-                    { filter: 'comm',         value: 'todo',    label: 'To-Do' },
+                    { filter: 'todo', value: 'yes', label: 'To-Do',
+                      isOn: b => fbSel(b, 'todo').has('yes'),
+                      onclick: `satcomTodoPick('satcom')` },
                 ],
                 filters: [
                     // One definition — SATCOM_STATUSES drives the badges, the edit
                     // dropdown and this filter together.
                     { id: 'satcomstatus', label: 'Status',
                       options: () => SATCOM_STATUSES.map(x => ({ v: x.value, l: x.label })) },
-                    // Commissioning as ONE axis across both antennas (replaced the two
-                    // per-antenna filters, 2026-09-01). A box reads To-Do if EITHER
-                    // antenna is still To-Do OR the aircraft has IPHO Disabled (user,
-                    // 2026-09-01 — To-Do now surfaces anything not fully commissioned AND
-                    // anything with IPHO still off); Done only when neither holds. The
-                    // broadened rule drives BOTH the To-Do quick pill and this dropdown's
-                    // To-Do option, since both read this one rowValue. N/A boxes
-                    // (spare/removed, IPHO N/A) fall through to 'na' and match neither.
+                    // One Commissioning dropdown now carries every per-module state (user,
+                    // 2026-09-04, replacing the combined To-Do/Done axis AND the separate
+                    // IPHO dropdown): Taurus / Hughes each To-Do·Done, and IPHO
+                    // Enabled·Disabled. A bespoke rowMatch ORs the ticked states across the
+                    // three dataset fields (commtaurus/commhughes = todo·done·na,
+                    // ipho = enabled·disabled·na); an N/A antenna or IPHO simply matches no
+                    // option, so ticking any value drops the off-wing boxes.
                     { id: 'comm', label: 'Commissioning',
-                      rowValue: row => (row.dataset.commtaurus === 'todo' || row.dataset.commhughes === 'todo' || row.dataset.ipho === 'disabled')
-                          ? 'todo'
-                          : ((row.dataset.commtaurus === 'done' || row.dataset.commhughes === 'done') ? 'done' : 'na'),
+                      rowMatch: (row, sel) => {
+                          const t = row.dataset.commtaurus, h = row.dataset.commhughes, i = row.dataset.ipho;
+                          return (sel.has('taurus:todo')   && t === 'todo')
+                              || (sel.has('taurus:done')   && t === 'done')
+                              || (sel.has('hughes:todo')   && h === 'todo')
+                              || (sel.has('hughes:done')   && h === 'done')
+                              || (sel.has('ipho:enabled')  && i === 'enabled')
+                              || (sel.has('ipho:disabled') && i === 'disabled');
+                      },
                       options: [
-                        { v: 'todo', l: 'To-Do' },
-                        { v: 'done', l: 'Done' },
+                        { v: 'taurus:todo',   l: 'Taurus To-Do' },
+                        { v: 'taurus:done',   l: 'Taurus Done' },
+                        { v: 'hughes:todo',   l: 'Hughes To-Do' },
+                        { v: 'hughes:done',   l: 'Hughes Done' },
+                        { v: 'ipho:enabled',  l: 'IPHO Enabled' },
+                        { v: 'ipho:disabled', l: 'IPHO Disabled' },
                       ] },
-                    // IPHO Mode, the aircraft's iphoStatus surfaced per box. Only active
-                    // retrofit boxes carry enabled/disabled; N/A rows read 'na' and match
-                    // neither option, so filtering either value drops them.
-                    { id: 'ipho', label: 'IPHO',
-                      rowValue: row => row.dataset.ipho,
-                      options: [
-                        { v: 'enabled',  l: 'Enabled' },
-                        { v: 'disabled', l: 'Disabled' },
-                      ] },
+                    // Drives the To-Do quick pill ONLY — hidden, so it renders no dropdown
+                    // and stays out of the collapsed sheet (the media `age` axis pattern).
+                    // "Needs attention" = either antenna still To-Do, or IPHO Disabled.
+                    { id: 'todo', label: 'To-Do', hidden: true,
+                      rowValue: row => (row.dataset.commtaurus === 'todo' || row.dataset.commhughes === 'todo' || row.dataset.ipho === 'disabled') ? 'yes' : 'no' },
                 ],
             },
 
