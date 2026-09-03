@@ -13,6 +13,26 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.92.0 — Fleet: All pill, search, Aircraft Age column, header sort note
+At the user's instruction (2026-09-03). Five things on the Fleet page:
+
+- **`/fleetSpecs` is now loaded** — added to the initial fetch and the low-traffic poll
+  (`fleetSpecsLive`), so the airframe reference data imported earlier is finally read by
+  the page. A change re-renders the Fleet table.
+- **Aircraft Age column** (new col 2): delivery month as **MMM-YY** with an age pill in
+  the same shape as Activation Date (`deliveryShort`/`deliveryAge`, parsed from the
+  `"May 2012"` month-year — day 1 stands in). `'—'` when the spec has no delivery date.
+- **Search box** on the Fleet filter bar, matching tail, either type form, comments and
+  location (rows now carry `data-search`).
+- **"All" quick pill** (off by default): clears the Fit filter to show every aircraft in
+  the database and re-sorts by **Aircraft Age, newest first**; toggling off restores the
+  programme fits and the Activation-Date sort. `fbRenderQuick` gained an optional custom
+  `onclick`/`isOn` so a pill can carry a bespoke action, not just toggle a Set value.
+- **Header sort note** — the Software tab's `.th-order` "Newest first" caption, now on
+  the Fleet table too: it sits under whichever column holds the code default sort
+  (Activation Date, or Aircraft Age in All mode) and hides the moment the user sorts
+  elsewhere. Header clicks route through `sortFleetTable` so the note re-syncs.
+
 ### v2.91.0 — Fleet default sort: newest activation first
 At the user's instruction (2026-09-03). The Fleet table now opens **newest-activation
 first** (`FLEET_DEFAULT_SORT` dir `1`→`-1` on the Activation Date column). The undated

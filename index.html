@@ -5094,15 +5094,16 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th class="sortable-th" data-col="1" data-label="Activation Date" onclick="sortTable('fleetTable', 1)">Activation Date</th>
-                                <th class="sortable-th" data-col="2" data-label="Aircraft" onclick="sortTable('fleetTable', 2)">Aircraft</th>
-                                <th class="sortable-th" data-col="3" data-label="Type" onclick="sortTable('fleetTable', 3)">Type</th>
-                                <th class="sortable-th" data-col="4" data-label="Fit" onclick="sortTable('fleetTable', 4)">Fit</th>
-                                <th class="sortable-th" data-col="5" data-label="Install Site" onclick="sortTable('fleetTable', 5)">Install Site</th>
-                                <th class="sortable-th" data-col="6" data-label="Status" onclick="sortTable('fleetTable', 6)">Status</th>
-                                <th class="sortable-th" data-col="7" data-label="Operational State" onclick="sortTable('fleetTable', 7)">Operational State</th>
-                                <th class="sortable-th" data-col="8" data-label="SaudiaWiFi" onclick="sortTable('fleetTable', 8)">SaudiaWiFi</th>
-                                <th class="sortable-th col-comment" data-col="9" data-label="Comments" onclick="sortTable('fleetTable', 9)">Comments</th>
+                                <th class="sortable-th" data-col="1" data-label="Activation Date" onclick="sortFleetTable(1)">Activation Date</th>
+                                <th class="sortable-th" data-col="2" data-label="Aircraft Age" onclick="sortFleetTable(2)">Aircraft Age</th>
+                                <th class="sortable-th" data-col="3" data-label="Aircraft" onclick="sortFleetTable(3)">Aircraft</th>
+                                <th class="sortable-th" data-col="4" data-label="Type" onclick="sortFleetTable(4)">Type</th>
+                                <th class="sortable-th" data-col="5" data-label="Fit" onclick="sortFleetTable(5)">Fit</th>
+                                <th class="sortable-th" data-col="6" data-label="Install Site" onclick="sortFleetTable(6)">Install Site</th>
+                                <th class="sortable-th" data-col="7" data-label="Status" onclick="sortFleetTable(7)">Status</th>
+                                <th class="sortable-th" data-col="8" data-label="Operational State" onclick="sortFleetTable(8)">Operational State</th>
+                                <th class="sortable-th" data-col="9" data-label="SaudiaWiFi" onclick="sortFleetTable(9)">SaudiaWiFi</th>
+                                <th class="sortable-th col-comment" data-col="10" data-label="Comments" onclick="sortFleetTable(10)">Comments</th>
                                 <th id="fleetActionsHead" style="display:none;">Actions</th>
                             </tr>
                         </thead>
@@ -6082,6 +6083,10 @@
         // Polled rather than streamed: a browser allows about six connections per
         // origin and the page already holds three streams. See the connection budget.
         let mediaLoadsLive = {};
+        // /fleetSpecs/{tail} — airframe reference data (delivery date, engine, seating,
+        // MSN…). Low-traffic; polled with the other reference nodes, not streamed. Read
+        // by the Fleet page's Aircraft Age column and its age sort.
+        let fleetSpecsLive = {};
 
         function unitEntries() {
             return Object.entries(unitsLive).map(([id, u]) => ({ id, ...u }));
@@ -6192,8 +6197,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.91.0';
-        const APP_BUILD    = '2026.09.03.08';
+        const APP_VERSION  = '2.92.0';
+        const APP_BUILD    = '2026.09.03.09';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -6409,14 +6414,15 @@
             // to LOW_TRAFFIC_POLL_MS late, and since the Media widgets are built from
             // it, every monthly card was missing for the first 25 seconds of each page
             // load — the strip looked broken.
-            Promise.all(['hardware', 'units', 'activities', 'mediaLoads', 'modmans'].map(n =>
+            Promise.all(['hardware', 'units', 'activities', 'mediaLoads', 'modmans', 'fleetSpecs'].map(n =>
                 fetch(`${FIREBASE_DB_URL}/${n}.json`).then(r => r.json()).catch(() => null)
-            )).then(([hw, un, ac, ml, mm]) => {
+            )).then(([hw, un, ac, ml, mm, fs]) => {
                 hardwareLive   = hw || {};
                 unitsLive      = un || {};
                 activitiesLive = ac || {};
                 mediaLoadsLive = ml || {};
                 modmansLive    = mm || {};
+                fleetSpecsLive = fs || {};
                 markDataSync();
                 rebuildAircraftData();     // current media is derived from the log
                 renderHardwarePage();      // fitment is derived from units
@@ -6424,6 +6430,7 @@
                 renderSerialsPage();
                 populateMediaTable();      // widgets and rows both read the log
                 renderSatcomPage();        // the MODMAN register reads /modmans
+                if (!fleetEditMode) populateFleetTable();  // Aircraft Age column reads /fleetSpecs
                 updateMetrics();           // the Timeline reads activities and loads
                 startLowTrafficPoll();
             });
@@ -6463,6 +6470,7 @@
                 activities: d => { activitiesLive = d || {}; },
                 mediaLoads: d => { mediaLoadsLive = d || {}; },
                 modmans:    d => { modmansLive = d || {}; },
+                fleetSpecs: d => { fleetSpecsLive = d || {}; },
             };
             let changed = false;
 
@@ -6484,6 +6492,7 @@
                 renderMaintenancePage();
                 renderSerialsPage();
                 if (!satcomEditMode) renderSatcomPage();  // MODMAN register reads /modmans
+                if (!fleetEditMode) populateFleetTable();  // Aircraft Age reads /fleetSpecs
                 updateMetrics();          // the Timeline reads activities
             }
         }
@@ -6497,6 +6506,7 @@
                 activities: JSON.stringify(Object.keys(activitiesLive).length ? activitiesLive : null),
                 mediaLoads: JSON.stringify(Object.keys(mediaLoadsLive).length ? mediaLoadsLive : null),
                 modmans:    JSON.stringify(Object.keys(modmansLive).length ? modmansLive : null),
+                fleetSpecs: JSON.stringify(Object.keys(fleetSpecsLive).length ? fleetSpecsLive : null),
             };
             setInterval(pollLowTrafficNodes, LOW_TRAFFIC_POLL_MS);
         }
@@ -7446,9 +7456,14 @@
             const bar = FILTER_BARS[barId];
             if (!bar || !bar.quick || !bar.quick.length) return '';
             return `<span class="fb-quick">` + bar.quick.map(q => {
-                const on = fbSel(barId, q.filter).has(q.value);
+                // A pill normally toggles a value in a filter's Set. A pill may instead
+                // carry its own `onclick` (a JS expression) and `isOn` (a predicate) for
+                // a bespoke action — the Fleet "All" pill clears the fit filter AND
+                // switches the sort, which the value-toggle model cannot express.
+                const on = q.isOn ? q.isOn(barId) : fbSel(barId, q.filter).has(q.value);
+                const handler = q.onclick || `fbQuickToggle('${escAttr(barId)}','${escAttr(q.filter)}','${escAttr(q.value)}')`;
                 return `<button type="button" class="qf-btn fb-quick-btn ${on ? 'active' : ''}"
-                    onclick="fbQuickToggle('${escAttr(barId)}','${escAttr(q.filter)}','${escAttr(q.value)}')"
+                    onclick="${handler}"
                     aria-pressed="${on}">${escAttr(q.label)}</button>`;
             }).join('') + `</span>`;
         }
@@ -7937,6 +7952,13 @@
 
             fleet: {
                 apply: () => applyFleetFilters(),
+                search: 'Search tail, type or comment',
+                // One pill: "All". Off by default (the page opens on the WiFi programme);
+                // clicking it clears the Fit filter to reveal every aircraft in the
+                // database and re-sorts by Aircraft Age, newest first. See fleetToggleAll.
+                quick: [
+                    { label: 'All', onclick: 'fleetToggleAll()', isOn: () => fleetIsAllMode() },
+                ],
                 filters: [
                     // fleetRoster, not projectScope() — that returns the COUNT, and this
                     // page lists the whole roster rather than an operational subset.
@@ -8620,6 +8642,64 @@
         // sort to the BOTTOM under this descending default rather than crowding the top.
         const FLEET_DEFAULT_STATUS = '';
         const FLEET_DEFAULT_SORT = { col: 1, dir: -1 };
+        // The Aircraft Age column index (delivery date). When "All" is on the page sorts
+        // by this instead of Activation Date — newest aircraft first.
+        const FLEET_AGE_COL = 2;
+
+        // "All" is on when the Fit filter selects nothing (every fit shown). The quick
+        // All pill drives this and the sort together; deriving it from the filter keeps
+        // the pill's lit state honest even if the fit dropdown is what changed.
+        function fleetIsAllMode() { return fbSel('fleet', 'fitview').size === 0; }
+        // What the table sorts by with no manual override: Aircraft Age newest-first in
+        // All mode, Activation Date newest-first otherwise. Both descending; the note in
+        // the header reads "Newest first" for whichever column is the default.
+        function fleetDefaultSort() {
+            return fleetIsAllMode() ? { col: FLEET_AGE_COL, dir: -1 } : { col: 1, dir: -1 };
+        }
+
+        // The "Newest first" tiny caption under whichever header holds the current CODE
+        // default sort — Activation Date, or Aircraft Age in All mode. It hides the
+        // moment the user sorts to anything else, so the note only ever describes the
+        // default (the same philosophy as the Software tab's install-date note).
+        // ⚠️ RE-CREATED, not toggled: updateSortIndicators() sets th.textContent and
+        // wipes any child, so this must run AFTER it. ⚠️ Class, never id — the
+        // frozen-head clone copies className, not id.
+        function syncFleetOrderNote() {
+            document.querySelectorAll('#fleetTable thead .th-order').forEach(n => n.remove());
+            const def = fleetDefaultSort();
+            const cur = lastSort['fleetTable'];
+            if (!cur || cur.col !== def.col || cur.dir !== def.dir) return;  // only the default
+            const th = document.querySelector(`#fleetTable thead th[data-col="${def.col}"]`);
+            if (!th) return;
+            const note = document.createElement('span');
+            note.className = 'th-order';
+            note.textContent = 'Newest first';
+            th.appendChild(note);
+            scheduleFrozenHeads();   // carry the note onto the floating head copy
+        }
+
+        // The quick "All" pill: show every aircraft in the database and sort by Aircraft
+        // Age, newest first. Toggling off restores the WiFi-programme default — the fit
+        // filter and the Activation-Date sort. The fit filter is the source of truth for
+        // the pill's lit state (fleetIsAllMode), so the two never disagree.
+        function fleetToggleAll() {
+            if (fleetIsAllMode()) {
+                applyFleetFitDefault();                        // back to the programme fits
+                lastSort['fleetTable'] = { col: 1, dir: -1 };  // Activation Date, newest first
+            } else {
+                fbSel('fleet', 'fitview').clear();             // every fit — the whole roster
+                lastSort['fleetTable'] = { col: FLEET_AGE_COL, dir: -1 }; // Aircraft Age, newest first
+            }
+            fbRender('fleet');
+            populateFleetTable();
+        }
+
+        // Header clicks route through here so the order note re-syncs: it reappears when
+        // the user lands back on the default and hides on any other column or direction.
+        function sortFleetTable(col) {
+            sortTable('fleetTable', col);
+            syncFleetOrderNote();
+        }
 
         function fleetRowOf(id) {
             return fleetRoster.find(a => a.id === id) || {};
@@ -8632,6 +8712,40 @@
         // sensible to say in either case, and a pill reading "-3d" would be noise.
         function activationAge(displayDate) {
             return dateSpan(displayDate, '');
+        }
+
+        // ── Delivery date (from /fleetSpecs) ────────────────────────────────────────
+        // Stored as a month-year, "May 2012" — no day, because that is all the source
+        // gives. It is NOT a fmtDate date (which is day-first DD-Mon-YYYY); it is
+        // reference metadata, parsed only here. Day 1 stands in for the age maths.
+        function parseDeliveryDate(s) {
+            const m = String(s || '').trim().match(/^([A-Za-z]{3,})\s+(\d{4})$/);
+            if (!m) return null;
+            const mon = m[1].slice(0, 3);
+            const mon3 = mon.charAt(0).toUpperCase() + mon.slice(1).toLowerCase();
+            const idx = MONTH_NAMES.indexOf(mon3);
+            if (idx < 0) return null;
+            return { mon: mon3, year: m[2], monthNum: idx + 1, iso: `${m[2]}-${String(idx + 1).padStart(2, '0')}-01` };
+        }
+        // "May 2012" -> "May-12" for the Aircraft Age column.
+        function deliveryShort(s) {
+            const p = parseDeliveryDate(s);
+            return p ? `${p.mon}-${p.year.slice(2)}` : '';
+        }
+        // Age since delivery in the same "13y 114d" shape the activation pill uses.
+        function deliveryAge(s) {
+            const p = parseDeliveryDate(s);
+            return p ? dateSpan(`01-${p.mon}-${p.year}`, '') : '';
+        }
+        // The numeric sort key for the Aircraft Age column, newest-largest like a real
+        // date. '00000000' for no delivery date so those sort to the bottom under the
+        // newest-first (descending) default, matching the Activation column.
+        function deliverySortKey(s) {
+            const p = parseDeliveryDate(s);
+            return p ? dateSortKey(p.iso) : '00000000';
+        }
+        function deliveryDateOf(id) {
+            return (fleetSpecsLive[id] || {}).deliveryDate || '';
         }
 
         // The same calendar-aware count, but between any two dates. `to` blank means
@@ -8867,9 +8981,23 @@
                     ? `<td><button class="sched-del-btn" title="Remove from fleet" onclick="removeAircraft('${a.id}')">🗑</button></td>`
                     : '';
 
+                // Aircraft Age — delivery month from /fleetSpecs, shown MMM-YY with an age
+                // pill in the same shape as the Activation column. Never editable here (it
+                // is reference data), '—' when the spec has no delivery date.
+                const delivery = deliveryDateOf(a.id);
+                const delivShort = deliveryShort(delivery);
+                const delivAge = deliveryAge(delivery);
+                const ageCell = delivShort
+                    ? `<span class="fleet-date">${escAttr(delivShort)}</span>${delivAge ? `<span class="age-pill" title="Age since delivery (${escAttr(delivery)})">${escAttr(delivAge)}</span>` : ''}`
+                    : '<span class="fleet-notset">—</span>';
+
+                // Free-text search haystack: tail, both type forms, comments, location.
+                row.dataset.search = [a.id, a.type, TYPE_SHORT_LABEL[a.type] || '', comments, loc, delivShort].join(' ').toLowerCase();
+
                 row.innerHTML = `
                     <td>${idx + 1}</td>
                     <td data-sort="${dateSortKey(toISODate(activated)) || '00000000'}">${activatedCell}</td>
+                    <td data-sort="${deliverySortKey(delivery)}">${ageCell}</td>
                     <td data-sort="${a.id}"><strong>${a.id}</strong></td>
                     <td data-sort="${escAttr(a.type)}">${typeCell}</td>
                     <td data-sort="${st === 'In Retrofit' ? 'in retrofit' : (fit || 'zzzz')}">${fitCell}</td>
@@ -8887,13 +9015,15 @@
             fbRender('fleet');
             syncTableFreeze();
             applyFleetFilters();
-            // Newest activation first until someone picks another column, and re-applied
-            // on every rebuild — this runs again on every live update, which would
-            // otherwise hand the rows back in roster order under an unchanged arrow.
-            const fs = lastSort['fleetTable'] || FLEET_DEFAULT_SORT;
+            // Default order — Aircraft Age or Activation Date, newest first depending on
+            // the All mode — until someone picks a column. Re-applied on every rebuild
+            // (this runs on every live update), which would otherwise hand the rows back
+            // in roster order under an unchanged arrow.
+            const fs = lastSort['fleetTable'] || fleetDefaultSort();
             lastSort['fleetTable'] = fs;
             applyTableSort('fleetTable', fs.col, fs.dir);
             updateSortIndicators('fleetTable');
+            syncFleetOrderNote();   // the "Newest first" note — must follow updateSortIndicators
             updateFleetEditUI();
         }
 
