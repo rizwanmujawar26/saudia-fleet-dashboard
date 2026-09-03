@@ -1271,6 +1271,10 @@
         }
         .tl-arrow { font-size: 12px; line-height: 1; }
 
+        /* Reset sits at the far right of the row, past the sort group; it must not
+           shrink. The label→circle collapse below 700px is the shared .reset-btn rule. */
+        .tl-reset { flex: 0 0 auto; }
+
         /* One label per step. Only .tl-lab-lg shows by default; each query
            below swaps which single span is visible. */
         .tl-lab-md, .tl-lab-sm { display: none; }
@@ -3762,6 +3766,30 @@
             border-left-color: #ccc;
         }
 
+        /* ── Icon action button — the project-wide pattern ──────────────────
+           A labelled icon that sheds its text to a tidy icon-only circle as the
+           bar runs out of room, the same principle the Timeline sort uses
+           ("Newest First" → "Newest" → a bare arrow). ONE global rule: below
+           700px — the width every filter bar collapses its filters at — a Reset
+           button drops its label and becomes a circle, so a phone shows a clean
+           ↺ instead of "↺ Reset". Reuse it on any future icon action by giving a
+           button `class="qf-btn icon-btn reset-btn"` (or another trigger class)
+           wrapping an `.ib-icon` and an `.ib-label` span. */
+        .icon-btn { display: inline-flex; align-items: center; gap: 5px; }
+        .icon-btn .ib-icon { font-size: 13px; line-height: 1; flex: 0 0 auto; }
+
+        @media (max-width: 700px) {
+            .reset-btn {
+                width: 32px;
+                height: 32px;
+                padding: 0;
+                gap: 0;
+                border-radius: 50%;
+                justify-content: center;
+            }
+            .reset-btn .ib-label { display: none; }
+        }
+
         /* Room for the one-click values as well as the menus. Measured, not picked
            off a device size: with four pills (264px), three dropdowns (267px) and
            three action buttons (268px) plus gaps and padding the row needs 855px,
@@ -4653,6 +4681,11 @@
                                     <span class="tl-arrow">↓</span><span class="tl-lab tl-lab-lg">Newest First</span><span class="tl-lab tl-lab-md">Newest</span><span class="tl-lab tl-lab-sm">New</span>
                                 </button>
                             </div>
+                            <!-- Reset — the shared icon-btn/reset-btn pattern: "↺ Reset" where
+                                 there is room, a bare ↺ circle below 700px. Clears the kind, the
+                                 search and the sort, which drops the focused view and brings the
+                                 widgets and pinned banner back. -->
+                            <button id="timelineResetBtn" class="qf-btn icon-btn reset-btn tl-reset" onclick="resetTimeline()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                         </div>
                         <div class="cal-strip" id="timelineCalendarStrip"></div>
                         <!-- What is out of service right now. Sits above the day list and
@@ -4685,7 +4718,7 @@
                     <div class="fb-filters" data-bar="aircraft"></div>
                     <div class="fb-actions">
                         <button id="editModeBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleEditMode()">🔒 Edit</button>
-                        <button id="aircraftResetBtn" class="qf-btn" onclick="resetAircraftTable()">↺ Reset</button>
+                        <button id="aircraftResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetAircraftTable()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
@@ -4730,7 +4763,7 @@
                     <div class="fb-filters" data-bar="media"></div>
                     <div class="fb-actions">
                         <button id="mediaEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleMediaEdit()">🔒 Edit</button>
-                        <button id="mediaResetBtn" class="qf-btn" onclick="resetMediaTable()">↺ Reset</button>
+                        <button id="mediaResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetMediaTable()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
@@ -4773,7 +4806,7 @@
                     <div class="fb-actions">
                         <button id="maintAddActivityBtn" class="qf-btn" style="display:none;" onclick="openAddActivity()">➕ Add New Activity</button>
                         <button id="maintEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleMaintEdit()">🔒 Edit</button>
-                        <button id="maintResetBtn" class="qf-btn" onclick="resetMaintenancePage()">↺ Reset</button>
+                        <button id="maintResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetMaintenancePage()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
@@ -4883,7 +4916,7 @@
                     <div class="fb-actions">
                         <button id="simAddBtn" class="qf-btn" style="display:none;" onclick="openAddSim()">➕ Add SIM</button>
                         <button id="simEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleSimEdit()">🔒 Edit</button>
-                        <button id="simResetBtn" class="qf-btn" onclick="resetSimTable()">↺ Reset</button>
+                        <button id="simResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetSimTable()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
@@ -4930,7 +4963,7 @@
                     <div class="fb-actions">
                         <button id="satcomAddBtn" class="qf-btn" style="display:none;" onclick="openAddModman()">➕ Add MODMAN</button>
                         <button id="satcomEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleSatcomEdit()">🔒 Edit</button>
-                        <button id="satcomResetBtn" class="qf-btn" onclick="resetSatcomTable()">↺ Reset</button>
+                        <button id="satcomResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetSatcomTable()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
@@ -4993,7 +5026,7 @@
                     <div class="fb-actions">
                         <button id="fleetAddBtn" class="qf-btn" style="display:none;" onclick="openAddAircraft()">➕ Add Aircraft</button>
                         <button id="fleetEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleFleetEdit()">🔒 Edit</button>
-                        <button id="fleetResetBtn" class="qf-btn" onclick="resetFleetTable()">↺ Reset</button>
+                        <button id="fleetResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetFleetTable()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
@@ -6099,10 +6132,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.86.0';
-        const APP_BUILD    = '2026.09.03.03';
+        const APP_VERSION  = '2.87.0';
+        const APP_BUILD    = '2026.09.03.04';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-09-03T13:13:00Z';
+        const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -7229,6 +7262,12 @@
             } else if (tabName === 'serials') {
                 renderSerialsPage();
             }
+
+            // The global widgets sit above every tab, so a timeline filter left set must
+            // only blank them WHILE the Overview is on screen. Re-sync on every switch:
+            // leaving the Overview restores them, returning with a filter still set hides
+            // them again. (No scroll — that belongs only to an active filter/search.)
+            syncTimelineFocus();
         }
 
         let editMode = false;
@@ -7952,14 +7991,19 @@
             // name like MODMAN/KRFU, a location, an AOG reason). Everything here drives
             // renderTimeline(), which re-filters the model and the calendar counts with it.
             timeline: {
-                apply: () => renderTimeline(),
+                // applyTimelineFilters, not renderTimeline directly: it re-filters AND,
+                // when a filter/search first takes hold, drops into the focused view
+                // (widgets and pinned hidden, page scrolled to the Timeline). A background
+                // renderTimeline still just re-renders without grabbing the scroll.
+                apply: () => applyTimelineFilters(),
                 search: 'Search aircraft or keyword',
-                // The three recurring work streams, one click each. Activation (a one-time
-                // milestone) and Hardware stay in the Show dropdown — nothing is unreachable.
+                // The three loading streams, one click each (user, 2026-09-03: Software,
+                // Hardware, Media). Activation, Maintenance and Operational stay in the Show
+                // dropdown — nothing is unreachable.
                 quick: [
-                    { filter: 'kind', value: 'software',    label: 'Software' },
-                    { filter: 'kind', value: 'media',       label: 'Media' },
-                    { filter: 'kind', value: 'operational', label: 'Operational' },
+                    { filter: 'kind', value: 'software', label: 'Software' },
+                    { filter: 'kind', value: 'hardware', label: 'Hardware' },
+                    { filter: 'kind', value: 'media',    label: 'Media' },
                 ],
                 filters: [
                     { id: 'kind', label: 'Show', single: true,
@@ -13488,8 +13532,11 @@
         // no Timeline collection — nothing here is entered twice.
         let timelineSortDir = 'desc';   // 'desc' = newest first (default), 'asc' = oldest first
 
-        // No Maintenance pill for now — maintenance-kind activities still appear under
-        // All, they just have no filter of their own until the categories settle.
+        // The kind set: quick pills for the three loading streams (Software, Hardware,
+        // Media — see the `timeline` bar), the rest reachable in the Show dropdown.
+        // Maintenance is its own filter (2026-09-03, user): modem commissioning,
+        // troubleshooting, inspections and the like all carry kind 'maintenance', and it
+        // now has a dropdown option instead of only appearing under All.
         const TIMELINE_KINDS = [
             { value: '',           label: 'All' },
             // First after All: it is the milestone the others are work towards.
@@ -13497,6 +13544,7 @@
             { value: 'software', label: 'Software' },
             { value: 'hardware', label: 'Hardware' },
             { value: 'media',    label: 'Media' },
+            { value: 'maintenance', label: 'Maintenance' },
             // Out-of-service periods. Last because it is the exception, not the work.
             { value: 'operational', label: 'Operational' },
         ];
@@ -13538,6 +13586,66 @@
             if (!q) return true;
             const hay = timelineHaystack(x);
             return q.split(/\s+/).every(w => hay.includes(w));
+        }
+
+        // ── Focused view ────────────────────────────────────────────────────
+        // The moment a kind or a search is in force on the Overview, the page strips
+        // itself back to just the thing being looked for: the global KPI widgets and the
+        // Pinned "out of service" banner drop away, leaving the filtered Timeline (user,
+        // 2026-09-03 — reduce clutter, show exactly what was asked for). Reset, or clearing
+        // the search, brings them straight back.
+        let timelineFocused = false;   // last-applied state, so the scroll fires once on entry
+
+        // A filter/search only counts as focused when the Overview is actually the tab on
+        // screen — the widgets sit above every tab, so a timeline filter left set while the
+        // user is on Software must NOT blank the widgets there.
+        function timelineIsFocused() {
+            const overview = document.getElementById('overview');
+            const overviewActive = overview && overview.classList.contains('active');
+            const q = (fbQuery['timeline'] || '').trim();
+            return !!overviewActive && !!(timelineKind() || q);
+        }
+
+        // Toggle the widgets and the pinned banner to match the focus state. Idempotent and
+        // scroll-free, so it is safe to call from every renderTimeline and from switchTab —
+        // the pinned banner reads the row count renderTimeline stamps on it, so this can run
+        // without rebuilding the list.
+        function syncTimelineFocus() {
+            const focused = timelineIsFocused();
+            const widgets = document.querySelector('.global-widgets');
+            if (widgets) widgets.style.display = focused ? 'none' : '';
+            const pinnedEl = document.getElementById('timelinePinned');
+            if (pinnedEl) {
+                const hasPinned = pinnedEl.dataset.count && pinnedEl.dataset.count !== '0';
+                pinnedEl.style.display = (focused || !hasPinned) ? 'none' : '';
+            }
+            timelineFocused = focused;
+            return focused;
+        }
+
+        // The bar's apply path (a pill, the dropdown, a keystroke, Reset). Re-filters, then
+        // grabs the scroll ONCE — only on the transition from the default view into the
+        // focused one, so typing a second character does not keep yanking the page. A plain
+        // renderTimeline (a background data update) never runs this, so it never scrolls.
+        function applyTimelineFilters() {
+            const was = timelineFocused;
+            renderTimeline();                 // -> syncTimelineFocus() updates timelineFocused
+            if (timelineFocused && !was) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        // Reset the Timeline to its default view: clear the kind, the search and the sort,
+        // which drops the focused view (widgets + pinned return via syncTimelineFocus).
+        function resetTimeline() {
+            fbClear('timeline');
+            fbRender('timeline');
+            timelineSortDir = 'desc';
+            const oldestBtn = document.getElementById('sortOldestBtn');
+            const latestBtn = document.getElementById('sortLatestBtn');
+            if (oldestBtn) oldestBtn.classList.remove('active');
+            if (latestBtn) latestBtn.classList.add('active');
+            renderTimeline();
         }
 
         // Where an activity happened, best available. Software carries its own
@@ -13870,11 +13978,13 @@
                     .sort((x, y) => (dateSortKey(toISODate(x.o.since)) || '99999999')
                                     .localeCompare(dateSortKey(toISODate(y.o.since)) || '99999999'));
 
+                // The row count is stamped here and the actual show/hide is left to
+                // syncTimelineFocus, so the focused view can drop the banner without this
+                // block having to know about the filter state.
+                pinnedEl.dataset.count = String(outNow.length);
                 if (!outNow.length) {
-                    pinnedEl.style.display = 'none';
                     pinnedEl.innerHTML = '';
                 } else {
-                    pinnedEl.style.display = '';
                     pinnedEl.innerHTML = `
                         <div class="tl-pinned-head">
                             <span class="tl-pinned-title">📌 Pinned — Out of Service</span>
@@ -13940,6 +14050,11 @@
                     moreWrap.innerHTML = '';
                 }
             }
+
+            // Widgets + pinned banner follow the focus state. Done last, after the pinned
+            // count is stamped above, so a background re-render keeps them correct without
+            // ever grabbing the scroll (only applyTimelineFilters does that).
+            syncTimelineFocus();
         }
 
         // Project scope: 40 Middleware 2.1.0 aircraft + 2 HBC+ SBC Config aircraft = 42 total
