@@ -5700,10 +5700,11 @@
             { id: 'ASAC', type: 'A321-251NX', station: 'RUH' },
             { id: 'ASAB', type: 'A321-251NX', station: 'RUH' },
 
-            // A321 253NY XLR (2 aircraft) - EXCLUDED (HBC+)
+            // A321XLR linefit (2 aircraft) - EXCLUDED (HBC+). Stored type is the simple
+            // 'A321XLR' (Airbus variant A321-253NY, kept in /fleetSpecs); all HZ-ASB_ tails.
             // ⚠️ No space in a type string — see TYPE_SHORT_LABEL.
-            { id: 'ASBA', type: 'A321-253NYXLR', station: 'N/A' },
-            { id: 'ASBB', type: 'A321-253NYXLR', station: 'N/A' },
+            { id: 'ASBA', type: 'A321XLR', station: 'N/A' },
+            { id: 'ASBB', type: 'A321XLR', station: 'N/A' },
 
             // A330 343 (4 aircraft)
             { id: 'AQJ', type: 'A330-343', station: 'JED' },
@@ -6191,8 +6192,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.89.0';
-        const APP_BUILD    = '2026.09.03.06';
+        const APP_VERSION  = '2.90.0';
+        const APP_BUILD    = '2026.09.03.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -13515,7 +13516,7 @@
             'A321-211':       { bg: '#eaf2ec', fg: '#3f6b4f', bd: '#d2e4d8' },
             'A321-251NX':     { bg: '#efedf5', fg: '#55507a', bd: '#dedaea' },
             'A330-343':       { bg: '#f2efe9', fg: '#6d604a', bd: '#e3ddd2' },
-            'A321-253NYXLR':  { bg: '#f0f1f2', fg: '#5a6066', bd: '#e0e2e4' },
+            'A321XLR':        { bg: '#f0f1f2', fg: '#5a6066', bd: '#e0e2e4' },
         };
         const NEUTRAL_PILL = { bg: '#f0f1f2', fg: '#5a6066', bd: '#e0e2e4' };
         // ⚠️ An aircraft type NEVER contains a space, stored or displayed (user,
@@ -13525,7 +13526,7 @@
         // roster — those three are the only places a type string is hardcoded.
         // typeFamily() is safe either way: it matches on the A32x prefix, so CWAP stays
         // three on this pair.
-        const TYPE_SHORT_LABEL = { 'A320-214': 'A320', 'A321-211': 'A321', 'A321-251NX': 'A321neo', 'A330-343': 'A330', 'A321-253NYXLR': 'A321XLR' };
+        const TYPE_SHORT_LABEL = { 'A320-214': 'A320', 'A321-211': 'A321', 'A321-251NX': 'A321neo', 'A330-343': 'A330', 'A321XLR': 'A321XLR' };
         // Light enough that the 📍 glyph reads clearly — the old Riyadh green was so dark
         // it swallowed the pin entirely.
         const LOCATION_PILL_COLORS = {

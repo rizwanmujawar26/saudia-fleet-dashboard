@@ -13,6 +13,27 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.90.0 — A321ceo import (15) + A321XLR type rename & linefit
+At the user's instruction (2026-09-03). A second source file, the A321-211 classic
+(A321ceo) family, 15 aircraft. **9 of them are the tails the earlier dataset was
+missing** (ASI, ASJ, ASK, ASL, ASN, ASO, ASQ, ASR, ASV) — already active retrofit
+records, so only their `/fleetSpecs` was written, `/fleet` untouched. **6 are new**
+(ASH, ASM, ASP, AST, ASU, ASW), added to `/fleet` as `{type: A321-211}`, no fit
+(NOT STARTED). Fleet 99→**105**, fleetSpecs 90→**105**.
+
+**A321XLR rename.** Per the user, `A321-253NY` is our verbose form of **A321XLR** and
+all `HZ-ASB_` tails are A321XLR linefit. Stored `/fleet.type` for ASBA–ASBH is now the
+simple **`A321XLR`** (the true Airbus variant `A321-253NY` stays in `/fleetSpecs`), and
+ASBC–ASBH gained `fit: linefit` (ASBA/ASBB already were). The three hardcoded type
+spots were renamed together — `TYPE_SHORT_LABEL`, `TYPE_PILL_COLORS`, the fallback
+roster — as the code comment requires; `qtyByType`/`typeFamily` key on no XLR string, so
+CWAP counts are unaffected. Marking the six XLRs linefit puts them in the programme:
+`projectScope` 44→**50** and they show in the Fleet default view (as LINEFIT, status —).
+
+⚠️ **Data conflict flagged, not fixed:** `HZ-ASF` is `A321-211` in the DB (pre-existing)
+but the A320 source lists it as `A320-214` (MSN 04955, SkyTeam livery). Left as-is
+pending the user's call.
+
 ### v2.89.0 — Full fleet import: 55 new aircraft, /fleetSpecs, "Not Started" fit
 At the user's instruction (2026-09-03). Imported the whole Saudia narrowbody/widebody
 roster from four JSON files (A320 ×37, A321 ×14, A321XLR ×8, A330 ×31 = 90 records).
