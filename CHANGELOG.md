@@ -13,6 +13,16 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.93.0 — Accurate delivery dates (DD-Mon-YYYY)
+At the user's instruction (2026-09-04). Three source files replaced the placeholder
+month-year delivery dates with precise `DD/MM/YYYY` values — many of the originals were
+years off (AQA "May 2012" → 17-May-2010; ASA "May 2012" → 29-Oct-2009). All 99 dated
+airframes updated in `/fleetSpecs` to the canonical **DD-Mon-YYYY**; the 6 undelivered
+A321XLRs (ASBC–ASBH), absent from the files, had `deliveryDate` cleared to null. Every
+file aircraft matched the roster — none missing. `parseDeliveryDate` now reads the
+precise form (via `toISODate`) with the month-year kept as a fallback, so the Aircraft
+Age column still shows MMM-YY but its age pill is now day-accurate.
+
 ### v2.92.0 — Fleet: All pill, search, Aircraft Age column, header sort note
 At the user's instruction (2026-09-03). Five things on the Fleet page:
 

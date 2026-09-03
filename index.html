@@ -6197,8 +6197,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.92.0';
-        const APP_BUILD    = '2026.09.03.09';
+        const APP_VERSION  = '2.93.0';
+        const APP_BUILD    = '2026.09.04.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -8715,17 +8715,27 @@
         }
 
         // ── Delivery date (from /fleetSpecs) ────────────────────────────────────────
-        // Stored as a month-year, "May 2012" — no day, because that is all the source
-        // gives. It is NOT a fmtDate date (which is day-first DD-Mon-YYYY); it is
-        // reference metadata, parsed only here. Day 1 stands in for the age maths.
+        // Delivery is stored precisely as DD-Mon-YYYY (v2.93.0, from the accurate source
+        // files). The legacy month-year form "May 2012" is still accepted so a record
+        // not yet updated keeps rendering. Either way this returns the month, year and an
+        // ISO date; the month-year form stands day 1 in for the age maths.
         function parseDeliveryDate(s) {
-            const m = String(s || '').trim().match(/^([A-Za-z]{3,})\s+(\d{4})$/);
-            if (!m) return null;
-            const mon = m[1].slice(0, 3);
-            const mon3 = mon.charAt(0).toUpperCase() + mon.slice(1).toLowerCase();
-            const idx = MONTH_NAMES.indexOf(mon3);
+            s = String(s || '').trim();
+            if (!s) return null;
+            // Precise DD-Mon-YYYY (or ISO) — the accurate stored form.
+            const iso = toISODate(s);
+            if (iso) {
+                const [y, m] = iso.split('-');
+                return { mon: MONTH_NAMES[Number(m) - 1], year: y, monthNum: Number(m), iso };
+            }
+            // Legacy month-year "May 2012".
+            const mm = s.match(/^([A-Za-z]{3,})\s+(\d{4})$/);
+            if (!mm) return null;
+            const mon3 = mm[1].slice(0, 3);
+            const cap = mon3.charAt(0).toUpperCase() + mon3.slice(1).toLowerCase();
+            const idx = MONTH_NAMES.indexOf(cap);
             if (idx < 0) return null;
-            return { mon: mon3, year: m[2], monthNum: idx + 1, iso: `${m[2]}-${String(idx + 1).padStart(2, '0')}-01` };
+            return { mon: cap, year: mm[2], monthNum: idx + 1, iso: `${mm[2]}-${String(idx + 1).padStart(2, '0')}-01` };
         }
         // "May 2012" -> "May-12" for the Aircraft Age column.
         function deliveryShort(s) {
@@ -8733,9 +8743,11 @@
             return p ? `${p.mon}-${p.year.slice(2)}` : '';
         }
         // Age since delivery in the same "13y 114d" shape the activation pill uses.
+        // dateSpan accepts the ISO date directly, so a precise DD-Mon-YYYY gives a
+        // precise age; a legacy month-year uses its day-1 iso.
         function deliveryAge(s) {
             const p = parseDeliveryDate(s);
-            return p ? dateSpan(`01-${p.mon}-${p.year}`, '') : '';
+            return p ? dateSpan(p.iso, '') : '';
         }
         // The numeric sort key for the Aircraft Age column, newest-largest like a real
         // date. '00000000' for no delivery date so those sort to the bottom under the
