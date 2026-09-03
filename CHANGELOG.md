@@ -13,6 +13,31 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.89.0 — Full fleet import: 55 new aircraft, /fleetSpecs, "Not Started" fit
+At the user's instruction (2026-09-03). Imported the whole Saudia narrowbody/widebody
+roster from four JSON files (A320 ×37, A321 ×14, A321XLR ×8, A330 ×31 = 90 records).
+**Merge, not overwrite:** the existing 44 `/fleet` and `/aircraft` records were left
+byte-for-byte untouched (a `database:update` merge, verified against the pre-import
+backup); 35 of the 44 also appear in the new files, and **9 (ASI, ASJ, ASK, ASL, ASN,
+ASO, ASQ, ASR, ASV) are absent from the new dataset** and were preserved as-is. **55
+new aircraft** were added to `/fleet` with only `{type}` — no `fit`, no `fleetStatus`,
+no `station` (in scope, flying without WiFi, awaiting retrofit).
+
+**New `/fleetSpecs/{tail}` node** (the 4-edit checklist: rules + backup/restore/verify
+scripts) holds the reference data the schema had no home for — manufacturer, family,
+variant, engine, seating, MSN, delivery month, remark — for all 90. Nothing renders it
+yet; it is captured for a later UI.
+
+**No-fit is now a first-class state.** `setFleetRoster` and `fleetStatusOf` no longer
+coerce absent `fit`/`fleetStatus` to `retrofit`/`Active` — the coercion would have
+flooded `activeFleet()` and every derived count with 55 not-yet-programme airframes.
+The Fit column shows a muted **NOT STARTED** badge (`fitview: 'none'`) and Status shows
+`—`. `programmeFleet()` (a `fit` on record) is the new scope for `projectScope`, the
+Fleet widgets and the Timeline pinned denominator, so Overview/Software/Media stay on
+the 44-aircraft programme. The Fleet page opens on the programme (Fit filter seeded
+Retrofit + Linefit + In Retrofit); the dropdown's built-in **All** — or the new **Not
+Started** option — reveals the other 55. Reset returns to the programme default.
+
 ### v2.88.0 — Overview pinned banner: collapsible, one-line, single dividers
 At the user's instruction (2026-09-03). The "Pinned — Out of Service" banner had
 grown tall enough to push the day timeline off the first screen. It is now **collapsed

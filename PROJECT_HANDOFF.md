@@ -252,9 +252,23 @@ adding it to the rules first.
 |---|---|
 | `type` | e.g. `A320-214`, `A321-253NYXLR`. ⚠️ **Never contains a space** — see *Conventions* |
 | `station` | `JED` / `RUH` / `N/A` |
-| `fit` | `retrofit` (42) \| `linefit` (2 — ASBA, ASBB). **How WiFi got onto the airframe, not where it is in the programme** — an aircraft can be `fit: retrofit` *and* `fleetStatus: In Retrofit` |
-| `fleetStatus` | **WiFi installation status** — one of `Planned`, `In Retrofit`, `Installed`, `Commissioned`, `Active`, `Decommissioned`. Exact strings, defined once in `FLEET_STATUSES` |
+| `fit` | `retrofit` \| `linefit` (ASBA, ASBB), **or absent**. How WiFi got onto the airframe, not where it is in the programme — an aircraft can be `fit: retrofit` *and* `fleetStatus: In Retrofit`. **Absent = in scope but not yet in the WiFi programme** (the 55 imported airframes, v2.89.0): the Fit column reads a muted **NOT STARTED**, `fitview` is `'none'`, and it is hidden by the Fleet page's default filter |
+| `fleetStatus` | **WiFi installation status** — one of `Planned`, `In Retrofit`, `Installed`, `Commissioned`, `Active`, `Decommissioned`, **or absent**. Exact strings, defined once in `FLEET_STATUSES`. ⚠️ **Absent no longer defaults to `Active`** (v2.89.0) — `fleetStatusOf` returns `''`, so a not-started airframe stays out of `activeFleet()` and every derived count. `programmeFleet()` (a `fit` on record) is the WiFi-programme scope; `projectScope()` counts it |
 | `comments` | free text |
+
+⚠️ The roster now holds **all 99 airframes**, but only the ~44 with a `fit` are the
+WiFi programme. `fleetRoster.length` is the whole roster (Fleet page); `programmeFleet()`
+/ `projectScope()` is the programme. Do not use `fleetRoster.length` as a scope figure.
+
+### `/fleetSpecs/{tail}` — airframe reference data (captured, not yet shown)
+
+Imported with the fleet (v2.89.0) for all 90 aircraft in the source files. **Nothing
+renders it yet** — it is the home for the fields the roster had nowhere to put, ready
+for a later UI. `manufacturer`, `family` (e.g. `A320`), `variant` (e.g. `A320-214`),
+`engineMfr`, `engineModel`, `engineQty` (num), `seatConfig`, `seatBusiness`/`seatEconomy`/
+`seatTotal` (num), `deliveryDate` (free string, month-year e.g. `May 2012` — no day, so
+not a `fmtDate` date), `msn`, `remark`. Null source fields were omitted, not stored as
+null. It is a **node**, so it is on the four backup/restore/verify lists.
 
 ### `/aircraft/{tail}` — per-aircraft state
 

@@ -1963,6 +1963,9 @@
         /* Shown in the Fit column while an aircraft is being retrofitted. Amber, to
            match the In Retrofit widget — it is a stage, not an installation method. */
         .status-badge.fit-in-retrofit { background: #fdf3e3; color: #8a5a12; }
+        /* Not yet in the WiFi programme — in scope, currently flying without WiFi.
+           Muted grey so it reads as "nothing decided yet", not as a status. */
+        .status-badge.fit-none { background: #eef0f2; color: #8a939b; }
         /* Active is the only one that reads as operational. In Retrofit is amber and
            clearly unfinished — it must not be mistaken for a flying WiFi aircraft. */
         .status-badge.fleet-active         { background: #28a745; color: #fff; }
@@ -6188,8 +6191,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.88.0';
-        const APP_BUILD    = '2026.09.03.05';
+        const APP_VERSION  = '2.89.0';
+        const APP_BUILD    = '2026.09.03.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -6215,7 +6218,10 @@
         function setFleetRoster(data) {
             const rows = Object.entries(data || {}).map(([id, v]) => ({
                 id, type: v.type, station: v.station,
-                fit: v.fit || 'retrofit', fleetStatus: v.fleetStatus || 'Active', comments: v.comments || '',
+                // Absent fit / fleetStatus is preserved as '' — an aircraft added to the
+                // roster but not yet in the WiFi programme has neither, and coercing them
+                // to 'retrofit' / 'Active' would falsely count it as an active retrofit.
+                fit: v.fit || '', fleetStatus: v.fleetStatus || '', comments: v.comments || '',
             }));
             if (rows.length) fleetRoster = rows.sort((a, b) => a.id.localeCompare(b.id));
         }
@@ -6253,9 +6259,15 @@
         //                 by SBC configuration, never mixed into the retrofit figures.
         //
         // So: 44 in the programme, 41 Active, of which 39 retrofit + 2 linefit.
-        // projectScope stays the whole programme because the Fleet page is the one
-        // place that legitimately reports on aircraft not yet active.
-        function projectScope()    { return fleetRoster.length; }
+        //
+        // The roster ALSO holds aircraft in scope but not yet in the WiFi programme —
+        // added with no `fit` status, currently flying without WiFi. programmeFleet()
+        // is the WiFi-programme population (a fit on record); projectScope counts it,
+        // so every scope figure ignores the not-yet-started airframes until one enters
+        // retrofit and gets a fit. The full roster (all airframes) lives on the Fleet
+        // page, which lists everything.
+        function programmeFleet()  { return fleetRoster.filter(a => a.fit); }
+        function projectScope()    { return programmeFleet().length; }
         function hbcScope()        { return hbcFleet().length; }
         function middlewareScope() { return swFleet().length; }
         function mediaScope()      { return mediaFleet().length; }
@@ -7934,6 +7946,10 @@
                         { v: 'retrofit', l: 'Retrofit' },
                         { v: 'linefit', l: 'Linefit' },
                         { v: 'in-retrofit', l: 'In Retrofit' },
+                        // Aircraft in scope but not yet in the WiFi programme — no fit on
+                        // record. Hidden by default (see applyFleetFitDefault); the built-in
+                        // "All" option in this dropdown brings them into view.
+                        { v: 'none', l: 'Not Started' },
                     ] },
                     { id: 'fstatus', label: 'Status',
                       rowValue: row => row.dataset.fstatus === 'Active' ? 'Active' : 'inactive',
@@ -8536,7 +8552,10 @@
             { value: 'Decommissioned', label: 'Decommissioned', css: 'decommissioned' },
         ];
 
-        function fleetStatusOf(a) { return a.fleetStatus || 'Active'; }
+        // '' when no programme status is set — an aircraft in scope but not yet being
+        // retrofitted. Must NOT default to 'Active', or the 55 not-yet-programme
+        // airframes would flood activeFleet() and every count derived from it.
+        function fleetStatusOf(a) { return a.fleetStatus || ''; }
         function fleetStatusCss(v) {
             const s = FLEET_STATUSES.find(x => x.value === v);
             return s ? s.css : 'active';
@@ -8582,6 +8601,16 @@
 
         let fleetEditMode = false;
         let pendingFleet = {};
+        // The Fleet page opens on the WiFi programme only: the Fit filter starts with
+        // Retrofit + Linefit + In Retrofit selected, so the in-scope-but-not-started
+        // aircraft (fitview 'none') are hidden until the reader picks "All" (or ticks
+        // "Not Started"). Seeded once on first render, and re-applied by Reset.
+        let fleetFitDefaulted = false;
+        function applyFleetFitDefault() {
+            const sel = fbSel('fleet', 'fitview');
+            sel.clear();
+            ['retrofit', 'linefit', 'in-retrofit'].forEach(v => sel.add(v));
+        }
         // Opens on the operational fleet; All and the other statuses are one click away.
         // The Fleet page is the whole roster, so it opens on everything: no status is
         // preselected, and the table is ordered by when each aircraft was activated,
@@ -8672,6 +8701,9 @@
         function populateFleetTable() {
             const tbody = document.getElementById('fleetTableBody');
             if (!tbody) return;
+            // First render seeds the default Fit filter (programme only). Done here, not
+            // at load, so it lands before the first applyFleetFilters() below.
+            if (!fleetFitDefaulted) { applyFleetFitDefault(); fleetFitDefaulted = true; }
             tbody.innerHTML = '';
             const editing = fleetEditMode && canEdit();
             const head = document.getElementById('fleetActionsHead');
@@ -8679,8 +8711,11 @@
 
             fleetRoster.forEach((a, idx) => {
                 const staged = pendingFleet[a.id] || {};
-                const fit = staged.fit || a.fit || 'retrofit';
-                const st = staged.fleetStatus || fleetStatusOf(a);
+                // '' when the aircraft is in scope but not yet in the WiFi programme —
+                // NOT coerced to 'retrofit'/'Active', so the Fit and Status columns can
+                // show it as not started rather than inventing a status.
+                const fit = staged.fit !== undefined ? staged.fit : (a.fit || '');
+                const st = staged.fleetStatus !== undefined ? staged.fleetStatus : fleetStatusOf(a);
                 // Activation date lives on /aircraft/{tail}/activatedDate — the field the
                 // Maintenance tab already edits. Read it here rather than storing the same
                 // fact twice on the fleet record.
@@ -8726,9 +8761,11 @@
 
                 const row = document.createElement('tr');
                 row.dataset.type = a.type;
-                row.dataset.fit = fit;
+                row.dataset.fit = fit || 'none';
                 // What the Fit column actually shows, which is what its filter matches.
-                row.dataset.fitview = st === 'In Retrofit' ? 'in-retrofit' : fit;
+                // 'none' for an aircraft with no fit yet — the value the default filter
+                // hides and the "Not Started" option selects.
+                row.dataset.fitview = st === 'In Retrofit' ? 'in-retrofit' : (fit || 'none');
                 row.dataset.fstatus = st;
                 row.dataset.wifi = wifi;
                 // 'in_service' rather than '' — an empty dataset value cannot be
@@ -8744,19 +8781,25 @@
 
                 const fitCell = editing
                     ? `<select class="edit-select" data-id="${a.id}" data-field="fit" onchange="handleFleetEdit(this)">${
+                        (fit ? '' : '<option value="" selected>— Not started —</option>') +
                         FLEET_FITS.map(f => `<option value="${f.value}" ${f.value === fit ? 'selected' : ''}>${f.label}</option>`).join('')
                       }</select>`
                     : (st === 'In Retrofit'
                         ? '<span class="status-badge fit-in-retrofit" title="Being retrofitted — fit on record is Retrofit">IN RETROFIT</span>'
-                        : `<span class="status-badge fit-${fit}">${fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>`);
+                        : (fit
+                            ? `<span class="status-badge fit-${fit}">${fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>`
+                            : '<span class="status-badge fit-none" title="No WiFi fit yet — in scope for retrofit">NOT STARTED</span>'));
 
                 const statusCell = editing
                     ? `<select class="edit-select" data-id="${a.id}" data-field="fleetStatus" onchange="handleFleetEdit(this)">${
+                        (st ? '' : '<option value="" selected>— Not set —</option>') +
                         FLEET_STATUSES.map(s => `<option value="${s.value}" ${s.value === st ? 'selected' : ''}>${s.label}</option>`).join('')
                       }</select>`
-                    : (st === 'Active'
-                        ? '<span class="status-badge fleet-active">ACTIVE</span>'
-                        : `<span class="status-badge fleet-inactive" title="${escAttr(st)}">INACTIVE</span>`);
+                    : (!st
+                        ? '<span class="fleet-notset">—</span>'
+                        : st === 'Active'
+                            ? '<span class="status-badge fleet-active">ACTIVE</span>'
+                            : `<span class="status-badge fleet-inactive" title="${escAttr(st)}">INACTIVE</span>`);
 
                 // Never inferred — blank until someone types it.
                 const age = activationAge(activated);
@@ -8827,9 +8870,9 @@
                     <td data-sort="${dateSortKey(toISODate(activated)) || '99999999'}">${activatedCell}</td>
                     <td data-sort="${a.id}"><strong>${a.id}</strong></td>
                     <td data-sort="${escAttr(a.type)}">${typeCell}</td>
-                    <td data-sort="${st === 'In Retrofit' ? 'in retrofit' : fit}">${fitCell}</td>
+                    <td data-sort="${st === 'In Retrofit' ? 'in retrofit' : (fit || 'zzzz')}">${fitCell}</td>
                     <td data-sort="${escAttr((isOutstation(loc) ? '0' : '1') + loc)}">${locCell}</td>
-                    <td data-sort="${st === 'Active' ? 'active' : 'inactive'}">${statusCell}</td>
+                    <td data-sort="${!st ? 'zzzz' : (st === 'Active' ? 'active' : 'inactive')}">${statusCell}</td>
                     <td class="col-ops" data-sort="${escAttr(opsSort)}">${opsCell}</td>
                     <td data-sort="${escAttr(wifi)}">${wifiCell}</td>
                     <td class="col-comment" data-sort="${escAttr(comments)}">${commentCell}</td>
@@ -8863,7 +8906,10 @@
             });
             const activeCount   = byStatus['Active'] || 0;
             const retrofitCount = byStatus['In Retrofit'] || 0;
-            const total = fleetRoster.length || 1;
+            // Denominator is the WiFi programme, not the whole roster — the not-yet-
+            // started airframes are listed on this page but are not what these
+            // Active / In Retrofit shares are measured against.
+            const total = programmeFleet().length || 1;
 
             const card = (label, count, sub, type) => {
                 const pct = Math.round((count / total) * 1000) / 10;
@@ -8932,6 +8978,9 @@
 
         function resetFleetTable() {
             fbClear('fleet');
+            // Reset returns to the page's default view — the WiFi programme — not to a
+            // bare "everything", so the not-started airframes stay hidden as on load.
+            applyFleetFitDefault();
             fbRender('fleet');
             delete lastSort['fleetTable'];
             populateFleetTable();
@@ -14071,7 +14120,7 @@
                             <span class="tl-pinned-title">📌 Out of Service</span>
                             <span class="tl-pinned-tag">${outNow.length} Aircraft</span>
                             <span class="tl-pinned-summary">${regSummary}</span>
-                            <span class="tl-pinned-count">${outNow.length} of ${fleetRoster.length}</span>
+                            <span class="tl-pinned-count">${outNow.length} of ${programmeFleet().length}</span>
                             <span class="tl-pinned-chevron" aria-hidden="true">▾</span>
                         </div>
                         <ul class="tl-pinned-items">${outNow.map(({ a, o }) => {

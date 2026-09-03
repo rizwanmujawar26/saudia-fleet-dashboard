@@ -107,6 +107,30 @@
       }
     },
 
+    "fleetSpecs": {
+      ".read": true,
+
+      "$tail": {
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
+
+        "manufacturer": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "family":       { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "variant":      { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "engineMfr":    { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "engineModel":  { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "engineQty":    { ".validate": "newData.isNumber()" },
+        "seatConfig":   { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "seatBusiness": { ".validate": "newData.isNumber()" },
+        "seatEconomy":  { ".validate": "newData.isNumber()" },
+        "seatTotal":    { ".validate": "newData.isNumber()" },
+        "deliveryDate": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "msn":          { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "remark":       { ".validate": "newData.isString() && newData.val().length <= 200" },
+
+        "$other":       { ".validate": false }
+      }
+    },
+
     "activities": {
       ".read": true,
 
