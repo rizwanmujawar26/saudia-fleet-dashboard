@@ -13,6 +13,15 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.91.0 — Fleet default sort: newest activation first
+At the user's instruction (2026-09-03). The Fleet table now opens **newest-activation
+first** (`FLEET_DEFAULT_SORT` dir `1`→`-1` on the Activation Date column). The undated
+sentinel on that column flipped `'99999999'`→`'00000000'` so aircraft with no activation
+date sort to the **bottom** under the descending default instead of crowding the top
+(`applyTableSort` compares these keys numerically). Data-only DB edits this session, no
+code: HZ-ASF corrected to `A320-214`; ASBC–ASBH reverted to no-fit (NOT STARTED, hidden
+by default) — only ASBA/ASBB remain linefit.
+
 ### v2.90.0 — A321ceo import (15) + A321XLR type rename & linefit
 At the user's instruction (2026-09-03). A second source file, the A321-211 classic
 (A321ceo) family, 15 aircraft. **9 of them are the tails the earlier dataset was

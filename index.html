@@ -6192,8 +6192,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.90.0';
-        const APP_BUILD    = '2026.09.03.07';
+        const APP_VERSION  = '2.91.0';
+        const APP_BUILD    = '2026.09.03.08';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -8615,10 +8615,11 @@
         // Opens on the operational fleet; All and the other statuses are one click away.
         // The Fleet page is the whole roster, so it opens on everything: no status is
         // preselected, and the table is ordered by when each aircraft was activated,
-        // oldest first. Aircraft with no date sort to the end (dateSortKey gives them
-        // 99999999) rather than crowding the top.
+        // NEWEST first (user, 2026-09-03) — dir -1 on the Activation Date column.
+        // ⚠️ Aircraft with no date use the '00000000' sentinel (not '99999999'), so they
+        // sort to the BOTTOM under this descending default rather than crowding the top.
         const FLEET_DEFAULT_STATUS = '';
-        const FLEET_DEFAULT_SORT = { col: 1, dir: 1 };
+        const FLEET_DEFAULT_SORT = { col: 1, dir: -1 };
 
         function fleetRowOf(id) {
             return fleetRoster.find(a => a.id === id) || {};
@@ -8868,7 +8869,7 @@
 
                 row.innerHTML = `
                     <td>${idx + 1}</td>
-                    <td data-sort="${dateSortKey(toISODate(activated)) || '99999999'}">${activatedCell}</td>
+                    <td data-sort="${dateSortKey(toISODate(activated)) || '00000000'}">${activatedCell}</td>
                     <td data-sort="${a.id}"><strong>${a.id}</strong></td>
                     <td data-sort="${escAttr(a.type)}">${typeCell}</td>
                     <td data-sort="${st === 'In Retrofit' ? 'in retrofit' : (fit || 'zzzz')}">${fitCell}</td>
@@ -8886,7 +8887,7 @@
             fbRender('fleet');
             syncTableFreeze();
             applyFleetFilters();
-            // Oldest activation first until someone picks another column, and re-applied
+            // Newest activation first until someone picks another column, and re-applied
             // on every rebuild — this runs again on every live update, which would
             // otherwise hand the rows back in roster order under an unchanged arrow.
             const fs = lastSort['fleetTable'] || FLEET_DEFAULT_SORT;
