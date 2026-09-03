@@ -13,6 +13,19 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.88.0 — Overview pinned banner: collapsible, one-line, single dividers
+At the user's instruction (2026-09-03). The "Pinned — Out of Service" banner had
+grown tall enough to push the day timeline off the first screen. It is now **collapsed
+by default to a single header line** — `📌 Out of Service`, an `N Aircraft` pill, the
+registrations inline (`ASD · ASO · ASV · ASAD · AS58`), the `N of 44` count and a
+chevron — and the header itself is the expand/collapse control (`toggleTimelinePinned`,
+state in `timelinePinnedExpanded`, a DOM-only class toggle so it does not redraw the
+whole timeline). **Double-line fix:** the per-aircraft rows re-used `.tl-row`, whose
+own grey `border-bottom` and outer padding stacked on top of `.tl-pin`'s pink divider
+and padding — two lines and doubled height per row. Now `.tl-pin` carries the single
+divider and the inner `.tl-row` sheds its border and tightens to `6px 12px`, so each
+aircraft reads as one neat section like the date rows below it.
+
 ### v2.87.0 — Timeline: Reset, focused view, Maintenance; shared icon-btn Reset
 At the user's instruction (2026-09-03). A focus-first Overview and a project-wide
 Reset pattern. **Reset button (global rule):** a new shared `.icon-btn`/`.reset-btn`

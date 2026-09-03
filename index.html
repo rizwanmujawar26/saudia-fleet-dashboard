@@ -2229,15 +2229,21 @@
             overflow: hidden;
         }
 
+        /* The header doubles as the expand/collapse control. Collapsed by default,
+           it is a single line: title, an "N Aircraft" pill, the registrations inline,
+           the count and a chevron — enough to answer "what is out" without opening. */
         .tl-pinned-head {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 8px 12px;
+            gap: 8px;
+            padding: 7px 12px;
             background: #fdeff0;
-            border-bottom: 1px solid #f6d2d6;
+            cursor: pointer;
+            user-select: none;
         }
+        .tl-pinned-head:hover { background: #fce6e8; }
+        /* Divider only when the body below the head is actually open. */
+        .tl-pinned.expanded .tl-pinned-head { border-bottom: 1px solid #f6d2d6; }
 
         .tl-pinned-title {
             font-size: 11.5px;
@@ -2245,7 +2251,36 @@
             letter-spacing: 0.3px;
             text-transform: uppercase;
             color: #a52834;
+            white-space: nowrap;
+            flex: 0 0 auto;
         }
+
+        /* "N Aircraft" — the headline count, sitting right after the title. */
+        .tl-pinned-tag {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #a52834;
+            background: rgba(165, 40, 52, 0.10);
+            border-radius: 20px;
+            padding: 2px 9px;
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+
+        /* The inline registration list, shown only while collapsed. It takes the
+           middle space and truncates rather than wrapping, so the head stays one line. */
+        .tl-pinned-summary {
+            flex: 1 1 auto;
+            min-width: 0;
+            font-size: 12px;
+            font-weight: 600;
+            color: #9a6a70;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: 0.2px;
+        }
+        .tl-pinned.expanded .tl-pinned-summary { display: none; }
 
         .tl-pinned-count {
             font-size: 11px;
@@ -2256,11 +2291,32 @@
             padding: 2px 7px;
             white-space: nowrap;
             font-variant-numeric: tabular-nums;
+            flex: 0 0 auto;
+            margin-left: auto;
         }
 
+        .tl-pinned-chevron {
+            flex: 0 0 auto;
+            font-size: 10px;
+            line-height: 1;
+            color: #a52834;
+            transition: transform 0.2s ease;
+        }
+        .tl-pinned.expanded .tl-pinned-chevron { transform: rotate(180deg); }
+
+        /* Body: the per-aircraft rows, hidden until the head is expanded. */
         .tl-pinned-items { list-style: none; margin: 0; padding: 0; }
-        .tl-pinned-items .tl-pin { padding: 8px 12px; }
-        .tl-pinned-items .tl-pin + .tl-pin { border-top: 1px solid #f6e3e5; }
+        .tl-pinned:not(.expanded) .tl-pinned-items { display: none; }
+        /* One divider per row: the .tl-pin carries it, and the inner .tl-row sheds
+           its own grey border and outer padding — otherwise the two stack into the
+           double line and doubled height the day list never had. */
+        .tl-pinned-items .tl-pin { padding: 0; }
+        .tl-pinned-items .tl-pin + .tl-pin { border-top: 1px solid #f4dfe2; }
+        .tl-pinned-items .tl-pin .tl-row {
+            border-bottom: none;
+            padding: 6px 12px;
+        }
+        .tl-pinned-items .tl-pin .tl-row:hover { background: rgba(165, 40, 52, 0.03); }
         .tl-pin-mark { flex: 0 0 auto; font-size: 12px; line-height: 1; }
 
         /* The state pill in the pinned block carries the same colour as the Fleet
@@ -6132,8 +6188,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.87.0';
-        const APP_BUILD    = '2026.09.03.04';
+        const APP_VERSION  = '2.88.0';
+        const APP_BUILD    = '2026.09.03.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -13801,6 +13857,9 @@
         // on for a screen and a half.
         const TIMELINE_VISIBLE_DAYS = 7;
         let timelineShowAllDays = false;
+        // The out-of-service banner opens on demand. Collapsed by default so a busy
+        // ground list never pushes the day timeline off the first screen.
+        let timelinePinnedExpanded = false;
         // Only months the user has actually clicked are recorded. Everything else falls
         // back to the rule — the current month is open, older months are folded — so the
         // default stays right when the month rolls over rather than freezing whatever
@@ -13837,6 +13896,21 @@
         function toggleTimelineShowAll() {
             timelineShowAllDays = !timelineShowAllDays;
             renderTimeline();
+        }
+
+        // Expand/collapse the pinned out-of-service banner. A DOM-only toggle — the
+        // rows are already in the markup, hidden by CSS — so it does not redraw the
+        // whole timeline, and renderTimeline reads the flag to restore state on redraw.
+        function toggleTimelinePinned() {
+            timelinePinnedExpanded = !timelinePinnedExpanded;
+            const el = document.getElementById('timelinePinned');
+            if (!el) return;
+            el.classList.toggle('expanded', timelinePinnedExpanded);
+            const head = el.querySelector('.tl-pinned-head');
+            if (head) {
+                head.setAttribute('aria-expanded', String(timelinePinnedExpanded));
+                head.setAttribute('title', (timelinePinnedExpanded ? 'Collapse' : 'Expand') + ' the out-of-service list');
+            }
         }
 
         function renderTimeline() {
@@ -13984,11 +14058,21 @@
                 pinnedEl.dataset.count = String(outNow.length);
                 if (!outNow.length) {
                     pinnedEl.innerHTML = '';
+                    pinnedEl.className = 'tl-pinned';
                 } else {
+                    // Collapsed by default. The inline summary lists the registrations
+                    // so the closed head still answers "which aircraft are out".
+                    pinnedEl.className = 'tl-pinned' + (timelinePinnedExpanded ? ' expanded' : '');
+                    const regSummary = outNow.map(({ a }) => escAttr(a.id)).join(' · ');
                     pinnedEl.innerHTML = `
-                        <div class="tl-pinned-head">
-                            <span class="tl-pinned-title">📌 Pinned — Out of Service</span>
+                        <div class="tl-pinned-head" onclick="toggleTimelinePinned()" role="button" tabindex="0"
+                             aria-expanded="${timelinePinnedExpanded}"
+                             title="${timelinePinnedExpanded ? 'Collapse' : 'Expand'} the out-of-service list">
+                            <span class="tl-pinned-title">📌 Out of Service</span>
+                            <span class="tl-pinned-tag">${outNow.length} Aircraft</span>
+                            <span class="tl-pinned-summary">${regSummary}</span>
                             <span class="tl-pinned-count">${outNow.length} of ${fleetRoster.length}</span>
+                            <span class="tl-pinned-chevron" aria-hidden="true">▾</span>
                         </div>
                         <ul class="tl-pinned-items">${outNow.map(({ a, o }) => {
                             const d = opsDef(o.state);
