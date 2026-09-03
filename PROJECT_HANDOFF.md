@@ -6,8 +6,32 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-This session took the app **v2.85.1 → v2.87.0**. Everything below is detail; these
+This session took the app **v2.87.0 → v2.93.0**. Everything below is detail; these
 are the things that change how you work on it.
+
+**The full Saudia roster was imported — the fleet is now 105 airframes, and a new
+`/fleetSpecs` node holds airframe reference data (v2.89.0–v2.93.0, 2026-09-03/04).**
+At the user's instruction, across four then one then three JSON files (in `~/Downloads`).
+**Merge, never overwrite** — every existing `/fleet` and `/aircraft` record was left
+untouched (`database:update` merges, each verified against a pre-write backup). New
+airframes were added to `/fleet` with `{type}` only — **no `fit`, no `fleetStatus`** —
+which is now a first-class "in scope but not in the WiFi programme" state: `setFleetRoster`
+and `fleetStatusOf` no longer coerce absent → `retrofit`/`Active`, the Fit column shows a
+muted **NOT STARTED** (`fitview: 'none'`), and **`programmeFleet()`** (a `fit` on record)
+is the WiFi-programme scope that `projectScope` and the Fleet/Overview counts use — NOT
+`fleetRoster.length` (the whole roster). All `HZ-ASB_` tails are **A321XLR** (the simple
+stored type; true variant `A321-253NY` lives in `/fleetSpecs`); only ASBA/ASBB are
+`linefit`, ASBC–ASBH are undelivered NOT STARTED. The **Fleet page** gained: a default
+**newest-first** sort (Activation Date, undated last via a `'00000000'` sentinel), an
+**Aircraft Age** column (delivery MMM-YY + a day-accurate age pill, read from
+`/fleetSpecs.deliveryDate`, stored `DD-Mon-YYYY`), a **search box**, an **All** quick pill
+(clears the Fit filter → whole roster sorted by Aircraft Age newest-first), and the
+Software-tab **`.th-order` "Newest first"** header note under whichever column is the code
+default sort. `/fleetSpecs` is loaded by the initial fetch and the low-traffic poll
+(`fleetSpecsLive`); it is on all four backup/restore/verify lists. ⚠️ The pre-import
+delivery dates were placeholders and years off — they were replaced with precise ones
+(v2.93.0). ⚠️ `HZ-ASF` was corrected `A321-211` → `A320-214` (it is one of the 7 A320
+ASA–ASG).
 
 **The Overview timeline moved onto the shared filter component, gained search, a
 Reset button and a focused view (v2.86.0–v2.87.0, 2026-09-03).** At the user's
@@ -250,13 +274,13 @@ adding it to the rules first.
 
 | field | values |
 |---|---|
-| `type` | e.g. `A320-214`, `A321-253NYXLR`. ⚠️ **Never contains a space** — see *Conventions* |
+| `type` | e.g. `A320-214`, `A321XLR`. ⚠️ **Never contains a space** — see *Conventions*. Stored, so a rename means the three hardcoded spots (`TYPE_SHORT_LABEL`, `TYPE_PILL_COLORS`, the `aircraftStatic` fallback) |
 | `station` | `JED` / `RUH` / `N/A` |
 | `fit` | `retrofit` \| `linefit` (ASBA, ASBB), **or absent**. How WiFi got onto the airframe, not where it is in the programme — an aircraft can be `fit: retrofit` *and* `fleetStatus: In Retrofit`. **Absent = in scope but not yet in the WiFi programme** (the 55 imported airframes, v2.89.0): the Fit column reads a muted **NOT STARTED**, `fitview` is `'none'`, and it is hidden by the Fleet page's default filter |
 | `fleetStatus` | **WiFi installation status** — one of `Planned`, `In Retrofit`, `Installed`, `Commissioned`, `Active`, `Decommissioned`, **or absent**. Exact strings, defined once in `FLEET_STATUSES`. ⚠️ **Absent no longer defaults to `Active`** (v2.89.0) — `fleetStatusOf` returns `''`, so a not-started airframe stays out of `activeFleet()` and every derived count. `programmeFleet()` (a `fit` on record) is the WiFi-programme scope; `projectScope()` counts it |
 | `comments` | free text |
 
-⚠️ The roster now holds **all 99 airframes**, but only the ~44 with a `fit` are the
+⚠️ The roster now holds **all 105 airframes**, but only the ~44 with a `fit` are the
 WiFi programme. `fleetRoster.length` is the whole roster (Fleet page); `programmeFleet()`
 / `projectScope()` is the programme. Do not use `fleetRoster.length` as a scope figure.
 
@@ -2088,9 +2112,20 @@ editable in place — that is where the backlog gets finished — and the "Dates
 Outstanding" widget is the progress bar for it.
 ### 7. Fleet
 
-owns the roster: add / edit / remove, incl. linefit. The **Operational State** column
-is the 8th, after Status — see *Operational state* for the field, the eight values and
-why In Service is stored as nothing at all. The
+owns the roster: add / edit / remove, incl. linefit. Columns are # · **Activation Date**
+(1, default newest-first) · **Aircraft Age** (2 — delivery MMM-YY + age pill from
+`/fleetSpecs`) · Aircraft · Type · Fit · Install Site · Status · **Operational State** ·
+SaudiaWiFi · Comments. The filter bar carries a **search box**, an **All** quick pill
+(off by default; on → clears the Fit filter to show every airframe and sorts by Aircraft
+Age newest-first — `fleetToggleAll`), and the Fit filter opens on the programme
+(Retrofit + Linefit + In Retrofit; the `none` "Not Started" airframes are hidden until
+All). A **`.th-order` "Newest first"** note sits under whichever column holds the code
+default sort (Activation Date, or Aircraft Age in All mode) and hides on manual sort —
+`syncFleetOrderNote`, run after `updateSortIndicators`; header clicks route through
+`sortFleetTable`. ⚠️ Inserting the Aircraft Age column renumbered every Fleet column
+after it (data-col 2→3…9→10). The **Operational State** column
+is now the 9th, after Status — see *Operational state* for the field, the eight values
+and why In Service is stored as nothing at all. The
 **SaudiaWiFi** column shows `wifiVisibility` (Public / Hidden) and edits it, so a
 Fleet save now writes **three** kinds of field: roster fields to `/fleet`, and
 `activatedDate` *and* `wifiVisibility` to `/aircraft`. The Maintenance profile edits
