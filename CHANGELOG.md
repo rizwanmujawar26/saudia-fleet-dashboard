@@ -13,6 +13,34 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.85.0 — Media tab: Current/Old pills, search, no July widget
+At the user's instruction (2026-09-03). The Media filter bar is reordered and gains a
+free-text search and two quick pills; the widget strip drops the July 2026 card.
+
+**Widgets.** A new `MEDIA_WIDGET_MIN_CYCLE` (`'0826'`) gates the dated strip, so only
+monthly widgets from **August 2026 onward** show — July and earlier are dropped from
+the *strip only*; their loads, counts and table rows are untouched, and Light Media /
+No Media (separate kinds, not months) are unaffected. The **No Media card lost its
+`N loaded` pill** (`card()` gained a `hideTotal` flag): No Media means nothing was ever
+loaded, so a loaded count there is meaningless. Every dated cycle keeps its total.
+
+**Filter bar.** Order is now **Type · Status · Current · Old · Cycle · Search**. The
+**Month dropdown (`cycle`) was removed** — the Cycle view and the search cover picking
+a month, and it was the third dated-cycle control on one row. A **search box** matches
+each row's tail, media part number (the source string) and month (code, full and short
+form) via new per-row `data-search`.
+
+**Current / Old.** Two quick pills on one **hidden `age` axis**, single-select so only
+one is ever lit. **Current = the latest cycle; Old = previous + older**; Light Media
+and No Media match neither. Below 980px the pills hide and the Status dropdown still
+reaches Latest/Previous/Older, so nothing becomes unreachable.
+
+**Filter component (shared).** Two new optional per-bar fields, used only by the media
+bar so every other bar is unchanged: `hidden` filters take part in matching but render
+no trigger (and stay out of the mobile sheet), and `quickAfter` interleaves the quick
+pills after a named dropdown instead of the default pills-first position, letting them
+sit *between* two dropdowns.
+
 ### v2.82.0 — Modem and Schedule tabs removed
 At the user's instruction (2026-09-02). Satcom (the `/modmans` register) is now the
 single reference for modem commissioning, so the Modem tab — a failed experiment —

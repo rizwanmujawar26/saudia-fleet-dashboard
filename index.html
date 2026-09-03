@@ -6130,8 +6130,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.84.0';
-        const APP_BUILD    = '2026.09.02.01';
+        const APP_VERSION  = '2.85.0';
+        const APP_BUILD    = '2026.09.03.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-01T16:00:00Z';
 
@@ -7423,10 +7423,18 @@
 
             const n = fbActiveCount(barId);
             const cl = fbCompactLabel(barId);
+            // `hidden` filters take part in matching but render no trigger — the media
+            // bar's `age` axis is driven only by the Current / Old pills. `quickAfter`
+            // interleaves the pills after a named trigger instead of the default
+            // pills-first position, so a bar can put them BETWEEN two dropdowns; without
+            // it the pills render first, unchanged for every other bar.
+            const quick = fbRenderQuick(barId);
             host.innerHTML =
-                fbRenderQuick(barId) +
+                (bar.quickAfter ? '' : quick) +
                 `<span class="fb-groups">` +
-                    bar.filters.map(f => fbRenderTrigger(barId, f)).join('') +
+                    bar.filters.filter(f => !f.hidden)
+                        .map(f => fbRenderTrigger(barId, f) + (bar.quickAfter === f.id ? quick : ''))
+                        .join('') +
                 `</span>` +
                 // A bar's own controls, sitting with the filters rather than adrift at
                 // the other end of the row. Declared as `extra` so the COMPONENT places
@@ -7481,7 +7489,9 @@
 
             const compact = !filterId;
             const bar = FILTER_BARS[barId];
-            const groups = compact ? bar.filters : [bar.filters.find(f => f.id === filterId)];
+            // A hidden filter (the media `age` axis) has no dropdown, so it stays out of
+            // the collapsed sheet too — it is reachable only through its quick pills.
+            const groups = compact ? bar.filters.filter(f => !f.hidden) : [bar.filters.find(f => f.id === filterId)];
 
             const pop = document.createElement('div');
             pop.className = 'fb-pop' + (compact ? ' fb-sheet' : '');
@@ -7782,29 +7792,46 @@
 
             media: {
                 apply: () => applyMediaFilters(),
+                // Row order: Type, Status, the Current / Old pills, the Cycle view, then
+                // the search box. The pills sit BETWEEN two dropdowns, which the default
+                // pills-first layout cannot express — `quickAfter` injects them right
+                // after the named trigger instead. The old Month dropdown was removed
+                // (user, 2026-09-03): the Cycle view and the search box between them cover
+                // picking a month, and it was the third dated-cycle control on one row.
+                search: 'Search aircraft, part number or month',
+                // Current / Old — single-select on ONE axis, so only one is ever lit.
+                quick: [
+                    { filter: 'age', value: 'current', label: 'Current' },
+                    { filter: 'age', value: 'old',     label: 'Old' },
+                ],
+                quickAfter: 'mstatus',
                 filters: [
                     { id: 'type', label: 'Type', options: () => fbTypeOptions(mediaFleet()) },
-                    // Built from the cycles actually loaded, newest first, plus the
-                    // "No Media" bucket — the same set the old pill row derived.
-                    { id: 'cycle', label: 'Month', options: () => {
-                        const present = {};
-                        let none = false;
-                        mediaFleet().forEach(a => {
-                            const c = a.media && a.media.mediaCycle;
-                            if (c) present[c] = true; else none = true;
-                        });
-                        // Dated cycles newest first, then the baseline, then No Media —
-                        // the same ranking the widget strip uses. Light Media is not a
-                        // point in the monthly sequence, so listing it between two
-                        // months would misplace it.
-                        const keys = Object.keys(present).sort((x, y) => cycleSortKey(y) - cycleSortKey(x));
-                        const out = keys.filter(c => !isLightMediaCycle(c))
-                            .map(c => ({ v: c, l: cycleToDisplay(c) }));
-                        keys.filter(isLightMediaCycle)
-                            .forEach(c => out.push({ v: c, l: cycleToDisplay(c) }));
-                        if (none) out.push({ v: 'none', l: 'No Media' });
-                        return out;
-                    } },
+                    { id: 'mstatus', label: 'Status', options: [
+                        { v: 'latest', l: 'Latest Media' },
+                        { v: 'previous', l: 'Previous Media' },
+                        { v: 'older', l: 'Older Media' },
+                        // Second last, before No Media — it ranks below every dated
+                        // monthly load but above having nothing at all.
+                        { v: 'light', l: MEDIA_LIGHT_LABEL },
+                        { v: 'no_media', l: 'No Media' },
+                    ] },
+                    // The axis the Current / Old pills drive. Current = the latest cycle;
+                    // Old = anything behind it (previous or older). Light Media and No
+                    // Media are neither — the baseline is not behind, and "no media" is
+                    // not a cycle age (user, 2026-09-03). `hidden` keeps it off the row
+                    // and the mobile sheet: it is a pills-only shortcut, and below 980px
+                    // the Status dropdown already reaches Latest / Previous / Older, so
+                    // nothing becomes unreachable.
+                    { id: 'age', hidden: true, rowValue: row => {
+                        const s = row.dataset.mstatus;
+                        if (s === 'latest') return 'current';
+                        if (s === 'previous' || s === 'older') return 'old';
+                        return '';
+                    }, options: [
+                        { v: 'current', l: 'Current' },
+                        { v: 'old', l: 'Old' },
+                    ] },
                     // ⚠️ A VIEW, not a row filter. Empty means "current media", which
                     // is the page as it has always been. Pick a cycle and every
                     // in-scope aircraft is listed against THAT cycle instead — the ones
@@ -7831,15 +7858,6 @@
                               .sort((a, b) => (a === MEDIA_DEV_VIEW ? 1 : 0) - (b === MEDIA_DEV_VIEW ? 1 : 0));
                           return months.concat(special).map(c => ({ v: c, l: cycleViewLabel(c) }));
                       } },
-                    { id: 'mstatus', label: 'Status', options: [
-                        { v: 'latest', l: 'Latest Media' },
-                        { v: 'previous', l: 'Previous Media' },
-                        { v: 'older', l: 'Older Media' },
-                        // Second last, before No Media — it ranks below every dated
-                        // monthly load but above having nothing at all.
-                        { v: 'light', l: MEDIA_LIGHT_LABEL },
-                        { v: 'no_media', l: 'No Media' },
-                    ] },
                 ],
             },
 
@@ -9144,6 +9162,19 @@
                 row.dataset.type = aircraft.type;
                 row.dataset.cycle = effective.mediaCycle || 'none';
                 row.dataset.mstatus = type;
+                // Free-text haystack: the tail, the media part number (the source
+                // string), and the month in every form it might be typed — the code
+                // (0826), the full label (August 2026) and the short one (AUG 2026). An
+                // aircraft with no cycle is searchable by "No Media" instead. Every word
+                // must match, so "asv august" narrows to one tail in that month.
+                const searchParts = [aircraft.id];
+                if (effective.mediaSource) searchParts.push(effective.mediaSource);
+                if (effective.mediaCycle) {
+                    searchParts.push(effective.mediaCycle, cycleToDisplay(effective.mediaCycle), cycleToShort(effective.mediaCycle));
+                } else {
+                    searchParts.push('No Media');
+                }
+                row.dataset.search = searchParts.filter(Boolean).join(' ');
 
                 const badgeText = type === 'no_media'
                     ? (cycleView ? 'NOT LOADED' : 'NO MEDIA')
@@ -9254,6 +9285,12 @@
             '0826': { size: '791 GB', start: '26-Jul-2026' },
             '0926': { size: '884 GB', start: '25-Aug-2026' },
         };
+
+        // The oldest monthly widget the strip shows. Cycles before it (July 2026 and
+        // earlier) keep their loads, counts and rows but are dropped from the widget
+        // strip (user, 2026-09-03). Light Media and No Media are separate kinds, not
+        // months, and are not governed by this.
+        const MEDIA_WIDGET_MIN_CYCLE = '0826';
 
         function mediaCycleSize(cycle) {
             return (MEDIA_CYCLES[cycle] || {}).size || '';
@@ -9418,7 +9455,10 @@
             });
 
             const scope = mediaScope() || 1;
-            const card = (label, key, type, size) => {
+            // `hideTotal` drops the "N loaded" pill. No Media means no media was ever
+            // loaded on those aircraft, so a loaded count there is meaningless (user,
+            // 2026-09-03) — every dated cycle still carries its total.
+            const card = (label, key, type, size, hideTotal) => {
                 const count = key === MEDIA_DEV_VIEW ? none : (live[key] || 0);
                 const total = totals[key] || 0;
                 const pct = Math.round((count / scope) * 1000) / 10;
@@ -9436,7 +9476,7 @@
                     <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
                     <div class="cycle-foot">
                         <span class="cycle-window">${win}</span>
-                        <span class="cycle-total" title="Aircraft that have ever taken this media">${total} loaded</span>
+                        ${hideTotal ? '' : `<span class="cycle-total" title="Aircraft that have ever taken this media">${total} loaded</span>`}
                     </div>
                 </div>`;
             };
@@ -9457,12 +9497,17 @@
             // ⚠️ The two out-of-cycle kinds leave the chronology. Neither is a point in
             // the monthly sequence — they happen whenever an aircraft is activated — so
             // they are pulled out and ranked last: Light Media, then No Media.
-            const dated = cycles.filter(c => !isLightMediaCycle(c));
+            // Only monthly widgets from August 2026 onward are shown (user, 2026-09-03):
+            // July and anything earlier are dropped from the STRIP. Their loads, counts
+            // and rows all remain — this hides the widget only, and Light Media (0526) is
+            // in its own bucket below, untouched.
+            const dated = cycles.filter(c => !isLightMediaCycle(c)
+                && cycleSortKey(c) >= cycleSortKey(MEDIA_WIDGET_MIN_CYCLE));
             const light = cycles.filter(isLightMediaCycle);
 
             let html = dated.map(c => card(cycleToDisplay(c), c, typeOf(c), mediaCycleSize(c))).join('');
             html += light.map(c => card(MEDIA_LIGHT_LABEL, c, 'light', mediaCycleSize(c))).join('');
-            html += card('No Media', MEDIA_DEV_VIEW, 'no_media', '');
+            html += card('No Media', MEDIA_DEV_VIEW, 'no_media', '', true);
 
             grid.innerHTML = html || '<div class="media-widget media-widget-no_media"><div class="media-widget-head"><span class="media-widget-label">No Media Data</span></div></div>';
         }
