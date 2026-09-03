@@ -6,8 +6,24 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-This session took the app **v2.84.0 → v2.85.1**. Everything below is detail; these
+This session took the app **v2.85.1 → v2.87.0**. Everything below is detail; these
 are the things that change how you work on it.
+
+**The Overview timeline moved onto the shared filter component, gained search, a
+Reset button and a focused view (v2.86.0–v2.87.0, 2026-09-03).** At the user's
+instruction. The bespoke `.tl-controls` twin (pills + a 4-step shed + the
+`timelineKindFilter`/`setTimelineKind`/`applyTimelineKindFromBar`/`renderTimelineKindPills`
+machinery) is **gone** — the control row is now `.fb-filters[data-bar="timeline"]`
+like every table tab: **quick pills Software · Hardware · Media**, a `Show` dropdown
+holding all kinds (Activation, **Maintenance** — new filter — and Operational), and a
+**free-text search** over the model. **Focused view:** a kind or search on the Overview
+hides the global KPI widgets and the Pinned banner and scrolls to the Timeline, so only
+the result shows; Reset brings them back. **A project-wide Reset pattern** landed too:
+`.icon-btn`/`.reset-btn` sheds `↺ Reset` to a `↺` circle below 700px, on every tab —
+see *Filter bar → The Reset / icon-button pattern* and *1. Overview*. ⚠️ Two traps in
+those sections: a model-filtered bar's search must guard its own focus (renderTimeline
+skips `fbRender` while the box is focused), and the focus scroll fires only once on the
+default→focused transition.
 
 **The Media tab filter bar was reworked, and the July widget dropped (v2.85.0–.1,
 2026-09-03).** At the user's instruction. The bar is now **Type · Status · Current ·
@@ -1137,6 +1153,14 @@ the text survives.
 The query counts toward `fbActiveCount()`, so the collapsed mobile badge includes it,
 and `fbClear()` clears it — Reset empties the box.
 
+⚠️ **A bar that filters a MODEL (not DOM rows) re-renders on apply — so it must guard
+the focus itself.** The Overview timeline has no `data-search` rows; its `apply` is
+`applyTimelineFilters → renderTimeline`, which rebuilds everything **including
+`fbRender('timeline')`**. That would tear the search box out from under the user on
+every keystroke, exactly what `fbSearchInput` avoids for table bars. The fix lives in
+`renderTimeline`: it **skips its `fbRender` call while the timeline search box is the
+active element**. Any future model-filtered bar with a search needs the same guard.
+
 ### Single-select filters
 
 A filter declared `single: true` is an exclusive choice: the popover renders
@@ -1151,6 +1175,24 @@ and `fbMatch()` need no special case.
 with a count is right when there are several axes to summarise; with one there is
 nothing to summarise, so `fbCompactLabel()` returns that filter's own trigger text
 instead — `Show`, then `Show: Media`.
+
+### The Reset / icon-button pattern
+
+Every bar ends with a **Reset** button, and they now share one component (v2.87.0,
+user): `class="qf-btn icon-btn reset-btn"` wrapping an `.ib-icon` (`↺`) and an
+`.ib-label` (`Reset`). The principle — the user's, for this project and future
+designs — is **shed the text, keep the icon**: a labelled icon that collapses to a
+tidy icon-only circle as the row runs out of room, the same idea as the timeline
+sort's `Newest First → an arrow`.
+
+- **One global rule:** `@media (max-width: 700px)` — the width every filter bar
+  collapses its filters at — the `.reset-btn` drops its `.ib-label` and becomes a
+  32px circle. So a phone shows a clean `↺` instead of `↺ Reset` on every tab.
+- All six table Reset buttons and the Timeline Reset use it. Reuse it for any future
+  icon action by giving the button this markup; the collapse comes for free.
+- The Timeline's Reset (`.tl-reset`) sits past the sort group; its `resetTimeline()`
+  clears the kind, the search **and** the sort, which also drops the Overview's
+  focused view (widgets + pinned return).
 
 ### What is not converted
 
@@ -1773,23 +1815,48 @@ starts with the Timeline (calendar strip + grouped-by-date
 list). One divider per day, nothing between aircraft. Beware
 `.timeline-items li`: it must stay `.timeline-items > li`, or the descendant
 match hits nested per-aircraft `<li>`s and double rules return.
-**The kind filter and the sort direction share one field** (`.tl-controls`),
-styled as the tables' `.filterbar` so the two read as one component. They were
-two stacked rows, and on a phone the sort pair alone wrapped to a full row —
-108px of chrome above the calendar, now 90px, and far less visually heavy.
-**The row sheds width in four steps instead of wrapping**, each a media query:
-`Oldest First` → `Oldest` → `Old` → a bare arrow in a circle, and at the last
-step the four kind pills give way to the dropdown.
-⚠️ **Those breakpoints are MEASURED, not device sizes.** The row is
-`viewport - 100`, the pill set is a fixed 312px, and the steps need
-582 / 516 / 483 / 428px including padding, gap and divider — so each query
-fires exactly where the level above stops fitting. **Changing a label or adding
-a pill invalidates them: re-measure, do not nudge.** Verified with no clipping
-at 700 / 660 / 600 / 560 / 500 / 348px.
-**The pills and the dropdown are two views of one value.** `setTimelineKind()`
-and `applyTimelineKindFromBar()` each write `timelineKindFilter` and repaint the
-other, and `renderTimeline()` renders both whatever the width — nothing is
-rebuilt on resize, so the hidden one has to be correct already.
+
+**The control row is the shared filter-bar component** (v2.86.0, user), exactly
+like every table tab — `.tl-controls` holds a `.fb-filters[data-bar="timeline"]`
+plus the sort group and a Reset button. The bespoke `.tl-kind-pills` /
+`.tl-kind-menu` twin, the 4-step pill shedding and the `timelineKindFilter` /
+`setTimelineKind` / `applyTimelineKindFromBar` / `renderTimelineKindPills`
+machinery are all **gone** — the component renders the quick pills, the `Show`
+dropdown (single-select) and the collapsed button, and `renderTimeline()` reads
+the kind from `fbSel('timeline','kind')` (empty = All) and the query from
+`fbQuery['timeline']`.
+
+- **Quick pills:** Software · Hardware · Media (≥980px). Activation, Maintenance
+  and Operational live in the `Show` dropdown. `TIMELINE_KINDS` is still the one
+  definition of the set; Maintenance was added as a filter option in v2.87.0.
+- **Search** matches an aircraft tail, a kind word, or any word a row renders —
+  built by `timelineHaystack()` over tail/kind/type/location/title/sub/ops.
+  ⚠️ This bar's `apply` re-renders the whole Timeline, so `renderTimeline()`
+  **skips its own `fbRender('timeline')` while the search box is focused** — an
+  `innerHTML` rebuild would drop focus every keystroke (the trap `fbSearchInput`
+  exists to avoid; table bars dodge it because their apply only re-filters rows).
+- **The sort group** still sheds its own labels in steps
+  (`Newest First → Newest → New → a bare arrow`, at 689/619/589px) — those are
+  independent of the component and unchanged.
+
+**Focused view (v2.87.0, user — reduce clutter).** The moment a kind or search
+takes hold *while the Overview is the active tab*, the global KPI widgets
+(`.global-widgets`) and the Pinned banner hide and the page scrolls to the
+Timeline, leaving only the filtered result. Reset (or clearing the search) brings
+them back. Load-bearing:
+- `syncTimelineFocus()` toggles widget + pinned **visibility** and is idempotent;
+  it runs at the end of every `renderTimeline()` **and** on every `switchTab()`,
+  so a timeline filter left set never blanks the widgets on another tab.
+- The Pinned banner's show/hide moved OUT of `renderTimeline` — that block only
+  stamps `pinnedEl.dataset.count`; `syncTimelineFocus` decides display.
+- `applyTimelineFilters()` (the bar's `apply`) grabs the scroll **once**, only on
+  the default→focused transition, so a second keystroke does not yank the page.
+  A background `renderTimeline()` (a data stream) updates visibility but never
+  scrolls.
+
+**Reset** uses the project-wide `.icon-btn`/`.reset-btn` pattern — see *Filter
+bar → The Reset / icon-button pattern*. `resetTimeline()` clears the kind, the
+search and the sort (back to Newest First), which drops the focused view.
 ### 2. Software
 
  (tab id is still `aircraft`) — **one** widget row of three cards:

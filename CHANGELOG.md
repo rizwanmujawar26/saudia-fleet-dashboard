@@ -13,6 +13,36 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.87.0 — Timeline: Reset, focused view, Maintenance; shared icon-btn Reset
+At the user's instruction (2026-09-03). A focus-first Overview and a project-wide
+Reset pattern. **Reset button (global rule):** a new shared `.icon-btn`/`.reset-btn`
+— a labelled icon that sheds its text to a `↺` circle below 700px, the same principle
+the sort uses (`Newest First → an arrow`), now the project's icon-action pattern for
+future designs. Applied to all six table Reset buttons AND the new Timeline Reset.
+**Timeline:** Reset added at the end of the row (clears kind, search, sort); quick
+pills are now Software · Hardware · Media (were Software/Media/Operational);
+Maintenance added as a `Show` dropdown filter (modem commissioning, troubleshooting,
+inspections all carry `kind: 'maintenance'` — previously only under All). **Focused
+view (Overview only):** a kind or search hides the global KPI widgets and the Pinned
+banner and scrolls to the Timeline, showing only what was asked for; Reset or clearing
+the search brings them back. `syncTimelineFocus()` drives visibility (idempotent, run
+on every render and on tab switch so the widgets never stay blank elsewhere);
+`applyTimelineFilters()` grabs the scroll once, only on the default→focused transition.
+
+### v2.86.0 — Overview timeline: search box + standard responsive filter bar
+At the user's instruction (2026-09-03). The Overview timeline's control row moved
+fully onto the shared filter-bar component (the `timeline` bar), the way every other
+tab works, and gained a free-text **search** — matches an aircraft tail, a kind word,
+or any word a row shows (a part name like MODMAN/KRFU, a location, an AOG reason);
+every word must match. **Responsive:** quick pills above 980px, the `Show` dropdown
+holds all kinds, and below 700px the whole row collapses to one button with a bottom
+sheet — replacing the old bespoke pill row that only scrolled sideways and never
+collapsed. Removed the `.tl-kind-pills`/`.tl-kind-menu` twin and the
+`timelineKindFilter`/`setTimelineKind`/`applyTimelineKindFromBar`/`renderTimelineKindPills`
+machinery. ⚠️ Because this bar's `apply` re-renders the Timeline (calling `fbRender`),
+`renderTimeline` skips that rebuild while the search box is focused, or typing would
+drop focus every keystroke.
+
 ### v2.85.1 — Media: Old means everything off the current cycle
 At the user's instruction (2026-09-03). The Old pill was showing only previous + older
 and silently excluding the No Media aircraft. It now means **everything except the
