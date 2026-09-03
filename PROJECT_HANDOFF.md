@@ -2498,11 +2498,12 @@ skipped, so an empty-state row is never numbered.
 
 ---
 
-## "RESUME" — the one-word session start
+## "quick resume nsg dashboard" — the session start
 
-CHECKPOINT's bookend. When the user says **RESUME** (alone or in a sentence), it
-means: *bring yourself fully up to speed on this project and tell me where things
-stand.* Do all three without asking:
+CHECKPOINT's bookend. The keyword is **"quick resume nsg dashboard"** — the reusable
+form is *"quick resume &lt;project&gt;"*, so the same habit works for other projects.
+It means: *bring yourself up to speed and tell me where things stand, loading only
+just enough to begin.* Two steps, no asking:
 
 0. ⚠️ **`cd` here first — a session does not open in this repo.** New chats open in
    `/Users/rizwanmujawar/Downloads/Claude Projects/Saudia Reports`, the **NSG IFEC
@@ -2511,20 +2512,24 @@ stand.* Do all three without asking:
    ```bash
    cd /Users/rizwanmujawar/Downloads/saudia-fleet-dashboard
    ```
-   ⚠️ **This is why RESUME failed on 2026-08-30**, on a checkpoint that was otherwise
+   ⚠️ **This is why resume failed on 2026-08-30**, on a checkpoint that was otherwise
    perfect. A close-out being complete does not make it *reachable*; the `cd` is what
    makes it so, which is why it is step zero in all three places the protocol lives —
    here, `CLAUDE.md`, and the assistant's memory.
-1. **Read `CLAUDE.md`** — that is the entire briefing.
-2. **Run the state check.** One read-only command covers all of it:
+1. **Run the one start command:**
    ```bash
-   ./scripts/resume.sh
+   ./scripts/quick-resume.sh
    ```
-   Release · git state · the 12 deployment checks · live-vs-local `index.html`
-   hash · live figures read fresh from the database · latest snapshot · open items.
-3. **Report briefly** — version and commit, tree clean and pushed, check result,
-   hash match, current figures, and the open items waiting on the user. Then ask
-   what to work on.
+   Its whole output (~450 tokens) IS the start: where you are, version + git state,
+   the load-bearing guardrails, and the on-demand menu. Read-only. **Do not read
+   `CLAUDE.md`, this handoff, or the runbook to begin** — that is the whole point.
+2. **Report one line** — version and commit, tree clean/dirty and in sync — then ask
+   what to work on, pulling only the section the work touches.
+
+⚠️ **"quick resume" replaces the old one-word RESUME**, which read `CLAUDE.md` whole
+and then ran the full `resume.sh`. The full network check — the 12 deployment checks,
+live-vs-local hash, live figures read fresh, latest snapshot — is still `resume.sh`,
+now run on demand and before a deploy, not to answer "where do I start".
 
 ⚠️ **DO NOT READ THIS DOCUMENT AT SESSION START.** It is a reference manual —
 ~38,000 tokens, a quarter of a context window gone before any work begins, which
@@ -2548,11 +2553,11 @@ non-zero when the tree is dirty, the branch is out of sync, a check fails, the l
 hash differs, or there is no verifiable snapshot.
 
 **Where the trigger is recorded.** A fresh session only knows what it auto-loads, so
-RESUME is written down in three places deliberately:
+the "quick resume" protocol is written down in three places deliberately:
 
 | | covers |
 |---|---|
-| `CLAUDE.md` in this repo | any session started **in** the repo — and it is committed, so it survives a clone. **It is also the briefing itself** |
+| `CLAUDE.md` in this repo | any session started **in** the repo — and it is committed, so it survives a clone. It is the fuller briefing; `quick-resume.sh` is what a session actually runs to begin |
 | the user's project memory (`resume-code-word`) | sessions started from the user's usual working directory |
 | this section | the human-readable source both of those point at |
 
@@ -2568,17 +2573,26 @@ been a **second home for the same content** — the exact duplication this proje
 removes everywhere else. One file, loaded automatically in the repo and read
 explicitly from anywhere else.
 
-**Session-start cost, measured 2026-08-28:**
+**Session-start cost, measured over two rounds:**
 
-| | before | after |
-|---|---|---|
-| documents read | handoff + runbook, whole | `CLAUDE.md` only |
-| tokens | **~52,000 (25% of a 200k window)** | **~2,500 (~1.2%)** |
+| | 2026-08-28 before | 2026-08-28 after | 2026-09-03 "quick resume" |
+|---|---|---|---|
+| what a start reads | handoff + runbook, whole | `CLAUDE.md` whole + `resume.sh` | `quick-resume.sh` output only |
+| tokens | **~52,000** | **~3,300** | **~450** |
 
-The saving came from three things: the change log left for `CHANGELOG.md` (~10k,
-and `git log` already had it), the runbook became on-demand (~3.4k, it is a
-break-glass procedure), and the handoff stopped being read at all in favour of
-`doc.sh` (~38k).
+The first cut (~52k → ~3.3k) came from three things: the change log left for
+`CHANGELOG.md` (~10k, and `git log` already had it), the runbook became on-demand
+(~3.4k, a break-glass procedure), and the handoff stopped being read at all in
+favour of `doc.sh` (~38k). The second cut (~3.3k → ~450) stopped reading `CLAUDE.md`
+whole at start too: `quick-resume.sh` carries the load-bearing guardrails inline and
+everything else — the reasons, the full network state check — is pulled on demand.
+
+⚠️ **Perspective: the ~450 tokens is a rounding error against the session baseline.**
+The tens of thousands of tokens a fresh chat spends "before work" are the Claude Code
+harness itself — system prompt, the skills/plugins catalogue, MCP server
+instructions, tool schemas — and no change to this protocol can shrink them. The one
+way *resume* can still blow up is a session reading `PROJECT_HANDOFF.md` whole (~38k);
+that mistake is what every ⚠️ above exists to prevent.
 
 ## "CHECKPOINT" — the one-word session close
 
@@ -2617,7 +2631,7 @@ up so it can be resumed cleanly in a fresh chat.* Do all four, in order, without
    covers the 12 checks, a clean tree, everything pushed, and the live `index.html`
    hash matching local. Never report a deploy from build status alone.
 
-4. **Say that the next session starts with the word RESUME**, and name anything
+4. **Say that the next session starts with "quick resume nsg dashboard"**, and name anything
    left unfinished. Nothing else needs to be carried across by hand — the protocol,
    the working agreements and the state check all live in the repo now.
 

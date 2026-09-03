@@ -1,8 +1,16 @@
-# Saudia Connectivity Fleet Status — briefing
+# ⛳ THIS PROJECT: Saudia Connectivity Fleet Status — briefing
 
-**This file is the whole session briefing. Read it and stop.** `PROJECT_HANDOFF.md`
-is a ~38,000-token reference manual, not a document to read at session start — pull
-the one section you need with `./scripts/doc.sh` when the work reaches it.
+> You are in the **Saudia dashboard** (static `index.html` · Realtime DB · GitHub
+> Pages). The **NSG IFEC Fleet Portal** is a *different* project in a different folder
+> (`.../Claude Projects/Saudia Reports`, React/Vite/Firestore) with its own memory —
+> don't cross the two.
+
+**A session starts with one command — `./scripts/quick-resume.sh` — not by reading
+this file.** See *"quick resume nsg dashboard"* below. This file is the fuller
+briefing: read a part of it only when you want the reasons behind a guardrail.
+`PROJECT_HANDOFF.md` is a ~38,000-token reference manual, never read at session
+start — pull the one section you need with `./scripts/doc.sh` when the work reaches
+it.
 
 A single-file HTML dashboard (`index.html`, ~7,700 lines, vanilla, no build step,
 no external scripts) for Saudia's wireless IFEC fleet: software loading, monthly
@@ -19,42 +27,49 @@ in front, Firebase Realtime Database behind, live-synced so the team sees one tr
 
 ## The two code words
 
-⚠️ **Both words start with a `cd`, because a session does not open here.** New chats
-open in `/Users/rizwanmujawar/Downloads/Claude Projects/Saudia Reports` — the **NSG
-IFEC Fleet Portal**, a different app (React + Vite + Firestore) with its own
-`index.html` and `scripts/` to mislead you. Nothing in this file is reachable from
-there:
+**Open this folder directly for dashboard work** (the workflow from 2026-09-03) — then
+you are already here, with this `CLAUDE.md` and the dashboard's own memory loaded, and
+both code words just work.
+
+⚠️ **If a session instead opened in the NSG portal folder**
+(`/Users/rizwanmujawar/Downloads/Claude Projects/Saudia Reports` — a different app,
+React + Vite + Firestore, with its own `index.html` and `scripts/` to mislead you),
+`cd` here first, because nothing in this file is reachable from there:
 
 ```bash
 cd /Users/rizwanmujawar/Downloads/saudia-fleet-dashboard
 ```
 
 On 2026-08-30 a checkpoint was flawless — clean tree, pushed, 12/12, live hash
-matching, full backup — and RESUME still failed in the next chat, because every
-artefact was in this repo while the session was somewhere else. **A perfect close-out
-is not the same as a reachable one.**
+matching, full backup — and resume still failed in the next chat, because every
+artefact was in this repo while the session was in the portal folder. **A perfect
+close-out is not the same as a reachable one** — opening the right folder is what
+makes it reachable.
 
-### RESUME — start of session
+### "quick resume nsg dashboard" — start of session
 
-Means: *get up to speed and tell me where things stand.* Three steps, no asking:
+The keyword is **"quick resume nsg dashboard"** (the reusable form is *"quick resume
+&lt;project&gt;"*). Means: *get up to speed and tell me where things stand, loading
+only just enough to begin.* Two steps, no asking:
 
-1. **`cd` here (above), then read this file.** That is the briefing — do **not** read
-   the handoff or the runbook to start a session.
-2. **Run the state check:**
+1. **`cd` here (above).**
+2. **Run the one start command:**
    ```bash
-   ./scripts/resume.sh
+   ./scripts/quick-resume.sh
    ```
-   Release · git state · the 12 deployment checks · live-vs-local `index.html`
-   hash · live figures read fresh from the database · latest verifiable snapshot ·
-   open items. Read-only, safe to repeat.
-3. **Report briefly** — version and commit, tree clean and pushed, check result,
-   hash match, current figures, open items waiting on the user. Then ask what to
-   work on.
+   Its whole output (~450 tokens) IS the start: where you are, version + git state,
+   the load-bearing guardrails, and the on-demand menu. Read-only, safe to repeat.
+   **Do not read this file, the handoff, or the runbook to start** — pull a section
+   only when the work reaches it. Then report one line and ask what to work on.
+
+⚠️ **"quick resume" replaces the old one-word RESUME.** The full network check —
+live-vs-local hash, the 12 deployment checks, live figures — is now `resume.sh`,
+run on demand and before a deploy, not to answer "where do I start".
 
 ⚠️ **Never quote figures from any document as fact.** The user edits live; that is
-why `resume.sh` reads them. ⚠️ **If the script flags anything, say so before
-changing anything** — it exits non-zero on a dirty tree, an out-of-sync branch, a
-failed check, a hash mismatch, or no verifiable snapshot.
+why `resume.sh` reads them fresh. ⚠️ **If a check flags anything, say so before
+changing anything** — `quick-resume.sh` shows a dirty tree / out-of-sync branch;
+`resume.sh` and `check.sh` are the fuller gates before a deploy.
 
 ### CHECKPOINT — end of session
 
@@ -69,7 +84,7 @@ Wrap up so the next session resumes cleanly. Four steps, no asking:
    project changed.
 3. `./scripts/resume.sh` must come back **All clear** — clean tree, pushed, 12/12,
    live hash == local. **Never report a deploy from build status alone.**
-4. Tell the user the next session starts with the word **RESUME**.
+4. Tell the user the next session starts with **"quick resume nsg dashboard"**.
 
 A close-out, not a stopping point: finish what is in flight or name it unfinished.
 
