@@ -6,8 +6,22 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-This session took the app **v2.81.0 → v2.82.0**. Everything below is detail; these
+This session took the app **v2.84.0 → v2.85.1**. Everything below is detail; these
 are the things that change how you work on it.
+
+**The Media tab filter bar was reworked, and the July widget dropped (v2.85.0–.1,
+2026-09-03).** At the user's instruction. The bar is now **Type · Status · Current ·
+Old · Cycle · Search**: the **Month dropdown (`cycle`) was removed**, a **free-text
+search** was added (tail + media part number/source string + month, via a new per-row
+`data-search`), and two **Current / Old quick pills** were added on a hidden `age` axis.
+**Current = the latest running cycle; Old = everything else** (previous, older, Light
+Media and No Media — the two pills partition the fleet). The **widget strip now starts
+at August 2026** (`MEDIA_WIDGET_MIN_CYCLE = '0826'` gates the dated cards; July and
+earlier keep their loads, counts and rows but lose their widget), and the **No Media
+card lost its `N loaded` pill** (`card()` gained a `hideTotal` flag). Two reusable
+additions to the shared filter component came out of this — see *Filter bar*: **`hidden`
+filters** (match rows, render no trigger, stay out of the mobile sheet) and
+**`quickAfter`** (interleave the quick pills after a named dropdown instead of first).
 
 **The Modem and Schedule tabs were removed (v2.82.0, 2026-09-02).** At the user's
 instruction: Satcom (the `/modmans` register) is the single reference for modem
@@ -969,6 +983,21 @@ filters on the left, that page's actions on the right.
   types and media cycles are functions, so they follow the data with no wiring.
 - `rowValue(row)` — only where the matched value is not the dataset attribute.
   Software's Status uses it to collapse "anything not completed" to `pending`.
+- `hidden: true` — the filter takes part in matching but renders **no trigger**, and
+  stays out of the collapsed mobile sheet. The Media `age` axis uses it: it exists only
+  to be driven by the Current / Old quick pills (v2.85.0). A hidden filter still counts
+  toward `fbActiveCount()` and is cleared by Reset, so a lit pill shows on the badge and
+  clears normally. Only give a pills-only axis a `hidden` filter when a visible dropdown
+  already reaches the same rows below 980px, or the values become unreachable on a phone.
+
+There is also one **bar-level** field beside `filters`/`quick`/`search`:
+
+- `quickAfter: '<filterId>'` — render the quick pills right **after** that trigger
+  inside `.fb-groups`, instead of the default position before every dropdown. Media uses
+  it to place Current / Old **between** Status and Cycle. Without it the pills render
+  first, unchanged for every other bar. Because `.fb-groups` is `display: contents`, the
+  interleaved `.fb-quick` is still a direct flex child and still obeys its own 980px
+  show/hide rule.
 
 That one entry gets you the trigger, the popover, the filtering, the trigger
 summary, the mobile count badge and the Reset behaviour. Before, each filter cost
@@ -1057,7 +1086,8 @@ the individual triggers and the collapsed one rendered at once.
 
 A bar may declare a `quick` list beside its `filters`: one-click pills for the handful
 of values worth reaching without opening a menu. The 4G SIM bar has **Active, Spare,
-Global, Local**.
+Global, Local**; the Media bar has **Current, Old** — both on one `age` axis, so they
+are mutually exclusive (see *Current / Old* below).
 
 ```js
 quick: [
@@ -1084,7 +1114,10 @@ dropdowns (267px) and three action buttons (268px) plus gaps and padding need 85
 bar, and the bar is the viewport less 100. Below it the pills hide and the dropdowns
 carry everything — nothing becomes unreachable. **A bar with more dropdowns than the
 SIM one would need a higher threshold**; `.fb-filters` scrolls sideways rather than
-breaking, but re-measure before giving another bar a `quick` list.
+breaking, but re-measure before giving another bar a `quick` list. The Media bar reuses
+the same 980px and fits (three dropdowns, **two** pills not four, plus the search box,
+which shrinks first) — verified in the preview; if a fourth dropdown or pill lands there,
+re-measure.
 
 ### Free-text search
 
@@ -2007,10 +2040,14 @@ clears them rather than keeping a stale month.
   on its own — any record whose `mediaSource` is `ME-SVA-UGO-0526` parses to `0526` and
   is baseline.
 
-  It ranks **second last, above only No Media**, in the widget strip *and* in the Month
-  filter: it is not a point in the monthly sequence, so listing it between two months
+  It ranks **second last, above only No Media**, in the widget strip *and* in the Cycle
+  view list: it is not a point in the monthly sequence, so listing it between two months
   would misplace it. **Violet**, deliberately clear of the green/blue/amber
-  progression, because the aircraft is not behind.
+  progression, because the aircraft is not behind. (⚠️ Since v2.85.1 the **Current / Old**
+  pills count Light Media as **Old** — "everything except the current running cycle,"
+  the user's rule — even though its colour still says "not behind." The two are not in
+  conflict: the pill answers *is it the current cycle?*, the colour answers *is it
+  behind?*, and the baseline is neither.)
   ⚠️ The two records still store `mediaDisplay: 'May 2026'`. Nothing reads it for
   display — `cycleToDisplay()` derives the label — so it is superseded rather than
   wrong, the same way `simRoaming` is.
@@ -2058,9 +2095,26 @@ clears them rather than keeping a stale month.
   fleet, so a stored value goes stale the moment a newer cycle lands.
   `mediaStatusType()` derives it: latest (green), one month back (blue), older
   (amber), none (grey).
-- Widgets are built from cycles actually present, newest first, and so is the Month
-  filter's option list. A new cycle creates its own widget and filter option with no
-  code change (verified with a simulated September).
+- Widgets are built from cycles actually present, newest first, and so is the Cycle
+  view's option list. A new cycle creates its own widget and Cycle-view option with no
+  code change (verified with a simulated September). ⚠️ **The Month row-filter (`cycle`)
+  was removed in v2.85.0** — the Cycle *view* plus the search box cover picking a month,
+  and it was a third dated-cycle control on one row. Do not reintroduce it without the
+  user asking.
+- ⚠️ **The widget strip starts at August 2026** (`MEDIA_WIDGET_MIN_CYCLE = '0826'`,
+  v2.85.0, user). Dated cards older than that — July 2026 and earlier — are dropped from
+  the **strip only**; their loads, counts, rows and Cycle-view option all remain. The
+  gate is on `dated` in `renderMediaWidgets()`; Light Media (its own bucket) and No Media
+  are not months and are not governed by it.
+- **The No Media card carries no `N loaded` pill** (v2.85.0, user): No Media means
+  nothing was ever loaded on those aircraft, so a loaded count is meaningless. `card()`
+  takes a `hideTotal` flag; every dated cycle still shows its total.
+- **Current / Old** are quick pills on a hidden `age` axis (v2.85.0–.1): Current = the
+  latest running cycle, Old = **everything else**. See *Filter bar → Quick pills* and
+  *Declaring one* (`hidden`, `quickAfter`).
+- **Search** matches each row's tail, media part number (the `mediaSource` string) and
+  month — the cycle code, full label and short label — via a per-row `data-search` built
+  in `populateMediaTable()`. An aircraft with no cycle is searchable as "No Media".
 - **`MEDIA_CYCLE_SIZES`** maps a cycle (MMYY) to its load size — `'0926': '884 GB'` —
   and is the one place to add next month. It does two jobs: it puts the size in a pill
   on that cycle's widget, and **a cycle listed there gets a widget before any aircraft
@@ -2070,7 +2124,7 @@ clears them rather than keeping a stale month.
   actually loaded — declaring September otherwise marks the whole August fleet a month
   behind, and `mediaStatus` is relative to the newest cycle *in the fleet*. An
   undelivered cycle renders as `upcoming` (violet), deliberately not `older` (amber),
-  is left out of the Month filter's options (it could only filter to an empty table), and
+  is left out of the Cycle view's options (it could only view an empty table), and
   flips to `latest` on its own once the first aircraft takes it.
 
 ---
