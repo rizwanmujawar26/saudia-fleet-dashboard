@@ -909,6 +909,24 @@ returning.
 hidden, so the two are marked on the ROW — `tl-ops-out` takes a red accent and ⚠,
 `tl-ops-back` takes green and ✔ — the same reasoning as the Activation milestone.
 
+**Collapsible, collapsed by default (v2.88.0).** The banner had grown tall enough to
+push the day list off the first screen, so it now shows as a single header line —
+`📌 Out of Service`, an `N Aircraft` pill, the registrations inline (`ASD · ASO · …`),
+the `N of 44` count and a chevron — and the whole header is the expand/collapse
+control (`toggleTimelinePinned`, state in `timelinePinnedExpanded`). The toggle is a
+**DOM-only class flip** (`.tl-pinned.expanded`), not a `renderTimeline()`, so opening
+it does not redraw the day list; `renderTimeline` reads the flag to restore state on a
+real redraw. The inline summary lives in `.tl-pinned-summary` and is hidden by CSS once
+expanded; the rows in `.tl-pinned-items` are hidden by CSS until then.
+
+⚠️ **The rows re-use `.tl-row`, so kill its divider and padding here.** `.tl-row`
+carries its own grey `border-bottom` and `9px 14px` padding for the day list. Left
+alone inside a `.tl-pin`, that stacked on top of `.tl-pin`'s own pink divider and
+padding — a **double line and doubled row height** (the v2.88.0 bug the user reported).
+The fix: `.tl-pin` carries the single divider (`.tl-pin + .tl-pin`), and
+`.tl-pinned-items .tl-pin .tl-row` sheds its border and tightens to `6px 12px`. Any
+future strip that borrows `.tl-row` inherits the same trap.
+
 ### Activation is a milestone, and it is DERIVED
 
 Entering service is the event the other three kinds are work towards, so it renders
