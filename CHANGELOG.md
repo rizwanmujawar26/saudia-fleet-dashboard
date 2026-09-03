@@ -13,6 +13,13 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.85.1 — Media: Old means everything off the current cycle
+At the user's instruction (2026-09-03). The Old pill was showing only previous + older
+and silently excluding the No Media aircraft. It now means **everything except the
+current running cycle** — the `age` rowValue is simply `latest ? 'current' : 'old'`, so
+previous, older, Light Media and No Media are all Old. Current (the latest cycle) and
+Old now partition the fleet, so the two pills between them account for every aircraft.
+
 ### v2.85.0 — Media tab: Current/Old pills, search, no July widget
 At the user's instruction (2026-09-03). The Media filter bar is reordered and gains a
 free-text search and two quick pills; the widget strip drops the July 2026 card.

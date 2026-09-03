@@ -6130,8 +6130,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.85.0';
-        const APP_BUILD    = '2026.09.03.01';
+        const APP_VERSION  = '2.85.1';
+        const APP_BUILD    = '2026.09.03.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-01T16:00:00Z';
 
@@ -7816,19 +7816,16 @@
                         { v: 'light', l: MEDIA_LIGHT_LABEL },
                         { v: 'no_media', l: 'No Media' },
                     ] },
-                    // The axis the Current / Old pills drive. Current = the latest cycle;
-                    // Old = anything behind it (previous or older). Light Media and No
-                    // Media are neither — the baseline is not behind, and "no media" is
-                    // not a cycle age (user, 2026-09-03). `hidden` keeps it off the row
-                    // and the mobile sheet: it is a pills-only shortcut, and below 980px
-                    // the Status dropdown already reaches Latest / Previous / Older, so
-                    // nothing becomes unreachable.
-                    { id: 'age', hidden: true, rowValue: row => {
-                        const s = row.dataset.mstatus;
-                        if (s === 'latest') return 'current';
-                        if (s === 'previous' || s === 'older') return 'old';
-                        return '';
-                    }, options: [
+                    // The axis the Current / Old pills drive. Current = the latest
+                    // running cycle; Old = EVERYTHING ELSE — previous, older, Light Media
+                    // and No Media all included (user, 2026-09-03). The two pills together
+                    // partition the fleet: an aircraft is either on the current cycle or
+                    // it is not. `hidden` keeps it off the row and the mobile sheet: it is
+                    // a pills-only shortcut, and below 980px the Status dropdown still
+                    // reaches every category, so nothing becomes unreachable.
+                    { id: 'age', hidden: true,
+                      rowValue: row => row.dataset.mstatus === 'latest' ? 'current' : 'old',
+                      options: [
                         { v: 'current', l: 'Current' },
                         { v: 'old', l: 'Old' },
                     ] },
