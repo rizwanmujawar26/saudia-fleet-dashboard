@@ -1242,32 +1242,13 @@
             z-index: 300;
         }
 
-        /* min-width:0 lets the pills scroll inside their share rather than
-           pushing the sort group off the right edge. */
-        .tl-controls .tl-kind-pills {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1 1 auto;
-            min-width: 0;
-            margin-bottom: 0;
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
-        .tl-controls .tl-kind-pills::-webkit-scrollbar { display: none; }
-        .tl-controls .tl-kind-pills .qf-btn { flex: 0 0 auto; }
-
-        /* The dropdown twin. The shared component renders both an expanded set
-           and a collapsed trigger and switches them at 700px; this row wants
-           neither of those defaults, so both are overridden at (0,2,0) —
-           higher than the component's own (0,1,0) rules, whatever the order. */
-        .tl-controls .tl-kind-menu {
-            display: none;
-            flex: 0 0 auto;
-            overflow: visible;
-        }
-        .tl-controls .fb-groups { display: none; }
-        .tl-controls .fb-compact { display: none; }
+        /* The kind filter and the search box are the shared filter-bar component
+           (`.fb-filters[data-bar="timeline"]`), styled entirely by the component's own
+           rules — the same quick-pills-above-980px / Show-dropdown / collapse-to-one-
+           button-below-700px behaviour every table bar has. .fb-filters is flex:1 and
+           shrinks (and scrolls) within its own share, so the sort group keeps its place
+           at the right. No per-row overrides: this row IS the component now, not a
+           bespoke twin of it. */
 
         .tl-sort {
             display: flex;
@@ -1319,14 +1300,6 @@
             .tl-arrow { font-size: 13px; }
             .tl-controls { gap: 8px; padding: 6px 8px; }
             .tl-sort { padding-left: 8px; }
-        }
-
-        /* Last step: the pills give way to the dropdown. The four pills are a
-           fixed 312px and stop fitting beside the arrows below ~535px. */
-        @media (max-width: 534px) {
-            .tl-controls .tl-kind-pills { display: none; }
-            .tl-controls .tl-kind-menu { display: flex; }
-            .tl-controls .fb-compact { display: inline-flex; }
         }
 
         /* Timeline tag pills */
@@ -4507,7 +4480,6 @@
         @media (any-pointer: fine) {
             .tabs,
             .cal-strip,
-            .tl-controls .tl-kind-pills,
             .table-scroll-wrapper,
             .media-widget-strip,
             .fb-filters,
@@ -4521,7 +4493,6 @@
                undo that. */
             .tabs::-webkit-scrollbar,
             .cal-strip::-webkit-scrollbar,
-            .tl-controls .tl-kind-pills::-webkit-scrollbar,
             .table-scroll-wrapper::-webkit-scrollbar,
             .media-widget-strip::-webkit-scrollbar,
             .fb-filters::-webkit-scrollbar,
@@ -4532,7 +4503,6 @@
 
             .tabs::-webkit-scrollbar-track,
             .cal-strip::-webkit-scrollbar-track,
-            .tl-controls .tl-kind-pills::-webkit-scrollbar-track,
             .table-scroll-wrapper::-webkit-scrollbar-track,
             .media-widget-strip::-webkit-scrollbar-track,
             .fb-filters::-webkit-scrollbar-track,
@@ -4542,7 +4512,6 @@
 
             .tabs::-webkit-scrollbar-thumb,
             .cal-strip::-webkit-scrollbar-thumb,
-            .tl-controls .tl-kind-pills::-webkit-scrollbar-thumb,
             .table-scroll-wrapper::-webkit-scrollbar-thumb,
             .media-widget-strip::-webkit-scrollbar-thumb,
             .fb-filters::-webkit-scrollbar-thumb,
@@ -4553,7 +4522,6 @@
 
             .tabs:hover::-webkit-scrollbar-thumb,
             .cal-strip:hover::-webkit-scrollbar-thumb,
-            .tl-controls .tl-kind-pills:hover::-webkit-scrollbar-thumb,
             .table-scroll-wrapper:hover::-webkit-scrollbar-thumb,
             .media-widget-strip:hover::-webkit-scrollbar-thumb,
             .fb-filters:hover::-webkit-scrollbar-thumb,
@@ -4665,15 +4633,16 @@
                         <div class="timeline-title-row">
                             <div class="timeline-title" id="completedDeliveriesTitle">📅 Timeline</div>
                         </div>
-                        <!-- Kind filter and sort share one field. Both shed width in
-                             steps as the row narrows: the sort labels go
-                             "Oldest First" -> "Oldest" -> "Old" -> a bare arrow, and at
-                             the last step the pills give way to the dropdown. Activity
-                             kinds are built in JS from TIMELINE_KINDS, which is still
-                             the one definition of the set. -->
+                        <!-- The kind filter and the free-text search are the shared
+                             filter-bar component (the `timeline` bar), exactly like every
+                             other tab: quick pills above 980px, a Show dropdown holding all
+                             kinds, and a collapse to one button below 700px. The kind
+                             options are built in JS from TIMELINE_KINDS, still the one
+                             definition of the set. The sort group sits beside it and sheds
+                             its own labels: "Oldest First" -> "Oldest" -> "Old" -> a bare
+                             arrow as the row narrows. -->
                         <div class="tl-controls">
-                            <div class="quick-filters tl-kind-pills" id="timelineKindPills"></div>
-                            <div class="fb-filters tl-kind-menu" data-bar="timeline"></div>
+                            <div class="fb-filters" data-bar="timeline"></div>
                             <div class="tl-sort">
                                 <button id="sortOldestBtn" class="qf-btn tl-sort-btn" onclick="setTimelineSort('asc')"
                                         title="Oldest first" aria-label="Sort oldest first">
@@ -6130,10 +6099,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.85.1';
-        const APP_BUILD    = '2026.09.03.02';
+        const APP_VERSION  = '2.86.0';
+        const APP_BUILD    = '2026.09.03.03';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-09-01T16:00:00Z';
+        const APP_DEPLOYED = '2026-09-03T13:13:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -7975,12 +7944,23 @@
                 ],
             },
 
-            // The Overview timeline's kind filter. It is PILLS at most widths — an
-            // exclusive four-way choice reads better as a segmented row than as a menu
-            // — and collapses to this dropdown only when the control row runs out of
-            // room. Both surfaces drive the one `timelineKindFilter`.
+            // The Overview timeline. On the shared component like every other tab: the
+            // most-watched kinds are quick pills above 980px, the Show dropdown holds all
+            // of them (an exclusive, single-select choice), and below 700px the whole row
+            // collapses to one Show/Filters button. The search box filters the entries
+            // themselves — an aircraft tail, a kind word, or any word a row shows (a part
+            // name like MODMAN/KRFU, a location, an AOG reason). Everything here drives
+            // renderTimeline(), which re-filters the model and the calendar counts with it.
             timeline: {
-                apply: () => applyTimelineKindFromBar(),
+                apply: () => renderTimeline(),
+                search: 'Search aircraft or keyword',
+                // The three recurring work streams, one click each. Activation (a one-time
+                // milestone) and Hardware stay in the Show dropdown — nothing is unreachable.
+                quick: [
+                    { filter: 'kind', value: 'software',    label: 'Software' },
+                    { filter: 'kind', value: 'media',       label: 'Media' },
+                    { filter: 'kind', value: 'operational', label: 'Operational' },
+                ],
                 filters: [
                     { id: 'kind', label: 'Show', single: true,
                       options: () => TIMELINE_KINDS.filter(k => k.value).map(k => ({ v: k.value, l: k.label })) },
@@ -13507,7 +13487,6 @@
         // /aircraft/{tail}/media, and Maintenance + Hardware from /activities. There is
         // no Timeline collection — nothing here is entered twice.
         let timelineSortDir = 'desc';   // 'desc' = newest first (default), 'asc' = oldest first
-        let timelineKindFilter = '';    // '' = all
 
         // No Maintenance pill for now — maintenance-kind activities still appear under
         // All, they just have no filter of their own until the categories settle.
@@ -13531,36 +13510,34 @@
             updateMetrics();
         }
 
-        // The pills and the collapsed dropdown are two views of ONE value. Each writes
-        // timelineKindFilter and then repaints the other, so whichever is on screen at
-        // the time is correct and the hidden one is already right when the window is
-        // resized across the breakpoint.
-        function setTimelineKind(kind) {
-            timelineKindFilter = kind;
+        // The Timeline's kind and free-text search both live on the shared filter-bar
+        // component (the `timeline` bar), exactly like every other tab. The quick pills,
+        // the Show dropdown and the collapsed button are surfaces the component renders
+        // and keeps in step — nothing here re-implements them. These two readers are all
+        // renderTimeline() needs: the current kind (empty Set = All) and the query.
+        function timelineKind() {
             const sel = fbSel('timeline', 'kind');
-            sel.clear();
-            if (kind) sel.add(kind);
-            fbRender('timeline');
-            renderTimelineKindPills();
-            updateMetrics();
+            return sel.size ? [...sel][0] : '';
         }
 
-        // Called by the filter bar when the choice is made in the dropdown.
-        function applyTimelineKindFromBar() {
-            const chosen = [...fbSel('timeline', 'kind')];
-            timelineKindFilter = chosen.length ? chosen[0] : '';
-            renderTimelineKindPills();
-            updateMetrics();
+        // Everything a Timeline row shows, folded into one searchable string so a query
+        // can match an aircraft (tail), a kind word (software, media, operational…) or any
+        // other word the entry displays — a part name like MODMAN or KRFU, a location, an
+        // AOG reason. Whatever the row renders is what the search sees.
+        function timelineHaystack(x) {
+            const typeLabel = TYPE_SHORT_LABEL[x.type] || x.type || '';
+            const loc = x.location || '';
+            const ops = x.opsState ? [opsDef(x.opsState).label, opsDef(x.opsState).short].join(' ') : '';
+            return [x.tail, x.kind, typeLabel, x.type, loc, loc && locationCode(loc), x.title, x.sub, ops]
+                .filter(Boolean).join(' ').toLowerCase();
         }
 
-        // Rebuilt every time rather than once: it has to reflect a choice that may have
-        // been made in the dropdown, and four buttons cost nothing.
-        function renderTimelineKindPills() {
-            const box = document.getElementById('timelineKindPills');
-            if (!box) return;
-            box.innerHTML = TIMELINE_KINDS.map(k =>
-                `<button class="qf-btn ${k.value === timelineKindFilter ? 'active' : ''}" onclick="setTimelineKind('${escAttr(k.value)}')">${escAttr(k.label)}</button>`
-            ).join('');
+        // Every word must match, so "asv media" narrows rather than widens — the same
+        // rule the table bars use in fbRowMatch.
+        function timelineSearchMatch(x, q) {
+            if (!q) return true;
+            const hay = timelineHaystack(x);
+            return q.split(/\s+/).every(w => hay.includes(w));
         }
 
         // Where an activity happened, best available. Software carries its own
@@ -13756,17 +13733,27 @@
 
         function renderTimeline() {
             setText('completedDeliveriesTitle', '📅 Timeline');
-            renderTimelineKindPills();
-            // The collapsed twin. Rendered whatever the width, because a resize
-            // across the breakpoint only changes which one CSS shows — neither is
-            // rebuilt on resize, so both have to be current already.
-            fbRender('timeline');
+            // The whole control row — quick pills, the Show dropdown, the search box and
+            // the collapsed button — is the shared component. Rendered whatever the width,
+            // because a resize across a breakpoint only changes which parts CSS shows;
+            // nothing is rebuilt on resize, so every surface has to be current already.
+            // ⚠️ But NOT while the search box is being typed into: this bar's apply is
+            // renderTimeline itself, so it runs on every keystroke, and an innerHTML
+            // rebuild would drop focus each time (the trap fbSearchInput exists to avoid).
+            // The component already keeps its pills and triggers in step on click, so
+            // skipping the rebuild mid-type loses nothing — only the rows re-filter.
+            const active = document.activeElement;
+            const typingSearch = active && active.classList.contains('fb-search')
+                && active.closest('.fb-filters[data-bar="timeline"]');
+            if (!typingSearch) fbRender('timeline');
 
             const all = timelineActivities();
-            // The filter drives the day counts as well as the rows, so a day showing
-            // "2 activities" under Hardware means two hardware activities, not two of
-            // anything else.
-            const items = timelineKindFilter ? all.filter(x => x.kind === timelineKindFilter) : all;
+            // Both the kind filter and the free-text search drive the day counts as well
+            // as the rows, so a day showing "2 activities" counts only what is left after
+            // filtering, not two of anything else.
+            const kind = timelineKind();
+            const q = (fbQuery['timeline'] || '').trim().toLowerCase();
+            const items = all.filter(x => (!kind || x.kind === kind) && timelineSearchMatch(x, q));
 
             const groups = {};
             items.forEach(x => { (groups[x.iso] = groups[x.iso] || []).push(x); });
@@ -13860,7 +13847,7 @@
                         <span class="tl-reg">${escAttr(x.tail)}</span>
                         ${typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : ''}
                         ${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}
-                        ${timelineKindFilter ? '' : `<span class="tl-kind tl-kind-${x.kind}">${x.kind}</span>`}
+                        ${kind ? '' : `<span class="tl-kind tl-kind-${x.kind}">${x.kind}</span>`}
                         <span class="tl-title">${escAttr(x.title)}</span>
                         ${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}
                     </div>
@@ -14543,7 +14530,7 @@
         // hide their scrollbar outright (`scrollbar-width: none`), so a wide Modem
         // table or an overflowing tab strip simply had content that could not be got
         // at (user, 2026-08-28).
-        const HSCROLL_SELECTOR = '.tabs, .cal-strip, .tl-kind-pills, .table-scroll-wrapper,'
+        const HSCROLL_SELECTOR = '.tabs, .cal-strip, .table-scroll-wrapper,'
             + ' .media-widget-strip, .fb-filters, .quick-filters';
 
         // Translate a vertical wheel into horizontal scroll while the pointer is over
