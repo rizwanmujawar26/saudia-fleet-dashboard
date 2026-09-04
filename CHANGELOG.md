@@ -13,6 +13,45 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.97.0 — Satcom: IPHO applies to A321XLR boxes too
+At the user's instruction (2026-09-04). IPHO Mode was N/A for A321XLR (linefit/Astronics)
+aircraft; the XLR uses IPHO as well, so its Enabled/Disabled pill is now live and editable
+as soon as a box is added to an A321XLR — whatever the airframe's activation state.
+`iphoApplies` in `satcomRows()` is now `!offWing && ((fit==='retrofit' && Active) ||
+isAstronics)`. Active-retrofit and off-wing/other-not-active N/A behaviour unchanged. Note:
+XLR boxes default to IPHO Disabled, so they surface under the To-Do filter until set to
+Enabled (same as retrofit).
+
+### v2.96.0 — Satcom: serials are supplier-specific (Astronics vs Eclipse/Kontron)
+At the user's instruction (2026-09-04). The MODMAN supplier follows the airframe: an A321XLR
+(Airbus HBC+ linefit) carries an Astronics box, every other airframe the legacy
+Eclipse+Kontron build. `satcomRows()` derives `isAstronics = ac.type === 'A321XLR'`; a new
+`serialCell()` shows a static grey **N/A** pill (`.sn-na`) for the serials that don't belong
+to a box's supplier, in read AND edit mode (no input) — replacing the "N/A" the user had been
+typing by hand. `handleSatcomEdit()` now repaints on an `aircraft` change so the serial (and
+IPHO) cells flip live. The **Add MODMAN modal** greys the non-applicable serials and switches
+the required identifier — Astronics S/N for an XLR box (no Kontron), Kontron S/N otherwise —
+dedup keyed on whichever applies. Search haystack carries only the applicable serials.
+
+### v2.95.0 — Satcom: Astronics S/N column
+At the user's instruction (2026-09-04). Added an **Astronics S/N** column inside MODMAN
+Details after Kontron — the A321XLR MODMAN is a different Astronics part number. New
+`/modmans` field `astronicsSn` (rules: string ≤60, deployed ahead of the page). The insert
+re-numbered every `data-col`/`sortTable()` arg from 5 on (colspan 5→6, Aircraft 12→13,
+Status 13→14, IPHO 14→15) with body cells inserted to match — verified head↔body alignment
+and shifted-column sorts in the browser. The three serials share a `.satcom-serial` class
+(10px, tight padding, one-line body, wrapping heads) so the third column adds ~40px.
+
+### v2.94.0 — Satcom filters: To-Do exclusive; IPHO folded into Commissioning
+At the user's instruction (2026-09-04). Two filter-bar changes:
+- **To-Do is now whole-bar exclusive** (was sticky/per-axis). It moved to its own hidden
+  `todo` axis with a bespoke `satcomTodoPick()`; the new generic `bar.exclusive` +
+  `fbExclusiveClear()` (called from `fbQuickToggle`/`fbPick`) make the four quick pills one
+  radio group. Search stays orthogonal.
+- **IPHO dropdown removed, folded into Commissioning.** The Commissioning dropdown now
+  carries six per-module options (Taurus/Hughes To-Do·Done, IPHO Enabled·Disabled) matched
+  by a new `filter.rowMatch(row, sel)` hook that ORs across three dataset fields.
+
 ### v2.93.0 — Accurate delivery dates (DD-Mon-YYYY)
 At the user's instruction (2026-09-04). Three source files replaced the placeholder
 month-year delivery dates with precise `DD/MM/YYYY` values — many of the originals were
