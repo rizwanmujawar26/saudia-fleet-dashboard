@@ -2738,6 +2738,12 @@
         /* IPHO does not apply to this row (linefit, not-yet-active, or an off-wing box).
            Grey, matching the commissioning N/A pill on the same page. */
         .status-badge.ipho-na  { background: #eef1f4; color: #6b747d; border: 1px solid #dce1e6; }
+        /* A serial column that does not belong to this box's supplier (Eclipse/Kontron on
+           an Astronics/A321XLR box, or Astronics on a legacy box). Same grey N/A pill. */
+        .status-badge.sn-na    { background: #eef1f4; color: #6b747d; border: 1px solid #dce1e6; }
+        /* An Add-MODMAN serial field greyed out because it does not apply to the selected
+           airframe's supplier — it reads N/A and cannot be typed into. */
+        .add-sched-input.sn-off { background: #eef1f4; color: #9aa2ab; cursor: not-allowed; }
 
         /* The identifying digits inside a chassis id or TID get a gentle emphasis — one
            weight step, no size change, so they stay on the monospace grid. Leading zeros
@@ -5367,7 +5373,7 @@
     <div id="addModmanOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
         <div class="act-modal" style="max-width:520px; max-height:88vh; overflow-y:auto;">
             <h3 style="color:#0a5c34; margin-bottom:6px;">Add MODMAN</h3>
-            <p style="font-size:13px; color:#666; margin-bottom:16px;">Add a box to the register. Only the <b>Kontron S/N</b> is required — the rest can be filled in later from the table.</p>
+            <p style="font-size:13px; color:#666; margin-bottom:16px;">Add a box to the register. Only the <b id="addModmanReqHint">Kontron S/N</b> is required — the rest can be filled in later from the table. An <b>A321XLR</b> box is an Astronics build, so it takes an Astronics S/N and no Eclipse/Kontron.</p>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 14px;">
                 <div>
@@ -5424,7 +5430,7 @@
                  box went on; it drives the days pill on the table. -->
             <div id="addMmFitWrap" style="display:none;">
                 <label class="add-sched-label">Aircraft</label>
-                <select id="addMmAircraft" class="add-sched-input"></select>
+                <select id="addMmAircraft" class="add-sched-input" onchange="syncAddModmanSerials()"></select>
 
                 <label class="add-sched-label">Install Date <span style="text-transform:none; font-weight:400;">(optional)</span></label>
                 <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="addMmInstall" class="add-sched-input">
@@ -6218,8 +6224,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.95.0';
-        const APP_BUILD    = '2026.09.04.03';
+        const APP_VERSION  = '2.96.0';
+        const APP_BUILD    = '2026.09.04.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -11686,8 +11692,15 @@
                 const iphoRaw = staged.iphoStatus !== undefined
                     ? staged.iphoStatus : (ac ? (ac.iphoStatus || '') : '');
                 const ipho = !iphoApplies ? 'na' : (iphoRaw === 'completed' ? 'enabled' : 'disabled');
+                // The MODMAN supplier follows the airframe: an A321XLR (Airbus HBC+
+                // linefit) carries an Astronics box — one Astronics S/N, no Eclipse/Kontron
+                // — while every other airframe, and any off-wing/unassigned box, is the
+                // legacy Eclipse+Kontron build with no Astronics serial. The serial columns
+                // that do not belong to this box's supplier read a static N/A, the same
+                // "derive, don't trust the raw field" rule the commissioning/IPHO cells use.
+                const isAstronics = !!ac && ac.type === 'A321XLR';
                 return {
-                    id, status, aircraft, ipho,
+                    id, status, aircraft, ipho, isAstronics,
                     commTaurus: comm('commTaurus'),
                     commHughes: comm('commHughes'),
                     eclipseSn: pick('eclipseSn'), kontronSn: pick('kontronSn'), astronicsSn: pick('astronicsSn'),
@@ -11779,7 +11792,8 @@
                 row.dataset.ipho = r.ipho;
                 // The search haystack is the data, not the columns: serials, both Taurus
                 // sets, the Hughes trio, and the tail with its ex- form.
-                row.dataset.search = [r.eclipseSn, r.kontronSn, r.astronicsSn, r.taurusOldMgId, r.taurusOldTid,
+                row.dataset.search = [...(r.isAstronics ? [r.astronicsSn] : [r.eclipseSn, r.kontronSn]),
+                    r.taurusOldMgId, r.taurusOldTid,
                     r.taurusNewMgId, r.taurusNewTid, r.hnsChassisId, r.hnsEsn, r.hnsMac,
                     r.tailLabel, r.aircraft].filter(Boolean).join(' ');
 
@@ -11821,6 +11835,14 @@
                     if (!value) return '<span class="fleet-notset">—</span>';
                     return promote ? modemIdHTML(value) : escAttr(value);
                 };
+
+                // A serial that belongs to this box's supplier renders like any other
+                // identifier; one that does not (Eclipse/Kontron on an Astronics box, or
+                // Astronics on a legacy box) shows a static grey N/A and offers no input,
+                // even in edit mode — the same treatment the N/A commissioning cells get.
+                const serialCell = (field, value, applicable) =>
+                    applicable ? idCell(field, value, false)
+                               : '<span class="status-badge sn-na">N/A</span>';
 
                 const tailCell = editing
                     ? `<select class="edit-select" data-mm="${escAttr(r.id)}" data-field="aircraft" onchange="handleSatcomEdit(this)">
@@ -11881,9 +11903,9 @@
                     <td>${idx + 1}</td>
                     <td data-sort="${insSort}">${dateCell('installDate', r.installDate)}</td>
                     <td class="satcom-tight" data-sort="${remSort}">${dateCell('removalDate', r.removalDate)}</td>
-                    <td class="satcom-serial" data-sort="${escAttr(r.eclipseSn)}">${idCell('eclipseSn', r.eclipseSn, false)}</td>
-                    <td class="satcom-serial" data-sort="${escAttr(r.kontronSn)}">${idCell('kontronSn', r.kontronSn, false)}</td>
-                    <td class="satcom-serial" data-sort="${escAttr(r.astronicsSn)}">${idCell('astronicsSn', r.astronicsSn, false)}</td>
+                    <td class="satcom-serial" data-sort="${escAttr(r.isAstronics ? '' : r.eclipseSn)}">${serialCell('eclipseSn', r.eclipseSn, !r.isAstronics)}</td>
+                    <td class="satcom-serial" data-sort="${escAttr(r.isAstronics ? '' : r.kontronSn)}">${serialCell('kontronSn', r.kontronSn, !r.isAstronics)}</td>
+                    <td class="satcom-serial" data-sort="${escAttr(r.isAstronics ? r.astronicsSn : '')}">${serialCell('astronicsSn', r.astronicsSn, r.isAstronics)}</td>
                     <td class="satcom-group-start" data-sort="${escAttr(r.taurusOldMgId)}">${idCell('taurusOldMgId', r.taurusOldMgId, false)}</td>
                     <td data-sort="${escAttr(r.taurusOldTid)}">${idCell('taurusOldTid', r.taurusOldTid, true)}</td>
                     <td class="satcom-group-start" data-sort="${escAttr(r.taurusNewMgId)}">${idCell('taurusNewMgId', r.taurusNewMgId, false)}</td>
@@ -11967,6 +11989,13 @@
                 // staged here too, but it lands on the AIRCRAFT at Save, not the modman —
                 // commitSatcomChanges pulls it out and writes it to /aircraft.
                 entry[field] = (el.value || '').trim();
+                repaint = true;
+            } else if (field === 'aircraft') {
+                // The airframe decides the MODMAN supplier (Astronics on an A321XLR vs
+                // Eclipse/Kontron elsewhere) AND whether IPHO applies, so changing it must
+                // repaint to switch the serial and IPHO cells between value and N/A. It is
+                // a dropdown, so no cursor is lost.
+                entry.aircraft = (el.value || '').trim();
                 repaint = true;
             } else {
                 entry[field] = (el.value || '').trim();
@@ -12109,6 +12138,37 @@
             if (!wrap) return;
             const s = document.getElementById('addMmStatus').value;
             wrap.style.display = (s === 'active' || s === 'fault' || s === 'removed') ? '' : 'none';
+            syncAddModmanSerials();
+        }
+
+        // True when the box being added is (or is going onto) an A321XLR — the Astronics
+        // build. Read from the chosen airframe; a spare / unassigned box is legacy.
+        function addModmanIsAstronics() {
+            const status = document.getElementById('addMmStatus').value;
+            const tail = status !== 'spare' ? (document.getElementById('addMmAircraft').value || '') : '';
+            const ac = tail ? aircraftData.find(a => a.id === tail) : null;
+            return !!ac && ac.type === 'A321XLR';
+        }
+
+        // Grey out the serials that do not belong to the selected airframe's supplier:
+        // Eclipse/Kontron for an Astronics (A321XLR) box, Astronics for a legacy box. A
+        // greyed field reads N/A and is cleared so it cannot be saved.
+        function syncAddModmanSerials() {
+            const isAstro = addModmanIsAstronics();
+            const set = (id, applicable, placeholder) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.disabled = !applicable;
+                el.classList.toggle('sn-off', !applicable);
+                if (!applicable) { el.value = ''; el.placeholder = 'N/A'; }
+                else el.placeholder = placeholder;
+            };
+            set('addMmEclipse',   !isAstro, 'e.g. SN_001');
+            set('addMmKontron',   !isAstro, 'e.g. 484230001');
+            set('addMmAstronics', isAstro,  'Astronics-supplied MODMAN serial');
+            // The required identifier follows the supplier.
+            const hint = document.getElementById('addModmanReqHint');
+            if (hint) hint.textContent = isAstro ? 'Astronics S/N' : 'Kontron S/N';
         }
 
         function initAddModmanModal() {
@@ -12121,16 +12181,26 @@
 
             document.getElementById('addModmanSave').addEventListener('click', async () => {
                 const val = x => (document.getElementById(x).value || '').trim();
-                const kontron = val('addMmKontron');
-                if (!kontron) { err.textContent = 'A Kontron S/N is required.'; err.style.display = 'block'; return; }
-                // One Kontron serial is one physical box; a duplicate would list it twice.
-                const clash = Object.values(modmansLive || {}).find(m => m.kontronSn === kontron);
-                if (clash) { err.textContent = `${kontron} is already in the register.`; err.style.display = 'block'; return; }
-
                 const status = document.getElementById('addMmStatus').value;
-                const entry = { kontronSn: kontron, status,
+                // The identifying serial follows the supplier: an A321XLR box is an
+                // Astronics build (identified by its Astronics S/N, no Kontron), every other
+                // box is the legacy Eclipse+Kontron build (identified by its Kontron S/N).
+                const isAstro = addModmanIsAstronics();
+                const idField = isAstro ? 'astronicsSn' : 'kontronSn';
+                const idLabel = isAstro ? 'Astronics S/N' : 'Kontron S/N';
+                const idVal = isAstro ? val('addMmAstronics') : val('addMmKontron');
+                if (!idVal) { err.textContent = `A ${idLabel} is required.`; err.style.display = 'block'; return; }
+                // One identifying serial is one physical box; a duplicate would list it twice.
+                const clash = Object.values(modmansLive || {}).find(m => m[idField] === idVal);
+                if (clash) { err.textContent = `${idVal} is already in the register.`; err.style.display = 'block'; return; }
+
+                const entry = { status,
                     addedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z') };
                 const put = (k, v) => { if (v) entry[k] = v; };
+                // Only the applicable serials are written — the greyed N/A fields are empty
+                // and skipped by put(), so a legacy box stores no Astronics and an Astronics
+                // box stores no Eclipse/Kontron.
+                put('kontronSn', val('addMmKontron'));
                 put('eclipseSn', val('addMmEclipse')); put('astronicsSn', val('addMmAstronics'));
                 put('taurusOldMgId', val('addMmToldMg')); put('taurusOldTid', val('addMmToldTid'));
                 put('taurusNewMgId', val('addMmTnewMg')); put('taurusNewTid', val('addMmTnewTid'));
