@@ -6224,8 +6224,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.96.0';
-        const APP_BUILD    = '2026.09.04.04';
+        const APP_VERSION  = '2.97.0';
+        const APP_BUILD    = '2026.09.04.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -11680,18 +11680,7 @@
                 const notApplicable = status === 'spare' || status === 'removed';
                 const defComm = status === 'active' ? 'done' : 'todo';
                 const comm = k => notApplicable ? 'na' : (pick(k) || defComm);
-                // IPHO Mode is the aircraft's top-level iphoStatus, surfaced on the box
-                // fitted to it. It applies ONLY to an active RETROFIT aircraft: linefit
-                // aircraft (HBC+) do not use IPHO, an aircraft not yet Active has no value
-                // yet, and an off-wing box (spare/removed) is on no aircraft — all read
-                // N/A. A staged edit (pendingSatcom) is read first so the pill updates
-                // before Save, exactly like the status and commissioning cells.
                 const ac = aircraft ? aircraftData.find(x => x.id === aircraft) : null;
-                const iphoApplies = !notApplicable && !!ac
-                    && ac.fit === 'retrofit' && ac.fleetStatus === 'Active';
-                const iphoRaw = staged.iphoStatus !== undefined
-                    ? staged.iphoStatus : (ac ? (ac.iphoStatus || '') : '');
-                const ipho = !iphoApplies ? 'na' : (iphoRaw === 'completed' ? 'enabled' : 'disabled');
                 // The MODMAN supplier follows the airframe: an A321XLR (Airbus HBC+
                 // linefit) carries an Astronics box — one Astronics S/N, no Eclipse/Kontron
                 // — while every other airframe, and any off-wing/unassigned box, is the
@@ -11699,6 +11688,18 @@
                 // that do not belong to this box's supplier read a static N/A, the same
                 // "derive, don't trust the raw field" rule the commissioning/IPHO cells use.
                 const isAstronics = !!ac && ac.type === 'A321XLR';
+                // IPHO Mode is the aircraft's top-level iphoStatus, surfaced on the box
+                // fitted to it. It applies to an active RETROFIT aircraft OR to any A321XLR
+                // (Astronics) aircraft (user, 2026-09-04 — the XLR uses IPHO too, whatever
+                // its activation state, so it is selectable as soon as a box is added to
+                // one). An off-wing box (spare/removed) is on no aircraft, and any other
+                // airframe not yet Active, read N/A. A staged edit (pendingSatcom) is read
+                // first so the pill updates before Save, like the status/commissioning cells.
+                const iphoApplies = !notApplicable && !!ac
+                    && ((ac.fit === 'retrofit' && ac.fleetStatus === 'Active') || isAstronics);
+                const iphoRaw = staged.iphoStatus !== undefined
+                    ? staged.iphoStatus : (ac ? (ac.iphoStatus || '') : '');
+                const ipho = !iphoApplies ? 'na' : (iphoRaw === 'completed' ? 'enabled' : 'disabled');
                 return {
                     id, status, aircraft, ipho, isAstronics,
                     commTaurus: comm('commTaurus'),
