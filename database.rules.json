@@ -265,6 +265,7 @@
 
         "eclipseSn":     { ".validate": "newData.isString() && newData.val().length <= 60" },
         "kontronSn":     { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "astronicsSn":   { ".validate": "newData.isString() && newData.val().length <= 60" },
         "taurusOldTid":  { ".validate": "newData.isString() && newData.val().length <= 20" },
         "taurusOldMgId": { ".validate": "newData.isString() && newData.val().length <= 20" },
         "taurusNewTid":  { ".validate": "newData.isString() && newData.val().length <= 20" },

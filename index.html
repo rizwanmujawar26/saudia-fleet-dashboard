@@ -2683,6 +2683,22 @@
             padding-left: 6px;
             padding-right: 6px;
         }
+        /* The MODMAN Details box now holds THREE serials — Eclipse · Kontron ·
+           Astronics (the last is the Airbus HBC+ / A321XLR supplier, a different part
+           number). A third column would widen an already-wide table, so the trio runs
+           at a smaller font with tighter padding and wraps rather than stretches, keeping
+           the group as narrow as before. */
+        #satcomTable th.satcom-serial, #satcomTable td.satcom-serial {
+            font-size: 10px;
+            letter-spacing: -0.2px;
+            padding-left: 4px;
+            padding-right: 4px;
+        }
+        /* Body serials stay on ONE line (a serial must never wrap mid-number); the
+           column is sized to that. The HEAD is allowed to wrap ("Astronics / S/N") so
+           the three-line label does not force the column wider than its data. */
+        #satcomTable td.satcom-serial { white-space: nowrap; }
+        #satcomTable th.satcom-serial { white-space: normal; line-height: 1.15; text-align: center; }
         /* The Removal Date head is allowed to wrap ("Removal / Date") so the column is
            only as wide as its content — the body cell keeps satcom-tight's nowrap so a
            real date stays on one line. (IPHO's head is now one short word inside the
@@ -5042,28 +5058,29 @@
                     <table class="aircraft-table has-grouphead satcom-table" id="satcomTable">
                         <thead>
                             <tr class="satcom-grouphead">
-                                <th colspan="5" class="satcom-group satcom-group-details">MODMAN Details</th>
+                                <th colspan="6" class="satcom-group satcom-group-details">MODMAN Details</th>
                                 <th colspan="2" class="satcom-group satcom-group-told satcom-told-col">Taurus · Old</th>
                                 <th colspan="2" class="satcom-group satcom-group-tnew satcom-tnew-col">Taurus · New</th>
                                 <th colspan="3" class="satcom-group satcom-group-hughes satcom-hughes-col">Hughes</th>
-                                <th rowspan="2" class="sortable-th satcom-group-start satcom-tight" data-col="12" data-label="Aircraft" onclick="sortTable('satcomTable', 12)">Aircraft</th>
-                                <th rowspan="2" class="sortable-th satcom-tight" data-col="13" data-label="Status" onclick="sortTable('satcomTable', 13)">Status</th>
+                                <th rowspan="2" class="sortable-th satcom-group-start satcom-tight" data-col="13" data-label="Aircraft" onclick="sortTable('satcomTable', 13)">Aircraft</th>
+                                <th rowspan="2" class="sortable-th satcom-tight" data-col="14" data-label="Status" onclick="sortTable('satcomTable', 14)">Status</th>
                                 <th colspan="3" class="satcom-group satcom-group-comm satcom-group-start satcom-comm-end">Commissioning Status</th>
                             </tr>
                             <tr>
                                 <th>#</th>
                                 <th class="sortable-th" data-col="1" data-label="Install Date" id="satcomDateHead" onclick="cycleSatcomDateSort()">Install Date</th>
                                 <th class="sortable-th satcom-tight satcom-rem-head" data-col="2" data-label="Removal Date" onclick="sortTable('satcomTable', 2)">Removal Date</th>
-                                <th class="sortable-th" data-col="3" data-label="Eclipse S/N" onclick="sortTable('satcomTable', 3)">Eclipse S/N</th>
-                                <th class="sortable-th" data-col="4" data-label="Kontron S/N" onclick="sortTable('satcomTable', 4)">Kontron S/N</th>
-                                <th class="sortable-th satcom-told-col satcom-group-start" data-col="5" data-label="MG ID" onclick="sortTable('satcomTable', 5)">MG ID</th>
-                                <th class="sortable-th satcom-told-col" data-col="6" data-label="TID" onclick="sortTable('satcomTable', 6)">TID</th>
-                                <th class="sortable-th satcom-tnew-col satcom-group-start" data-col="7" data-label="MG ID" onclick="sortTable('satcomTable', 7)">MG ID</th>
-                                <th class="sortable-th satcom-tnew-col" data-col="8" data-label="TID" onclick="sortTable('satcomTable', 8)">TID</th>
-                                <th class="sortable-th satcom-hughes-col satcom-group-start" data-col="9" data-label="Chassis ID" onclick="sortTable('satcomTable', 9)">Chassis ID</th>
-                                <th class="sortable-th satcom-hughes-col" data-col="10" data-label="ESN" onclick="sortTable('satcomTable', 10)">ESN</th>
-                                <th class="sortable-th satcom-hughes-col" data-col="11" data-label="MAC" onclick="sortTable('satcomTable', 11)">MAC Address</th>
-                                <th class="sortable-th satcom-group-start satcom-comm-col satcom-tight" data-col="14" data-label="IPHO" onclick="sortTable('satcomTable', 14)">IPHO</th>
+                                <th class="sortable-th satcom-serial" data-col="3" data-label="Eclipse S/N" onclick="sortTable('satcomTable', 3)">Eclipse S/N</th>
+                                <th class="sortable-th satcom-serial" data-col="4" data-label="Kontron S/N" onclick="sortTable('satcomTable', 4)">Kontron S/N</th>
+                                <th class="sortable-th satcom-serial" data-col="5" data-label="Astronics S/N" onclick="sortTable('satcomTable', 5)">Astronics S/N</th>
+                                <th class="sortable-th satcom-told-col satcom-group-start" data-col="6" data-label="MG ID" onclick="sortTable('satcomTable', 6)">MG ID</th>
+                                <th class="sortable-th satcom-told-col" data-col="7" data-label="TID" onclick="sortTable('satcomTable', 7)">TID</th>
+                                <th class="sortable-th satcom-tnew-col satcom-group-start" data-col="8" data-label="MG ID" onclick="sortTable('satcomTable', 8)">MG ID</th>
+                                <th class="sortable-th satcom-tnew-col" data-col="9" data-label="TID" onclick="sortTable('satcomTable', 9)">TID</th>
+                                <th class="sortable-th satcom-hughes-col satcom-group-start" data-col="10" data-label="Chassis ID" onclick="sortTable('satcomTable', 10)">Chassis ID</th>
+                                <th class="sortable-th satcom-hughes-col" data-col="11" data-label="ESN" onclick="sortTable('satcomTable', 11)">ESN</th>
+                                <th class="sortable-th satcom-hughes-col" data-col="12" data-label="MAC" onclick="sortTable('satcomTable', 12)">MAC Address</th>
+                                <th class="sortable-th satcom-group-start satcom-comm-col satcom-tight" data-col="15" data-label="IPHO" onclick="sortTable('satcomTable', 15)">IPHO</th>
                                 <th class="satcom-comm-col satcom-tight">Taurus</th>
                                 <th class="satcom-comm-end satcom-comm-col satcom-tight">Hughes</th>
                             </tr>
@@ -5360,6 +5377,10 @@
                 <div>
                     <label class="add-sched-label">Eclipse S/N</label>
                     <input id="addMmEclipse" class="add-sched-input" maxlength="60" placeholder="e.g. SN_001" autocomplete="off">
+                </div>
+                <div style="grid-column:1 / -1;">
+                    <label class="add-sched-label">Astronics S/N <span style="text-transform:none; font-weight:400;">(Airbus HBC+ linefit — A321XLR)</span></label>
+                    <input id="addMmAstronics" class="add-sched-input" maxlength="60" placeholder="Astronics-supplied MODMAN serial" autocomplete="off">
                 </div>
                 <div>
                     <label class="add-sched-label">Taurus Old — MG ID</label>
@@ -6197,8 +6218,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.94.0';
-        const APP_BUILD    = '2026.09.04.02';
+        const APP_VERSION  = '2.95.0';
+        const APP_BUILD    = '2026.09.04.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -11669,7 +11690,7 @@
                     id, status, aircraft, ipho,
                     commTaurus: comm('commTaurus'),
                     commHughes: comm('commHughes'),
-                    eclipseSn: pick('eclipseSn'), kontronSn: pick('kontronSn'),
+                    eclipseSn: pick('eclipseSn'), kontronSn: pick('kontronSn'), astronicsSn: pick('astronicsSn'),
                     taurusOldMgId: pick('taurusOldMgId'), taurusOldTid: pick('taurusOldTid'),
                     taurusNewMgId: pick('taurusNewMgId'), taurusNewTid: pick('taurusNewTid'),
                     hnsChassisId: pick('hnsChassisId'), hnsEsn: pick('hnsEsn'), hnsMac: pick('hnsMac'),
@@ -11758,7 +11779,7 @@
                 row.dataset.ipho = r.ipho;
                 // The search haystack is the data, not the columns: serials, both Taurus
                 // sets, the Hughes trio, and the tail with its ex- form.
-                row.dataset.search = [r.eclipseSn, r.kontronSn, r.taurusOldMgId, r.taurusOldTid,
+                row.dataset.search = [r.eclipseSn, r.kontronSn, r.astronicsSn, r.taurusOldMgId, r.taurusOldTid,
                     r.taurusNewMgId, r.taurusNewTid, r.hnsChassisId, r.hnsEsn, r.hnsMac,
                     r.tailLabel, r.aircraft].filter(Boolean).join(' ');
 
@@ -11860,8 +11881,9 @@
                     <td>${idx + 1}</td>
                     <td data-sort="${insSort}">${dateCell('installDate', r.installDate)}</td>
                     <td class="satcom-tight" data-sort="${remSort}">${dateCell('removalDate', r.removalDate)}</td>
-                    <td data-sort="${escAttr(r.eclipseSn)}">${idCell('eclipseSn', r.eclipseSn, false)}</td>
-                    <td data-sort="${escAttr(r.kontronSn)}">${idCell('kontronSn', r.kontronSn, false)}</td>
+                    <td class="satcom-serial" data-sort="${escAttr(r.eclipseSn)}">${idCell('eclipseSn', r.eclipseSn, false)}</td>
+                    <td class="satcom-serial" data-sort="${escAttr(r.kontronSn)}">${idCell('kontronSn', r.kontronSn, false)}</td>
+                    <td class="satcom-serial" data-sort="${escAttr(r.astronicsSn)}">${idCell('astronicsSn', r.astronicsSn, false)}</td>
                     <td class="satcom-group-start" data-sort="${escAttr(r.taurusOldMgId)}">${idCell('taurusOldMgId', r.taurusOldMgId, false)}</td>
                     <td data-sort="${escAttr(r.taurusOldTid)}">${idCell('taurusOldTid', r.taurusOldTid, true)}</td>
                     <td class="satcom-group-start" data-sort="${escAttr(r.taurusNewMgId)}">${idCell('taurusNewMgId', r.taurusNewMgId, false)}</td>
@@ -12066,7 +12088,7 @@
             if (!canEdit()) { requireSignIn(); return; }
             const overlay = document.getElementById('addModmanOverlay');
             if (!overlay) return;
-            ['addMmEclipse', 'addMmKontron', 'addMmToldMg', 'addMmToldTid', 'addMmTnewMg',
+            ['addMmEclipse', 'addMmKontron', 'addMmAstronics', 'addMmToldMg', 'addMmToldTid', 'addMmTnewMg',
              'addMmTnewTid', 'addMmChassis', 'addMmEsn', 'addMmMac', 'addMmNotes']
                 .forEach(x => { const el = document.getElementById(x); if (el) el.value = ''; });
             document.getElementById('addMmStatus').value = 'spare';
@@ -12109,7 +12131,7 @@
                 const entry = { kontronSn: kontron, status,
                     addedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z') };
                 const put = (k, v) => { if (v) entry[k] = v; };
-                put('eclipseSn', val('addMmEclipse'));
+                put('eclipseSn', val('addMmEclipse')); put('astronicsSn', val('addMmAstronics'));
                 put('taurusOldMgId', val('addMmToldMg')); put('taurusOldTid', val('addMmToldTid'));
                 put('taurusNewMgId', val('addMmTnewMg')); put('taurusNewTid', val('addMmTnewTid'));
                 put('hnsChassisId', val('addMmChassis')); put('hnsEsn', val('addMmEsn')); put('hnsMac', val('addMmMac'));
