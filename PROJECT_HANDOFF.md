@@ -275,16 +275,34 @@ adding it to the rules first.
 | field | values |
 |---|---|
 | `type` | e.g. `A320-214`, `A321XLR`. ⚠️ **Never contains a space** — see *Conventions*. Stored, so a rename means the three hardcoded spots (`TYPE_SHORT_LABEL`, `TYPE_PILL_COLORS`, the `aircraftStatic` fallback) |
-| `station` | `JED` / `RUH` / `N/A` |
+| `delivered` | `false`, **or absent** (v2.99.0). `false` = a **Future** / undelivered airframe (still with the manufacturer). Absent = delivered. A Future aircraft shows a FUTURE badge in the Operational column, is isolated by the "Future Aircraft" Operational filter, and is **excluded from every count** — it carries no `fit` (so `programmeFleet()` skips it) and no status; `opsOutFleet()` also guards `delivered !== false`. ⚠️ Invariant: a Future aircraft must never have a `fit` or `fleetStatus` or it re-enters the counts — the Edit modal refuses that save. |
+| `regUnknown` | `true`, **or absent** (v2.99.0). The registration is an auto placeholder (`nextPlaceholderKey`, e.g. `XLR01`) for a Future tail not yet known — the cell renders **UNKNOWN** with no FR24 link. Cleared when the Edit modal re-keys the record to the real tail. |
 | `fit` | `retrofit` \| `linefit` (ASBA, ASBB), **or absent**. How WiFi got onto the airframe, not where it is in the programme — an aircraft can be `fit: retrofit` *and* `fleetStatus: In Retrofit`. **Absent = not fitted** (the 55 imported airframes, v2.89.0). ⚠️ **`fit` stays `retrofit`/`linefit` ONLY** — `programmeFleet()`/`projectScope()` count "a `fit` on record", so overloading it with scope/status values would corrupt every scope figure. Scope and In-Retrofit are separate fields (below). |
 | `scope` | `in` \| `no`, **or absent** (v2.98.0). Whether the airframe *will* get connectivity. Surfaces in the **Fit column** for not-yet-fitted aircraft only — a fitted one reads Retrofit/Linefit and is self-evidently in scope. `fitview` precedence: `In Retrofit` (status) → `retrofit`/`linefit` (fit) → `no-scope`/`in-scope` (scope) → `none` (Not Started). Editable via the single Fit dropdown, which maps the pick back to fit/scope/fleetStatus in `handleFleetEdit`. |
 | `system` | `Eclipse` \| `Rave`, **or absent** (v2.98.0). Connectivity hardware line. Read-only cell **derives** the default from `fit` when unset (`systemDefault()`: retrofit→Eclipse, linefit→Rave); an explicit value overrides. Shown in the Connectivity column group. |
 | `fleetStatus` | **WiFi installation status** — one of `Planned`, `In Retrofit`, `Installed`, `Commissioned`, `Active`, `Decommissioned`, **or absent**. Exact strings, defined once in `FLEET_STATUSES`. ⚠️ **Absent no longer defaults to `Active`** (v2.89.0) — `fleetStatusOf` returns `''`, so a not-started airframe stays out of `activeFleet()` and every derived count. `programmeFleet()` (a `fit` on record) is the WiFi-programme scope; `projectScope()` counts it |
 | `comments` | free text |
 
-⚠️ The roster now holds **all 105 airframes**, but only the ~44 with a `fit` are the
-WiFi programme. `fleetRoster.length` is the whole roster (Fleet page); `programmeFleet()`
-/ `projectScope()` is the programme. Do not use `fleetRoster.length` as a scope figure.
+⚠️ The roster holds **every airframe** (~100+, the count moves as the user edits), but
+only those with a `fit` are the WiFi programme. `fleetRoster.length` is the whole roster
+(Fleet page); `programmeFleet()` / `projectScope()` is the programme. Do not use
+`fleetRoster.length` as a scope figure.
+
+⚠️ **`station` (base JED/RUH) was removed in v2.99.0** — the field, its Add-dialog
+select, the Maintenance card row, the `aircraftLocationOf` fallback, the roster mapping,
+and the rule are all gone, and the stored values were cleared. Don't reintroduce it; the
+Overview Jeddah/Riyadh completion widgets never used it (they key off
+`completionLocation`).
+
+**Editing the whole record:** the Fleet page's ✎ button (edit mode, beside 🗑) opens a
+per-aircraft modal — `openAircraftEditor(id)` — that exposes **every** field across
+`/fleet`, `/aircraft` and `/fleetSpecs`, editable, in sections (spec built lazily in
+`acEditSections()`). Changing the **Registration** re-keys the record (`rekeyAircraft`:
+PATCH edits onto the old id, copy rules-filtered records via the `AC_MOVE_*` whitelists —
+which drop `regUnknown`/`station`/`pinHash` — to the new tail, delete the old) — the way
+an UNKNOWN placeholder is promoted to its real tail. `pinHash` is never shown. Saves use
+**deep-path leaves** (`ops/state`, `modem/taurus/mgId`) — never a group path beside a
+leaf. `saveAircraftEditor` / `collectAcEdit` / `acReloadInto`.
 
 ### `/fleetSpecs/{tail}` — airframe reference data (captured, not yet shown)
 
@@ -852,6 +870,13 @@ Active aircraft can go AOG this morning and be back tonight without its programm
 status moving — so this is not the "one field, not two" situation above. `OPS_STATES`
 defines all eight in one place: In Service, AOG, A-Check, C-Check, Scheduled
 Maintenance, Storage / Parked, Painting, Cabin Modification.
+
+⚠️ **FUTURE is shown in this column but is NOT an ops state** (v2.99.0). It is a roster
+fact — `/fleet/{tail}/delivered === false` — rendered as a FUTURE badge that overrides
+the ops cell, with `row.dataset.ops = 'future'` so the "Future Aircraft" Operational
+filter can isolate it. It is not in `OPS_STATES` and not in the `ops.state` rule enum;
+a Future aircraft normally has no `ops` at all. `opsOutFleet()` guards `delivered !==
+false` so it never counts as out of service.
 
 ⚠️ **In Service is the ABSENCE of a value, not a stored one.** 42 of 44 aircraft are
 normal at any moment; writing `in_service` to all of them would mean 44 records to
