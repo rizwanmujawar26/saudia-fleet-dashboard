@@ -1442,7 +1442,12 @@
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             margin-top: 20px;
-            border-radius: 8px;
+            /* One design language across the app: the same soft border and radius the
+               filter bar and the timeline blocks use (1px #e8ebee, 10px). overflow is
+               already clipped here, so the rounded corners crop the header and the last
+               row cleanly. */
+            border: 1px solid #e8ebee;
+            border-radius: 10px;
         }
 
         .table-scroll-wrapper .aircraft-table {
@@ -2121,6 +2126,18 @@
             border: 1px solid rgba(15, 32, 45, 0.08);
         }
         .mod-bar.mod-na, .mod-bar.mod-empty { background: transparent; border-color: transparent; color: #b3bac0; font-style: italic; }
+        /* Retrofit under way — a start on record, no post-mod first flight yet. Amber,
+           the dashboard's "notice this / in progress" tone. */
+        .mod-bar.mod-ongoing { background: #fdf3e3; border-color: #efd9ae; color: #8a5a12; font-weight: 700; letter-spacing: .3px; }
+        /* Slim inline date editor for the two mod columns, sized like the slim bar. */
+        .mod-date-input { width: 78px; font-size: 10px; padding: 2px 4px; text-align: center; }
+
+        /* Every header and value centred (user, v2.98.2) — a single alignment down the
+           whole table. Cells that stack (Operations, Delivery) already centre their own
+           column via flex; this centres the rest. */
+        .fleet-compact th, .fleet-compact td { text-align: center; }
+        .fleet-compact .ops-stack, .fleet-compact .ops-edit { align-items: center; }
+        .fleet-compact .ops-sub { justify-content: center; }
 
         /* Comments never earns width — clip to a fixed box with the full text on hover. */
         .fleet-compact .comment-text {
@@ -6339,8 +6356,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.98.1';
-        const APP_BUILD    = '2026.09.05.02';
+        const APP_VERSION  = '2.98.2';
+        const APP_BUILD    = '2026.09.05.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -9108,8 +9125,10 @@
                 const loc = staged.retrofitLocation !== undefined
                     ? staged.retrofitLocation
                     : ((aircraftLive[a.id] || {}).retrofitLocation || '');
-                const rStart = (aircraftLive[a.id] || {}).retrofitStart || '';
-                const rEnd   = (aircraftLive[a.id] || {}).retrofitEnd || '';
+                // Now editable on this page (v2.98.2), so staged values win. Stored on
+                // /aircraft alongside retrofitLocation.
+                const rStart = staged.retrofitStart !== undefined ? staged.retrofitStart : ((aircraftLive[a.id] || {}).retrofitStart || '');
+                const rEnd   = staged.retrofitEnd   !== undefined ? staged.retrofitEnd   : ((aircraftLive[a.id] || {}).retrofitEnd   || '');
 
                 const wifi = staged.wifiVisibility !== undefined
                     ? staged.wifiVisibility
@@ -9192,11 +9211,21 @@
                 const isLine = fitview === 'linefit';
                 // dd-mmm-yyyy -> dd-mmm-yy so the two slim bars stay narrow.
                 const modShort = (v) => String(v || '').replace(/-(\d{2})(\d{2})$/, '-$2');
-                const modCell = (val) => isLine
+                const modInput = (field, val) => `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date mod-date-input" value="${toDMY(val)}" data-id="${a.id}" data-field="${field}" onchange="handleFleetEdit(this)">`;
+                // Line-fit has no retrofit window, so it is N/A and never editable. For a
+                // retrofit, the dates are editable in edit mode; read-only they show a
+                // slim bar, and Mod End reads ONGOING when a start exists but the aircraft
+                // has not yet flown after the mod (no end date recorded).
+                const modStartCell = isLine
                     ? '<span class="mod-bar mod-na" title="Line-fit — no retrofit window">N/A</span>'
-                    : (val ? `<span class="mod-bar" title="${escAttr(val)}">${escAttr(modShort(val))}</span>` : '<span class="mod-bar mod-empty">—</span>');
-                const modStartCell = modCell(rStart);
-                const modEndCell = modCell(rEnd);
+                    : (editing ? modInput('retrofitStart', rStart)
+                        : (rStart ? `<span class="mod-bar" title="${escAttr(rStart)}">${escAttr(modShort(rStart))}</span>` : '<span class="mod-bar mod-empty">—</span>'));
+                const modEndCell = isLine
+                    ? '<span class="mod-bar mod-na" title="Line-fit — no retrofit window">N/A</span>'
+                    : (editing ? modInput('retrofitEnd', rEnd)
+                        : (rEnd ? `<span class="mod-bar" title="${escAttr(rEnd)}">${escAttr(modShort(rEnd))}</span>`
+                            : (rStart ? '<span class="mod-bar mod-ongoing" title="Retrofit under way — no post-mod first flight recorded yet">ONGOING</span>'
+                                : '<span class="mod-bar mod-empty">—</span>')));
 
                 const statusCell = editing
                     ? `<select class="edit-select" data-id="${a.id}" data-field="fleetStatus" onchange="handleFleetEdit(this)">${
@@ -9478,7 +9507,7 @@
             // Validate BEFORE touching pendingFleet, or a rejected typo still leaves
             // an empty staged record behind for this aircraft.
             let staged;
-            if (field === 'activatedDate' || field === 'ops/since' || field === 'ops/expectedReturn') {
+            if (field === 'activatedDate' || field === 'ops/since' || field === 'ops/expectedReturn' || field === 'retrofitStart' || field === 'retrofitEnd') {
                 const v = readDateField(el);
                 if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
                 staged = v;
@@ -9589,7 +9618,7 @@
 
                 Object.entries(p).forEach(([f, v]) => {
                     if (f.indexOf('ops/') === 0) return;          // handled above
-                    if (f === 'activatedDate' || f === 'wifiVisibility' || f === 'retrofitLocation') {
+                    if (f === 'activatedDate' || f === 'wifiVisibility' || f === 'retrofitLocation' || f === 'retrofitStart' || f === 'retrofitEnd') {
                         acMulti[`${id}/${f}`] = v || null; return;
                     }
                     // These fields are optional and enum/length-validated: an empty
@@ -9614,7 +9643,7 @@
                     const data2 = await res2.json();
                     if (!res2.ok || (data2 && data2.error)) throw new Error((data2 && data2.error) || 'write failed');
                     Object.keys(pendingFleet).forEach(id => {
-                        ['activatedDate', 'wifiVisibility', 'retrofitLocation'].forEach(f => {
+                        ['activatedDate', 'wifiVisibility', 'retrofitLocation', 'retrofitStart', 'retrofitEnd'].forEach(f => {
                             const v = pendingFleet[id][f];
                             if (v === undefined) return;
                             aircraftLive[id] = aircraftLive[id] || {};
