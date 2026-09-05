@@ -2014,7 +2014,14 @@
             padding: 8px 12px;
             border-left: 2px solid rgba(255, 255, 255, 0.35);
         }
-        .aircraft-table th.fleet-group-air   { background: #08492a; }
+        /* Aircraft is the LEFTMOST group and the # index column sits outside it, so it
+           drops the group's white divider — the same call Satcom's leftmost group
+           (satcom-group-details) makes. Without this the .fleet-group border-left drew
+           a divider on the group row while the sub-row Tail beneath it had none, so the
+           line between # and Aircraft ran only half the head's height and read as
+           uneven. Every OTHER boundary keeps its full-height divider (group cell +
+           fleet-group-start sub cell), so the heads stay uniform. */
+        .aircraft-table th.fleet-group-air   { background: #08492a; border-left: none; }
         .aircraft-table th.fleet-group-retro { background: #4c4a63; }
         .aircraft-table th.fleet-group-conn  { background: #005DAC; }
         .aircraft-table .fleet-group-start { border-left: 2px solid #e3e8ec; }
@@ -6367,8 +6374,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.98.3';
-        const APP_BUILD    = '2026.09.05.04';
+        const APP_VERSION  = '2.98.4';
+        const APP_BUILD    = '2026.09.05.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
