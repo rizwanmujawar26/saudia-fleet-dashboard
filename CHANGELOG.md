@@ -13,6 +13,22 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.98.5 — Fleet head: align #/Comments to the column line, slim # divider, consistent foot
+Follow-up to 2.98.4 (user, 2026-09-05), three fixes around the rowspan-2 identity
+columns (#, Comments): (1) **Inconsistent bottom edge** — the sticky foot hairline was
+keyed to `thead tr:last-child th`, but #/Comments sit in the FIRST head row (rowspan 2),
+so their foot showed a bright gap. Rule now also targets `thead th[rowspan="2"]`, which
+fixes Satcom's Aircraft/Status the same way at non-overflowing widths. (2) **# floated
+high** — spanning both head rows with vertical-align middle centred it over the group
+row; `#fleetTable` rowspan-2 heads now sit on the sub-row line (`vertical-align:bottom`
++ calibrated 12px) so #/Comments read level with Tail/Type/…. (3) **Bare edge at #** —
+2.98.4 removed the divider entirely, which didn't look right; restored as an ordinary
+full-height group divider (`.fleet-group` border-left on the Aircraft group cell +
+`fleet-group-start` on the Tail sub-cell), slim and matching every other boundary
+rather than the half-height stub. Verified in-browser. ⚠️ Lesson: a rowspan-2 head
+cell is a child of the FIRST row, so any `tr:last-child` head styling silently skips it
+even though it reaches the same foot.
+
 ### v2.98.4 — Fleet head: drop the half-height divider at the # column
 Reported by the user (2026-09-05): the group border next to the `#` column read as
 uneven. Cause: the Aircraft group cell carried `.fleet-group`'s white left divider,
