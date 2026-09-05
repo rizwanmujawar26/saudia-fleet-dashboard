@@ -1539,8 +1539,13 @@
            one line pushed "INSTALLATION DATE" straight through the next column. */
 
         /* A sticky th keeps its background but drops out of border collapsing,
-           so rows would show through a hairline at its foot. */
-        .table-freeze:not(.is-overflowing) thead tr:last-child th::after {
+           so rows would show through a hairline at its foot. The last head row covers
+           the single-row columns; the rowspan-2 identity columns (Fleet's #/Comments,
+           Satcom's Aircraft/Status) live in the FIRST head row and reach the same foot,
+           so they need it too — without them their bottom edge showed a bright gap while
+           every neighbour had the line. */
+        .table-freeze:not(.is-overflowing) thead tr:last-child th::after,
+        .table-freeze:not(.is-overflowing) thead th[rowspan="2"]::after {
             content: '';
             position: absolute;
             left: 0;
@@ -2014,18 +2019,20 @@
             padding: 8px 12px;
             border-left: 2px solid rgba(255, 255, 255, 0.35);
         }
-        /* Aircraft is the LEFTMOST group and the # index column sits outside it, so it
-           drops the group's white divider — the same call Satcom's leftmost group
-           (satcom-group-details) makes. Without this the .fleet-group border-left drew
-           a divider on the group row while the sub-row Tail beneath it had none, so the
-           line between # and Aircraft ran only half the head's height and read as
-           uneven. Every OTHER boundary keeps its full-height divider (group cell +
-           fleet-group-start sub cell), so the heads stay uniform. */
-        .aircraft-table th.fleet-group-air   { background: #08492a; border-left: none; }
+        .aircraft-table th.fleet-group-air   { background: #08492a; }
         .aircraft-table th.fleet-group-retro { background: #4c4a63; }
         .aircraft-table th.fleet-group-conn  { background: #005DAC; }
         .aircraft-table .fleet-group-start { border-left: 2px solid #e3e8ec; }
         .aircraft-table thead .fleet-group-start { border-left: 2px solid rgba(255, 255, 255, 0.35); }
+        /* # and Comments span BOTH head rows (rowspan 2), so left to vertical-align:middle
+           their labels centre over the group row and float above the column heads. Drop
+           them onto the sub-row line so they sit level with Tail/Type/… — 12px is the
+           calibrated offset for this head's group-row height (verified in-browser). The
+           divider between # and the Aircraft group is the ordinary group divider: the
+           .fleet-group border-left on the group cell above, plus fleet-group-start on the
+           Tail sub-cell below (added in the markup) — a full-height slim line matching
+           every other boundary, not the half-height stub that read as uneven before. */
+        #fleetTable thead th[rowspan="2"] { vertical-align: bottom; padding-bottom: 12px; }
         /* Active is the only one that reads as operational. In Retrofit is amber and
            clearly unfinished — it must not be mistaken for a flying WiFi aircraft. */
         .status-badge.fleet-active         { background: #28a745; color: #fff; }
@@ -5266,7 +5273,7 @@
                                 <th rowspan="2" id="fleetActionsHead" style="display:none;">Actions</th>
                             </tr>
                             <tr>
-                                <th class="sortable-th" data-col="1" data-label="Tail" onclick="sortFleetTable(1)">Tail</th>
+                                <th class="sortable-th fleet-group-start" data-col="1" data-label="Tail" onclick="sortFleetTable(1)">Tail</th>
                                 <th class="sortable-th" data-col="2" data-label="Type" onclick="sortFleetTable(2)">Type</th>
                                 <th class="sortable-th" data-col="3" data-label="Delivery" onclick="sortFleetTable(3)">Delivery</th>
                                 <th class="sortable-th" data-col="4" data-label="Operations" onclick="sortFleetTable(4)">Operations</th>
@@ -6374,8 +6381,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.98.4';
-        const APP_BUILD    = '2026.09.05.05';
+        const APP_VERSION  = '2.98.5';
+        const APP_BUILD    = '2026.09.05.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
