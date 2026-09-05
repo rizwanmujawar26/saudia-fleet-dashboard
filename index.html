@@ -2196,6 +2196,13 @@
         .status-badge.ops-storage     { background: #eef1f3; color: #55606a; }
         .status-badge.ops-painting    { background: #e6f7f4; color: #10695c; }
         .status-badge.ops-cabin-mod   { background: #fbecf5; color: #8a2f68; }
+        /* FUTURE: an undelivered airframe — quiet and neutral, not a problem to act on,
+           just a placeholder in the roster. A dashed edge reads as "not here yet" and
+           keeps it distinct from the solid IN SERVICE badge beside it. */
+        .status-badge.ops-future      { background: #f5f3ec; color: #7a6f52; border: 1px dashed #cabf9e; }
+        /* A placeholder registration, shown in the Registration cell for a future tail
+           that is not known yet — muted and italic so it never reads as a real tail. */
+        .reg-unknown { color: #9a8f6a; font-style: italic; font-weight: 700; letter-spacing: .02em; }
 
         /* Stacked, not inline — the same fix the OTA column needed. Four facts side by
            side would push this table past the viewport and reintroduce a sideways
@@ -3712,6 +3719,64 @@
         }
 
         .sched-del-btn:hover { background: #f8dfe1; }
+
+        .fleet-edit-btn {
+            border: 1px solid #bfe0cd;
+            background: #eef7f1;
+            border-radius: 4px;
+            padding: 2px 7px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .fleet-edit-btn:hover { background: #dcefe3; }
+
+        /* ===== Aircraft editor modal ===== */
+        .ac-edit-panel {
+            background: #fff; border-radius: 12px; width: 92%; max-width: 720px;
+            max-height: 88vh; display: flex; flex-direction: column;
+            box-shadow: 0 16px 50px rgba(0,0,0,0.35); overflow: hidden;
+        }
+        .ac-edit-head {
+            display: flex; align-items: flex-start; justify-content: space-between;
+            padding: 18px 22px 12px; border-bottom: 1px solid #eee;
+        }
+        .ac-edit-sub { margin: 3px 0 0; font-size: 12.5px; color: #777; }
+        .ac-edit-x {
+            border: none; background: none; font-size: 17px; color: #999;
+            cursor: pointer; line-height: 1; padding: 4px;
+        }
+        .ac-edit-x:hover { color: #333; }
+        .ac-edit-body { padding: 6px 22px 4px; overflow-y: auto; }
+        .ac-edit-section-title {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .06em; color: #0a5c34; margin: 16px 0 8px;
+            border-bottom: 1px solid #eef2ef; padding-bottom: 4px;
+        }
+        .ac-edit-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 16px; }
+        .ac-edit-field { display: flex; flex-direction: column; min-width: 0; }
+        .ac-edit-field.full { grid-column: 1 / -1; }
+        .ac-edit-field label { font-size: 11px; font-weight: 600; color: #566; margin-bottom: 3px; }
+        .ac-edit-field input, .ac-edit-field select, .ac-edit-field textarea {
+            padding: 7px 9px; border: 1px solid #d5d9d7; border-radius: 6px;
+            font-size: 13px; font-family: inherit; box-sizing: border-box; width: 100%;
+        }
+        .ac-edit-field textarea { resize: vertical; min-height: 38px; }
+        .ac-edit-field .fld-hint { font-size: 10.5px; color: #aaa; margin-top: 2px; }
+        .ac-edit-error { margin: 4px 22px 0; font-size: 12.5px; color: #dc3545; font-weight: 600; }
+        .ac-edit-foot {
+            display: flex; gap: 10px; justify-content: flex-end;
+            padding: 14px 22px 18px; border-top: 1px solid #eee;
+        }
+        .ac-edit-btn-secondary {
+            padding: 9px 16px; border: 1px solid #ccc; background: #fff;
+            border-radius: 6px; cursor: pointer; font-size: 13px;
+        }
+        .ac-edit-btn-primary {
+            padding: 9px 18px; border: none; background: #0a5c34; color: #fff;
+            border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
+        }
+        .ac-edit-btn-primary:disabled { opacity: .6; cursor: default; }
+        @media (max-width: 560px) { .ac-edit-grid { grid-template-columns: 1fr; } }
 
         /* Overdue but still inside the 24h grace window */
         .sched-overdue-row {
@@ -5809,21 +5874,20 @@
     <div id="addAircraftOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
         <div style="background:white; border-radius:10px; padding:28px; width:90%; max-width:400px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
             <h3 style="color:#0a5c34; margin-bottom:6px;">Add Aircraft to Fleet</h3>
-            <p style="font-size:13px; color:#666; margin-bottom:16px;">Adds to the fleet roster — the aircraft appears on Software, Media and every count on the Overview.</p>
+            <p style="font-size:13px; color:#666; margin-bottom:16px;">Adds to the fleet roster. Delivered aircraft join Software, Media and every Overview count; Future aircraft stay out of the counts until you mark them delivered.</p>
             <label class="add-sched-label">Registration</label>
             <input id="addAcId" class="add-sched-input" placeholder="e.g. AS77" autocomplete="off">
             <label class="add-sched-label">Aircraft Type</label>
             <select id="addAcType" class="add-sched-input"></select>
             <div style="display:flex; gap:10px;">
                 <div style="flex:1;">
-                    <label class="add-sched-label">Base Station</label>
-                    <select id="addAcStation" class="add-sched-input">
-                        <option value="JED">Jeddah (JED)</option>
-                        <option value="RUH">Riyadh (RUH)</option>
-                        <option value="N/A">N/A</option>
+                    <label class="add-sched-label">Delivery</label>
+                    <select id="addAcDelivery" class="add-sched-input">
+                        <option value="delivered">Delivered — in service</option>
+                        <option value="future">Future — not yet delivered</option>
                     </select>
                 </div>
-                <div style="flex:1;">
+                <div style="flex:1;" id="addAcFitWrap">
                     <label class="add-sched-label">Fit</label>
                     <select id="addAcFit" class="add-sched-input">
                         <option value="retrofit">Retrofit</option>
@@ -5831,10 +5895,31 @@
                     </select>
                 </div>
             </div>
+            <label class="add-ac-check" id="addAcUnknownWrap" style="display:none; align-items:center; gap:8px; font-size:13px; color:#444; margin-top:10px; cursor:pointer;">
+                <input type="checkbox" id="addAcUnknown" style="width:auto; margin:0;"> Registration unknown — add as a placeholder, fill in the tail later
+            </label>
             <div id="addAcError" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
             <div style="display:flex; gap:10px; margin-top:6px;">
                 <button id="addAcCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="addAcSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Add Aircraft</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="acEditOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1001; align-items:center; justify-content:center;">
+        <div class="ac-edit-panel">
+            <div class="ac-edit-head">
+                <div>
+                    <h3 id="acEditTitle" style="color:#0a5c34; margin:0;">Edit Aircraft</h3>
+                    <p id="acEditSub" class="ac-edit-sub"></p>
+                </div>
+                <button id="acEditClose" class="ac-edit-x" title="Close" aria-label="Close">✕</button>
+            </div>
+            <div id="acEditBody" class="ac-edit-body"></div>
+            <div id="acEditError" class="ac-edit-error" style="display:none;"></div>
+            <div class="ac-edit-foot">
+                <button id="acEditCancel" class="ac-edit-btn-secondary">Cancel</button>
+                <button id="acEditSave" class="ac-edit-btn-primary">Save changes</button>
             </div>
         </div>
     </div>
@@ -6381,8 +6466,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.98.5';
-        const APP_BUILD    = '2026.09.05.06';
+        const APP_VERSION  = '2.99.0';
+        const APP_BUILD    = '2026.09.06.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -6407,11 +6492,16 @@
 
         function setFleetRoster(data) {
             const rows = Object.entries(data || {}).map(([id, v]) => ({
-                id, type: v.type, station: v.station,
+                id, type: v.type,
                 // Absent fit / fleetStatus is preserved as '' — an aircraft added to the
                 // roster but not yet in the WiFi programme has neither, and coercing them
                 // to 'retrofit' / 'Active' would falsely count it as an active retrofit.
                 fit: v.fit || '', fleetStatus: v.fleetStatus || '', comments: v.comments || '',
+                scope: v.scope || '', system: v.system || '',
+                // delivered === false is a Future / undelivered airframe (still with the
+                // manufacturer); absent means delivered. regUnknown flags an auto
+                // placeholder registration shown as UNKNOWN until the real tail is set.
+                delivered: v.delivered, regUnknown: !!v.regUnknown,
             }));
             if (rows.length) fleetRoster = rows.sort((a, b) => a.id.localeCompare(b.id));
         }
@@ -8201,10 +8291,16 @@
                     // because it is always true of somebody and is the useful inverse
                     // of "show me what is out".
                     { id: 'ops', label: 'Operational',
-                      options: () => [{ v: 'in_service', l: 'In Service' }].concat(
-                          fbPresentOptions(fleetRoster,
-                              a => opsOf(a.id).state,
-                              OPS_STATES.filter(o => o.out).map(o => [o.value, o.label]))) },
+                      options: () => {
+                          const opts = [{ v: 'in_service', l: 'In Service' }].concat(
+                              fbPresentOptions(fleetRoster,
+                                  a => opsOf(a.id).state,
+                                  OPS_STATES.filter(o => o.out).map(o => [o.value, o.label])));
+                          // Future / undelivered airframes are their own operational
+                          // bucket — only offered when some exist.
+                          if (fleetRoster.some(a => a.delivered === false)) opts.push({ v: 'future', l: 'Future Aircraft' });
+                          return opts;
+                      } },
                     // SSID was folded into the Status pill row as ssid:* to keep
                     // one variable. With a set per filter it can be its own axis,
                     // which is what it always was.
@@ -8658,13 +8754,57 @@
         // ===== Fleet roster: add aircraft from the app =====
         // Writes to /fleet, which every table, filter and metric derives from, so one
         // entry here updates the whole dashboard without a code change.
+        // A short, unique key for a Future aircraft whose real tail is not known yet.
+        // Derived from the type family (XLR / A330 / …) plus the lowest free 2-digit
+        // number, so it satisfies the [A-Z0-9]{2,10} registration rule and never
+        // collides. Shown as UNKNOWN in the table; the Edit box re-keys it to the real
+        // tail later.
+        function acTypePrefix(type) {
+            const t = String(type || '').toUpperCase();
+            if (t.includes('XLR')) return 'XLR';
+            if (t.includes('A330')) return 'A330';
+            if (t.includes('A321')) return 'A321';
+            if (t.includes('A320')) return 'A320';
+            if (t.includes('A350')) return 'A350';
+            const m = t.match(/[A-Z0-9]{2,4}/);
+            return m ? m[0] : 'AC';
+        }
+        function nextPlaceholderKey(type) {
+            const p = acTypePrefix(type);
+            const taken = new Set(fleetRoster.map(a => a.id));
+            for (let n = 1; n < 100; n++) {
+                const k = p + String(n).padStart(2, '0');
+                if (k.length <= 10 && !taken.has(k)) return k;
+            }
+            return (p + Date.now().toString().slice(-4)).slice(0, 10);
+        }
+
+        // Future aircraft have no fit and can be added without a registration; delivered
+        // aircraft need a real tail and a fit. The dialog reshapes to match the pick.
+        function syncAddAircraftMode() {
+            const future = document.getElementById('addAcDelivery').value === 'future';
+            document.getElementById('addAcFitWrap').style.display = future ? 'none' : '';
+            document.getElementById('addAcUnknownWrap').style.display = future ? 'flex' : 'none';
+            const unknown = future && document.getElementById('addAcUnknown').checked;
+            const idInput = document.getElementById('addAcId');
+            idInput.disabled = unknown;
+            idInput.placeholder = future
+                ? (unknown ? 'Auto placeholder — set the tail later' : 'Known tail, or tick “unknown” below')
+                : 'e.g. AS77';
+            if (unknown) idInput.value = '';
+        }
+
         function openAddAircraft() {
             if (!canEdit()) return;
             const typeSel = document.getElementById('addAcType');
             const known = [...new Set(fleetRoster.map(a => a.type))].sort();
             typeSel.innerHTML = known.map(t => `<option value="${escAttr(t)}">${TYPE_SHORT_LABEL[t] || t} — ${escAttr(t)}</option>`).join('');
             document.getElementById('addAcId').value = '';
-            document.getElementById('addAcStation').value = 'JED';
+            document.getElementById('addAcId').disabled = false;
+            document.getElementById('addAcDelivery').value = 'delivered';
+            document.getElementById('addAcFit').value = 'retrofit';
+            document.getElementById('addAcUnknown').checked = false;
+            syncAddAircraftMode();
             const err = document.getElementById('addAcError');
             err.textContent = ''; err.style.display = 'none';
             document.getElementById('addAircraftOverlay').style.display = 'flex';
@@ -8675,33 +8815,382 @@
             const overlay = document.getElementById('addAircraftOverlay');
             const err = document.getElementById('addAcError');
             document.getElementById('addAcCancel').addEventListener('click', () => { overlay.style.display = 'none'; });
+            document.getElementById('addAcDelivery').addEventListener('change', syncAddAircraftMode);
+            document.getElementById('addAcUnknown').addEventListener('change', syncAddAircraftMode);
             document.getElementById('addAcSave').addEventListener('click', async () => {
-                const id = document.getElementById('addAcId').value.trim().toUpperCase();
                 const type = document.getElementById('addAcType').value;
-                const station = document.getElementById('addAcStation').value;
-                const fit = document.getElementById('addAcFit').value;
+                const future = document.getElementById('addAcDelivery').value === 'future';
+                const typed = document.getElementById('addAcId').value.trim().toUpperCase();
+                // Future + (ticked unknown OR no tail typed) → auto placeholder shown as
+                // UNKNOWN. Otherwise the tail must be a real, unique registration.
+                const wantPlaceholder = future && (document.getElementById('addAcUnknown').checked || typed === '');
                 const fail = m => { err.textContent = m; err.style.display = 'block'; };
 
-                if (!/^[A-Z0-9]{2,10}$/.test(id)) return fail('Registration should be letters and digits only, e.g. AS77.');
-                if (fleetRoster.some(a => a.id === id)) return fail(`${id} is already in the fleet.`);
                 if (!type) return fail('Pick an aircraft type.');
+                const id = wantPlaceholder ? nextPlaceholderKey(type) : typed;
+                if (!wantPlaceholder && !/^[A-Z0-9]{2,10}$/.test(id)) return fail('Registration should be letters and digits only, e.g. AS77.');
+                if (fleetRoster.some(a => a.id === id)) return fail(`${id} is already in the fleet.`);
+
+                // Delivered → joins the WiFi programme (fit + Active). Future → excluded
+                // from every count: no fit, no status, just delivered:false (+ regUnknown
+                // when the tail is a placeholder).
+                const record = future
+                    ? Object.assign({ type, delivered: false }, wantPlaceholder ? { regUnknown: true } : {})
+                    : { type, fit: document.getElementById('addAcFit').value, fleetStatus: 'Active' };
 
                 const token = await getIdToken();
                 if (!token) return;
                 try {
                     const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/fleet/${id}.json?auth=${token}`, {
-                        method: 'PUT', body: JSON.stringify({ type, station, fit, fleetStatus: 'Active' }),
+                        method: 'PUT', body: JSON.stringify(record),
                     });
                     const data = await res.json();
                     if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                    fleetRoster = fleetRoster.concat([{ id, type, station, fit, fleetStatus: 'Active', comments: '' }]).sort((a, b) => a.id.localeCompare(b.id));
+                    fleetRoster = fleetRoster.concat([{
+                        id, type, fit: record.fit || '', fleetStatus: record.fleetStatus || '',
+                        comments: '', scope: '', system: '',
+                        delivered: record.delivered, regUnknown: !!record.regUnknown,
+                    }]).sort((a, b) => a.id.localeCompare(b.id));
                     overlay.style.display = 'none';
                     renderAll();
-                    setSyncStatus(`🟢 ${id} added to the fleet — now ${projectScope()} aircraft`, '#28a745');
+                    const label = wantPlaceholder ? `Future aircraft ${id} (UNKNOWN tail)` : `${id} added to the fleet`;
+                    setSyncStatus(`🟢 ${label}`, '#28a745');
                 } catch (e) {
                     fail(`Could not add — ${e.message}`);
                 }
             });
+        }
+
+        // ======= Aircraft editor — every stored field for one tail, in one modal =======
+        // The one place to see and change everything fed for an aircraft, across /fleet,
+        // /aircraft and /fleetSpecs, and the way an UNKNOWN future placeholder is promoted
+        // to its real registration (change the Registration field → the record re-keys).
+        // pinHash (the cabin PIN) is deliberately never shown or edited here.
+        let acEditId = null;
+        function acEscTa(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+        // Built at open time so it can read OPS_STATES / FLEET_STATUSES / TYPE_SHORT_LABEL
+        // after they are initialised. node names map to sub-records; 'meta' is virtual
+        // (the registration key and the delivered flag).
+        function acEditSections() {
+            return [
+                { title: 'Registration & Roster', rows: [
+                    { node: 'meta',  key: 'id',          label: 'Registration', kind: 'text', hint: 'change to re-key (promotes an UNKNOWN placeholder to its real tail)' },
+                    { node: 'fleet', key: 'type',        label: 'Aircraft Type', kind: 'type' },
+                    { node: 'meta',  key: 'delivered',   label: 'Delivery', kind: 'select', opts: [['delivered', 'Delivered'], ['future', 'Future — not yet delivered']] },
+                    { node: 'fleet', key: 'fit',         label: 'Fit', kind: 'select', opts: [['', '— none —'], ['retrofit', 'Retrofit'], ['linefit', 'Linefit']] },
+                    { node: 'fleet', key: 'scope',       label: 'Scope', kind: 'select', opts: [['', '— none —'], ['in', 'In scope'], ['no', 'No scope']] },
+                    { node: 'fleet', key: 'system',      label: 'Connectivity System', kind: 'select', opts: [['', '— default —'], ['Eclipse', 'Eclipse'], ['Rave', 'Rave']] },
+                    { node: 'fleet', key: 'fleetStatus', label: 'Programme Status', kind: 'select', opts: [['', '— none —']].concat(FLEET_STATUSES.map(s => [s.value, s.label])) },
+                    { node: 'fleet', key: 'comments',    label: 'Comments', kind: 'textarea', max: 500, full: true },
+                ]},
+                { title: 'Activation & Connectivity', rows: [
+                    { node: 'ac', key: 'activatedDate',  label: 'Activated', kind: 'date' },
+                    { node: 'ac', key: 'wifiVisibility', label: 'SSID Visibility', kind: 'select', opts: [['', '— none —'], ['public', 'Public'], ['hidden', 'Hidden']] },
+                    { node: 'ac', key: 'simRoaming',     label: 'SIM Roaming', kind: 'select', opts: [['', '— none —'], ['active', 'Active'], ['inactive', 'Inactive']] },
+                    { node: 'ac', key: 'swVersion',      label: 'Middleware Version', kind: 'text', re: /^[0-9]+\.[0-9]+\.[0-9]+$/, hint: 'x.y.z' },
+                    { node: 'ac', key: 'ugoVersion',     label: 'UGO Version', kind: 'text', re: /^[0-9A-Za-z][0-9A-Za-z.-]{0,19}$/ },
+                    { node: 'ac', key: 'tilesVersion',   label: 'Tiles Version', kind: 'text', re: /^[0-9A-Za-z][0-9A-Za-z.-]{0,19}$/ },
+                    { node: 'ac', key: 'iphoStatus',     label: 'IPHO', kind: 'select', opts: [['', '— none —'], ['completed', 'Completed']] },
+                    { node: 'ac', key: 'mg101Status',    label: 'MG101 Provisioning', kind: 'select', opts: [['', '— none —'], ['provisioned', 'Provisioned'], ['done', 'Done']] },
+                    { node: 'ac', key: 'beamcfgStatus',  label: 'SBC / Beam Config', kind: 'select', opts: [['', '— none —'], ['pending', 'Pending'], ['done', 'Done']] },
+                    { node: 'ac', key: 'otaPatchUTC',    label: 'OTA Patch (UTC)', kind: 'isodt', hint: 'YYYY-MM-DDThh:mm:ssZ' },
+                    { node: 'ac', key: 'note',           label: 'Note', kind: 'textarea', max: 500, full: true },
+                ]},
+                { title: 'Retrofit / Completion', rows: [
+                    { node: 'ac', key: 'retrofitStart',      label: 'Mod Start', kind: 'date' },
+                    { node: 'ac', key: 'retrofitEnd',        label: 'Mod End', kind: 'date' },
+                    { node: 'ac', key: 'retrofitLocation',   label: 'Retrofit Location', kind: 'text', max: 60 },
+                    { node: 'ac', key: 'completionDate',     label: 'Completion Date', kind: 'date' },
+                    { node: 'ac', key: 'completionLocation', label: 'Completion Site', kind: 'select', opts: [['', '— none —'], ['Jeddah', 'Jeddah'], ['Riyadh', 'Riyadh']] },
+                ]},
+                { title: 'Operational State', rows: [
+                    { node: 'ops', key: 'state',          label: 'State', kind: 'select', opts: OPS_STATES.map(o => [o.value, o.label]) },
+                    { node: 'ops', key: 'since',          label: 'Since', kind: 'date' },
+                    { node: 'ops', key: 'location',       label: 'Location', kind: 'text', max: 60 },
+                    { node: 'ops', key: 'reason',         label: 'Reason', kind: 'text', max: 200 },
+                    { node: 'ops', key: 'expectedReturn', label: 'Expected Return', kind: 'date' },
+                ]},
+                { title: 'Maintenance', rows: [
+                    { node: 'maint', key: 'open',   label: 'Maintenance Flag', kind: 'select', opts: [['', 'Serviceable'], ['open', 'Flagged']] },
+                    { node: 'maint', key: 'reason', label: 'What is open?', kind: 'text', max: 500, full: true },
+                ]},
+                { title: 'Modem — Taurus (MG)', rows: [
+                    { node: 'taurus', key: 'mgId',             label: 'MG ID', kind: 'text', max: 40 },
+                    { node: 'taurus', key: 'tid',              label: 'TID', kind: 'text', max: 40 },
+                    { node: 'taurus', key: 'se4',              label: 'SE4', kind: 'text', max: 40 },
+                    { node: 'taurus', key: 'se2c',             label: 'SE2C', kind: 'text', max: 40 },
+                    { node: 'taurus', key: 'commissionedDate', label: 'Commissioned', kind: 'date' },
+                    { node: 'taurus', key: 'notes',            label: 'Notes', kind: 'text', max: 500, full: true },
+                ]},
+                { title: 'Modem — Hughes (HNS)', rows: [
+                    { node: 'hughes', key: 'chassisId',        label: 'Chassis ID', kind: 'text', max: 40 },
+                    { node: 'hughes', key: 'esn',              label: 'ESN', kind: 'text', max: 40 },
+                    { node: 'hughes', key: 'commissionedDate', label: 'Commissioned', kind: 'date' },
+                    { node: 'hughes', key: 'notes',            label: 'Notes', kind: 'text', max: 500, full: true },
+                ]},
+                { title: 'Media', rows: [
+                    { node: 'media', key: 'mediaCycle',    label: 'Media Cycle (MMYY)', kind: 'text', re: /^[0-9]{4}$/, hint: '4 digits, e.g. 0926' },
+                    { node: 'media', key: 'mediaDisplay',  label: 'Media Display', kind: 'text', max: 32 },
+                    { node: 'media', key: 'mediaSource',   label: 'Media Source', kind: 'text', max: 64 },
+                    { node: 'media', key: 'loadedDateUTC', label: 'Loaded (UTC)', kind: 'isodt', hint: 'YYYY-MM-DDThh:mm:ssZ' },
+                    { node: 'media', key: 'comments',      label: 'Media Comments', kind: 'text', max: 500, full: true },
+                ]},
+                { title: 'Specifications', rows: [
+                    { node: 'spec', key: 'manufacturer', label: 'Manufacturer', kind: 'text', max: 40 },
+                    { node: 'spec', key: 'family',       label: 'Family', kind: 'text', max: 20 },
+                    { node: 'spec', key: 'variant',      label: 'Variant', kind: 'text', max: 40 },
+                    { node: 'spec', key: 'engineMfr',    label: 'Engine Maker', kind: 'text', max: 60 },
+                    { node: 'spec', key: 'engineModel',  label: 'Engine Model', kind: 'text', max: 60 },
+                    { node: 'spec', key: 'engineQty',    label: 'Engine Qty', kind: 'num' },
+                    { node: 'spec', key: 'seatConfig',   label: 'Seat Config', kind: 'text', max: 20 },
+                    { node: 'spec', key: 'seatBusiness', label: 'Business Seats', kind: 'num' },
+                    { node: 'spec', key: 'seatEconomy',  label: 'Economy Seats', kind: 'num' },
+                    { node: 'spec', key: 'seatTotal',    label: 'Total Seats', kind: 'num' },
+                    { node: 'spec', key: 'deliveryDate', label: 'Delivery Date', kind: 'text', max: 20, hint: 'dd-mmm-yyyy or as recorded' },
+                    { node: 'spec', key: 'msn',          label: 'MSN', kind: 'text', max: 20 },
+                    { node: 'spec', key: 'remark',       label: 'Remark', kind: 'text', max: 200, full: true },
+                ]},
+            ];
+        }
+
+        // Every stored value for a tail, grouped by the sub-record the editor writes to.
+        function acEditCurrent(id) {
+            const f = fleetRowOf(id);
+            const ac = aircraftLive[id] || {};
+            const modem = ac.modem || {};
+            return {
+                id,
+                delivered: f.delivered,
+                fleet: { type: f.type, fit: f.fit, scope: f.scope, system: f.system, fleetStatus: f.fleetStatus, comments: f.comments },
+                ac, ops: ac.ops || {}, maint: ac.maintenance || {},
+                taurus: modem.taurus || {}, hughes: modem.hughes || {},
+                media: ac.media || {}, spec: fleetSpecsLive[id] || {},
+            };
+        }
+
+        function acEditValue(cur, row) {
+            if (row.node === 'meta') {
+                if (row.key === 'id') return cur.id;
+                if (row.key === 'delivered') return cur.delivered === false ? 'future' : 'delivered';
+                return '';
+            }
+            return (cur[row.node] || {})[row.key];
+        }
+
+        function acFieldInput(row, val) {
+            const nk = `data-node="${row.node}" data-key="${row.key}"`;
+            if (row.kind === 'type') {
+                const types = [...new Set(fleetRoster.map(a => a.type))].sort();
+                return `<select ${nk}>${types.map(t => `<option value="${escAttr(t)}" ${t === val ? 'selected' : ''}>${escAttr(TYPE_SHORT_LABEL[t] || t)} — ${escAttr(t)}</option>`).join('')}</select>`;
+            }
+            if (row.kind === 'select') {
+                const cur = row.node === 'maint' && row.key === 'open' ? (val === true ? 'open' : '') : (val == null ? '' : String(val));
+                return `<select ${nk}>${row.opts.map(([v, l]) => `<option value="${escAttr(v)}" ${v === cur ? 'selected' : ''}>${escAttr(l)}</option>`).join('')}</select>`;
+            }
+            if (row.kind === 'textarea') return `<textarea ${nk} maxlength="${row.max || 500}">${acEscTa(val)}</textarea>`;
+            if (row.kind === 'date') return `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" ${nk} value="${escAttr(toDMY(val || ''))}">`;
+            if (row.kind === 'num') return `<input type="number" step="any" ${nk} value="${val == null || val === '' ? '' : escAttr(String(val))}">`;
+            // text / isodt
+            return `<input type="text" autocomplete="off" ${nk} maxlength="${row.max || 120}" value="${escAttr(val == null ? '' : String(val))}">`;
+        }
+
+        function acEditRender(id) {
+            const cur = acEditCurrent(id);
+            document.getElementById('acEditBody').innerHTML = acEditSections().map(sec => {
+                const fields = sec.rows.map(row => {
+                    const hint = row.hint ? `<span class="fld-hint">${escAttr(row.hint)}</span>` : '';
+                    return `<div class="ac-edit-field${row.full ? ' full' : ''}"><label>${escAttr(row.label)}</label>${acFieldInput(row, acEditValue(cur, row))}${hint}</div>`;
+                }).join('');
+                return `<div class="ac-edit-section-title">${escAttr(sec.title)}</div><div class="ac-edit-grid">${fields}</div>`;
+            }).join('');
+        }
+
+        function openAircraftEditor(id) {
+            if (!canEdit()) return;
+            acEditId = id;
+            const f = fleetRowOf(id);
+            document.getElementById('acEditTitle').textContent = f.regUnknown ? `Edit UNKNOWN (${id})` : `Edit ${id}`;
+            document.getElementById('acEditSub').textContent = `${TYPE_SHORT_LABEL[f.type] || f.type || 'Aircraft'} — every stored field, across the fleet, technical and spec records.`;
+            const err = document.getElementById('acEditError'); err.textContent = ''; err.style.display = 'none';
+            acEditRender(id);
+            const save = document.getElementById('acEditSave');
+            save.disabled = false; save.textContent = 'Save changes';
+            document.getElementById('acEditOverlay').style.display = 'flex';
+        }
+
+        function acEditFail(m) {
+            const err = document.getElementById('acEditError');
+            err.textContent = m; err.style.display = 'block';
+            return null;
+        }
+
+        // Reads every input back, validated and type-converted to match the DB rules.
+        // Returns the grouped values, or null (with the error shown) on the first problem.
+        function collectAcEdit() {
+            const err = document.getElementById('acEditError'); err.style.display = 'none';
+            const spec = {};
+            acEditSections().forEach(sec => sec.rows.forEach(r => { spec[r.node + '/' + r.key] = r; }));
+            const out = { meta: {}, fleet: {}, ac: {}, ops: {}, maint: {}, taurus: {}, hughes: {}, media: {}, spec: {} };
+            const inputs = document.querySelectorAll('#acEditBody [data-node]');
+            for (const el of inputs) {
+                const node = el.dataset.node, key = el.dataset.key;
+                const row = spec[node + '/' + key] || { kind: 'text', label: key };
+                let v;
+                if (row.kind === 'date') {
+                    v = readDateField(el);
+                    if (v === false) return acEditFail(`${row.label}: use dd-mm-yyyy.`);
+                } else if (row.kind === 'isodt') {
+                    v = el.value.trim();
+                    if (v && !/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/.test(v)) return acEditFail(`${row.label}: use YYYY-MM-DDThh:mm:ssZ.`);
+                } else if (row.kind === 'num') {
+                    const raw = el.value.trim();
+                    if (raw === '') v = null;
+                    else { const n = Number(raw); if (!isFinite(n)) return acEditFail(`${row.label}: must be a number.`); v = n; }
+                } else {
+                    v = el.value;
+                    if (typeof v === 'string') v = v.trim();
+                    if (row.re && v && !row.re.test(v)) return acEditFail(`${row.label}: ${row.hint || 'invalid format'}.`);
+                    if (row.max && v && v.length > row.max) return acEditFail(`${row.label}: too long (max ${row.max}).`);
+                }
+                out[node][key] = v;
+            }
+            return out;
+        }
+
+        function acKeep(obj, keys) {
+            const o = {};
+            if (obj && typeof obj === 'object') keys.forEach(k => { if (obj[k] !== undefined && obj[k] !== null) o[k] = obj[k]; });
+            return o;
+        }
+        const AC_MOVE_FLEET = ['type', 'fit', 'scope', 'system', 'fleetStatus', 'comments', 'delivered'];
+        const AC_MOVE_AC = ['completionDate', 'otaPatchUTC', 'otaPatch3UTC', 'completionLocation', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'note', 'swVersion', 'retrofitLocation', 'retrofitStart', 'retrofitEnd', 'wifiVisibility', 'activatedDate', 'simRoaming', 'ugoVersion', 'tilesVersion', 'ops', 'opsLog', 'maintenance', 'modem', 'media'];
+        const AC_MOVE_SPEC = ['manufacturer', 'family', 'variant', 'engineMfr', 'engineModel', 'engineQty', 'seatConfig', 'seatBusiness', 'seatEconomy', 'seatTotal', 'deliveryDate', 'msn', 'remark'];
+
+        async function acPatch(path, body, token) {
+            if (!Object.keys(body).length) return;
+            const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/${path}.json?auth=${token}`, { method: 'PATCH', body: JSON.stringify(body) });
+            const data = await res.json();
+            if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+        }
+
+        // Moves the already-updated records to a new registration key, dropping the
+        // placeholder flag and any field the rules would reject, then deletes the old key.
+        async function rekeyAircraft(oldId, newId, token) {
+            const grab = n => fetchWithTimeout(`${FIREBASE_DB_URL}/${n}/${oldId}.json?auth=${token}`).then(r => r.json()).catch(() => null);
+            const [f, ac, sp] = await Promise.all([grab('fleet'), grab('aircraft'), grab('fleetSpecs')]);
+            const put = async (n, rec) => {
+                if (!rec || !Object.keys(rec).length) return;
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/${n}/${newId}.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(rec) });
+                const d = await res.json();
+                if (!res.ok || (d && d.error)) throw new Error((d && d.error) || 'move failed');
+            };
+            await put('fleet', acKeep(f, AC_MOVE_FLEET));          // regUnknown + legacy station dropped — real tail now
+            await put('aircraft', acKeep(ac, AC_MOVE_AC));          // pinHash + any $other dropped
+            await put('fleetSpecs', acKeep(sp, AC_MOVE_SPEC));
+            for (const n of ['fleet', 'aircraft', 'fleetSpecs']) {
+                const del = await fetchWithTimeout(`${FIREBASE_DB_URL}/${n}/${oldId}.json?auth=${token}`, { method: 'DELETE' });
+                if (!del.ok) throw new Error('cleanup failed');
+            }
+        }
+
+        // Refreshes the local stores for one id straight from the DB so the redraw shows
+        // exactly what was written, not a stale mirror.
+        async function acReloadInto(id) {
+            const grab = n => fetchWithTimeout(`${FIREBASE_DB_URL}/${n}/${id}.json`).then(r => r.json()).catch(() => null);
+            const [f, ac, sp] = await Promise.all([grab('fleet'), grab('aircraft'), grab('fleetSpecs')]);
+            fleetRoster = fleetRoster.filter(a => a.id !== id);
+            if (f) fleetRoster.push({ id, type: f.type, fit: f.fit || '', fleetStatus: f.fleetStatus || '', comments: f.comments || '', scope: f.scope || '', system: f.system || '', delivered: f.delivered, regUnknown: !!f.regUnknown });
+            fleetRoster.sort((a, b) => a.id.localeCompare(b.id));
+            if (ac) aircraftLive[id] = ac; else delete aircraftLive[id];
+            if (sp) fleetSpecsLive[id] = sp; else delete fleetSpecsLive[id];
+        }
+
+        async function saveAircraftEditor() {
+            if (!acEditId) return;
+            const oldId = acEditId;
+            const c = collectAcEdit();
+            if (!c) return;
+
+            const future = c.meta.delivered === 'future';
+            // Future aircraft are excluded from every count, so they must carry no fit and
+            // no programme status — refuse the save rather than silently leaking one in.
+            if (future && (c.fleet.fit || c.fleet.fleetStatus)) {
+                return acEditFail('A Future aircraft cannot have a Fit or Programme Status (it is excluded from all counts). Clear them, or set Delivery to Delivered.');
+            }
+
+            const newId = (c.meta.id || '').trim().toUpperCase();
+            const rekey = newId && newId !== oldId;
+            if (rekey) {
+                if (!/^[A-Z0-9]{2,10}$/.test(newId)) return acEditFail('New registration must be 2–10 letters/digits.');
+                if (fleetRoster.some(a => a.id === newId)) return acEditFail(`${newId} already exists in the fleet.`);
+                if (!confirm(`Rename ${oldId} → ${newId}?\n\nMoves the fleet, technical and spec records to the new registration and deletes ${oldId}. Intended for giving an UNKNOWN placeholder its real tail. Historical activity/hardware references to ${oldId} are not moved.`)) return;
+            }
+
+            // ── /fleet ────────────────────────────────────────────────────────────────
+            const fleetBody = { type: c.fleet.type };
+            ['fit', 'scope', 'system', 'fleetStatus', 'comments'].forEach(k => { fleetBody[k] = c.fleet[k] ? c.fleet[k] : null; });
+            fleetBody.delivered = future ? false : null;
+
+            // ── /aircraft (flat + deep-path leaves; never a group path beside a leaf) ──
+            const acBody = {};
+            ['activatedDate', 'wifiVisibility', 'simRoaming', 'swVersion', 'ugoVersion', 'tilesVersion', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'otaPatchUTC', 'note', 'retrofitStart', 'retrofitEnd', 'retrofitLocation', 'completionDate', 'completionLocation'].forEach(k => {
+                if (c.ac[k] !== undefined) acBody[k] = c.ac[k] === '' ? null : c.ac[k];
+            });
+            const opsState = c.ops.state || '';
+            if (!opsIsOut(opsState)) {
+                ['state', 'since', 'reason', 'expectedReturn', 'location'].forEach(k => { acBody['ops/' + k] = null; });
+            } else {
+                acBody['ops/state'] = opsState;
+                ['since', 'reason', 'expectedReturn', 'location'].forEach(k => { acBody['ops/' + k] = c.ops[k] ? c.ops[k] : null; });
+            }
+            if (c.maint.open === 'open') {
+                acBody['maintenance/open'] = true;
+                acBody['maintenance/reason'] = c.maint.reason ? c.maint.reason : null;
+                const had = ((aircraftLive[oldId] || {}).maintenance || {}).flaggedAt;
+                if (!had) acBody['maintenance/flaggedAt'] = new Date().toISOString().slice(0, 19) + 'Z';
+            } else {
+                acBody['maintenance/open'] = null; acBody['maintenance/reason'] = null; acBody['maintenance/flaggedAt'] = null;
+            }
+            ['mgId', 'tid', 'se4', 'se2c', 'commissionedDate', 'notes'].forEach(k => { if (c.taurus[k] !== undefined) acBody['modem/taurus/' + k] = c.taurus[k] === '' ? null : c.taurus[k]; });
+            ['chassisId', 'esn', 'commissionedDate', 'notes'].forEach(k => { if (c.hughes[k] !== undefined) acBody['modem/hughes/' + k] = c.hughes[k] === '' ? null : c.hughes[k]; });
+            ['mediaCycle', 'mediaDisplay', 'mediaSource', 'loadedDateUTC', 'comments'].forEach(k => { if (c.media[k] !== undefined) acBody['media/' + k] = c.media[k] === '' ? null : c.media[k]; });
+
+            // ── /fleetSpecs ─────────────────────────────────────────────────────────
+            const specBody = {};
+            Object.keys(c.spec).forEach(k => { specBody[k] = (c.spec[k] === '' || c.spec[k] == null) ? null : c.spec[k]; });
+
+            const token = await getIdToken();
+            if (!token) return;
+            const save = document.getElementById('acEditSave');
+            save.disabled = true; save.textContent = 'Saving…';
+            setSyncStatus(`🟡 Saving ${oldId}…`, '#e0a800');
+            try {
+                await acPatch('fleet/' + oldId, fleetBody, token);
+                await acPatch('aircraft/' + oldId, acBody, token);
+                await acPatch('fleetSpecs/' + oldId, specBody, token);
+                if (rekey) await rekeyAircraft(oldId, newId, token);
+                await acReloadInto(rekey ? newId : oldId);
+                if (rekey) { fleetRoster = fleetRoster.filter(a => a.id !== oldId); delete aircraftLive[oldId]; delete fleetSpecsLive[oldId]; delete pendingFleet[oldId]; }
+                document.getElementById('acEditOverlay').style.display = 'none';
+                acEditId = null;
+                renderAll();
+                setSyncStatus(`🟢 ${rekey ? oldId + ' → ' + newId : oldId} saved — synced with your team`, '#28a745');
+            } catch (e) {
+                save.disabled = false; save.textContent = 'Save changes';
+                acEditFail(`Could not save — ${e.message}`);
+                setSyncStatus(`🔴 Could not save ${oldId} — ${e.message}`, '#dc3545');
+            }
+        }
+
+        function initAcEditModal() {
+            const overlay = document.getElementById('acEditOverlay');
+            const close = () => { overlay.style.display = 'none'; acEditId = null; };
+            document.getElementById('acEditCancel').addEventListener('click', close);
+            document.getElementById('acEditClose').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            document.getElementById('acEditSave').addEventListener('click', saveAircraftEditor);
+            document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.style.display === 'flex') close(); });
         }
 
         // ===== Software versions =====
@@ -8876,7 +9365,10 @@
         // The one definition of "not available today", used by the column, the filter,
         // the widget and the Timeline's pinned block alike.
         function opsOutFleet() {
-            return fleetRoster.filter(a => opsIsOut(opsOf(a.id).state));
+            // Future / undelivered airframes are never "out of service" — they are not
+            // in service to begin with — so they stay out of the Out-of-Service widget
+            // and the Timeline even if a stray ops state were ever set.
+            return fleetRoster.filter(a => a.delivered !== false && opsIsOut(opsOf(a.id).state));
         }
 
         let fleetEditMode = false;
@@ -9177,6 +9669,10 @@
                 const opsEtr    = opsPick('expectedReturn');
                 const opsLoc    = opsPick('location');
                 const opsD      = opsDef(opsState);
+                // A Future / undelivered airframe: delivered:false on the roster. It sits
+                // out of every count (no fit, no status) and shows a FUTURE badge in the
+                // Operational column instead of an ops state.
+                const isFuture  = a.delivered === false;
 
                 const row = document.createElement('tr');
                 row.dataset.type = a.type;
@@ -9188,8 +9684,10 @@
                 row.dataset.fstatus = st;
                 row.dataset.wifi = wifi;
                 // 'in_service' rather than '' — an empty dataset value cannot be
-                // selected by a filter pill, and In Service has to be pickable.
-                row.dataset.ops = opsState || 'in_service';
+                // selected by a filter pill, and In Service has to be pickable. A Future
+                // aircraft gets its own 'future' value so the Operational filter can
+                // isolate (or exclude) the undelivered airframes.
+                row.dataset.ops = isFuture ? 'future' : (opsState || 'in_service');
 
                 const tc = TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL;
                 const typeCell = editing
@@ -9285,7 +9783,9 @@
                 // The date, reason and expected return only exist while an aircraft is
                 // out, so they are only offered while a state that means "out" is
                 // chosen. Picking In Service hides them and clears the record on save.
-                const opsCell = editing
+                const opsCell = isFuture
+                    ? `<span class="status-badge ops-future" title="Future aircraft — not yet delivered, still with the manufacturer. Edit to set the tail and deliver it.">FUTURE</span>`
+                    : editing
                     ? `<div class="ops-edit">
                         <select class="edit-select" data-id="${a.id}" data-field="ops/state" onchange="handleFleetEdit(this)">${
                             OPS_STATES.map(o => `<option value="${o.value}" ${o.value === opsState ? 'selected' : ''}>${escAttr(o.label)}</option>`).join('')
@@ -9307,7 +9807,9 @@
 
                 // Out-of-service aircraft group ahead of the rest and, within a state,
                 // the longest-out first — the order somebody actually wants to read.
-                const opsSort = opsD.out
+                const opsSort = isFuture
+                    ? '3'
+                    : opsD.out
                     ? '0' + opsD.short + (dateSortKey(toISODate(opsSince)) || '99999999')
                     : '1';
 
@@ -9324,7 +9826,7 @@
                     : `<span class="comment-text">${comments ? escAttr(comments) : '—'}</span>`;
 
                 const actionCell = editing
-                    ? `<td><button class="sched-del-btn" title="Remove from fleet" onclick="removeAircraft('${a.id}')">🗑</button></td>`
+                    ? `<td><button class="fleet-edit-btn" title="View / edit all data for ${escAttr(a.id)}" onclick="openAircraftEditor('${escAttr(a.id)}')">✎</button><button class="sched-del-btn" title="Remove from fleet" onclick="removeAircraft('${escAttr(a.id)}')">🗑</button></td>`
                     : '';
 
                 // Delivery Date / Age — from /fleetSpecs, shown dd-mmm-yyyy with an age
@@ -9338,11 +9840,16 @@
                     : '<span class="fleet-notset">—</span>';
 
                 // The tail plus a Flightradar24 link — icon sized to the text, opens the
-                // aircraft's FR24 page in a new tab. The URL is derived, not stored.
-                const tailCell = `<strong>${a.id}</strong><a class="fr24-link" href="${escAttr(fr24Url(a.id))}" target="_blank" rel="noopener noreferrer" title="Track ${escAttr(a.id)} on Flightradar24" aria-label="Track ${escAttr(a.id)} on Flightradar24">${FR24_ICON}</a>`;
+                // aircraft's FR24 page in a new tab. The URL is derived, not stored. A
+                // placeholder registration (unknown future tail) shows UNKNOWN with no
+                // FR24 link — there is no real aircraft to track yet.
+                const tailCell = a.regUnknown
+                    ? `<strong class="reg-unknown" title="Placeholder ${escAttr(a.id)} — set the real registration from the Edit box">UNKNOWN</strong>`
+                    : `<strong>${a.id}</strong><a class="fr24-link" href="${escAttr(fr24Url(a.id))}" target="_blank" rel="noopener noreferrer" title="Track ${escAttr(a.id)} on Flightradar24" aria-label="Track ${escAttr(a.id)} on Flightradar24">${FR24_ICON}</a>`;
 
-                // Free-text search haystack: tail, both type forms, comments, location.
-                row.dataset.search = [a.id, a.type, TYPE_SHORT_LABEL[a.type] || '', comments, loc, delivLong].join(' ').toLowerCase();
+                // Free-text search haystack: tail, both type forms, comments, location,
+                // plus UNKNOWN / FUTURE so the search box can find placeholder airframes.
+                row.dataset.search = [a.id, a.type, TYPE_SHORT_LABEL[a.type] || '', comments, loc, delivLong, a.regUnknown ? 'unknown' : '', isFuture ? 'future' : ''].join(' ').toLowerCase();
 
                 row.innerHTML = `
                     <td>${idx + 1}</td>
@@ -10450,7 +10957,6 @@
 
             const profile = [
                 cell('Aircraft Type', escAttr(a.type)),
-                cell('Base Station', a.station && a.station !== 'N/A' ? escAttr(a.station) : ''),
                 cell('Install Site', locVal),
                 linefit
                     ? cell('SBC Config A.13', a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
@@ -14353,7 +14859,6 @@
         // completion location; media and the airframe fall back to the base station.
         function aircraftLocationOf(a) {
             if (a.completionLocation) return a.completionLocation;
-            if (a.station && a.station !== 'N/A') return a.station;
             return '';
         }
 
@@ -15428,6 +15933,7 @@
             initBaselineModal();
             initRemovalModal();
             initAddAircraftModal();
+            initAcEditModal();
             updateAuthUI();
             renderObjectives();
             connectLiveSync();
