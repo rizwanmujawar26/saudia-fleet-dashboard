@@ -13,6 +13,19 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.98.4 — Fleet head: drop the half-height divider at the # column
+Reported by the user (2026-09-05): the group border next to the `#` column read as
+uneven. Cause: the Aircraft group cell carried `.fleet-group`'s white left divider,
+but the sub-row `Tail` beneath it had no `fleet-group-start` — so the line ran only
+the group-row's height and stopped, leaving a stub next to `#`. Aircraft is the
+LEFTMOST group and `#` sits outside it, so it now drops the divider
+(`border-left: none`) — the same call Satcom's leftmost group
+(`satcom-group-details`) already makes, so the two grouped heads share one rule. No
+lines added; every other boundary keeps its full-height divider (group cell +
+`fleet-group-start` sub cell). Satcom audited and already consistent — unchanged.
+⚠️ A grouped head's divider needs the border on BOTH the group cell and the
+first sub-cell of the block, or it renders half-height.
+
 ### v2.98.3 — Tables: round every corner, not just the ones that overflow
 Reported by the user (2026-09-05): the v2.98.2 soft border read as sharp on the
 live page. Root cause was CSS, not deploy — the live hash matched local. The soft
