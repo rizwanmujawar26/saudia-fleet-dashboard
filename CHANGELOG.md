@@ -13,6 +13,43 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.99.0 — Base station removed; Future aircraft; per-aircraft Edit modal
+Three requests from the user (2026-09-06).
+
+**Part 1 — Base station gone everywhere.** The `station` (JED/RUH) field is removed:
+the Add-dialog "Base Station" select, the Maintenance detail-card row, the
+`aircraftLocationOf` fallback, the roster mapping, and the rule in
+`database.rules.json`. The 44 stored values were cleared in one `database:update`
+(backed up first). ⚠️ The Overview Jeddah/Riyadh completion widgets are **not** driven
+by `station` — they key off `completionLocation` — so they were untouched; don't assume
+"base" and "completion site" are the same field.
+
+**Part 2 — Future aircraft.** `delivered:false` on `/fleet` marks an undelivered
+airframe (still with the manufacturer). It shows a **FUTURE** badge in the Operational
+column, is isolated by a new "Future Aircraft" Operational filter option, and is
+**excluded from every count** — it carries no `fit` (so `programmeFleet()` skips it) and
+no status; `opsOutFleet()` also guards `delivered !== false` so a stray ops state can't
+leak it into the Out-of-Service widget/Timeline. ⚠️ Invariant: a Future aircraft must
+never have a `fit` or `fleetStatus`, or it re-enters the counts — the Edit modal refuses
+such a save. The Add dialog gained a Delivery mode; an unknown tail auto-keys to a
+type-prefixed placeholder (`XLR01`…, satisfies `[A-Z0-9]{2,10}`) and renders as
+**UNKNOWN** with no FR24 link. New `/fleet` booleans `delivered` + `regUnknown` (rules
+first, then page).
+
+**Part 3 — per-aircraft Edit modal.** An ✎ button beside 🗑 (edit mode) opens a modal
+exposing **every** stored field across `/fleet`, `/aircraft` and `/fleetSpecs`, in
+sections, all editable. Changing the **Registration** re-keys the record — PATCH the
+edits onto the old id, copy the (rules-filtered) records to the new tail, delete the old
+key — which is how an UNKNOWN placeholder is promoted to its real tail. ⚠️ The re-key
+copy runs each record through a whitelist (`AC_MOVE_*`) so it drops `regUnknown`, the
+legacy `station`, and `pinHash` — a full-record PUT of any `$other` field the rules
+reject would otherwise fail. `pinHash` is never shown or edited. Saves assemble
+validated multi-node PATCHes using **deep-path leaves** (`ops/state`, `modem/taurus/mgId`,
+`media/mediaCycle`) — never a group path beside a leaf, which Firebase rejects — with
+dates as `DD-Mon-YYYY`, enums, and `null` to clear. ⚠️ Verified by intercepting the
+PATCH bodies in-browser (no auth needed, no prod writes), the method the handoff already
+prescribes for ops saves.
+
 ### v2.98.5 — Fleet head: align #/Comments to the column line, slim # divider, consistent foot
 Follow-up to 2.98.4 (user, 2026-09-05), three fixes around the rowspan-2 identity
 columns (#, Comments): (1) **Inconsistent bottom edge** — the sticky foot hairline was
