@@ -1966,6 +1966,43 @@
         /* Not yet in the WiFi programme — in scope, currently flying without WiFi.
            Muted grey so it reads as "nothing decided yet", not as a status. */
         .status-badge.fit-none { background: #eef0f2; color: #8a939b; }
+        /* In Scope — decided it WILL get connectivity, retrofit not yet begun. Green-
+           tinted so it reads as a positive commitment, softer than the live green. */
+        .status-badge.fit-in-scope { background: #e4f3ea; color: #0a5c34; }
+        /* No Scope — this airframe will NOT get connectivity. Red-tinted so it is
+           clearly the exclusion, distinct from the neutral Not Started. */
+        .status-badge.fit-no-scope { background: #fdeff0; color: #a52834; }
+        /* Connectivity System — the installed hardware line. Eclipse (retrofit) in the
+           retrofit blue, Rave (linefit) in the linefit violet, so System echoes Fit. */
+        .status-badge.sys-eclipse { background: #e3ecf5; color: #2f5f8a; }
+        .status-badge.sys-rave    { background: #efe9f7; color: #59468a; }
+
+        /* Flightradar24 link beside the tail. Sized to the surrounding text (1em) and
+           muted until hover, when it takes FR24's amber. Inline SVG, so no external
+           asset — the page stays self-contained. */
+        .fr24-link { display: inline-flex; vertical-align: -0.12em; margin-left: 5px; color: #9aa3ab; transition: color .12s; }
+        .fr24-link:hover, .fr24-link:focus-visible { color: #f8c300; }
+        .fr24-link svg { width: 1.05em; height: 1.05em; display: block; fill: currentColor; }
+
+        /* Filter-bar row count — a quiet chip that says how many aircraft the table is
+           showing under the current filters. Sits with the filters, not the actions. */
+        .fb-count { align-self: center; font-size: 12px; font-weight: 600; color: #55606a; background: #eef1f3; border-radius: 20px; padding: 3px 11px; white-space: nowrap; }
+        .fb-count strong { color: #1c3d5a; font-weight: 700; }
+
+        /* Fleet grouped header — the two-row head, Satcom's pattern. Aircraft in the
+           identity green, Retrofit in slate, Connectivity in the vendor blue. */
+        .aircraft-table th.fleet-group {
+            text-align: center;
+            font-size: 11px;
+            letter-spacing: 1.2px;
+            padding: 8px 12px;
+            border-left: 2px solid rgba(255, 255, 255, 0.35);
+        }
+        .aircraft-table th.fleet-group-air   { background: #08492a; }
+        .aircraft-table th.fleet-group-retro { background: #4c4a63; }
+        .aircraft-table th.fleet-group-conn  { background: #005DAC; }
+        .aircraft-table .fleet-group-start { border-left: 2px solid #e3e8ec; }
+        .aircraft-table thead .fleet-group-start { border-left: 2px solid rgba(255, 255, 255, 0.35); }
         /* Active is the only one that reads as operational. In Retrofit is amber and
            clearly unfinished — it must not be mistaken for a flying WiFi aircraft. */
         .status-badge.fleet-active         { background: #28a745; color: #fff; }
@@ -5113,21 +5150,29 @@
                 </div>
 
                 <div class="table-scroll-wrapper table-freeze">
-                    <table class="aircraft-table fleet-compact" id="fleetTable">
+                    <table class="aircraft-table fleet-compact has-grouphead" id="fleetTable">
                         <thead>
+                            <tr class="fleet-grouphead">
+                                <th rowspan="2">#</th>
+                                <th colspan="4" class="fleet-group fleet-group-air">Aircraft</th>
+                                <th colspan="4" class="fleet-group fleet-group-retro fleet-group-start">Retrofit</th>
+                                <th colspan="4" class="fleet-group fleet-group-conn fleet-group-start">Connectivity</th>
+                                <th rowspan="2" class="sortable-th col-comment fleet-group-start" data-col="13" data-label="Comments" onclick="sortFleetTable(13)">Comments</th>
+                                <th rowspan="2" id="fleetActionsHead" style="display:none;">Actions</th>
+                            </tr>
                             <tr>
-                                <th>#</th>
-                                <th class="sortable-th" data-col="1" data-label="Activation Date" onclick="sortFleetTable(1)">Activation Date</th>
-                                <th class="sortable-th" data-col="2" data-label="Aircraft Age" onclick="sortFleetTable(2)">Aircraft Age</th>
-                                <th class="sortable-th" data-col="3" data-label="Aircraft" onclick="sortFleetTable(3)">Aircraft</th>
-                                <th class="sortable-th" data-col="4" data-label="Type" onclick="sortFleetTable(4)">Type</th>
-                                <th class="sortable-th" data-col="5" data-label="Fit" onclick="sortFleetTable(5)">Fit</th>
-                                <th class="sortable-th" data-col="6" data-label="Install Site" onclick="sortFleetTable(6)">Install Site</th>
-                                <th class="sortable-th" data-col="7" data-label="Status" onclick="sortFleetTable(7)">Status</th>
-                                <th class="sortable-th" data-col="8" data-label="Operational State" onclick="sortFleetTable(8)">Operational State</th>
-                                <th class="sortable-th" data-col="9" data-label="SaudiaWiFi" onclick="sortFleetTable(9)">SaudiaWiFi</th>
-                                <th class="sortable-th col-comment" data-col="10" data-label="Comments" onclick="sortFleetTable(10)">Comments</th>
-                                <th id="fleetActionsHead" style="display:none;">Actions</th>
+                                <th class="sortable-th" data-col="1" data-label="Tail" onclick="sortFleetTable(1)">Tail</th>
+                                <th class="sortable-th" data-col="2" data-label="Type" onclick="sortFleetTable(2)">Type</th>
+                                <th class="sortable-th" data-col="3" data-label="Delivery Date / Age" onclick="sortFleetTable(3)">Delivery Date / Age</th>
+                                <th class="sortable-th" data-col="4" data-label="Operations" onclick="sortFleetTable(4)">Operations</th>
+                                <th class="sortable-th fleet-group-start" data-col="5" data-label="Mod Start" onclick="sortFleetTable(5)">Mod Start</th>
+                                <th class="sortable-th" data-col="6" data-label="Mod End" onclick="sortFleetTable(6)">Mod End</th>
+                                <th class="sortable-th" data-col="7" data-label="Install Site" onclick="sortFleetTable(7)">Install Site</th>
+                                <th class="sortable-th" data-col="8" data-label="Fit" onclick="sortFleetTable(8)">Fit</th>
+                                <th class="sortable-th fleet-group-start" data-col="9" data-label="System" onclick="sortFleetTable(9)">System</th>
+                                <th class="sortable-th" data-col="10" data-label="Status" onclick="sortFleetTable(10)">Status</th>
+                                <th class="sortable-th" data-col="11" data-label="SaudiaWiFi" onclick="sortFleetTable(11)">SaudiaWiFi</th>
+                                <th class="sortable-th" data-col="12" data-label="Activation Date" onclick="sortFleetTable(12)">Activation Date</th>
                             </tr>
                         </thead>
                         <tbody id="fleetTableBody">
@@ -6224,8 +6269,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.97.0';
-        const APP_BUILD    = '2026.09.04.05';
+        const APP_VERSION  = '2.98.0';
+        const APP_BUILD    = '2026.09.05.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -8026,9 +8071,11 @@
                         { v: 'retrofit', l: 'Retrofit' },
                         { v: 'linefit', l: 'Linefit' },
                         { v: 'in-retrofit', l: 'In Retrofit' },
-                        // Aircraft in scope but not yet in the WiFi programme — no fit on
-                        // record. Hidden by default (see applyFleetFitDefault); the built-in
-                        // "All" option in this dropdown brings them into view.
+                        // In / No Scope and Not Started have no fit on record and are
+                        // hidden by default (see applyFleetFitDefault); "All", or ticking
+                        // one of these, brings them into view.
+                        { v: 'in-scope', l: 'In Scope' },
+                        { v: 'no-scope', l: 'No Scope' },
                         { v: 'none', l: 'Not Started' },
                     ] },
                     { id: 'fstatus', label: 'Status',
@@ -8054,6 +8101,10 @@
                         { v: 'hidden', l: 'Hidden' },
                     ] },
                 ],
+                // How many aircraft the table is showing right now — sits with the
+                // filters (see fbRender's `extra`). applyFleetFilters keeps its text
+                // current; this initial value covers a bare re-render.
+                extra: () => `<span class="fb-count" id="fleetCount">${fleetCountLabel()}</span>`,
             },
 
             sim: {
@@ -8627,6 +8678,34 @@
         // The roster is the source of truth for which aircraft exist, so this page owns
         // add / edit / remove. Everything else on the dashboard reads what it produces.
         const FLEET_FITS = [{ value: 'retrofit', label: 'Retrofit' }, { value: 'linefit', label: 'Linefit' }];
+        // The six values the Fit COLUMN can read, as one editable dropdown. They are a
+        // view over three stored facts, not one field: 'in-retrofit' is the WiFi status
+        // (fleetStatus), 'retrofit'/'linefit' are `fit`, and 'in-scope'/'no-scope' are
+        // the new `scope` field. handleFleetEdit maps the chosen view back to those
+        // fields; populateFleetTable derives the view from them. Keeping `fit` as just
+        // retrofit/linefit is deliberate — programmeFleet()/projectScope() count a `fit`
+        // on record, so overloading it would corrupt every scope figure.
+        const FLEET_FIT_CHOICES = [
+            { value: 'retrofit',    label: 'Retrofit' },
+            { value: 'linefit',     label: 'Linefit' },
+            { value: 'in-retrofit', label: 'In Retrofit' },
+            { value: 'in-scope',    label: 'In Scope' },
+            { value: 'no-scope',    label: 'No Scope' },
+            { value: 'none',        label: 'Not Started' },
+        ];
+        // Connectivity System — the installed hardware line. Retrofit ships Eclipse,
+        // linefit ships Rave; the read-only cell derives that default from `fit` when
+        // nothing is stored, and an explicit `system` value overrides it.
+        const FLEET_SYSTEMS = [{ value: 'Eclipse', label: 'Eclipse' }, { value: 'Rave', label: 'Rave' }];
+        function systemDefault(fit) { return fit === 'retrofit' ? 'Eclipse' : (fit === 'linefit' ? 'Rave' : ''); }
+
+        // Flightradar24 aircraft-page URL. The registration is HZ-<tail> for the whole
+        // Saudia fleet, and FR24's slug is that registration lowercased — so the link is
+        // fully derived from the tail and needs no stored field.
+        function fr24Url(id) { return 'https://www.flightradar24.com/data/aircraft/hz-' + String(id || '').toLowerCase(); }
+        // Inlined so the page keeps no external assets (check.sh enforces this). Sized
+        // to 1em by .fr24-link svg, coloured by currentColor.
+        const FR24_ICON = '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M332.7 75.7c-5.1.1-9.2 4.3-9.1 9.4s4.3 9.2 9.4 9.1 9.2-4.3 9.1-9.4c0-2.4-1-4.7-2.7-6.4-1.8-1.8-4.2-2.8-6.7-2.7M161.3 196.6c-5.2 0-9.3 4.2-9.3 9.3 0 5.2 4.2 9.3 9.3 9.3s9.3-4.2 9.3-9.3c0-5.2-4.1-9.3-9.3-9.3m-41.4 208.3c5.2 0 9.3-4.2 9.3-9.3s-4.2-9.3-9.3-9.3c-5.2 0-9.3 4.2-9.3 9.3-.1 5 3.8 9.2 8.8 9.3zM255.4 0C114 .3-.3 115.2 0 256.6S115.2 512.3 256.6 512 512.3 396.8 512 255.4c-.2-67.8-27.2-132.8-75.2-180.6C388.6 26.7 323.4-.1 255.4 0m-87.5 362.4c-42.8-36-59.3-94.5-41.4-147.5 1.7 2.5 4.6 4 7.7 3.8 5.1.2 9.5-3.8 9.7-8.9s-3.8-9.5-8.9-9.7h-.8c-.6 0-1.1 0-1.7.3 32.2-67.7 113.2-96.4 180.8-64.2s96.4 113.2 64.2 180.8c-14 29.5-38.2 52.9-68.1 66 .2-.7.3-1.4.3-2.2-.2-5.1-4.6-9.1-9.7-8.9-4.8.2-8.7 4.1-8.9 8.9.1 3 1.5 5.8 3.8 7.7-12.9 4-26.3 6-39.8 6-8.1 0-16.2-.8-24.1-2.2l6.9-52.1c5.8 1.2 11.6 1.8 17.5 1.9 38.1 0 71.4-25.8 80.9-62.8 1.7 2.6 4.6 4.1 7.7 4.1 5.1-.2 9.1-4.6 8.9-9.7-.2-4.8-4.1-8.7-8.9-8.9-2 0-3.9.6-5.5 1.7.2-2.6.3-5.3.3-7.9 0-46.2-37.4-83.6-83.6-83.7s-83.6 37.4-83.7 83.6c0 24.2 10.5 47.2 28.7 63.1zM186 258.5c.1-38.1 31-68.9 69.1-68.9 38.1.1 68.9 31 68.9 69.1-.1 38.1-31 68.9-69.1 68.9-5 0-10-.6-14.9-1.6l8.5-62.8c1.7 2.5 4.6 4 7.7 3.8 5.2 0 9.3-4.2 9.3-9.3 0-5.2-4.2-9.3-9.3-9.3s-9.3 4.2-9.3 9.3c0 1.8.5 3.5 1.4 5l-38.4 48c-15.3-13-24.1-32.1-23.9-52.2m69.6 216.1c-11.8-.1-23.7-1-35.4-2.7l8.8-65.5c8.7 1.4 17.5 2.2 26.3 2.2 83.2-.1 150.5-67.6 150.4-150.8s-67.6-150.5-150.8-150.4S104.4 175 104.5 258.2c.1 44.7 20 87 54.3 115.6l-41.1 51.5C25.2 349.1 11.8 212.4 87.9 119.8S300.7 13.9 393.2 90 499.1 302.8 423 395.4c-41.1 50.1-102.5 79.1-167.4 79.2"/></svg>';
         // The canonical WiFi-programme installation statuses. Value and label are the
         // same string because these exact words are what the database stores — no
         // alternative spellings ("Retrofitting", "Live", "Operational") anywhere.
@@ -8707,10 +8786,14 @@
         // ⚠️ Aircraft with no date use the '00000000' sentinel (not '99999999'), so they
         // sort to the BOTTOM under this descending default rather than crowding the top.
         const FLEET_DEFAULT_STATUS = '';
-        const FLEET_DEFAULT_SORT = { col: 1, dir: -1 };
-        // The Aircraft Age column index (delivery date). When "All" is on the page sorts
-        // by this instead of Activation Date — newest aircraft first.
-        const FLEET_AGE_COL = 2;
+        // Activation Date is column 12 in the grouped layout (Connectivity group).
+        const FLEET_DEFAULT_SORT = { col: 12, dir: -1 };
+        // The Delivery Date / Age column index. When "All" is on the page sorts by this
+        // instead of Activation Date — newest aircraft first. Column 3 in the Aircraft
+        // group (Tail · Type · Delivery · Operations).
+        const FLEET_AGE_COL = 3;
+        // Activation Date column index — the programme default sort (newest first).
+        const FLEET_ACT_COL = 12;
 
         // "All" is on when the Fit filter selects nothing (every fit shown). The quick
         // All pill drives this and the sort together; deriving it from the filter keeps
@@ -8720,7 +8803,7 @@
         // All mode, Activation Date newest-first otherwise. Both descending; the note in
         // the header reads "Newest first" for whichever column is the default.
         function fleetDefaultSort() {
-            return fleetIsAllMode() ? { col: FLEET_AGE_COL, dir: -1 } : { col: 1, dir: -1 };
+            return fleetIsAllMode() ? { col: FLEET_AGE_COL, dir: -1 } : { col: FLEET_ACT_COL, dir: -1 };
         }
 
         // The "Newest first" tiny caption under whichever header holds the current CODE
@@ -8751,10 +8834,14 @@
         function fleetToggleAll() {
             if (fleetIsAllMode()) {
                 applyFleetFitDefault();                        // back to the programme fits
-                lastSort['fleetTable'] = { col: 1, dir: -1 };  // Activation Date, newest first
+                lastSort['fleetTable'] = { col: FLEET_ACT_COL, dir: -1 };  // Activation Date, newest first
             } else {
-                fbSel('fleet', 'fitview').clear();             // every fit — the whole roster
-                lastSort['fleetTable'] = { col: FLEET_AGE_COL, dir: -1 }; // Aircraft Age, newest first
+                // "All" is a clean slate: drop every other filter and the search box too,
+                // so it always shows the whole roster rather than the roster still
+                // narrowed by whatever was picked before. fbClear empties the Fit set as
+                // well, which is exactly what turns All mode on.
+                fbClear('fleet');
+                lastSort['fleetTable'] = { col: FLEET_AGE_COL, dir: -1 }; // Delivery date, newest first
             }
             fbRender('fleet');
             populateFleetTable();
@@ -8807,6 +8894,14 @@
         function deliveryShort(s) {
             const p = parseDeliveryDate(s);
             return p ? `${p.mon}-${p.year.slice(2)}` : '';
+        }
+        // Full delivery date for the Delivery Date / Age column, dd-mmm-yyyy. Day-level
+        // records (the 99 with a real day) read as stored; a legacy month-year record
+        // has no day to show, so it falls back to Mon-YYYY rather than inventing one.
+        function deliveryLong(s) {
+            const p = parseDeliveryDate(s);
+            if (!p) return '';
+            return /^\d{1,2}[- ]/.test(String(s).trim()) ? fmtDate(p.iso) : `${p.mon}-${p.year}`;
         }
         // Age since delivery in the same "13y 114d" shape the activation pill uses.
         // dateSpan accepts the ISO date directly, so a precise DD-Mon-YYYY gives a
@@ -8910,6 +9005,21 @@
                 // show it as not started rather than inventing a status.
                 const fit = staged.fit !== undefined ? staged.fit : (a.fit || '');
                 const st = staged.fleetStatus !== undefined ? staged.fleetStatus : fleetStatusOf(a);
+                // Scope and System both live on /fleet, so they read from the roster
+                // record (a.*) and stage flat like `fit`. Scope only surfaces in the Fit
+                // column for airframes with no fit yet — a fitted aircraft is self-
+                // evidently in scope. System defaults from the fit when unset.
+                const scope = staged.scope !== undefined ? staged.scope : (a.scope || '');
+                const system = staged.system !== undefined ? staged.system : (a.system || '');
+                // The single value the Fit COLUMN reads and its filter matches. Precedence:
+                // being retrofitted wins over how it will be fitted, an actual fit wins
+                // over scope, and scope wins over "nothing decided".
+                const fitview = st === 'In Retrofit' ? 'in-retrofit'
+                    : fit === 'retrofit' ? 'retrofit'
+                    : fit === 'linefit' ? 'linefit'
+                    : scope === 'no' ? 'no-scope'
+                    : scope === 'in' ? 'in-scope'
+                    : 'none';
                 // Activation date lives on /aircraft/{tail}/activatedDate — the field the
                 // Maintenance tab already edits. Read it here rather than storing the same
                 // fact twice on the fleet record.
@@ -8956,10 +9066,10 @@
                 const row = document.createElement('tr');
                 row.dataset.type = a.type;
                 row.dataset.fit = fit || 'none';
-                // What the Fit column actually shows, which is what its filter matches.
-                // 'none' for an aircraft with no fit yet — the value the default filter
-                // hides and the "Not Started" option selects.
-                row.dataset.fitview = st === 'In Retrofit' ? 'in-retrofit' : (fit || 'none');
+                // What the Fit column actually shows, which is what its filter matches —
+                // one of retrofit / linefit / in-retrofit / in-scope / no-scope / none.
+                // The default filter hides the last three; the dropdown selects any.
+                row.dataset.fitview = fitview;
                 row.dataset.fstatus = st;
                 row.dataset.wifi = wifi;
                 // 'in_service' rather than '' — an empty dataset value cannot be
@@ -8973,16 +9083,46 @@
                       }</select>`
                     : (TYPE_SHORT_LABEL[a.type] || a.type);
 
+                // One dropdown over the six view values; handleFleetEdit maps the pick
+                // back to fit / scope / fleetStatus. The read-only cell reads the badge
+                // straight off fitview.
+                const FIT_BADGE = {
+                    'in-retrofit': ['fit-in-retrofit', 'IN RETROFIT', 'Being retrofitted — fit on record is Retrofit'],
+                    'retrofit':    ['fit-retrofit', 'RETROFIT', ''],
+                    'linefit':     ['fit-linefit', 'LINEFIT', ''],
+                    'in-scope':    ['fit-in-scope', 'IN SCOPE', 'Will get connectivity — retrofit not yet started'],
+                    'no-scope':    ['fit-no-scope', 'NO SCOPE', 'Not planned to get connectivity'],
+                    'none':        ['fit-none', 'NOT STARTED', 'No decision yet — in scope for retrofit by default'],
+                };
+                const fb = FIT_BADGE[fitview] || FIT_BADGE.none;
                 const fitCell = editing
-                    ? `<select class="edit-select" data-id="${a.id}" data-field="fit" onchange="handleFleetEdit(this)">${
-                        (fit ? '' : '<option value="" selected>— Not started —</option>') +
-                        FLEET_FITS.map(f => `<option value="${f.value}" ${f.value === fit ? 'selected' : ''}>${f.label}</option>`).join('')
+                    ? `<select class="edit-select" data-id="${a.id}" data-field="fitview" onchange="handleFleetEdit(this)">${
+                        FLEET_FIT_CHOICES.map(f => `<option value="${f.value}" ${f.value === fitview ? 'selected' : ''}>${f.label}</option>`).join('')
                       }</select>`
-                    : (st === 'In Retrofit'
-                        ? '<span class="status-badge fit-in-retrofit" title="Being retrofitted — fit on record is Retrofit">IN RETROFIT</span>'
-                        : (fit
-                            ? `<span class="status-badge fit-${fit}">${fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>`
-                            : '<span class="status-badge fit-none" title="No WiFi fit yet — in scope for retrofit">NOT STARTED</span>'));
+                    : `<span class="status-badge ${fb[0]}"${fb[2] ? ` title="${escAttr(fb[2])}"` : ''}>${fb[1]}</span>`;
+
+                // Connectivity System — Eclipse (retrofit) or Rave (linefit). Read-only
+                // cell shows the stored value or the fit-derived default; the editor
+                // offers the explicit override.
+                const sysShown = system || systemDefault(fit);
+                const systemCell = editing
+                    ? `<select class="edit-select" data-id="${a.id}" data-field="system" onchange="handleFleetEdit(this)">${
+                        (system ? '' : `<option value="" selected>${sysShown ? `— ${escAttr(sysShown)} (default) —` : '— Not set —'}</option>`) +
+                        FLEET_SYSTEMS.map(s => `<option value="${s.value}" ${s.value === system ? 'selected' : ''}>${s.label}</option>`).join('')
+                      }</select>`
+                    : (sysShown
+                        ? `<span class="status-badge sys-${sysShown.toLowerCase()}"${!system ? ` title="Default for ${fit || 'this fit'} — not explicitly set"` : ''}>${escAttr(sysShown)}</span>`
+                        : '<span class="fleet-notset">—</span>');
+
+                // Modification window. Retrofit grounding dates (retrofitStart/End) reused
+                // as Mod Start / Mod End; a linefit is built with WiFi, so it has no mod
+                // window — N/A, not blank. Read-only here as on the Activity profile.
+                const isLine = fitview === 'linefit';
+                const modCell = (val) => isLine
+                    ? '<span class="fleet-notset" title="Line-fit — no retrofit window">N/A</span>'
+                    : (val ? `<span class="fleet-date">${escAttr(val)}</span>` : '<span class="fleet-notset">—</span>');
+                const modStartCell = modCell(rStart);
+                const modEndCell = modCell(rEnd);
 
                 const statusCell = editing
                     ? `<select class="edit-select" data-id="${a.id}" data-field="fleetStatus" onchange="handleFleetEdit(this)">${
@@ -9059,30 +9199,37 @@
                     ? `<td><button class="sched-del-btn" title="Remove from fleet" onclick="removeAircraft('${a.id}')">🗑</button></td>`
                     : '';
 
-                // Aircraft Age — delivery month from /fleetSpecs, shown MMM-YY with an age
+                // Delivery Date / Age — from /fleetSpecs, shown dd-mmm-yyyy with an age
                 // pill in the same shape as the Activation column. Never editable here (it
                 // is reference data), '—' when the spec has no delivery date.
                 const delivery = deliveryDateOf(a.id);
-                const delivShort = deliveryShort(delivery);
+                const delivLong = deliveryLong(delivery);
                 const delivAge = deliveryAge(delivery);
-                const ageCell = delivShort
-                    ? `<span class="fleet-date">${escAttr(delivShort)}</span>${delivAge ? `<span class="age-pill" title="Age since delivery (${escAttr(delivery)})">${escAttr(delivAge)}</span>` : ''}`
+                const ageCell = delivLong
+                    ? `<span class="fleet-date">${escAttr(delivLong)}</span>${delivAge ? `<span class="age-pill" title="Age since delivery (${escAttr(delivery)})">${escAttr(delivAge)}</span>` : ''}`
                     : '<span class="fleet-notset">—</span>';
 
+                // The tail plus a Flightradar24 link — icon sized to the text, opens the
+                // aircraft's FR24 page in a new tab. The URL is derived, not stored.
+                const tailCell = `<strong>${a.id}</strong><a class="fr24-link" href="${escAttr(fr24Url(a.id))}" target="_blank" rel="noopener noreferrer" title="Track ${escAttr(a.id)} on Flightradar24" aria-label="Track ${escAttr(a.id)} on Flightradar24">${FR24_ICON}</a>`;
+
                 // Free-text search haystack: tail, both type forms, comments, location.
-                row.dataset.search = [a.id, a.type, TYPE_SHORT_LABEL[a.type] || '', comments, loc, delivShort].join(' ').toLowerCase();
+                row.dataset.search = [a.id, a.type, TYPE_SHORT_LABEL[a.type] || '', comments, loc, delivLong].join(' ').toLowerCase();
 
                 row.innerHTML = `
                     <td>${idx + 1}</td>
-                    <td data-sort="${dateSortKey(toISODate(activated)) || '00000000'}">${activatedCell}</td>
-                    <td data-sort="${deliverySortKey(delivery)}">${ageCell}</td>
-                    <td data-sort="${a.id}"><strong>${a.id}</strong></td>
+                    <td data-sort="${a.id}">${tailCell}</td>
                     <td data-sort="${escAttr(a.type)}">${typeCell}</td>
-                    <td data-sort="${st === 'In Retrofit' ? 'in retrofit' : (fit || 'zzzz')}">${fitCell}</td>
-                    <td data-sort="${escAttr((isOutstation(loc) ? '0' : '1') + loc)}">${locCell}</td>
-                    <td data-sort="${!st ? 'zzzz' : (st === 'Active' ? 'active' : 'inactive')}">${statusCell}</td>
+                    <td data-sort="${deliverySortKey(delivery)}">${ageCell}</td>
                     <td class="col-ops" data-sort="${escAttr(opsSort)}">${opsCell}</td>
+                    <td data-sort="${isLine ? 'zzzz' : (dateSortKey(toISODate(rStart)) || '00000000')}">${modStartCell}</td>
+                    <td data-sort="${isLine ? 'zzzz' : (dateSortKey(toISODate(rEnd)) || '00000000')}">${modEndCell}</td>
+                    <td data-sort="${escAttr((isOutstation(loc) ? '0' : '1') + loc)}">${locCell}</td>
+                    <td data-sort="${escAttr(fitview)}">${fitCell}</td>
+                    <td data-sort="${escAttr((sysShown || 'zzzz').toLowerCase())}">${systemCell}</td>
+                    <td data-sort="${!st ? 'zzzz' : (st === 'Active' ? 'active' : 'inactive')}">${statusCell}</td>
                     <td data-sort="${escAttr(wifi)}">${wifiCell}</td>
+                    <td data-sort="${dateSortKey(toISODate(activated)) || '00000000'}">${activatedCell}</td>
                     <td class="col-comment" data-sort="${escAttr(comments)}">${commentCell}</td>
                     ${actionCell}
                 `;
@@ -9092,6 +9239,7 @@
             renderFleetWidgets();
             fbRender('fleet');
             syncTableFreeze();
+            publishGroupHeadHeight();   // the grouped head is two rows now
             applyFleetFilters();
             // Default order — Aircraft Age or Activation Date, newest first depending on
             // the All mode — until someone picks a column. Re-applied on every rebuild
@@ -9184,6 +9332,22 @@
                 row.style.display = fbRowMatch('fleet', row) ? '' : 'none';
             });
             renumberVisibleRows('fleetTable');
+            syncFleetCount();
+        }
+
+        // The number of aircraft rows the table is currently showing, for the filter-bar
+        // chip. Counts what is visible so it always agrees with the rows on screen.
+        function fleetVisibleCount() {
+            let n = 0;
+            document.querySelectorAll('#fleetTableBody tr').forEach(row => {
+                if (row.style.display !== 'none' && !(row.cells[0] && row.cells[0].hasAttribute('colspan'))) n++;
+            });
+            return n;
+        }
+        function fleetCountLabel() { return `<strong>${fleetVisibleCount()}</strong> aircraft`; }
+        function syncFleetCount() {
+            const el = document.getElementById('fleetCount');
+            if (el) el.innerHTML = fleetCountLabel();
         }
 
         function resetFleetTable() {
@@ -9212,6 +9376,31 @@
 
         function handleFleetEdit(el) {
             const id = el.dataset.id, field = el.dataset.field;
+
+            // The Fit dropdown is a VIEW over three stored fields. Translate the pick into
+            // the real fields here so the rest of the pipeline only ever sees fit / scope
+            // / fleetStatus. 'in-retrofit' is the WiFi status; the other picks clear a
+            // lingering 'In Retrofit' status (only that one — never a real status like
+            // Active) so the reader can move an aircraft OUT of retrofit from this column.
+            if (field === 'fitview') {
+                const v = el.value;
+                pendingFleet[id] = pendingFleet[id] || {};
+                const setF = (f, val) => { pendingFleet[id][f] = val; const r = fleetRowOf(id); if (r) r[f] = val; };
+                if (v === 'in-retrofit') {
+                    setF('fleetStatus', 'In Retrofit'); setF('fit', 'retrofit'); setF('scope', '');
+                } else {
+                    if (fleetStatusOf(fleetRowOf(id)) === 'In Retrofit') setF('fleetStatus', '');
+                    if (v === 'retrofit')      { setF('fit', 'retrofit'); setF('scope', ''); }
+                    else if (v === 'linefit')  { setF('fit', 'linefit');  setF('scope', ''); }
+                    else if (v === 'in-scope') { setF('fit', '');         setF('scope', 'in'); }
+                    else if (v === 'no-scope') { setF('fit', '');         setF('scope', 'no'); }
+                    else                       { setF('fit', '');         setF('scope', ''); }  // Not Started
+                }
+                populateFleetTable();
+                setSyncStatus(`🟡 ${id} staged — press Save`, '#e0a800');
+                return;
+            }
+
             // Validate BEFORE touching pendingFleet, or a rejected typo still leaves
             // an empty staged record behind for this aircraft.
             let staged;
@@ -9329,7 +9518,10 @@
                     if (f === 'activatedDate' || f === 'wifiVisibility' || f === 'retrofitLocation') {
                         acMulti[`${id}/${f}`] = v || null; return;
                     }
-                    multi[`${id}/${f}`] = (f === 'comments' && !v) ? null : v;
+                    // These fields are optional and enum/length-validated: an empty
+                    // string is not a legal value, so clearing one writes null (removes
+                    // it) rather than sending '' — which the rules would reject.
+                    multi[`${id}/${f}`] = (!v && (f === 'comments' || f === 'fit' || f === 'scope' || f === 'system' || f === 'fleetStatus')) ? null : v;
                 });
             });
 
