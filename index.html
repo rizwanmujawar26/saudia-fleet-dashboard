@@ -1443,11 +1443,22 @@
             -webkit-overflow-scrolling: touch;
             margin-top: 20px;
             /* One design language across the app: the same soft border and radius the
-               filter bar and the timeline blocks use (1px #e8ebee, 10px). overflow is
-               already clipped here, so the rounded corners crop the header and the last
-               row cleanly. */
+               filter bar and the timeline blocks use (1px #e8ebee, 10px). */
             border: 1px solid #e8ebee;
             border-radius: 10px;
+            /* ⚠️ border-radius alone does NOT round the table. A radius only crops
+               content when the box clips — and a FITTING table is deliberately
+               `overflow: visible` (see .table-freeze:not(.is-overflowing) below) so
+               its sticky <thead> can pin to the page. With overflow visible the
+               square-cornered green head spilled to the wrapper edges and painted
+               over the rounding, so every table that fit on screen looked sharp while
+               only the few wide enough to overflow (overflow: auto → clips) rounded.
+               clip-path crops paint to the rounded box WITHOUT being a scroll
+               container, so it rounds the corners and leaves the sticky head pinning
+               to the viewport untouched — the head, sitting inside the wrapper's box
+               whenever it is pinned, is never clipped. border-collapse stays `collapse`
+               so the frozen-head clone is not disturbed. */
+            clip-path: inset(0 round 10px);
         }
 
         .table-scroll-wrapper .aircraft-table {
@@ -6356,8 +6367,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.98.2';
-        const APP_BUILD    = '2026.09.05.03';
+        const APP_VERSION  = '2.98.3';
+        const APP_BUILD    = '2026.09.05.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
