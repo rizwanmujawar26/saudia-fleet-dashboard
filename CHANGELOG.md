@@ -13,6 +13,25 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.98.3 — Tables: round every corner, not just the ones that overflow
+Reported by the user (2026-09-05): the v2.98.2 soft border read as sharp on the
+live page. Root cause was CSS, not deploy — the live hash matched local. The soft
+`1px #e8ebee` border + `10px` radius were on `.table-scroll-wrapper`, but a radius
+only crops content when the box clips, and a *fitting* table is deliberately
+`overflow: visible` (so its sticky `<thead>` can pin to the page). With overflow
+visible the square-cornered green head painted over the rounding, so every table
+that fit at desktop width looked sharp while only the odd table wide enough to
+overflow (`overflow: auto` → clips) rounded — hence "sharp / uneven / no borders".
+Fix: `clip-path: inset(0 round 10px)` on the wrapper — it crops paint to the
+rounded box without being a scroll container, so corners round and the
+viewport-anchored sticky head (always inside the wrapper box when pinned) is never
+clipped. `border-collapse` stays `collapse`, so the frozen-head clone is
+undisturbed. Verified in-browser at 1600px across Software, Media, Fleet and
+Satcom (both grouped-head), head still pinning. ⚠️ Lesson: `border-radius` on a
+box that does not clip is inert — the sticky-head `overflow: visible` silently ate
+the rounding, and it only showed on the minority of tables wide enough to trip
+`overflow: auto`.
+
 ### v2.98.2 — Fleet: editable Mod dates + Ongoing, centred cells, soft table border
 At the user's instruction (2026-09-05). Mod Start / Mod End are editable in edit mode
 (retrofit only; linefit stays N/A), stored on `/aircraft` as `retrofitStart`/`retrofitEnd`
