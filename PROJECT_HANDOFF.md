@@ -2574,6 +2574,22 @@ and an ordinary head. `.table-freeze` marks the **eight** page-level tables
 (Software, HBC+, Media, Serials, both Schedule stations, 4G SIM, Fleet) — the Installed
 Equipment and Hardware fitment tables sit inside detail panels and are left alone.
 
+⚠️ **The wrapper's rounded corners are clipped by `clip-path: inset(0 round 10px)`,
+NOT by `overflow` (v2.98.3).** A `border-radius` only crops when the box clips, and a
+fitting table is `overflow: visible` (above) so the square-cornered head painted over
+the rounding — every table that fit read as sharp while only the ones wide enough to
+overflow (→ `overflow: auto`, which clips) rounded. `clip-path` crops paint to the
+rounded box *without* being a scroll container, so it rounds the corners and leaves the
+viewport-anchored sticky head untouched. Do not "fix" the rounding by changing the
+fitting table's `overflow` — that re-breaks the frozen head.
+
+⚠️ **A rowspan-2 head cell is a child of the FIRST head row**, so any `thead
+tr:last-child th` styling silently skips it even though it reaches the same foot. The
+sticky foot hairline had to add `thead th[rowspan="2"]` to cover Fleet's #/Comments and
+Satcom's Aircraft/Status, or their bottom edge showed a bright gap (v2.98.5). Same trap
+for a grouped-head divider: it needs the border on BOTH the group cell and the first
+sub-cell of the block, or it renders only half the head's height (v2.98.4–2.98.5).
+
 ⚠️ **A capped, internally-scrolling pane was tried first and rejected.** Giving the
 wrapper a `max-height` does make the head stick — but the page can still scroll past
 the pinned filter bar, dragging the pane and its head up behind the header, and making

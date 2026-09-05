@@ -111,6 +111,8 @@ A close-out, not a stopping point: finish what is in flight or name it unfinishe
 | A write to a **polled** node must be mirrored locally, or the save looks like it vanished | Media / Satcom |
 | A node left out of the **initial fetch** still streams later — so a whole widget strip sat empty for 25 seconds and nothing errored | Live streams |
 | Style a frozen-head table **by class** — the floating copy inherits `className`, never `id` | Sticky header |
+| A `border-radius` is inert on a box that doesn't clip — a fitting table is `overflow: visible` (for the sticky head), so its rounding rides on **`clip-path`**, not overflow; don't "fix" corners by touching overflow | Sticky header |
+| A **rowspan-2 head cell is a child of the FIRST row** — `thead tr:last-child th` styling skips it though it reaches the same foot; and a grouped-head divider needs the border on **both** the group cell and its first sub-cell or it renders half-height | Sticky header |
 | `dir` in a sort is a numeric **multiplier** — `'asc'` makes every comparison `NaN` | Table sorting |
 | A date column's `data-sort` goes through `dateSortKey()`, and the undated sentinel needs the **same digit count** as a real key | Table sorting |
 | Never put `x` and `x/field` in one PATCH — Firebase rejects a multi-path update where one path contains another | Saves |
