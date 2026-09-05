@@ -2068,7 +2068,77 @@
            that inherits className and never the id, so an id rule leaves the header
            columns a different width from the body's. */
         .fleet-compact th,
-        .fleet-compact td { padding-left: 11px; padding-right: 11px; }
+        .fleet-compact td { padding-left: 5px; padding-right: 5px; }
+
+        /* ===== Fleet density pass (v2.98) — fit the whole table on one laptop screen,
+           no horizontal scroll. Everything below is by CLASS, never #fleetTable: the
+           frozen head is a floating clone that copies className, not id, so an id rule
+           would leave the pinned header a different width from the body. ===== */
+        .fleet-compact th, .fleet-compact td { padding-top: 6px; padding-bottom: 6px; }
+        .fleet-compact thead tr:nth-child(2) th { font-size: 10.5px; letter-spacing: .3px; }
+        .fleet-compact th.fleet-group { font-size: 10px; letter-spacing: 1px; padding: 6px 8px; }
+        /* Tiny table badges — the page-wide default is 12px/6-12px padding; on this
+           dense table they shrink to a chip. */
+        .fleet-compact .status-badge {
+            padding: 2px 7px;
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: .3px;
+            border-radius: 9px;
+        }
+        .fleet-compact .age-pill { margin-left: 0; font-size: 9px; padding: 1px 5px; vertical-align: 0; }
+
+        /* Aircraft type as a tiny coloured pill, same palette as the Timeline. */
+        .type-pill {
+            display: inline-block;
+            padding: 1px 7px;
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: .2px;
+            border-radius: 9px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        /* Delivery — date on top, age below, both centred. */
+        .deliv-stack { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.15; }
+        .deliv-stack .fleet-date { font-size: 11px; }
+
+        /* Mod Start / Mod End squeezed into slim bars: a thin chip, short dd-mmm-yy,
+           so the two retrofit-window columns cost almost no width. */
+        .mod-bar {
+            display: inline-block;
+            min-width: 0;
+            padding: 1px 5px;
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: .1px;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+            background: rgba(15, 32, 45, 0.05);
+            color: #55606a;
+            border: 1px solid rgba(15, 32, 45, 0.08);
+        }
+        .mod-bar.mod-na, .mod-bar.mod-empty { background: transparent; border-color: transparent; color: #b3bac0; font-style: italic; }
+
+        /* Comments never earns width — clip to a fixed box with the full text on hover. */
+        .fleet-compact .comment-text {
+            display: inline-block;
+            max-width: 110px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: bottom;
+        }
+
+        /* Fleet filter bar — tiny pills so the control row is as slim as the table. */
+        .fb-filters[data-bar="fleet"] .fb-trigger,
+        .fb-filters[data-bar="fleet"] .qf-btn,
+        .fb-filters[data-bar="fleet"] .fb-search { font-size: 11px; }
+        .fb-filters[data-bar="fleet"] .fb-trigger,
+        .fb-filters[data-bar="fleet"] .qf-btn { padding-top: 4px; padding-bottom: 4px; padding-left: 9px; padding-right: 9px; }
+        .fb-filters[data-bar="fleet"] .fb-count { font-size: 11px; padding: 2px 9px; }
 
         /* ===== Operational state ===== */
         /* IN SERVICE is deliberately the quietest badge on the row: 42 of 44 aircraft
@@ -5155,24 +5225,24 @@
                             <tr class="fleet-grouphead">
                                 <th rowspan="2">#</th>
                                 <th colspan="4" class="fleet-group fleet-group-air">Aircraft</th>
-                                <th colspan="4" class="fleet-group fleet-group-retro fleet-group-start">Retrofit</th>
                                 <th colspan="4" class="fleet-group fleet-group-conn fleet-group-start">Connectivity</th>
+                                <th colspan="4" class="fleet-group fleet-group-retro fleet-group-start">Retrofit</th>
                                 <th rowspan="2" class="sortable-th col-comment fleet-group-start" data-col="13" data-label="Comments" onclick="sortFleetTable(13)">Comments</th>
                                 <th rowspan="2" id="fleetActionsHead" style="display:none;">Actions</th>
                             </tr>
                             <tr>
                                 <th class="sortable-th" data-col="1" data-label="Tail" onclick="sortFleetTable(1)">Tail</th>
                                 <th class="sortable-th" data-col="2" data-label="Type" onclick="sortFleetTable(2)">Type</th>
-                                <th class="sortable-th" data-col="3" data-label="Delivery Date / Age" onclick="sortFleetTable(3)">Delivery Date / Age</th>
+                                <th class="sortable-th" data-col="3" data-label="Delivery" onclick="sortFleetTable(3)">Delivery</th>
                                 <th class="sortable-th" data-col="4" data-label="Operations" onclick="sortFleetTable(4)">Operations</th>
-                                <th class="sortable-th fleet-group-start" data-col="5" data-label="Mod Start" onclick="sortFleetTable(5)">Mod Start</th>
-                                <th class="sortable-th" data-col="6" data-label="Mod End" onclick="sortFleetTable(6)">Mod End</th>
-                                <th class="sortable-th" data-col="7" data-label="Install Site" onclick="sortFleetTable(7)">Install Site</th>
-                                <th class="sortable-th" data-col="8" data-label="Fit" onclick="sortFleetTable(8)">Fit</th>
-                                <th class="sortable-th fleet-group-start" data-col="9" data-label="System" onclick="sortFleetTable(9)">System</th>
-                                <th class="sortable-th" data-col="10" data-label="Status" onclick="sortFleetTable(10)">Status</th>
-                                <th class="sortable-th" data-col="11" data-label="SaudiaWiFi" onclick="sortFleetTable(11)">SaudiaWiFi</th>
-                                <th class="sortable-th" data-col="12" data-label="Activation Date" onclick="sortFleetTable(12)">Activation Date</th>
+                                <th class="sortable-th fleet-group-start" data-col="5" data-label="System" onclick="sortFleetTable(5)">System</th>
+                                <th class="sortable-th" data-col="6" data-label="Status" onclick="sortFleetTable(6)">Status</th>
+                                <th class="sortable-th" data-col="7" data-label="SSID" onclick="sortFleetTable(7)">SSID</th>
+                                <th class="sortable-th" data-col="8" data-label="Activation Date" onclick="sortFleetTable(8)">Activation Date</th>
+                                <th class="sortable-th fleet-group-start" data-col="9" data-label="Mod Start" onclick="sortFleetTable(9)">Mod Start</th>
+                                <th class="sortable-th" data-col="10" data-label="Mod End" onclick="sortFleetTable(10)">Mod End</th>
+                                <th class="sortable-th" data-col="11" data-label="Install Site" onclick="sortFleetTable(11)">Install Site</th>
+                                <th class="sortable-th" data-col="12" data-label="Fit" onclick="sortFleetTable(12)">Fit</th>
                             </tr>
                         </thead>
                         <tbody id="fleetTableBody">
@@ -6269,8 +6339,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.98.0';
-        const APP_BUILD    = '2026.09.05.01';
+        const APP_VERSION  = '2.98.1';
+        const APP_BUILD    = '2026.09.05.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -8096,7 +8166,7 @@
                     // SSID was folded into the Status pill row as ssid:* to keep
                     // one variable. With a set per filter it can be its own axis,
                     // which is what it always was.
-                    { id: 'wifi', label: 'SaudiaWiFi', options: [
+                    { id: 'wifi', label: 'SSID', options: [
                         { v: 'public', l: 'Public' },
                         { v: 'hidden', l: 'Hidden' },
                     ] },
@@ -8786,14 +8856,15 @@
         // ⚠️ Aircraft with no date use the '00000000' sentinel (not '99999999'), so they
         // sort to the BOTTOM under this descending default rather than crowding the top.
         const FLEET_DEFAULT_STATUS = '';
-        // Activation Date is column 12 in the grouped layout (Connectivity group).
-        const FLEET_DEFAULT_SORT = { col: 12, dir: -1 };
+        // Activation Date is column 8 in the grouped layout (Connectivity group).
+        const FLEET_DEFAULT_SORT = { col: 8, dir: -1 };
         // The Delivery Date / Age column index. When "All" is on the page sorts by this
         // instead of Activation Date — newest aircraft first. Column 3 in the Aircraft
         // group (Tail · Type · Delivery · Operations).
         const FLEET_AGE_COL = 3;
         // Activation Date column index — the programme default sort (newest first).
-        const FLEET_ACT_COL = 12;
+        // Column 8 now that Connectivity sits ahead of Retrofit.
+        const FLEET_ACT_COL = 8;
 
         // "All" is on when the Fit filter selects nothing (every fit shown). The quick
         // All pill drives this and the sort together; deriving it from the filter keeps
@@ -9076,12 +9147,13 @@
                 // selected by a filter pill, and In Service has to be pickable.
                 row.dataset.ops = opsState || 'in_service';
 
+                const tc = TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL;
                 const typeCell = editing
                     ? `<select class="edit-select" data-id="${a.id}" data-field="type" onchange="handleFleetEdit(this)">${
                         [...new Set(fleetRoster.map(x => x.type))].sort().map(t =>
                           `<option value="${escAttr(t)}" ${t === (staged.type || a.type) ? 'selected' : ''}>${TYPE_SHORT_LABEL[t] || t}</option>`).join('')
                       }</select>`
-                    : (TYPE_SHORT_LABEL[a.type] || a.type);
+                    : `<span class="type-pill" style="background:${tc.bg};color:${tc.fg};border-color:${tc.bd}">${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</span>`;
 
                 // One dropdown over the six view values; handleFleetEdit maps the pick
                 // back to fit / scope / fleetStatus. The read-only cell reads the badge
@@ -9118,9 +9190,11 @@
                 // as Mod Start / Mod End; a linefit is built with WiFi, so it has no mod
                 // window — N/A, not blank. Read-only here as on the Activity profile.
                 const isLine = fitview === 'linefit';
+                // dd-mmm-yyyy -> dd-mmm-yy so the two slim bars stay narrow.
+                const modShort = (v) => String(v || '').replace(/-(\d{2})(\d{2})$/, '-$2');
                 const modCell = (val) => isLine
-                    ? '<span class="fleet-notset" title="Line-fit — no retrofit window">N/A</span>'
-                    : (val ? `<span class="fleet-date">${escAttr(val)}</span>` : '<span class="fleet-notset">—</span>');
+                    ? '<span class="mod-bar mod-na" title="Line-fit — no retrofit window">N/A</span>'
+                    : (val ? `<span class="mod-bar" title="${escAttr(val)}">${escAttr(modShort(val))}</span>` : '<span class="mod-bar mod-empty">—</span>');
                 const modStartCell = modCell(rStart);
                 const modEndCell = modCell(rEnd);
 
@@ -9206,7 +9280,7 @@
                 const delivLong = deliveryLong(delivery);
                 const delivAge = deliveryAge(delivery);
                 const ageCell = delivLong
-                    ? `<span class="fleet-date">${escAttr(delivLong)}</span>${delivAge ? `<span class="age-pill" title="Age since delivery (${escAttr(delivery)})">${escAttr(delivAge)}</span>` : ''}`
+                    ? `<div class="deliv-stack"><span class="fleet-date">${escAttr(delivLong)}</span>${delivAge ? `<span class="age-pill" title="Age since delivery (${escAttr(delivery)})">${escAttr(delivAge)}</span>` : ''}</div>`
                     : '<span class="fleet-notset">—</span>';
 
                 // The tail plus a Flightradar24 link — icon sized to the text, opens the
@@ -9222,14 +9296,14 @@
                     <td data-sort="${escAttr(a.type)}">${typeCell}</td>
                     <td data-sort="${deliverySortKey(delivery)}">${ageCell}</td>
                     <td class="col-ops" data-sort="${escAttr(opsSort)}">${opsCell}</td>
-                    <td data-sort="${isLine ? 'zzzz' : (dateSortKey(toISODate(rStart)) || '00000000')}">${modStartCell}</td>
-                    <td data-sort="${isLine ? 'zzzz' : (dateSortKey(toISODate(rEnd)) || '00000000')}">${modEndCell}</td>
-                    <td data-sort="${escAttr((isOutstation(loc) ? '0' : '1') + loc)}">${locCell}</td>
-                    <td data-sort="${escAttr(fitview)}">${fitCell}</td>
                     <td data-sort="${escAttr((sysShown || 'zzzz').toLowerCase())}">${systemCell}</td>
                     <td data-sort="${!st ? 'zzzz' : (st === 'Active' ? 'active' : 'inactive')}">${statusCell}</td>
                     <td data-sort="${escAttr(wifi)}">${wifiCell}</td>
                     <td data-sort="${dateSortKey(toISODate(activated)) || '00000000'}">${activatedCell}</td>
+                    <td class="mod-cell" data-sort="${isLine ? 'zzzz' : (dateSortKey(toISODate(rStart)) || '00000000')}">${modStartCell}</td>
+                    <td class="mod-cell" data-sort="${isLine ? 'zzzz' : (dateSortKey(toISODate(rEnd)) || '00000000')}">${modEndCell}</td>
+                    <td data-sort="${escAttr((isOutstation(loc) ? '0' : '1') + loc)}">${locCell}</td>
+                    <td data-sort="${escAttr(fitview)}">${fitCell}</td>
                     <td class="col-comment" data-sort="${escAttr(comments)}">${commentCell}</td>
                     ${actionCell}
                 `;
