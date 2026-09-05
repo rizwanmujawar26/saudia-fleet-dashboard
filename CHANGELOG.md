@@ -13,6 +13,33 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.98.2 — Fleet: editable Mod dates + Ongoing, centred cells, soft table border
+At the user's instruction (2026-09-05). Mod Start / Mod End are editable in edit mode
+(retrofit only; linefit stays N/A), stored on `/aircraft` as `retrofitStart`/`retrofitEnd`
+(rules already allowed them — routed through the `/aircraft` write and mirrored locally).
+Mod End shows an amber **ONGOING** pill when a retrofit has a start on record but no
+post-mod first flight yet. Every Fleet header and value is centre-aligned. New shared
+table design language: `.table-scroll-wrapper` gets the soft border + radius the filter
+bar and timeline blocks use (`1px #e8ebee`, 10px), across every page-level table.
+
+### v2.98.1 — Fleet density pass: one-screen fit, group reorder, tiny pills
+At the user's instruction (2026-09-05). Column groups reordered to Aircraft · Connectivity
+· Retrofit (Activation Date became col 8, `FLEET_ACT_COL`). Whole table fits one laptop
+screen with no horizontal scroll to ~1265px — 5px cell padding, 9–10px pill/badge fonts,
+comments clipped with hover title (all by `.fleet-compact` class for the frozen-head clone).
+Type rendered as a tiny coloured pill; Delivery header shortened, date stacked over age
+centred; Mod Start/End squeezed to slim `dd-mmm-yy` bars; SaudiaWiFi relabelled **SSID**.
+
+### v2.98.0 — Fleet: grouped columns, FR24 links, Scope + System, live count
+At the user's instruction (2026-09-05). Grouped two-row header (Satcom pattern). Derived
+Flightradar24 link icon per tail (`hz-<tail>`, inlined SVG, no stored field). Fit column
+now reads six values (Retrofit · Linefit · In Retrofit · In Scope · No Scope · Not Started)
+from a new `/fleet` `scope` field plus fit and fleetStatus — `fit` kept `retrofit`/`linefit`
+only so scope figures stay correct. New `/fleet` `system` field (Eclipse/Rave, defaults
+from fit). Delivery column now `dd-mmm-yyyy` (live data is day-level — the handoff's
+month-year note was stale). **All** clears every filter + search; live `N aircraft` count
+chip. Rules: added `fleet.scope` and `fleet.system`.
+
 ### v2.97.0 — Satcom: IPHO applies to A321XLR boxes too
 At the user's instruction (2026-09-04). IPHO Mode was N/A for A321XLR (linefit/Astronics)
 aircraft; the XLR uses IPHO as well, so its Enabled/Disabled pill is now live and editable

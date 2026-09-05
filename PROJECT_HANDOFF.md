@@ -276,7 +276,9 @@ adding it to the rules first.
 |---|---|
 | `type` | e.g. `A320-214`, `A321XLR`. ⚠️ **Never contains a space** — see *Conventions*. Stored, so a rename means the three hardcoded spots (`TYPE_SHORT_LABEL`, `TYPE_PILL_COLORS`, the `aircraftStatic` fallback) |
 | `station` | `JED` / `RUH` / `N/A` |
-| `fit` | `retrofit` \| `linefit` (ASBA, ASBB), **or absent**. How WiFi got onto the airframe, not where it is in the programme — an aircraft can be `fit: retrofit` *and* `fleetStatus: In Retrofit`. **Absent = in scope but not yet in the WiFi programme** (the 55 imported airframes, v2.89.0): the Fit column reads a muted **NOT STARTED**, `fitview` is `'none'`, and it is hidden by the Fleet page's default filter |
+| `fit` | `retrofit` \| `linefit` (ASBA, ASBB), **or absent**. How WiFi got onto the airframe, not where it is in the programme — an aircraft can be `fit: retrofit` *and* `fleetStatus: In Retrofit`. **Absent = not fitted** (the 55 imported airframes, v2.89.0). ⚠️ **`fit` stays `retrofit`/`linefit` ONLY** — `programmeFleet()`/`projectScope()` count "a `fit` on record", so overloading it with scope/status values would corrupt every scope figure. Scope and In-Retrofit are separate fields (below). |
+| `scope` | `in` \| `no`, **or absent** (v2.98.0). Whether the airframe *will* get connectivity. Surfaces in the **Fit column** for not-yet-fitted aircraft only — a fitted one reads Retrofit/Linefit and is self-evidently in scope. `fitview` precedence: `In Retrofit` (status) → `retrofit`/`linefit` (fit) → `no-scope`/`in-scope` (scope) → `none` (Not Started). Editable via the single Fit dropdown, which maps the pick back to fit/scope/fleetStatus in `handleFleetEdit`. |
+| `system` | `Eclipse` \| `Rave`, **or absent** (v2.98.0). Connectivity hardware line. Read-only cell **derives** the default from `fit` when unset (`systemDefault()`: retrofit→Eclipse, linefit→Rave); an explicit value overrides. Shown in the Connectivity column group. |
 | `fleetStatus` | **WiFi installation status** — one of `Planned`, `In Retrofit`, `Installed`, `Commissioned`, `Active`, `Decommissioned`, **or absent**. Exact strings, defined once in `FLEET_STATUSES`. ⚠️ **Absent no longer defaults to `Active`** (v2.89.0) — `fleetStatusOf` returns `''`, so a not-started airframe stays out of `activeFleet()` and every derived count. `programmeFleet()` (a `fit` on record) is the WiFi-programme scope; `projectScope()` counts it |
 | `comments` | free text |
 
@@ -290,9 +292,14 @@ Imported with the fleet (v2.89.0) for all 90 aircraft in the source files. **Not
 renders it yet** — it is the home for the fields the roster had nowhere to put, ready
 for a later UI. `manufacturer`, `family` (e.g. `A320`), `variant` (e.g. `A320-214`),
 `engineMfr`, `engineModel`, `engineQty` (num), `seatConfig`, `seatBusiness`/`seatEconomy`/
-`seatTotal` (num), `deliveryDate` (free string, month-year e.g. `May 2012` — no day, so
-not a `fmtDate` date), `msn`, `remark`. Null source fields were omitted, not stored as
-null. It is a **node**, so it is on the four backup/restore/verify lists.
+`seatTotal` (num), `deliveryDate`, `msn`, `remark`. Null source fields were omitted, not
+stored as null. It is a **node**, so it is on the four backup/restore/verify lists.
+
+⚠️ **`deliveryDate` is now day-level `DD-Mon-YYYY`** for 99 of 105 tails (verified live
+2026-09-05 — the earlier "month-year e.g. `May 2012`" note was stale). `parseDeliveryDate`
+still handles both forms; the Fleet **Delivery** column renders full `dd-mmm-yyyy` via
+`deliveryLong()`, falling back to `Mon-YYYY` only for a legacy month-only value. This is
+the "curl the node before trusting a doc figure" rule in the flesh.
 
 ### `/aircraft/{tail}` — per-aircraft state
 
@@ -2147,28 +2154,51 @@ editable in place — that is where the backlog gets finished — and the "Dates
 Outstanding" widget is the progress bar for it.
 ### 7. Fleet
 
-owns the roster: add / edit / remove, incl. linefit. Columns are # · **Activation Date**
-(1, default newest-first) · **Aircraft Age** (2 — delivery MMM-YY + age pill from
-`/fleetSpecs`) · Aircraft · Type · Fit · Install Site · Status · **Operational State** ·
-SaudiaWiFi · Comments. The filter bar carries a **search box**, an **All** quick pill
-(off by default; on → clears the Fit filter to show every airframe and sorts by Aircraft
-Age newest-first — `fleetToggleAll`), and the Fit filter opens on the programme
-(Retrofit + Linefit + In Retrofit; the `none` "Not Started" airframes are hidden until
-All). A **`.th-order` "Newest first"** note sits under whichever column holds the code
-default sort (Activation Date, or Aircraft Age in All mode) and hides on manual sort —
-`syncFleetOrderNote`, run after `updateSortIndicators`; header clicks route through
-`sortFleetTable`. ⚠️ Inserting the Aircraft Age column renumbered every Fleet column
-after it (data-col 2→3…9→10). The **Operational State** column
-is now the 9th, after Status — see *Operational state* for the field, the eight values
-and why In Service is stored as nothing at all. The
-**SaudiaWiFi** column shows `wifiVisibility` (Public / Hidden) and edits it, so a
-Fleet save now writes **three** kinds of field: roster fields to `/fleet`, and
-`activatedDate` *and* `wifiVisibility` to `/aircraft`. The Maintenance profile edits
-the same `wifiVisibility` — one fact, two places to change it, one place stored.
-The select offers only Public and Hidden; a blank option appears **only** when
-nothing is set yet, so it can never silently claim Public for an aircraft nobody has
-decided about. Removing
-deletes only the `/fleet` entry; `/aircraft` history survives, so re-adding
+owns the roster: add / edit / remove, incl. linefit. **Grouped two-row header**
+(Satcom's `.has-grouphead` pattern, rebuilt v2.98.0–.2), three column groups:
+
+- **Aircraft** — Tail (1, + a derived Flightradar24 link icon) · Type (2, tiny
+  `.type-pill`) · **Delivery** (3, `dd-mmm-yyyy` + age pill, `deliveryLong()`) · Operations (4)
+- **Connectivity** — System (5) · Status (6, `fleetStatus`→Active/Inactive) · **SSID** (7,
+  `wifiVisibility` Public/Hidden — column relabelled from SaudiaWiFi) · **Activation Date**
+  (8, the programme default sort, `FLEET_ACT_COL`)
+- **Retrofit** — Mod Start (9) · Mod End (10) · Install Site (11) · **Fit** (12)
+- then Comments (13) · Actions (edit only)
+
+⚠️ **Column order and `data-col` indices have been renumbered twice** (v2.98.0 added
+the groups, v2.98.1 swapped Connectivity ahead of Retrofit). `FLEET_AGE_COL = 3`
+(Delivery, All-mode sort), `FLEET_ACT_COL = 8` (Activation, programme sort). If you
+reorder again, every `data-col`, both constants, and `fleetDefaultSort`/`fleetToggleAll`
+move together.
+
+**Fit column reads six values** via `fitview` (see `/fleet` `scope`): Retrofit · Linefit ·
+In Retrofit · In Scope · No Scope · Not Started, one editable dropdown
+(`FLEET_FIT_CHOICES`) that `handleFleetEdit` decomposes into fit / scope / fleetStatus.
+**Mod Start / Mod End** reuse `/aircraft` `retrofitStart`/`retrofitEnd`, **editable here
+since v2.98.2** (slim `.mod-bar`; N/A for linefit; Mod End shows an amber **ONGOING** pill
+when a start is on record with no end yet). A Fleet save therefore writes to **two nodes**:
+roster fields (`fit`, `scope`, `system`, `fleetStatus`, `comments`) to `/fleet`, and
+`activatedDate`, `wifiVisibility`, `retrofitLocation`, `retrofitStart`, `retrofitEnd` to
+`/aircraft`. ⚠️ Empty `fit`/`scope`/`system`/`fleetStatus` commit as **null** (an empty
+string fails the enum rules) — see `commitFleetChanges`.
+
+The filter bar has a **search box**, an **All** quick pill (off by default; on →
+`fbClear('fleet')` wipes *every* filter + search and sorts by Delivery newest-first —
+`fleetToggleAll`), a **live `N aircraft` count chip** (`extra()` + `syncFleetCount`;
+45 programme / 105 All), and the Fit dropdown opens on the programme (Retrofit + Linefit +
+In Retrofit; In Scope / No Scope / Not Started hidden until All). A **`.th-order` "Newest
+first"** note sits under the default-sort column and hides on manual sort
+(`syncFleetOrderNote`, after `updateSortIndicators`; clicks route through `sortFleetTable`).
+
+**Density + design language (v2.98.1–.2):** the whole table fits one laptop screen with
+no horizontal scroll down to ~1265px — cell padding 5px, 9–10px pill/badge fonts,
+comments clipped with hover title, all styled **by `.fleet-compact` class** (the frozen
+head is a clone that copies className, never id). **Every header and value is
+centre-aligned.** `.table-scroll-wrapper` now carries the shared soft border + radius
+(`1px #e8ebee`, 10px — the same the filter bar and timeline blocks use), so all
+page-level tables read as one system.
+
+Removing deletes only the `/fleet` entry; `/aircraft` history survives, so re-adding
 the registration restores it.
 
 ---
