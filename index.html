@@ -2699,6 +2699,14 @@
         .maint-act.kind-media       { border-left-color: #10695c; }
         .maint-act.kind-maintenance { border-left-color: #d08a2c; }
         .maint-act.kind-hardware    { border-left-color: #6f52ad; }
+        /* Operational-history cards (out-of-service periods). A red accent like the
+           Timeline's ops-out marker; the open period a touch warmer still. */
+        .maint-act.kind-operational { border-left-color: #d0454b; }
+        .maint-act.ops-hist-open    { border-left-color: #b81f27; background: #fef6f6; }
+        .ops-hist-range { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #445; }
+        .ops-hist-arrow { color: #99a2ab; font-weight: 700; }
+        .ops-hist-ongoing { font-weight: 700; color: #b81f27; }
+        .ops-return-input { max-width: 140px; }
 
         .maint-act-top {
             display: flex;
@@ -5957,6 +5965,27 @@
         </div>
     </div>
 
+    <!-- Out-of-service period editor (Activity tab). Reuses the ac-edit-* shell; its
+         body is built by openOpsPeriod(). Writes straight to /aircraft/{id}/ops or
+         /opsLog — the single source the Fleet column and Timeline also read. -->
+    <div id="opsEditOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1001; align-items:center; justify-content:center;">
+        <div class="ac-edit-panel" style="max-width:480px;">
+            <div class="ac-edit-head">
+                <div>
+                    <h3 id="opsEditTitle" style="color:#0a5c34; margin:0;">Out-of-service period</h3>
+                    <p id="opsEditSub" class="ac-edit-sub"></p>
+                </div>
+                <button id="opsEditClose" class="ac-edit-x" title="Close" aria-label="Close">✕</button>
+            </div>
+            <div id="opsEditBody" class="ac-edit-body"></div>
+            <div id="opsEditError" class="ac-edit-error" style="display:none;"></div>
+            <div class="ac-edit-foot">
+                <button id="opsEditCancel" class="ac-edit-btn-secondary">Cancel</button>
+                <button id="opsEditSave" class="ac-edit-btn-primary">Save period</button>
+            </div>
+        </div>
+    </div>
+
     <script>
 
         // Aircraft data with all fleet information
@@ -6499,8 +6528,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.100.0';
-        const APP_BUILD    = '2026.09.06.02';
+        const APP_VERSION  = '2.101.0';
+        const APP_BUILD    = '2026.09.06.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -8379,7 +8408,8 @@
                 searchClears: true,
                 // Three one-click views, each showing a LIVE count of how many aircraft it
                 // yields: All (99, the whole roster), Active (programme status Active) and
-                // AOG (on the ground). They are one radio group — picking one clears the
+                // AOG (EVERY out-of-service aircraft — the opsout axis, not just the aog
+                // state). They are one radio group — picking one clears the
                 // bar and sets just its axis, so exactly one is ever lit, and "All" lights
                 // only when nothing narrows. Type and the Filters dropdown combine on top.
                 quick: [
@@ -8438,6 +8468,13 @@
                         { v: 'public', l: 'Public' },
                         { v: 'hidden', l: 'Hidden' },
                     ] },
+                    // Drives the AOG quick pill only — hidden, so no trigger and out of the
+                    // collapsed sheet (the media `age` / satcom `todo` pattern). "AOG" on the
+                    // bar means ANY out-of-service state (user, 2026-09-06), not just the aog
+                    // one: a row is out when its Operational cell is neither In Service nor
+                    // Future — matches opsOutFleet(), which the pill count uses.
+                    { id: 'opsout', label: 'Out of Service', hidden: true,
+                      rowValue: row => (row.dataset.ops !== 'in_service' && row.dataset.ops !== 'future') ? 'yes' : 'no' },
                 ],
                 // How many aircraft the table is showing right now — sits with the
                 // filters (see fbRender's `extra`). applyFleetFilters keeps its text
@@ -9514,6 +9551,28 @@
             return fleetRoster.filter(a => a.delivered !== false && opsIsOut(opsOf(a.id).state));
         }
 
+        // Every out-of-service PERIOD for one aircraft, newest first — the same two nodes
+        // the Timeline derives from, in one shape. The OPEN period (still out) comes from
+        // `ops` with key '__open' and a blank `until`; CLOSED ones from `opsLog`, keyed by
+        // their own record key. This is the single source the Activity tab lists and edits
+        // (v2.100.0) — no duplicate /activities records, so the Fleet column, the pinned
+        // banner and the Timeline can never drift from it.
+        function opsPeriodsForAircraft(id) {
+            const a = aircraftLive[id] || {};
+            const list = [];
+            if (a.ops && opsIsOut(a.ops.state)) {
+                list.push({ key: '__open', open: true, state: a.ops.state, since: a.ops.since || '',
+                            until: '', reason: a.ops.reason || '', location: a.ops.location || '',
+                            expectedReturn: a.ops.expectedReturn || '' });
+            }
+            Object.entries(a.opsLog || {}).forEach(([key, pd]) => {
+                if (!pd) return;
+                list.push({ key, open: false, state: pd.state || '', since: pd.since || '',
+                            until: pd.until || '', reason: pd.reason || '', location: pd.location || '' });
+            });
+            return list.sort((x, y) => (toISODate(y.since) || '').localeCompare(toISODate(x.since) || ''));
+        }
+
         let fleetEditMode = false;
         let pendingFleet = {};
         // The Fleet page opens on the WiFi programme only: the Fit filter starts with
@@ -9548,7 +9607,7 @@
         // Filters value must therefore un-light All ("when A330 is selected you don't have
         // all aircraft"), which the old fit-only test could not express.
         function fleetIsAllMode() {
-            return ['type', 'fitview', 'fstatus', 'ops', 'wifi'].every(id => fbSel('fleet', id).size === 0)
+            return ['type', 'fitview', 'fstatus', 'ops', 'wifi', 'opsout'].every(id => fbSel('fleet', id).size === 0)
                 && !(fbQuery['fleet'] || '').trim();
         }
         // Type options with a per-type roster count, so the dropdown reads "A330  31" and
@@ -9560,18 +9619,19 @@
             return seen.map(t => ({ v: t, l: TYPE_SHORT_LABEL[t] || t, n: fleetRoster.filter(a => a.type === t).length }));
         }
         // Live count each pill would yield, shown as its bullet: All = whole roster,
-        // Active = programme status Active, AOG = on the ground (delivered airframes only).
+        // Active = programme status Active, AOG = every out-of-service airframe
+        // (opsOutFleet — any out state, delivered airframes only).
         function fleetPillCount(mode) {
             if (mode === 'active') return fleetRoster.filter(a => fleetStatusOf(a) === 'Active').length;
-            if (mode === 'aog')    return fleetRoster.filter(a => a.delivered !== false && opsOf(a.id).state === 'aog').length;
+            if (mode === 'aog')    return opsOutFleet().length;
             return fleetRoster.length;
         }
         // Whether the Active / AOG pill is currently lit — its axis holds its value. (All
         // uses fleetIsAllMode.) Kept loose (has, not size===1) so Active + a Type still
-        // reads as "Active".
+        // reads as "Active". AOG rides the hidden opsout axis (any out state).
         function fleetPillOn(mode) {
             if (mode === 'active') return fbSel('fleet', 'fstatus').has('Active');
-            if (mode === 'aog')    return fbSel('fleet', 'ops').has('aog');
+            if (mode === 'aog')    return fbSel('fleet', 'opsout').has('yes');
             return false;
         }
         // What the table sorts by with no manual override: Aircraft Age newest-first in
@@ -9611,7 +9671,7 @@
             const turnOn = mode !== 'all' && !fleetPillOn(mode);
             fbClear('fleet');
             if (turnOn && mode === 'active') fbSel('fleet', 'fstatus').add('Active');
-            else if (turnOn && mode === 'aog') fbSel('fleet', 'ops').add('aog');
+            else if (turnOn && mode === 'aog') fbSel('fleet', 'opsout').add('yes');
             // Whole-roster views sort by Aircraft Age, newest first — the same order the
             // old All pill used; a narrowed pill keeps whatever sort is in effect.
             if (mode === 'all' || !turnOn) lastSort['fleetTable'] = { col: FLEET_AGE_COL, dir: -1 };
@@ -9835,7 +9895,16 @@
                 const opsReason = opsPick('reason');
                 const opsEtr    = opsPick('expectedReturn');
                 const opsLoc    = opsPick('location');
+                // The actual return date, staged when the state is switched to In Service
+                // from an out state (handleFleetEdit defaults it to today). Its own field,
+                // not run through opsPick — it belongs to the period being CLOSED, not a
+                // new one, so the fresh-period blanking must not touch it.
+                const opsUntil  = staged['ops/until'] !== undefined ? staged['ops/until'] : '';
                 const opsD      = opsDef(opsState);
+                // Returning to service: the current record is an out state and In Service
+                // is now selected. Offer a "Returned on" date so the closing period's end
+                // is recorded correctly rather than silently stamped today.
+                const opsReturning = !opsD.out && opsCur.state && opsIsOut(opsCur.state);
                 // A Future / undelivered airframe: delivered:false on the roster. It sits
                 // out of every count (no fit, no status) and shows a FUTURE badge in the
                 // Operational column instead of an ops state.
@@ -9960,7 +10029,9 @@
                         <input type="text" inputmode="numeric" maxlength="10" placeholder="Since dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(opsSince)}" data-id="${a.id}" data-field="ops/since" onchange="handleFleetEdit(this)">
                         <input class="edit-text ops-loc-input" value="${escAttr(opsLoc)}" maxlength="60" placeholder="Location (e.g. Jeddah)" data-id="${a.id}" data-field="ops/location" onchange="handleFleetEdit(this)">
                         <input class="edit-text ops-reason-input" value="${escAttr(opsReason)}" maxlength="200" placeholder="Reason (optional)" data-id="${a.id}" data-field="ops/reason" onchange="handleFleetEdit(this)">
-                        <input type="text" inputmode="numeric" maxlength="10" placeholder="Back by dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(opsEtr)}" data-id="${a.id}" data-field="ops/expectedReturn" onchange="handleFleetEdit(this)">` : '')
+                        <input type="text" inputmode="numeric" maxlength="10" placeholder="Back by dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(opsEtr)}" data-id="${a.id}" data-field="ops/expectedReturn" onchange="handleFleetEdit(this)">`
+                          : (opsReturning ? `
+                        <input type="text" inputmode="numeric" maxlength="10" placeholder="Returned dd-mm-yyyy" autocomplete="off" class="edit-date ops-return-input" value="${toDMY(opsUntil)}" data-id="${a.id}" data-field="ops/until" onchange="handleFleetEdit(this)" title="Actual date this aircraft returned to service — recorded on the out-of-service history">` : ''))
                       + `</div>`
                     : (!opsD.out
                         ? '<span class="status-badge ops-in-service">IN SERVICE</span>'
@@ -10206,7 +10277,7 @@
             // Validate BEFORE touching pendingFleet, or a rejected typo still leaves
             // an empty staged record behind for this aircraft.
             let staged;
-            if (field === 'activatedDate' || field === 'ops/since' || field === 'ops/expectedReturn' || field === 'retrofitStart' || field === 'retrofitEnd') {
+            if (field === 'activatedDate' || field === 'ops/since' || field === 'ops/expectedReturn' || field === 'ops/until' || field === 'retrofitStart' || field === 'retrofitEnd') {
                 const v = readDateField(el);
                 if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
                 staged = v;
@@ -10232,6 +10303,11 @@
                     // Back in service, or back to the state already on record: drop
                     // anything staged so the cell shows the stored period untouched.
                     delete pf['ops/since']; delete pf['ops/reason']; delete pf['ops/expectedReturn']; delete pf['ops/location'];
+                    // Returning to service from an out state records the actual return
+                    // date — defaulted to today and shown in the "Returned on" field for
+                    // the user to correct. Not for a no-op re-pick of the same state.
+                    if (!opsIsOut(staged) && cur.state && opsIsOut(cur.state)) pf['ops/until'] = fmtDate(new Date().toISOString().slice(0, 10));
+                    else delete pf['ops/until'];
                 } else {
                     // A new period. It starts today unless the user says otherwise, and
                     // carries NONE of the previous one's details — see populateFleetTable.
@@ -10239,6 +10315,7 @@
                     pf['ops/reason'] = '';
                     pf['ops/expectedReturn'] = '';
                     pf['ops/location'] = '';
+                    delete pf['ops/until'];
                 }
                 populateFleetTable();
             }
@@ -10285,9 +10362,12 @@
                         const rec = {
                             state: cur.state,
                             since: cur.since,
-                            // Ends the day the next state began, or today when the
-                            // aircraft simply came back.
-                            until: (opsIsOut(next) ? pick('since') : '') || fmtDate(new Date().toISOString().slice(0, 10)),
+                            // Ends the day the next state began (out → out), or the
+                            // explicit "Returned on" date the user set when going back In
+                            // Service (ops/until). Falls back to today only if neither is
+                            // set. ⚠️ Before v2.100 this ALWAYS stamped today on a return,
+                            // silently discarding the date the user had entered (the ASAD bug).
+                            until: (opsIsOut(next) ? pick('since') : (p['ops/until'] || '')) || fmtDate(new Date().toISOString().slice(0, 10)),
                         };
                         if (cur.reason) rec.reason = cur.reason;
                         if (cur.location) rec.location = cur.location;
@@ -11182,6 +11262,37 @@
                     </table>
                 </div>` : '';
 
+            // --- Operational History: out-of-service periods, editable in place ---
+            // The single source is ops / opsLog (see opsPeriodsForAircraft) — the same data
+            // the Fleet column, the pinned banner and the Timeline read, so an edit here
+            // corrects all of them at once. No /activities records are minted.
+            const opsPeriods = opsPeriodsForAircraft(a.id);
+            const opsCard = p => {
+                const d = opsDef(p.state);
+                const span = p.until ? dateSpan(p.since, p.until) : (p.since ? activationAge(p.since) : '');
+                return `<li class="maint-act kind-operational ops-hist${p.open ? ' ops-hist-open' : ''}">
+                    <div class="maint-act-top">
+                        <span class="status-badge ops-${d.css}"${d.full ? ` title="${escAttr(d.full)}"` : ''}>${escAttr(d.short)}</span>
+                        <span class="ops-hist-range"><span class="fleet-date">${escAttr(p.since || '—')}</span><span class="ops-hist-arrow">→</span>${p.until ? `<span class="fleet-date">${escAttr(p.until)}</span>` : '<span class="ops-hist-ongoing">Ongoing</span>'}</span>
+                        ${span ? `<span class="age-pill" title="${p.until ? 'Time out of service' : 'Out of service so far'}">${escAttr(span)}</span>` : ''}
+                        ${p.location ? `<span class="tl-loc-pill" style="background:${(LOCATION_PILL_COLORS[p.location] || NEUTRAL_PILL).bg}; color:${(LOCATION_PILL_COLORS[p.location] || NEUTRAL_PILL).fg}; border-color:${(LOCATION_PILL_COLORS[p.location] || NEUTRAL_PILL).bd}">📍 ${escAttr(locationCode(p.location))}</span>` : ''}
+                        ${canEdit() ? `<button class="maint-act-edit" title="Edit this period" onclick="openOpsPeriod('${escAttr(a.id)}','${escAttr(p.key)}')">✏️</button>` : ''}
+                        ${canEdit() ? `<button class="maint-act-del" title="Delete this period" onclick="deleteOpsPeriod('${escAttr(a.id)}','${escAttr(p.key)}')">🗑</button>` : ''}
+                    </div>
+                    ${p.reason ? `<div class="maint-act-title">${escAttr(p.reason)}</div>` : ''}
+                </li>`;
+            };
+            const opsSection = `
+                <div class="maint-history-head">
+                    <span class="maint-history-title">Operational History</span>
+                    <span class="timeline-day-count">${opsPeriods.length} ${opsPeriods.length === 1 ? 'period' : 'periods'}</span>
+                    ${canEdit() ? `<button class="qf-btn" style="margin-left:auto;" onclick="openOpsPeriod('${escAttr(a.id)}','__new')">➕ Add period</button>` : ''}
+                </div>
+                <ul class="maint-history">${
+                    opsPeriods.length ? opsPeriods.map(opsCard).join('')
+                        : '<li class="maint-empty">No out-of-service periods recorded — this aircraft has stayed in service.</li>'
+                }</ul>`;
+
             panel.innerHTML = `
                 <div class="maint-detail-head">
                     <span class="maint-detail-reg">${escAttr(a.id)}</span>
@@ -11190,6 +11301,7 @@
                 </div>
                 <div class="maint-profile">${profile}</div>
                 ${equipSection}
+                ${opsSection}
                 <div class="maint-history-head">
                     <span class="maint-history-title">Activity History</span>
                     <span class="timeline-day-count">${acts.length} ${acts.length === 1 ? 'activity' : 'activities'}</span>
@@ -11734,6 +11846,158 @@
             } catch (e) {
                 setSyncStatus(`🔴 Could not delete activity — ${e.message}`, '#dc3545');
             }
+        }
+
+        // ===== Out-of-service period editor (Activity tab) =================
+        // Edits the ops / opsLog SINGLE SOURCE directly — no /activities record is minted,
+        // so the Fleet column, the pinned banner and the Timeline all follow one edit. Key
+        // is '__open' (the live open period on `ops`), '__new' (log a past closed period),
+        // or an existing opsLog record key.
+        let opsEditId = null, opsEditKey = null, opsEditWasOpen = false;
+
+        function openOpsPeriod(id, key) {
+            if (!canEdit()) { requireSignIn(); return; }
+            opsEditId = id; opsEditKey = key;
+            const isNew = key === '__new';
+            const p = isNew ? null : opsPeriodsForAircraft(id).find(x => x.key === key);
+            if (!isNew && !p) { setSyncStatus('🔴 That period is no longer there — reload', '#dc3545'); return; }
+            opsEditWasOpen = !!(p && p.open);
+
+            const stateOpts = OPS_STATES.filter(o => o.out)
+                .map(o => `<option value="${o.value}" ${p && p.state === o.value ? 'selected' : ''}>${escAttr(o.label)}</option>`).join('');
+            const untilHint = opsEditWasOpen
+                ? 'Leave blank while still out of service; set it to record the return.'
+                : 'The date it returned to service.';
+
+            document.getElementById('opsEditTitle').textContent = isNew ? `Add out-of-service period — ${id}` : `Edit out-of-service period — ${id}`;
+            document.getElementById('opsEditSub').textContent = opsEditWasOpen
+                ? 'This aircraft is currently out of service (the open period).'
+                : 'A completed out-of-service period. Corrections here update the Timeline too.';
+            const err = document.getElementById('opsEditError'); err.textContent = ''; err.style.display = 'none';
+
+            document.getElementById('opsEditBody').innerHTML = `
+                <div class="ac-edit-grid">
+                    <div class="ac-edit-field"><label>State</label>
+                        <select id="opsEditState">${stateOpts}</select></div>
+                    <div class="ac-edit-field"><label>Location</label>
+                        <input id="opsEditLoc" type="text" maxlength="60" placeholder="e.g. Jeddah" value="${escAttr(p ? p.location : '')}"></div>
+                    <div class="ac-edit-field"><label>Since</label>
+                        <input id="opsEditSince" type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" value="${p ? toDMY(p.since) : ''}"></div>
+                    <div class="ac-edit-field"><label>Returned on</label>
+                        <input id="opsEditUntil" type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" value="${p ? toDMY(p.until) : ''}">
+                        <span class="fld-hint">${escAttr(untilHint)}</span></div>
+                    <div class="ac-edit-field full"><label>Reason</label>
+                        <input id="opsEditReason" type="text" maxlength="200" placeholder="Why it was out (optional)" value="${escAttr(p ? p.reason : '')}"></div>
+                </div>`;
+            document.getElementById('opsEditOverlay').style.display = 'flex';
+        }
+
+        function opsEditFail(m) {
+            const err = document.getElementById('opsEditError');
+            err.textContent = m; err.style.display = 'block';
+            return null;
+        }
+
+        async function saveOpsPeriod() {
+            const id = opsEditId, key = opsEditKey;
+            if (!id) return;
+            const state = document.getElementById('opsEditState').value;
+            if (!opsIsOut(state)) return opsEditFail('Pick an out-of-service state.');
+            const since = readDateField(document.getElementById('opsEditSince'));
+            if (since === false || !since) return opsEditFail('Since: use dd-mm-yyyy.');
+            const untilEl = document.getElementById('opsEditUntil');
+            let until = untilEl.value.trim() ? readDateField(untilEl) : '';
+            if (until === false) return opsEditFail('Returned on: use dd-mm-yyyy.');
+            const location = document.getElementById('opsEditLoc').value.trim();
+            const reason = document.getElementById('opsEditReason').value.trim();
+            // A closed or newly-logged period must have an end; only the live open period
+            // may be left running.
+            if (!until && !opsEditWasOpen) return opsEditFail('A completed period needs a return date.');
+            if (until && toISODate(until) < toISODate(since)) return opsEditFail('Returned on cannot be before Since.');
+
+            const token = await getIdToken();
+            if (!token) return;
+            const btn = document.getElementById('opsEditSave');
+            btn.disabled = true; btn.textContent = 'Saving...';
+
+            // Build the record and decide which node it lands in.
+            const rec = { state, since };
+            if (until) rec.until = until;
+            if (reason) rec.reason = reason;
+            if (location) rec.location = location;
+
+            const patch = {};
+            let mirror;   // applied to aircraftLive[id] after a good write
+            if (opsEditWasOpen && !until) {
+                // Still out — stays the open period. Preserve the expected-return estimate.
+                const cur = (aircraftLive[id] || {}).ops || {};
+                if (cur.expectedReturn) rec.expectedReturn = cur.expectedReturn;
+                patch['ops'] = rec;
+                mirror = () => { aircraftLive[id].ops = rec; };
+            } else if (opsEditWasOpen && until) {
+                // Closing the open period: archive it and clear ops in one PATCH (siblings).
+                const nk = `${since}_${state}`.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+                patch['ops'] = null;
+                patch[`opsLog/${nk}`] = rec;
+                mirror = () => { delete aircraftLive[id].ops; aircraftLive[id].opsLog = { ...(aircraftLive[id].opsLog || {}), [nk]: rec }; };
+            } else {
+                // Editing an existing closed period (keep its key so it rewrites in place),
+                // or logging a new one (derive a key from its start).
+                const k = key === '__new' ? `${since}_${state}`.toLowerCase().replace(/[^a-z0-9]+/g, '_') : key;
+                patch[`opsLog/${k}`] = rec;
+                mirror = () => { aircraftLive[id].opsLog = { ...(aircraftLive[id].opsLog || {}), [k]: rec }; };
+            }
+
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft/${id}.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify(patch),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                aircraftLive[id] = aircraftLive[id] || {};
+                mirror();
+                document.getElementById('opsEditOverlay').style.display = 'none';
+                opsEditId = null;
+                renderAll();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (e) {
+                opsEditFail(`Could not save — ${e.message}`);
+            } finally {
+                btn.disabled = false; btn.textContent = 'Save period';
+            }
+        }
+
+        async function deleteOpsPeriod(id, key) {
+            if (!canEdit()) { requireSignIn(); return; }
+            const p = opsPeriodsForAircraft(id).find(x => x.key === key);
+            if (!p) return;
+            const label = p.open ? `${opsDef(p.state).label} since ${p.since}` : `${opsDef(p.state).label} · ${p.since} → ${p.until || '—'}`;
+            if (!confirm(`Delete this out-of-service period?\n\n${id}: ${label}\n\nIt also disappears from the Timeline.`)) return;
+            const token = await getIdToken();
+            if (!token) return;
+            const path = key === '__open' ? 'ops' : `opsLog/${key}`;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft/${id}/${path}.json?auth=${token}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('delete failed');
+                aircraftLive[id] = aircraftLive[id] || {};
+                if (key === '__open') delete aircraftLive[id].ops;
+                else if (aircraftLive[id].opsLog) delete aircraftLive[id].opsLog[key];
+                renderAll();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not delete period — ${e.message}`, '#dc3545');
+            }
+        }
+
+        function initOpsEditModal() {
+            const overlay = document.getElementById('opsEditOverlay');
+            if (!overlay) return;
+            const close = () => { overlay.style.display = 'none'; opsEditId = null; };
+            document.getElementById('opsEditCancel').addEventListener('click', close);
+            document.getElementById('opsEditClose').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            document.getElementById('opsEditSave').addEventListener('click', saveOpsPeriod);
+            document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.style.display === 'flex') close(); });
         }
 
         // ===== 4G SIM register =============================================
@@ -16101,6 +16365,7 @@
             initRemovalModal();
             initAddAircraftModal();
             initAcEditModal();
+            initOpsEditModal();
             updateAuthUI();
             renderObjectives();
             connectLiveSync();
