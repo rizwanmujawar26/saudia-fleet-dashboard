@@ -13,6 +13,30 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.103.0 — MODMAN install/removal on the Timeline
+Request from the user (2026-09-06), the Satcom counterpart to v2.102.0.
+
+Every MODMAN box's install/removal now appears on the Overview Timeline under the
+**Hardware** pill — the whole Satcom register at once (51 fitted + 8 removed), and new
+ones automatically. **Derived, never stored**, the same way the SIM pass is:
+`timelineActivities()` gained a pass over `modmansLive` that emits one Hardware row per
+`installDate` (`MODMAN fitted`) and one per `removalDate` (`MODMAN removed`). Unlike the
+SIM register (per fitment), `/modmans` is **one record per box** with the dates stored on
+it, so this is a flat pass over the boxes, not over fitments.
+
+**The serial follows the supplier**, exactly as the Satcom table does: an **A321XLR**
+(Airbus HBC+ linefit) carries an **Astronics** box shown by its **Astronics S/N**; every
+other airframe is the legacy Eclipse+Kontron build shown by its **Eclipse S/N**
+(`air.type === 'A321XLR' ? m.astronicsSn : m.eclipseSn`). Active-fleet-only like every
+other programme event; no location pill (a box record stores none).
+
+⚠️ **No de-dup guard, deliberately** — unlike SIM, MODMAN swaps are **not** also logged on
+`/activities`, so a box only ever reaches the Timeline once. The one exception is a single
+free-text `Modman Replacement` activity on ASBB (18-Aug, `lruId` empty), which now sits
+beside the register's `MODMAN fitted 226` / `MODMAN removed 110` rows for that swap; it has
+no clean signal to suppress on and carries a Jeddah location the register rows do not, so it
+was left for the user to keep or delete.
+
 ### v2.102.0 — 4G SIM install/removal on the Timeline
 Request from the user (2026-09-06).
 

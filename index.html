@@ -6528,8 +6528,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.102.0';
-        const APP_BUILD    = '2026.09.06.04';
+        const APP_VERSION  = '2.103.0';
+        const APP_BUILD    = '2026.09.06.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -15451,6 +15451,41 @@
                                    title: 'SIM Card removed', sub: serial ? `S/N ${serial}` : '' });
                     }
                 });
+            });
+
+            // --- MODMAN boxes: install and removal, from the Satcom register ---
+            // The MODMAN register is /modmans — one record per physical box, with the
+            // install/removal dates STORED on the record (unlike the SIM register, which
+            // is per fitment, so this is a flat pass over the boxes rather than over
+            // fitments). Same reasoning as the SIM pass above: derived, never stored, so
+            // the whole Satcom history appears at once and a date corrected on the Satcom
+            // tab corrects the Timeline with it. Up to two Hardware rows per box — fitted
+            // (installDate) and removed (removalDate) — each naming the box's S/N.
+            //
+            // The serial follows the SUPPLIER, exactly as the Satcom table does: an
+            // A321XLR (Airbus HBC+ linefit) carries an Astronics box, identified by its
+            // Astronics S/N; every other airframe is the legacy Eclipse+Kontron build,
+            // identified by its Eclipse S/N. No de-dup guard is needed here — unlike SIM,
+            // MODMAN swaps are NOT also logged on /activities, so a box is only ever here.
+            Object.entries(modmansLive || {}).forEach(([, m]) => {
+                const tail = m.aircraft || '';
+                // Active fleet only, like every other programme event above.
+                if (!inScope(tail)) return;
+                const air = byTail[tail] || {};
+                const serial = (air.type === 'A321XLR' ? m.astronicsSn : m.eclipseSn) || '';
+                const sub = serial ? `S/N ${serial}` : '';
+                const fitIso = toISODate(m.installDate);
+                if (fitIso) {
+                    out.push({ iso: fitIso, kind: 'hardware', tail, type: air.type || '',
+                               location: '',
+                               title: 'MODMAN fitted', sub });
+                }
+                const remIso = toISODate(m.removalDate);
+                if (remIso) {
+                    out.push({ iso: remIso, kind: 'hardware', tail, type: air.type || '',
+                               location: '',
+                               title: 'MODMAN removed', sub });
+                }
             });
 
             // --- Maintenance + Hardware: the activity records ---
