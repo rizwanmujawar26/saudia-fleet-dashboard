@@ -6528,8 +6528,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.101.0';
-        const APP_BUILD    = '2026.09.06.03';
+        const APP_VERSION  = '2.102.0';
+        const APP_BUILD    = '2026.09.06.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -15413,6 +15413,46 @@
                            sub: `${st.done} of ${st.scope} aircraft · ${st.pct}%` });
             });
 
+            // --- 4G SIM cards: install and removal, straight from the register ---
+            // The SIM fitment history lives on /units, NOT on /activities, so it never
+            // reached the Timeline. Derived here the same way Activation and Media are —
+            // nothing is written and nothing needs backfilling: every fitment ever
+            // recorded appears at once, and a date corrected on the 4G SIM tab corrects
+            // the Timeline with it. Each period of service yields up to two Hardware
+            // rows — the card going on (fittedDate) and coming off (removedDate) — and
+            // each names the card's S/N, which is the whole point of putting it here.
+            //
+            // ⚠️ SIM events are OWNED by this pass. A card swap on the Serials tab writes
+            // BOTH an hardware_rr activity AND the fitment (see the 4 fitments carrying an
+            // activityId), so the activity pass below skips SIM hardware_rr records — or
+            // the swap would show twice, and these per-card rows carry the S/N the
+            // combined activity row does not.
+            simUnitEntries().forEach(([, u]) => {
+                const serial = formatSimSerial(u.serial || '');
+                unitFitments(u).forEach(f => {
+                    const tail = f.aircraft || '';
+                    // Active fleet only, exactly like every other programme event above —
+                    // a card on an aircraft still In Retrofit stays off the Overview until
+                    // the airframe enters service, same as its software and hardware work.
+                    if (!inScope(tail)) return;
+                    const air = byTail[tail] || {};
+                    // A fitment stores no location of its own; inventing one from the
+                    // aircraft would be a guess, so it carries none, like a media load.
+                    const fitIso = toISODate(f.fittedDate);
+                    if (fitIso) {
+                        out.push({ iso: fitIso, kind: 'hardware', tail, type: air.type || '',
+                                   location: '',
+                                   title: 'SIM Card fitted', sub: serial ? `S/N ${serial}` : '' });
+                    }
+                    const remIso = toISODate(f.removedDate);
+                    if (remIso) {
+                        out.push({ iso: remIso, kind: 'hardware', tail, type: air.type || '',
+                                   location: '',
+                                   title: 'SIM Card removed', sub: serial ? `S/N ${serial}` : '' });
+                    }
+                });
+            });
+
             // --- Maintenance + Hardware: the activity records ---
             activityEntries().forEach(act => {
                 const iso = toISODate(act.date);
@@ -15422,6 +15462,9 @@
                 // day's work — and there is one per unit per aircraft, so letting them
                 // in would swamp whatever day they were entered on.
                 if (isBaselineRecord(act)) return;
+                // SIM install/removal is derived from the fitment register above, so a
+                // SIM hardware_rr activity is the same event a second time — skip it here.
+                if (SIM_LRU_IDS.includes((act.details || {}).lruId)) return;
                 const cat = activityCategory(act.category);
                 const air = byTail[act.aircraft] || {};
                 const title = act.title || cat.label;

@@ -13,6 +13,29 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.102.0 — 4G SIM install/removal on the Timeline
+Request from the user (2026-09-06).
+
+Every SIM card's fitment history now appears on the Overview Timeline under the
+**Hardware** pill — the whole 4G SIM register at once (51 fitted + 10 removed), and
+new ones automatically from here on. **Derived, never stored**, the same way Activation
+and Media are: `timelineActivities()` gained a SIM pass over `simUnitEntries()` +
+`unitFitments()` that emits one Hardware row per `fittedDate` (`SIM Card fitted`) and one
+per `removedDate` (`SIM Card removed`), each naming the card's **S/N** in the subtitle
+(`formatSimSerial`, grouped in sixes). Nothing was written and nothing needed backfilling
+— a date corrected on the 4G SIM tab corrects the Timeline with it.
+
+⚠️ **SIM events are OWNED by this pass**, so the activity pass now **skips SIM
+`hardware_rr` records** (`SIM_LRU_IDS.includes(details.lruId)`): a card swap on the Serials
+tab writes BOTH an activity and the fitment (the 4 fitments carrying an `activityId`), and
+without the skip AQJ/ASV's 16-Aug swaps showed twice. The per-card fitment rows also carry
+the S/N the combined "Failed SIM" / "SIM card Replacement" activity rows did not.
+
+Active-fleet-only, like every other programme event on the Timeline — a card on an
+In-Retrofit airframe stays off the Overview until it enters service. A fitment stores no
+location, so the rows carry no location pill (like a media load). No rules change, no new
+node — pure derivation from `/units`.
+
 ### v2.101.0 — AOG = all out-of-service; editable ops history; return-date fix
 Follow-up requests from the user (2026-09-06).
 
