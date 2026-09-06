@@ -6,6 +6,19 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
+**Latest — v2.101.0 (2026-09-06).** Two Fleet-page sessions on top of everything below:
+- **v2.100.0 — Fleet filter bar rebuilt into a "logical bar":** quick pills **All / Active
+  / AOG**, each with a live count bullet; a **Type** dropdown with per-type counts; and one
+  **"Filters"** dropdown grouping the least-used axes (Fit / Status / Operational / SSID).
+  Typing bypasses filters. Systems widened (`Rave`→`HBC+` default, plus GX / Inmarsat /
+  Viasat / Thales / SITA). Activation-date age pill wraps to its own line. See *Filter bar*.
+- **v2.101.0 — operational state:** the **AOG pill now means EVERY out-of-service
+  aircraft** (hidden `opsout` axis, not just the `aog` state); a **"Returned on"** date
+  field fixes a bug where returning to service always stamped today (see *Operational
+  state*); and the **Activity tab has an editable Operational History** section — ops /
+  opsLog periods edited in place through a modal, still the single source (see *4.
+  Activity*). ASAD's 23-Aug AOG `until` was data-fixed 06→05-Sep.
+
 This session took the app **v2.87.0 → v2.93.0**. Everything below is detail; these
 are the things that change how you work on it.
 
@@ -279,7 +292,7 @@ adding it to the rules first.
 | `regUnknown` | `true`, **or absent** (v2.99.0). The registration is an auto placeholder (`nextPlaceholderKey`, e.g. `XLR01`) for a Future tail not yet known — the cell renders **UNKNOWN** with no FR24 link. Cleared when the Edit modal re-keys the record to the real tail. |
 | `fit` | `retrofit` \| `linefit` (ASBA, ASBB), **or absent**. How WiFi got onto the airframe, not where it is in the programme — an aircraft can be `fit: retrofit` *and* `fleetStatus: In Retrofit`. **Absent = not fitted** (the 55 imported airframes, v2.89.0). ⚠️ **`fit` stays `retrofit`/`linefit` ONLY** — `programmeFleet()`/`projectScope()` count "a `fit` on record", so overloading it with scope/status values would corrupt every scope figure. Scope and In-Retrofit are separate fields (below). |
 | `scope` | `in` \| `no`, **or absent** (v2.98.0). Whether the airframe *will* get connectivity. Surfaces in the **Fit column** for not-yet-fitted aircraft only — a fitted one reads Retrofit/Linefit and is self-evidently in scope. `fitview` precedence: `In Retrofit` (status) → `retrofit`/`linefit` (fit) → `no-scope`/`in-scope` (scope) → `none` (Not Started). Editable via the single Fit dropdown, which maps the pick back to fit/scope/fleetStatus in `handleFleetEdit`. |
-| `system` | `Eclipse` \| `Rave`, **or absent** (v2.98.0). Connectivity hardware line. Read-only cell **derives** the default from `fit` when unset (`systemDefault()`: retrofit→Eclipse, linefit→Rave); an explicit value overrides. Shown in the Connectivity column group. |
+| `system` | `Eclipse` \| `HBC+` \| `GX` \| `Inmarsat` \| `Viasat` \| `Thales` \| `SITA`, **or absent** (v2.98.0; list widened + `Rave`→`HBC+` v2.101.0). Connectivity hardware / service line. Read-only cell **derives** the default from `fit` when unset (`systemDefault()`: retrofit→Eclipse, linefit→HBC+); an explicit value overrides. Badge class is `sys-${sysSlug(name)}` — `sysSlug` drops non-alphanumerics so `HBC+`→`sys-hbc` (a valid selector). Shown in the Connectivity column group. `FLEET_SYSTEMS` is the one list; the Edit modal's opts derive from it. |
 | `fleetStatus` | **WiFi installation status** — one of `Planned`, `In Retrofit`, `Installed`, `Commissioned`, `Active`, `Decommissioned`, **or absent**. Exact strings, defined once in `FLEET_STATUSES`. ⚠️ **Absent no longer defaults to `Active`** (v2.89.0) — `fleetStatusOf` returns `''`, so a not-started airframe stays out of `activeFleet()` and every derived count. `programmeFleet()` (a `fit` on record) is the WiFi-programme scope; `projectScope()` counts it |
 | `comments` | free text |
 
@@ -908,12 +921,35 @@ than the screen.
 multi-path update where one path contains another. `ops` and `opsLog` are *siblings*,
 so archiving beside the clear is fine.
 
+⚠️ **The RETURN date is captured, not assumed (v2.101.0).** Before this, going back In
+Service **always** archived `until` = today, silently discarding the date the user had
+set — ASAD returned 05-Sep but recorded 06-Sep. Now the Fleet ops cell shows a
+**"Returned on"** field when the current state is out and In Service is selected
+(`opsReturning` in `populateFleetTable`, staged as `ops/until`, defaulting to today), and
+`commitFleetChanges` archives `p['ops/until']` as the `until` (falling back to today only
+if unset). ⚠️ `ops/until` belongs to the period being **closed**, so it is read straight
+from the pending set — NOT through `opsPick`, whose "fresh period" blanking would wipe it.
+
+### Editable in the Activity tab (v2.101.0) — same single source
+
+The Activity tab's detail panel has an **Operational History** section listing every
+period from `opsPeriodsForAircraft(id)` (the OPEN one from `ops`, key `__open`; CLOSED
+ones from `opsLog`), each with ✏️ Edit / 🗑 Delete and an ➕ Add. A modal
+(`openOpsPeriod` / `saveOpsPeriod` / `deleteOpsPeriod` / `initOpsEditModal`, overlay
+`#opsEditOverlay` reusing the `.ac-edit-*` shell) writes **straight to `ops` / `opsLog`** —
+NOT a `/activities` record (user's explicit choice: single source, no drift). So the same
+edit corrects the Fleet column, the pinned banner and the Timeline at once. Rules were
+unchanged — the `ops`/`opsLog` fields already existed. ⚠️ Editing a closed period keeps
+its original `opsLog` key (no re-key on a `since` change, to avoid orphaning); closing the
+open period from here archives to `opsLog` + clears `ops` in one PATCH (siblings — fine).
+
 ### Where it shows
 
 | | |
 |---|---|
-| Fleet tab | **Operational State** column, 8th, after Status. Badge, then the since-date with a days pill, the reason (clipped, full text in the tooltip) and the expected return. Edit mode offers the date, reason and return **only** while a state that means "out" is chosen, and dates a new period today |
-| Fleet filter bar | **Operational** — In Service plus only the states actually in use, via `fbPresentOptions` |
+| Fleet tab | **Operational State** column, 8th, after Status. Badge, then the since-date with a days pill, the reason (clipped, full text in the tooltip) and the expected return. Edit mode offers the date, reason and return **only** while a state that means "out" is chosen (a new period dates today), and a **"Returned on"** date when switching an out aircraft back to In Service (v2.101.0) |
+| Fleet filter bar | **AOG** quick pill = every out-of-service aircraft (hidden `opsout` axis, v2.101.0). The full **Operational** dropdown (In Service + the states in use, via `fbPresentOptions`) lives inside the grouped **Filters** dropdown (v2.100.0) |
+| Activity tab | **Operational History** section — every period, editable in place (v2.101.0, see above) |
 | Fleet Composition | a red **Out of Service** card, rendered only when something is out |
 | Timeline | a pinned block above the day list, plus dated `operational` entries — see below |
 
@@ -1295,13 +1331,52 @@ sort's `Newest First → an arrow`.
 - **Serials** still uses a native `<select>` and a search input. It was never part
   of the space problem. Bringing it onto the component is the obvious next step.
 
-### Fleet gained an axis
+### The Fleet "logical bar" (v2.100.0) — pills, a Type dropdown, one grouped Filters
 
-SSID visibility used to be smuggled into the Fleet Status pill row as
-`ssid:hidden` / `ssid:public`, because one variable had to carry two axes. With a
-set per filter that is unnecessary: **SaudiaWiFi is its own dropdown**, and Status
-and SSID can now be combined (Active *and* Hidden), which the old row could not
-express.
+The Fleet bar is the exception to "one trigger per axis" (user, 2026-09-06). It reads:
+
+```
+[All 99] [Active 43] [AOG 5]  [Type ▾]  [Filters ▾]  N aircraft  [search]
+```
+
+- **Three count pills, one radio group.** `All / Active / AOG` each carry a
+  `count: () => n` function whose value renders as a bullet inside the pill
+  (`.fb-quick-count`) — `fleetPillCount(mode)` (All = roster, Active = fstatus Active,
+  AOG = `opsOutFleet().length`). They are bespoke pills (`fleetView(mode)`): a click
+  **clears the whole bar** then sets just that axis, so exactly one is ever lit.
+  `fleetIsAllMode()` (All's `isOn`) is now "**nothing** narrows" — every axis empty
+  and the search box empty — so picking a Type or a Filters value un-lights All.
+- **AOG = every out-of-service aircraft, not just the `aog` state** (v2.101.0). A
+  **hidden `opsout` axis** (`rowValue`: `dataset.ops` ∉ {`in_service`,`future`}) drives
+  the pill; same media-`age` / satcom-`todo` hidden-axis pattern. The pill keeps the
+  label "AOG".
+- **Type is its own trigger with per-type counts.** `fleetTypeOptions()` sets `n` on
+  each option; `fbPopHTML` already renders `o.n`, and `fbTriggerText` now appends `(n)`
+  for a single pick → `Type: A330 (31)`. ⚠️ Picking a fleet Type **clears the `fitview`
+  narrowing** (fbPick, fleet-only) so all N of that type show and the count is honest.
+- **One "Filters" dropdown** stands in for every `grouped: true` filter (Fit / Status /
+  Operational / SSID). `fbRender` renders non-grouped triggers, then appends the group
+  trigger (`fbRenderGroupTrigger`, key `barId:__more`, badge = `fbGroupedCount`).
+  Opening `__more` builds a multi-group popover (like the mobile sheet, but anchored):
+  `fbToggle` special-cases it, `fbPopHTML(barId, groups, titled, scope)` renders titles
+  + a foot, and `scope: 'group'` makes Clear call `fbClearGroup` (only the grouped axes,
+  never the Type or pills). ⚠️ `fbSyncTrigger` must special-case `__more` too — it has no
+  single filter to summarise, so it updates the badge from `fbGroupedCount`; without the
+  branch it calls `fbTriggerText(barId, undefined)` and throws.
+- **Typing bypasses filters** (`searchClears: true` on the bar). `fbSearchInput` clears
+  every filter set on the empty→non-empty transition (then re-renders once and restores
+  focus/caret), so a tail hidden by the current filter (e.g. `ASAG` under a Fit view) is
+  found. Mid-word keystrokes only re-filter rows — a repaint per keystroke would lose the
+  box's focus.
+- **Responsive:** `.fb-filters[data-bar="fleet"] .fb-quick` shows at **every** width, so
+  a phone keeps the three pills + search and only Type + Filters collapse into the compact
+  button.
+
+⚠️ Every one of these hooks (`count`, `grouped`/`__more`, `searchClears`, option `n` in
+the trigger) is **opt-in** — the other six bars declare none and render exactly as before.
+
+(Historical: SSID visibility was once smuggled into the Status pill row as `ssid:*`; a set
+per filter made it its own axis, and it now lives inside the grouped Filters dropdown.)
 
 ---
 
@@ -2164,6 +2239,12 @@ the `mflag` dataset value is `serviceable`.
 Filters are Aircraft Type and Maintenance status. There is no station filter —
 the tab is about the retrofit and its systems, not which base an aircraft flies
 from. Base Station is one of the profile fields.
+**Operational History** (v2.101.0) sits between Installed Equipment and Activity
+History: every out-of-service period for the aircraft (`opsPeriodsForAircraft`),
+editable in place through the ops-period modal — see *Operational state → Editable
+in the Activity tab*. These are **not** `/activities` records; they read and write
+the `ops`/`opsLog` single source, so they cannot drift from the Fleet column or
+Timeline.
 ### 5. Hardware
 
 the LRU catalogue on the left in two fit groups, the selected unit
@@ -2184,16 +2265,18 @@ owns the roster: add / edit / remove, incl. linefit. **Grouped two-row header**
 
 - **Aircraft** — Tail (1, + a derived Flightradar24 link icon) · Type (2, tiny
   `.type-pill`) · **Delivery** (3, `dd-mmm-yyyy` + age pill, `deliveryLong()`) · Operations (4)
-- **Connectivity** — System (5) · Status (6, `fleetStatus`→Active/Inactive) · **SSID** (7,
+- **Connectivity** — System (5, `FLEET_SYSTEMS`: Eclipse/HBC+/GX/Inmarsat/Viasat/Thales/
+  SITA, badge `sys-${sysSlug()}`) · Status (6, `fleetStatus`→Active/Inactive) · **SSID** (7,
   `wifiVisibility` Public/Hidden — column relabelled from SaudiaWiFi) · **Activation Date**
-  (8, the programme default sort, `FLEET_ACT_COL`)
+  (8, the programme default sort, `FLEET_ACT_COL`; date + age pill stacked via `.deliv-stack`
+  since v2.100.0, matching Delivery)
 - **Retrofit** — Mod Start (9) · Mod End (10) · Install Site (11) · **Fit** (12)
 - then Comments (13) · Actions (edit only)
 
 ⚠️ **Column order and `data-col` indices have been renumbered twice** (v2.98.0 added
 the groups, v2.98.1 swapped Connectivity ahead of Retrofit). `FLEET_AGE_COL = 3`
 (Delivery, All-mode sort), `FLEET_ACT_COL = 8` (Activation, programme sort). If you
-reorder again, every `data-col`, both constants, and `fleetDefaultSort`/`fleetToggleAll`
+reorder again, every `data-col`, both constants, and `fleetDefaultSort`/`fleetView`
 move together.
 
 **Fit column reads six values** via `fitview` (see `/fleet` `scope`): Retrofit · Linefit ·
@@ -2207,13 +2290,16 @@ roster fields (`fit`, `scope`, `system`, `fleetStatus`, `comments`) to `/fleet`,
 `/aircraft`. ⚠️ Empty `fit`/`scope`/`system`/`fleetStatus` commit as **null** (an empty
 string fails the enum rules) — see `commitFleetChanges`.
 
-The filter bar has a **search box**, an **All** quick pill (off by default; on →
-`fbClear('fleet')` wipes *every* filter + search and sorts by Delivery newest-first —
-`fleetToggleAll`), a **live `N aircraft` count chip** (`extra()` + `syncFleetCount`;
-45 programme / 105 All), and the Fit dropdown opens on the programme (Retrofit + Linefit +
-In Retrofit; In Scope / No Scope / Not Started hidden until All). A **`.th-order` "Newest
-first"** note sits under the default-sort column and hides on manual sort
-(`syncFleetOrderNote`, after `updateSortIndicators`; clicks route through `sortFleetTable`).
+The filter bar was rebuilt into the **"logical bar"** in v2.100.0 — **All / Active / AOG**
+count pills, a **Type** dropdown with per-type counts, and one grouped **Filters** dropdown
+(Fit / Status / Operational / SSID); typing bypasses filters. See *Filter bar → The Fleet
+"logical bar"* for the full mechanics (`fleetView`, `fleetPillCount`, `grouped`/`__more`,
+`searchClears`, the hidden `opsout` axis behind AOG). It keeps a **live `N aircraft` count
+chip** (`extra()` + `syncFleetCount`; 45 programme / 99 All) and the Fit narrowing opens on
+the programme (Retrofit + Linefit + In Retrofit; In Scope / No Scope / Not Started hidden
+until All, a Type pick, or ticking one). A **`.th-order` "Newest first"** note sits under
+the default-sort column and hides on manual sort (`syncFleetOrderNote`, after
+`updateSortIndicators`; clicks route through `sortFleetTable`).
 
 **Density + design language (v2.98.1–.2):** the whole table fits one laptop screen with
 no horizontal scroll down to ~1265px — cell padding 5px, 9–10px pill/badge fonts,

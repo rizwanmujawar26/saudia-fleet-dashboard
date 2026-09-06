@@ -13,6 +13,70 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.101.0 — AOG = all out-of-service; editable ops history; return-date fix
+Follow-up requests from the user (2026-09-06).
+
+**Part 1 — AOG pill = every out-of-service aircraft**, not just the `aog` state. A new
+**hidden `opsout` axis** on the fleet bar (`rowValue`: `dataset.ops` not in
+`{in_service, future}`) drives the pill; `fleetPillCount('aog')` = `opsOutFleet().length`
+and `fleetPillOn('aog')` = `fbSel('fleet','opsout').has('yes')`. `fleetIsAllMode` now
+includes `opsout`. The pill keeps the label "AOG" (user's naming) though it means "out of
+service". Same media-`age` / satcom-`todo` hidden-axis pattern.
+
+**Part 2 — the return-date bug.** `commitFleetChanges` ALWAYS stamped **today** as a
+period's `until` when an aircraft went back In Service, silently discarding the date the
+user had entered — ASAD returned 05-Sep but recorded 06-Sep. Fixed two ways: (a) a
+**"Returned on" date field** now appears in the Fleet ops cell when an out aircraft is set
+to In Service (`opsReturning` in populateFleetTable, staged as `ops/until`, defaults to
+today, editable); (b) commit archives `p['ops/until']` as the `until` rather than today.
+⚠️ `ops/until` belongs to the period being CLOSED, so it is read straight from the pending
+set, NOT through `opsPick` (whose fresh-period blanking would wipe it).
+
+**Part 3 — editable Operational History in the Activity tab** (Design A, user's choice:
+single source, no duplicate records). `renderMaintDetail` gained an **Operational
+History** section between Installed Equipment and Activity History, listing
+`opsPeriodsForAircraft(id)` — the OPEN period from `ops` (key `__open`) and CLOSED ones
+from `opsLog`. ✏️ Edit / 🗑 Delete per period + ➕ Add. A dedicated modal (`#opsEditOverlay`
+reusing the `.ac-edit-*` shell; `openOpsPeriod` / `saveOpsPeriod` / `deleteOpsPeriod` /
+`initOpsEditModal`) writes straight to `/aircraft/{id}/ops` or `/opsLog/{key}` — the SAME
+single source the Fleet column, pinned banner and Timeline read, so one edit corrects all
+of them and nothing can drift. Closing an open period archives to opsLog + clears `ops` in
+one PATCH (siblings — allowed). `__new` mints a closed period; editing a closed one keeps
+its original key (no re-key on a since change, to avoid orphaning). No rules change — the
+`ops`/`opsLog` fields already existed.
+
+**Data fix.** ASAD `/aircraft/ASAD/opsLog/23_aug_2026_aog/until` corrected 06→05-Sep-2026
+via `firebase-tools database:update --force` (admin bypasses rules; browser writes need an
+editor uid). Timeline now shows ASAD returned 05-Sep (AOG · 13d).
+
+### v2.100.0 — Fleet filter overhaul; HBC+ systems; activation-pill wrap
+Requests from the user (2026-09-06).
+
+**Part 1 — connectivity systems.** `Rave → HBC+` (now the linefit default; Eclipse stays
+retrofit). `FLEET_SYSTEMS` gained **GX, Inmarsat, Viasat, Thales, SITA**. The badge class
+is `sys-${sysSlug(name)}` — new `sysSlug()` drops non-alphanumerics so `'HBC+'` → `sys-hbc`
+(a valid selector); each system has a CSS tint. No data migration (no aircraft stored
+`Rave`); the editor modal's `system` opts derive from `FLEET_SYSTEMS`.
+
+**Part 2 — activation-date pill wraps** to its own line (the cell uses `.deliv-stack`,
+matching the Delivery column).
+
+**Part 3 — the filter bar, rebuilt into a "logical bar".** Three quick pills **All /
+Active / AOG**, each with a LIVE count bullet (`count:()=>n` on the pill; `fleetPillCount`),
+behaving as one radio group (`fleetView(mode)` clears the bar then sets one axis; `All`
+lights only when nothing narrows — `fleetIsAllMode` broadened). A standalone **Type**
+dropdown with per-type counts (`fleetTypeOptions`, shown in the option list AND, when one
+is picked, in the trigger via `fbTriggerText`); picking a type drops the Fit narrowing
+(fbPick, fleet-only) so the count is honest. One **"Filters"** dropdown groups the
+least-used axes (Fit / Status / Operational / SSID) via `grouped:true` +
+`fbRenderGroupTrigger` / `fbGroupedCount` (key `barId:__more`, opened as a multi-group
+popover; `fbPopHTML(barId,groups,titled,scope)` with scope `'group'` clears only those
+axes). **Typing bypasses filters** (`searchClears`): the first character of a query clears
+every applied filter so a filtered-out tail is still found. Narrow width keeps the three
+pills + search and collapses Type + Filters into the compact Filters button
+(`.fb-filters[data-bar="fleet"] .fb-quick` shows at all widths). ⚠️ All new fb hooks are
+opt-in, so the other six bars are unchanged.
+
 ### v2.99.0 — Base station removed; Future aircraft; per-aircraft Edit modal
 Three requests from the user (2026-09-06).
 
