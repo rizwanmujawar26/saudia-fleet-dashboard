@@ -1993,10 +1993,16 @@
         /* No Scope — this airframe will NOT get connectivity. Red-tinted so it is
            clearly the exclusion, distinct from the neutral Not Started. */
         .status-badge.fit-no-scope { background: #fdeff0; color: #a52834; }
-        /* Connectivity System — the installed hardware line. Eclipse (retrofit) in the
-           retrofit blue, Rave (linefit) in the linefit violet, so System echoes Fit. */
-        .status-badge.sys-eclipse { background: #e3ecf5; color: #2f5f8a; }
-        .status-badge.sys-rave    { background: #efe9f7; color: #59468a; }
+        /* Connectivity System — the installed hardware / service line. Eclipse (retrofit)
+           in the retrofit blue, HBC+ (linefit) in the linefit violet, so System echoes
+           Fit; the other providers each get a distinct, muted tint. */
+        .status-badge.sys-eclipse  { background: #e3ecf5; color: #2f5f8a; }
+        .status-badge.sys-hbc      { background: #efe9f7; color: #59468a; }
+        .status-badge.sys-gx       { background: #d9f0ec; color: #1f6f64; }
+        .status-badge.sys-inmarsat { background: #e5e8f7; color: #3a4a9a; }
+        .status-badge.sys-viasat   { background: #fbeed6; color: #8a5a12; }
+        .status-badge.sys-thales   { background: #f7e3ea; color: #8a3358; }
+        .status-badge.sys-sita     { background: #e6eaef; color: #465a6e; }
 
         /* Flightradar24 link beside the tail. Sized to the surrounding text (1em) and
            muted until hover, when it takes FR24's amber. Inline SVG, so no external
@@ -4051,9 +4057,36 @@
         /* A pinch tighter than the dropdown triggers beside them: these are values,
            not axes, so they should not shout louder than the menus they duplicate. */
         .fb-quick-btn {
+            display: inline-flex;
+            align-items: center;
             padding: 5px 11px;
             font-size: 12.5px;
         }
+
+        /* The live count bullet inside a pill (Fleet All/Active/AOG): a small pill-in-pill,
+           muted green on the resting pill and translucent white on the lit one. */
+        .fb-quick-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 16px;
+            height: 15px;
+            margin-left: 5px;
+            padding: 0 5px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            background: rgba(10, 92, 52, 0.12);
+            color: #0a5c34;
+        }
+        .fb-quick-btn.active .fb-quick-count { background: rgba(255, 255, 255, 0.28); color: #fff; }
+
+        /* The Fleet bar keeps its All / Active / AOG pills at EVERY width (they are three
+           small, high-value views) — unlike the default, which shows quick pills only
+           ≥980px. Below 700px the Type / Filters triggers still collapse into the compact
+           "Filters" button, so a phone shows: the three pills, one Filters button, search. */
+        .fb-filters[data-bar="fleet"] .fb-quick { display: flex; align-items: center; gap: 8px; }
 
         /* Separates the quick values from the menus without another divider element. */
         .fb-quick + .fb-groups .fb-trigger:first-child {
@@ -6466,8 +6499,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.99.0';
-        const APP_BUILD    = '2026.09.06.01';
+        const APP_VERSION  = '2.100.0';
+        const APP_BUILD    = '2026.09.06.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-03T13:50:00Z';
 
@@ -7704,8 +7737,24 @@
         // Typing must NOT re-render the bar — the box being typed into would lose
         // focus on every keystroke. Only the rows are re-filtered.
         function fbSearchInput(barId, value) {
+            const bar = FILTER_BARS[barId];
+            const had = (fbQuery[barId] || '').trim();
             fbQuery[barId] = value;
+            // A `searchClears` bar (Fleet) drops every applied filter the moment a query
+            // begins, so the search sees the whole roster and a filtered-out tail is still
+            // found. Only the empty↔non-empty transitions repaint the bar (so the pills and
+            // triggers reflect the cleared state); mid-word keystrokes just re-filter rows,
+            // which keeps the box's focus — a repaint on every keystroke would lose it.
+            if (bar && bar.searchClears && value.trim() && !had) {
+                bar.filters.forEach(f => fbSel(barId, f.id).clear());
+                fbApply(barId);
+                fbRender(barId);
+                const box = document.querySelector(`.fb-filters[data-bar="${barId}"] .fb-search`);
+                if (box) { box.focus(); try { box.setSelectionRange(box.value.length, box.value.length); } catch (e) {} }
+                return;
+            }
             fbApply(barId);
+            if (bar && bar.searchClears && !value.trim() && had) fbRender(barId);
         }
 
         function fbOptionsOf(filter) {
@@ -7722,7 +7771,10 @@
             const opts = fbOptionsOf(filter);
             const first = opts.find(o => sel.has(o.v));
             const name = first ? first.l : [...sel][0];
-            return escAttr(filter.label) + ': ' + escAttr(name) +
+            // An option carrying `n` (the Fleet Type counts) shows it in the trigger too —
+            // "Type: A330 (31)". Only when a single value is chosen; a multi-pick shows +N.
+            const count = first && first.n !== undefined && sel.size === 1 ? ` (${first.n})` : '';
+            return escAttr(filter.label) + ': ' + escAttr(name) + count +
                 (sel.size > 1 ? ' <span class="fb-badge">+' + (sel.size - 1) + '</span>' : '');
         }
 
@@ -7741,9 +7793,12 @@
                 // switches the sort, which the value-toggle model cannot express.
                 const on = q.isOn ? q.isOn(barId) : fbSel(barId, q.filter).has(q.value);
                 const handler = q.onclick || `fbQuickToggle('${escAttr(barId)}','${escAttr(q.filter)}','${escAttr(q.value)}')`;
+                // A pill may carry a `count` function — a live bullet of how many rows it
+                // yields (the Fleet All/Active/AOG pills). Rendered inside the pill.
+                const count = typeof q.count === 'function' ? q.count() : undefined;
                 return `<button type="button" class="qf-btn fb-quick-btn ${on ? 'active' : ''}"
                     onclick="${handler}"
-                    aria-pressed="${on}">${escAttr(q.label)}</button>`;
+                    aria-pressed="${on}">${escAttr(q.label)}${count === undefined ? '' : `<span class="fb-quick-count">${count}</span>`}</button>`;
             }).join('') + `</span>`;
         }
 
@@ -7796,6 +7851,27 @@
             </button>`;
         }
 
+        // The single "Filters" trigger that stands in for every `grouped` filter on a bar
+        // (the Fleet bar's Fit / Status / Operational / SSID). Its badge counts how many of
+        // those axes are active; opening it (key `barId:__more`) builds a multi-group
+        // popover from the grouped filters — the same stacked layout as the mobile sheet,
+        // but anchored to this trigger.
+        function fbRenderGroupTrigger(barId) {
+            const n = fbGroupedCount(barId);
+            return `<button type="button" class="fb-trigger fb-group-trigger ${n ? 'has-value' : ''}"
+                data-fbkey="${escAttr(barId)}:__more"
+                aria-haspopup="true" aria-expanded="false"
+                onclick="fbToggle('${escAttr(barId)}', '__more', this)">
+                <span class="fb-trigger-text">Filters</span>
+                ${n ? `<span class="fb-badge">${n}</span>` : '<span class="fb-caret">▼</span>'}
+            </button>`;
+        }
+        function fbGroupedCount(barId) {
+            const bar = FILTER_BARS[barId];
+            if (!bar) return 0;
+            return bar.filters.filter(f => f.grouped).reduce((n, f) => n + (fbSel(barId, f.id).size ? 1 : 0), 0);
+        }
+
         // What the collapsed trigger says. A bar with several filters needs the
         // generic word plus a count; a bar with exactly one has nothing to summarise,
         // so it reads like that filter's own trigger — "Show", then "Show: Media".
@@ -7826,9 +7902,13 @@
             host.innerHTML =
                 (bar.quickAfter ? '' : quick) +
                 `<span class="fb-groups">` +
-                    bar.filters.filter(f => !f.hidden)
+                    // `grouped` filters render no trigger of their own — they collapse into
+                    // one "Filters" dropdown appended after (the Fleet bar's Fit / Status /
+                    // Operational / SSID). Other bars declare none, so this is a no-op there.
+                    bar.filters.filter(f => !f.hidden && !f.grouped)
                         .map(f => fbRenderTrigger(barId, f) + (bar.quickAfter === f.id ? quick : ''))
                         .join('') +
+                    (bar.filters.some(f => f.grouped && !f.hidden) ? fbRenderGroupTrigger(barId) : '') +
                 `</span>` +
                 // A bar's own controls, sitting with the filters rather than adrift at
                 // the other end of the row. Declared as `extra` so the COMPONENT places
@@ -7882,15 +7962,23 @@
             btn.setAttribute('aria-expanded', 'true');
 
             const compact = !filterId;
+            // `__more` is the "Filters" trigger: a multi-group popover of the bar's
+            // `grouped` axes, anchored like a normal dropdown (not a bottom sheet).
+            const grouped = filterId === '__more';
             const bar = FILTER_BARS[barId];
             // A hidden filter (the media `age` axis) has no dropdown, so it stays out of
             // the collapsed sheet too — it is reachable only through its quick pills.
-            const groups = compact ? bar.filters.filter(f => !f.hidden) : [bar.filters.find(f => f.id === filterId)];
+            const groups = compact ? bar.filters.filter(f => !f.hidden)
+                : grouped ? bar.filters.filter(f => !f.hidden && f.grouped)
+                : [bar.filters.find(f => f.id === filterId)];
 
             const pop = document.createElement('div');
-            pop.className = 'fb-pop' + (compact ? ' fb-sheet' : '');
+            // A multi-group popover (compact sheet or grouped dropdown) renders titles and
+            // a foot; the grouped dropdown clears only its own axes, the sheet the whole bar.
+            const titled = compact || grouped;
+            pop.className = 'fb-pop' + (compact ? ' fb-sheet' : '') + (grouped ? ' fb-multi' : '');
             pop.dataset.bar = barId;
-            pop.innerHTML = fbPopHTML(barId, groups, compact);
+            pop.innerHTML = fbPopHTML(barId, groups, titled, grouped ? 'group' : 'bar');
             document.body.appendChild(pop);
 
             if (compact) {
@@ -7902,7 +7990,12 @@
             fbPosition(pop, btn, compact);
         }
 
-        function fbPopHTML(barId, groups, compact) {
+        // `titled` renders a per-group title and the Clear/Done foot (the mobile sheet and
+        // the desktop "Filters" dropdown both do; a single-axis dropdown does not). `scope`
+        // decides what the foot's Clear button clears: the whole bar ('bar', the sheet) or
+        // only the grouped axes ('group', the Filters dropdown), so clearing Filters never
+        // wipes a chosen Type or a lit pill.
+        function fbPopHTML(barId, groups, titled, scope) {
             const body = groups.map(f => {
                 const sel = fbSel(barId, f.id);
                 const opts = fbOptionsOf(f);
@@ -7920,7 +8013,7 @@
                         ${o.n === undefined ? '' : `<span class="fb-opt-count">${o.n}</span>`}
                     </label>`).join('');
                 return `<div class="fb-pop-group" data-fbgroup="${escAttr(f.id)}">
-                    ${compact ? `<div class="fb-pop-title">${escAttr(f.label)}</div>` : ''}
+                    ${titled ? `<div class="fb-pop-title">${escAttr(f.label)}</div>` : ''}
                     <label class="fb-opt fb-opt-all">
                         <input type="${inputType}" name="${escAttr(groupName)}" ${sel.size === 0 ? 'checked' : ''}
                             onchange="fbPickAll('${escAttr(barId)}','${escAttr(f.id)}')">
@@ -7930,9 +8023,9 @@
                 </div>`;
             }).join('');
 
-            const foot = compact
+            const foot = titled
                 ? `<div class="fb-pop-foot">
-                       <button type="button" class="fb-pop-btn" onclick="fbClearBar('${escAttr(barId)}')">Clear all</button>
+                       <button type="button" class="fb-pop-btn" onclick="${scope === 'group' ? `fbClearGroup('${escAttr(barId)}')` : `fbClearBar('${escAttr(barId)}')`}">${scope === 'group' ? 'Clear' : 'Clear all'}</button>
                        <button type="button" class="fb-pop-btn primary" onclick="fbClose()">Done</button>
                    </div>`
                 : '';
@@ -8051,6 +8144,15 @@
                 }
                 return;
             }
+            // The "Filters" group trigger has no single filter to summarise — its badge is
+            // the count of active grouped axes, and its text stays "Filters".
+            if (filterId === '__more') {
+                const gn = fbGroupedCount(barId);
+                btn.classList.toggle('has-value', gn > 0);
+                const tail = btn.querySelector('.fb-badge, .fb-caret');
+                if (tail) tail.outerHTML = gn ? `<span class="fb-badge">${gn}</span>` : '<span class="fb-caret">▼</span>';
+                return;
+            }
             const f = bar.filters.find(x => x.id === filterId);
             btn.classList.toggle('has-value', fbSel(barId, filterId).size > 0);
             btn.querySelector('.fb-trigger-text').innerHTML = fbTriggerText(barId, f);
@@ -8077,6 +8179,10 @@
             }
             // Choosing any dropdown value clears a whole-bar-exclusive pill (satcom To-Do).
             fbExclusiveClear(barId, filterId);
+            // Fleet Type is a primary axis: ticking a type reveals EVERY aircraft of that
+            // type by dropping the default Fit narrowing (the WiFi-programme view), so the
+            // rows match the per-type count in the trigger. Un-ticking leaves it cleared.
+            if (barId === 'fleet' && filterId === 'type' && on) fbSel('fleet', 'fitview').clear();
             fbApply(barId);
             fbSyncOpen(barId, filterId);
         }
@@ -8095,6 +8201,14 @@
 
         function fbClearBar(barId) {
             fbClear(barId);
+            fbApply(barId);
+            fbSyncOpen(barId, null);
+        }
+        // Clear only the `grouped` axes — the "Filters" dropdown's Clear button. Leaves the
+        // Type trigger, the quick pills and the search box untouched.
+        function fbClearGroup(barId) {
+            const bar = FILTER_BARS[barId];
+            if (bar) bar.filters.filter(f => f.grouped).forEach(f => fbSel(barId, f.id).clear());
             fbApply(barId);
             fbSyncOpen(barId, null);
         }
@@ -8257,19 +8371,35 @@
             fleet: {
                 apply: () => applyFleetFilters(),
                 search: 'Search tail, type or comment',
-                // One pill: "All". Off by default (the page opens on the WiFi programme);
-                // clicking it clears the Fit filter to reveal every aircraft in the
-                // database and re-sorts by Aircraft Age, newest first. See fleetToggleAll.
+                // Typing bypasses the filters (user, 2026-09-06): the first character of a
+                // query clears every applied filter so the search sees the whole roster,
+                // then the term alone decides what shows — so a tail hidden by the current
+                // filter (e.g. ASAG under a Fit view) is still found. fbSearchInput honours
+                // this flag; clearing the box repaints the bar.
+                searchClears: true,
+                // Three one-click views, each showing a LIVE count of how many aircraft it
+                // yields: All (99, the whole roster), Active (programme status Active) and
+                // AOG (on the ground). They are one radio group — picking one clears the
+                // bar and sets just its axis, so exactly one is ever lit, and "All" lights
+                // only when nothing narrows. Type and the Filters dropdown combine on top.
                 quick: [
-                    { label: 'All', onclick: 'fleetToggleAll()', isOn: () => fleetIsAllMode() },
+                    { label: 'All',    onclick: `fleetView('all')`,    isOn: () => fleetIsAllMode(),      count: () => fleetPillCount('all') },
+                    { label: 'Active', onclick: `fleetView('active')`, isOn: () => fleetPillOn('active'), count: () => fleetPillCount('active') },
+                    { label: 'AOG',    onclick: `fleetView('aog')`,    isOn: () => fleetPillOn('aog'),    count: () => fleetPillCount('aog') },
                 ],
                 filters: [
-                    // fleetRoster, not projectScope() — that returns the COUNT, and this
-                    // page lists the whole roster rather than an operational subset.
-                    { id: 'type', label: 'Type', options: () => fbTypeOptions(fleetRoster) },
+                    // Type is its own trigger and carries a per-type count (A330 (31)…);
+                    // picking one reveals every aircraft of that type (fbPick drops the Fit
+                    // narrowing for the fleet bar) so the count is honest.
+                    { id: 'type', label: 'Type', options: () => fleetTypeOptions() },
+                    // The least-used axes fold into ONE "Filters" dropdown (user,
+                    // 2026-09-06): Fit, Programme Status, Operational state and SSID, each a
+                    // group of checkboxes in a single grouped popover. `grouped: true` keeps
+                    // each off the bar as its own trigger; they render together under
+                    // "Filters" instead (see fbRenderGroupTrigger). Options are unchanged.
                     // Matches the Fit COLUMN, not the stored `fit` — the three
                     // displayed values sum to the roster. See the handoff.
-                    { id: 'fitview', label: 'Fit', options: [
+                    { id: 'fitview', label: 'Fit', grouped: true, options: [
                         { v: 'retrofit', l: 'Retrofit' },
                         { v: 'linefit', l: 'Linefit' },
                         { v: 'in-retrofit', l: 'In Retrofit' },
@@ -8280,7 +8410,7 @@
                         { v: 'no-scope', l: 'No Scope' },
                         { v: 'none', l: 'Not Started' },
                     ] },
-                    { id: 'fstatus', label: 'Status',
+                    { id: 'fstatus', label: 'Status', grouped: true,
                       rowValue: row => row.dataset.fstatus === 'Active' ? 'Active' : 'inactive',
                       options: [
                         { v: 'Active', l: 'Active' },
@@ -8290,7 +8420,7 @@
                     // kinds of check that no aircraft is in. In Service is forced in
                     // because it is always true of somebody and is the useful inverse
                     // of "show me what is out".
-                    { id: 'ops', label: 'Operational',
+                    { id: 'ops', label: 'Operational', grouped: true,
                       options: () => {
                           const opts = [{ v: 'in_service', l: 'In Service' }].concat(
                               fbPresentOptions(fleetRoster,
@@ -8304,7 +8434,7 @@
                     // SSID was folded into the Status pill row as ssid:* to keep
                     // one variable. With a set per filter it can be its own axis,
                     // which is what it always was.
-                    { id: 'wifi', label: 'SSID', options: [
+                    { id: 'wifi', label: 'SSID', grouped: true, options: [
                         { v: 'public', l: 'Public' },
                         { v: 'hidden', l: 'Hidden' },
                     ] },
@@ -8880,7 +9010,7 @@
                     { node: 'meta',  key: 'delivered',   label: 'Delivery', kind: 'select', opts: [['delivered', 'Delivered'], ['future', 'Future — not yet delivered']] },
                     { node: 'fleet', key: 'fit',         label: 'Fit', kind: 'select', opts: [['', '— none —'], ['retrofit', 'Retrofit'], ['linefit', 'Linefit']] },
                     { node: 'fleet', key: 'scope',       label: 'Scope', kind: 'select', opts: [['', '— none —'], ['in', 'In scope'], ['no', 'No scope']] },
-                    { node: 'fleet', key: 'system',      label: 'Connectivity System', kind: 'select', opts: [['', '— default —'], ['Eclipse', 'Eclipse'], ['Rave', 'Rave']] },
+                    { node: 'fleet', key: 'system',      label: 'Connectivity System', kind: 'select', opts: [['', '— default —']].concat(FLEET_SYSTEMS.map(s => [s.value, s.label])) },
                     { node: 'fleet', key: 'fleetStatus', label: 'Programme Status', kind: 'select', opts: [['', '— none —']].concat(FLEET_STATUSES.map(s => [s.value, s.label])) },
                     { node: 'fleet', key: 'comments',    label: 'Comments', kind: 'textarea', max: 500, full: true },
                 ]},
@@ -9294,11 +9424,24 @@
             { value: 'no-scope',    label: 'No Scope' },
             { value: 'none',        label: 'Not Started' },
         ];
-        // Connectivity System — the installed hardware line. Retrofit ships Eclipse,
-        // linefit ships Rave; the read-only cell derives that default from `fit` when
-        // nothing is stored, and an explicit `system` value overrides it.
-        const FLEET_SYSTEMS = [{ value: 'Eclipse', label: 'Eclipse' }, { value: 'Rave', label: 'Rave' }];
-        function systemDefault(fit) { return fit === 'retrofit' ? 'Eclipse' : (fit === 'linefit' ? 'Rave' : ''); }
+        // Connectivity System — the installed hardware / service line. Retrofit ships
+        // Eclipse, linefit ships HBC+ (replaced Rave, user 2026-09-06); the read-only
+        // cell derives that default from `fit` when nothing is stored, and an explicit
+        // `system` value overrides it. The other providers are selectable but have no
+        // fit-derived default — they are only ever set explicitly.
+        const FLEET_SYSTEMS = [
+            { value: 'Eclipse',  label: 'Eclipse' },
+            { value: 'HBC+',     label: 'HBC+' },
+            { value: 'GX',       label: 'GX' },
+            { value: 'Inmarsat', label: 'Inmarsat' },
+            { value: 'Viasat',   label: 'Viasat' },
+            { value: 'Thales',   label: 'Thales' },
+            { value: 'SITA',     label: 'SITA' },
+        ];
+        function systemDefault(fit) { return fit === 'retrofit' ? 'Eclipse' : (fit === 'linefit' ? 'HBC+' : ''); }
+        // CSS-safe slug for the badge class: 'HBC+' → 'hbc', 'GX' → 'gx'. The '+' and any
+        // spacing are dropped so `sys-hbc` is a valid selector.
+        function sysSlug(v) { return String(v || '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
 
         // Flightradar24 aircraft-page URL. The registration is HZ-<tail> for the whole
         // Saudia fleet, and FR24's slug is that registration lowercased — so the link is
@@ -9400,10 +9543,37 @@
         // Column 8 now that Connectivity sits ahead of Retrofit.
         const FLEET_ACT_COL = 8;
 
-        // "All" is on when the Fit filter selects nothing (every fit shown). The quick
-        // All pill drives this and the sort together; deriving it from the filter keeps
-        // the pill's lit state honest even if the fit dropdown is what changed.
-        function fleetIsAllMode() { return fbSel('fleet', 'fitview').size === 0; }
+        // "All" is on only when NOTHING narrows the table — no type, fit, status, ops or
+        // SSID filter and an empty search box (user, 2026-09-06). Picking a Type or a
+        // Filters value must therefore un-light All ("when A330 is selected you don't have
+        // all aircraft"), which the old fit-only test could not express.
+        function fleetIsAllMode() {
+            return ['type', 'fitview', 'fstatus', 'ops', 'wifi'].every(id => fbSel('fleet', id).size === 0)
+                && !(fbQuery['fleet'] || '').trim();
+        }
+        // Type options with a per-type roster count, so the dropdown reads "A330  31" and
+        // the trigger reads "Type: A330 (31)" (fbTriggerText appends the count). Counts are
+        // roster-wide totals — what EXISTS — independent of the current view.
+        function fleetTypeOptions() {
+            const seen = [];
+            fleetRoster.forEach(a => { if (a && a.type && seen.indexOf(a.type) === -1) seen.push(a.type); });
+            return seen.map(t => ({ v: t, l: TYPE_SHORT_LABEL[t] || t, n: fleetRoster.filter(a => a.type === t).length }));
+        }
+        // Live count each pill would yield, shown as its bullet: All = whole roster,
+        // Active = programme status Active, AOG = on the ground (delivered airframes only).
+        function fleetPillCount(mode) {
+            if (mode === 'active') return fleetRoster.filter(a => fleetStatusOf(a) === 'Active').length;
+            if (mode === 'aog')    return fleetRoster.filter(a => a.delivered !== false && opsOf(a.id).state === 'aog').length;
+            return fleetRoster.length;
+        }
+        // Whether the Active / AOG pill is currently lit — its axis holds its value. (All
+        // uses fleetIsAllMode.) Kept loose (has, not size===1) so Active + a Type still
+        // reads as "Active".
+        function fleetPillOn(mode) {
+            if (mode === 'active') return fbSel('fleet', 'fstatus').has('Active');
+            if (mode === 'aog')    return fbSel('fleet', 'ops').has('aog');
+            return false;
+        }
         // What the table sorts by with no manual override: Aircraft Age newest-first in
         // All mode, Activation Date newest-first otherwise. Both descending; the note in
         // the header reads "Newest first" for whichever column is the default.
@@ -9432,22 +9602,19 @@
             scheduleFrozenHeads();   // carry the note onto the floating head copy
         }
 
-        // The quick "All" pill: show every aircraft in the database and sort by Aircraft
-        // Age, newest first. Toggling off restores the WiFi-programme default — the fit
-        // filter and the Activation-Date sort. The fit filter is the source of truth for
-        // the pill's lit state (fleetIsAllMode), so the two never disagree.
-        function fleetToggleAll() {
-            if (fleetIsAllMode()) {
-                applyFleetFitDefault();                        // back to the programme fits
-                lastSort['fleetTable'] = { col: FLEET_ACT_COL, dir: -1 };  // Activation Date, newest first
-            } else {
-                // "All" is a clean slate: drop every other filter and the search box too,
-                // so it always shows the whole roster rather than the roster still
-                // narrowed by whatever was picked before. fbClear empties the Fit set as
-                // well, which is exactly what turns All mode on.
-                fbClear('fleet');
-                lastSort['fleetTable'] = { col: FLEET_AGE_COL, dir: -1 }; // Delivery date, newest first
-            }
+        // The All / Active / AOG radio pills. Each is a clean slate: it clears every
+        // filter and the search box (fbClear), then sets just its own axis — so exactly
+        // one is ever lit and the pill always shows the whole roster narrowed by nothing
+        // but itself. Re-clicking the lit pill (or All) returns to the full 99. Type and
+        // the Filters dropdown then combine ON TOP without un-lighting it.
+        function fleetView(mode) {
+            const turnOn = mode !== 'all' && !fleetPillOn(mode);
+            fbClear('fleet');
+            if (turnOn && mode === 'active') fbSel('fleet', 'fstatus').add('Active');
+            else if (turnOn && mode === 'aog') fbSel('fleet', 'ops').add('aog');
+            // Whole-roster views sort by Aircraft Age, newest first — the same order the
+            // old All pill used; a narrowed pill keeps whatever sort is in effect.
+            if (mode === 'all' || !turnOn) lastSort['fleetTable'] = { col: FLEET_AGE_COL, dir: -1 };
             fbRender('fleet');
             populateFleetTable();
         }
@@ -9715,9 +9882,9 @@
                       }</select>`
                     : `<span class="status-badge ${fb[0]}"${fb[2] ? ` title="${escAttr(fb[2])}"` : ''}>${fb[1]}</span>`;
 
-                // Connectivity System — Eclipse (retrofit) or Rave (linefit). Read-only
-                // cell shows the stored value or the fit-derived default; the editor
-                // offers the explicit override.
+                // Connectivity System — Eclipse (retrofit) or HBC+ (linefit) by default,
+                // or any explicitly-set provider. Read-only cell shows the stored value
+                // or the fit-derived default; the editor offers the explicit override.
                 const sysShown = system || systemDefault(fit);
                 const systemCell = editing
                     ? `<select class="edit-select" data-id="${a.id}" data-field="system" onchange="handleFleetEdit(this)">${
@@ -9725,7 +9892,7 @@
                         FLEET_SYSTEMS.map(s => `<option value="${s.value}" ${s.value === system ? 'selected' : ''}>${s.label}</option>`).join('')
                       }</select>`
                     : (sysShown
-                        ? `<span class="status-badge sys-${sysShown.toLowerCase()}"${!system ? ` title="Default for ${fit || 'this fit'} — not explicitly set"` : ''}>${escAttr(sysShown)}</span>`
+                        ? `<span class="status-badge sys-${sysSlug(sysShown)}"${!system ? ` title="Default for ${fit || 'this fit'} — not explicitly set"` : ''}>${escAttr(sysShown)}</span>`
                         : '<span class="fleet-notset">—</span>');
 
                 // Modification window. Retrofit grounding dates (retrofitStart/End) reused
@@ -9766,7 +9933,7 @@
                 const activatedCell = editing
                     ? `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="edit-date" value="${toDMY(activated)}" data-id="${a.id}" data-field="activatedDate" onchange="handleFleetEdit(this)">`
                     : (activated
-                        ? `<span class="fleet-date">${escAttr(activated)}</span>${age ? `<span class="age-pill" title="Time since activation">${age}</span>` : ''}`
+                        ? `<div class="deliv-stack"><span class="fleet-date">${escAttr(activated)}</span>${age ? `<span class="age-pill" title="Time since activation">${age}</span>` : ''}</div>`
                         : '<span class="fleet-notset">Not set</span>');
 
                 // Two options, per the field. The blank appears only when nothing is set
