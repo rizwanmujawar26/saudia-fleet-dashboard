@@ -973,10 +973,32 @@ single shape (`{ iso, kind, tail, type, location, title, sub }`):
 | Software | `/aircraft` completion fields — `Middleware {swVersion}` for retrofit, `SBC Configuration A.13` for the linefit pair when `beamcfgStatus === 'done'` | `completionDate` |
 | Media | `/aircraft/{tail}/media` | `loadedDateUTC` |
 | Maintenance | `/activities` whose category maps to `maintenance` | `date` |
-| Hardware | `/activities` with `category === 'hardware_rr'` | `date` |
+| Hardware | `/activities` with `category === 'hardware_rr'`, **plus SIM fitments and MODMAN boxes** (below) | `date` · `fittedDate`/`removedDate` · `installDate`/`removalDate` |
 
 Category → kind lives in `ACTIVITY_CATEGORIES`: `hardware_rr` → Hardware,
 `software_update` → Software, **everything else → Maintenance**.
+
+**SIM cards and MODMAN boxes are derived onto the Hardware kind (v2.102 / v2.103)** —
+the same "nothing written, nothing backfilled" reasoning as Activation. Each period of
+service yields up to two Hardware rows naming the unit's S/N:
+
+- **SIM** — a pass over `simUnitEntries()` + `unitFitments()`. `SIM Card fitted` on
+  `fittedDate`, `SIM Card removed` on `removedDate`; sub is `S/N ` + `formatSimSerial()`
+  (grouped in sixes). ⚠️ **SIM events are OWNED by this pass**, so the `/activities` pass
+  **skips SIM `hardware_rr` records** (`SIM_LRU_IDS.includes(details.lruId)`) — a Serials-tab
+  swap writes BOTH an activity and the fitment (the 4 fitments carrying an `activityId`), and
+  without the skip AQJ/ASV's 16-Aug swaps showed twice.
+- **MODMAN** — a flat pass over `modmansLive` (one record per box, dates stored on it, NOT
+  per fitment). `MODMAN fitted` on `installDate`, `MODMAN removed` on `removalDate`. The
+  serial **follows the supplier**, as the Satcom table does: `air.type === 'A321XLR'` →
+  Astronics S/N, else Eclipse S/N. ⚠️ **No de-dup guard** — MODMAN swaps are NOT also on
+  `/activities`, so a box reaches the Timeline once. The lone free-text `Modman Replacement`
+  activity (ASBB 18-Aug, empty `lruId`) coexists with its register rows; no clean signal to
+  suppress it on, left for the user to keep or delete.
+
+Both passes are **Active-fleet-only** (`inScope`), like every other programme event, and
+carry **no location pill** — a fitment/box stores no location and inventing one from the
+aircraft would be a guess (same as a media load).
 
 **Baseline serial records are excluded** (`isBaselineRecord()`). They state what
 is fitted rather than describing a day's work, and there is one per unit per
