@@ -13,6 +13,44 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.110.0 — Modification derives from the Fleet retrofit window
+Request from the user (2026-09-08).
+
+The mod dates already live on the Fleet page — `retrofitStart` = "Mod Start",
+`retrofitEnd` = "Mod End" (ONGOING when a start has no end), `retrofitLocation` = the
+install site. So the Timeline now **derives** the Modification kind straight from those
+aircraft fields (single source, like the ops out/back periods): `timelineActivities()`
+iterates the **whole roster** and emits a **MOD START** row on `retrofitStart` and a
+**MOD END** row on `retrofitEnd` carrying the days grounded (`groundedDaysLabel`). Both
+rows carry `retrofitLocation` as the location pill, so each entry says WHEN and WHERE the
+modification happened (user's explicit instruction). Line-fits have no retrofit window and
+are skipped; a start with no end reads ONGOING; title is `${system} retrofit`.
+
+Reverts the v2.109 manual path (per user): the Add-Activity `Mod End Date` field/section,
+the `details.modEnd` field + rule, the activity-loop pairing and the history-card MOD badge
+are gone; the `modification` activity category is a plain maintenance entry again. Kept the
+vocabulary that drives the derived rows — the slate `tl-kind-modification` MOD START / MOD
+END pills, the `.tl-mod` accent, the Modification filter, and the `groundedDays` helpers.
+84 entries lit up from live retrofit data (44 starts, 40 ends, 4 ongoing). ⚠️ Lesson: when
+a "new" concept's data already exists on another page, derive from it — don't add a parallel
+hand-entry path (it came up empty because nobody types what the retrofit column already holds).
+
+### v2.109.0 — Modification as a Timeline period (superseded by v2.110)
+Request from the user (2026-09-08). First cut: a hand-entered `modification` activity with a
+`details.modEnd` date, rendered as MOD START / MOD END period rows. Shipped and verified, then
+reworked in v2.110 to derive from the Fleet retrofit column instead. The pill/accent/filter/
+helper vocabulary introduced here survived the rework.
+
+### v2.108.0 — Commission is its own Timeline kind, pill and filter
+Request from the user (2026-09-08).
+
+`modem_commissioning` was carrying kind `maintenance`, so it wore the amber MAINTENANCE pill
+and only surfaced under the Maintenance filter. Split into its own `commission` kind: a cyan
+`tl-kind-commission` COMMISSION pill (off the amber maintenance vocabulary, off software blue
+and media green-teal), its own left-edge accent on the Activity history cards, and a new
+Commission option in the Timeline Show dropdown. Kind is derived from the stored category, so
+every past and future modem-commissioning activity retagged automatically — no data migration.
+
 ### v2.107.0 — Eclipse S/N shows without its `SN_` prefix
 Request from the user (2026-09-08).
 

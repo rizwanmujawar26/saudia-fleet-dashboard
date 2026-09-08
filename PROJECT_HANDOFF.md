@@ -972,11 +972,26 @@ single shape (`{ iso, kind, tail, type, location, title, sub }`):
 | **Operational** | `/aircraft/{tail}/ops` for the open period, `opsLog` for closed ones. A closed period yields **two** rows — going out, and `Returned to service` on its `until` | `ops.since` · `opsLog.since` / `.until` |
 | Software | `/aircraft` completion fields — `Middleware {swVersion}` for retrofit, `SBC Configuration A.13` for the linefit pair when `beamcfgStatus === 'done'`; **plus `OTA Patch #2`/`#3`** (v2.106, below) | `completionDate` · `otaPatchUTC` · `otaPatch3UTC` |
 | Media | `/aircraft/{tail}/media` | `loadedDateUTC` |
+| **Commission** (v2.108) | `/activities` with `category === 'modem_commissioning'` | `date` |
+| **Modification** (v2.110) | `/aircraft` retrofit window — **NOT an activity**. A **MOD START** row on `retrofitStart` and a **MOD END** row on `retrofitEnd` carrying the days grounded (`groundedDaysLabel`). Both carry `retrofitLocation` as the location pill (install site). Line-fits skipped; a start with no end reads **ONGOING** (one row) | `retrofitStart` · `retrofitEnd` |
 | Maintenance | `/activities` whose category maps to `maintenance` | `date` |
 | Hardware | `/activities` with `category === 'hardware_rr'`, **plus SIM fitments and MODMAN boxes** (below) | `date` · `fittedDate`/`removedDate` · `installDate`/`removalDate` |
 
 Category → kind lives in `ACTIVITY_CATEGORIES`: `hardware_rr` → Hardware,
-`software_update` → Software, **everything else → Maintenance**.
+`software_update` → Software, `modem_commissioning` → **Commission** (v2.108),
+**everything else → Maintenance** (`modification` included — it is a plain maintenance
+category again; the Modification *kind* comes from the retrofit window, above, not from
+this category). Commission has its own cyan `tl-kind-commission` pill; Modification its
+own slate `tl-kind-modification` MOD START / MOD END pills (`.tl-mod` row accent, 🔧 / 🏁).
+
+**Modification is derived, whole-roster, like the MODMAN/SIM passes** — `timelineActivities()`
+iterates `aircraftData` (NOT Active-only), so an **In-Retrofit** airframe shows its Mod Start
+too. This is the single source: the same dates edited on the Fleet page (`retrofitStart` =
+"Mod Start", `retrofitEnd` = "Mod End", ONGOING pill) drive both the Fleet column and the
+Timeline. Title is `${a.system || systemDefault(fitOf(a))} retrofit` (e.g. "Eclipse retrofit").
+⚠️ v2.109 briefly made Modification a *hand-entered activity* (a `details.modEnd` field on the
+Add-Activity form) — REVERTED in v2.110 because the Timeline came up empty (nobody types them;
+the data was in the retrofit column all along).
 
 **SIM cards and MODMAN boxes are derived onto the Hardware kind (v2.102 / v2.103)** —
 the same "nothing written, nothing backfilled" reasoning as Activation. Each period of
@@ -1021,9 +1036,10 @@ The kind filter drives the day counts as well as the rows, so a tile reading
 "2" under Hardware means two hardware activities that day, not two of anything
 else. Default sort is **newest first**. The title carries no count.
 
-Filter pills are **All / Activation / Software / Hardware / Media / Operational**.
-There is no Maintenance pill for now — maintenance-kind activities still appear under
-All, they just have no filter of their own until the categories settle.
+Filters live in `TIMELINE_KINDS`. **Software / Hardware / Media** are the three quick
+pills (the loading streams); the **Show** dropdown holds the full single-select set —
+**All / Activation / Software / Hardware / Media / Commission / Modification / Maintenance /
+Operational**. Adding a kind is one line in `TIMELINE_KINDS`; the dropdown derives from it.
 
 ### Pinned — what is out of service right now
 
