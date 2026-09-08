@@ -6545,7 +6545,7 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.110.0';
+        const APP_VERSION  = '2.111.0';
         const APP_BUILD    = '2026.09.08.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
@@ -15277,7 +15277,11 @@
             const typeLabel = TYPE_SHORT_LABEL[x.type] || x.type || '';
             const loc = x.location || '';
             const ops = x.opsState ? [opsDef(x.opsState).label, opsDef(x.opsState).short].join(' ') : '';
-            return [x.tail, x.kind, typeLabel, x.type, loc, loc && locationCode(loc), x.title, x.sub, ops]
+            // A modification row shows a MOD START / MOD END phase label that is drawn on the
+            // row (not from title/sub), so fold it in or "mod start"/"mod end" match nothing.
+            const modPhase = x.kind === 'modification'
+                ? (x.modPhase === 'start' ? 'mod start' : 'mod end') : '';
+            return [x.tail, x.kind, typeLabel, x.type, loc, loc && locationCode(loc), x.title, x.sub, ops, modPhase]
                 .filter(Boolean).join(' ').toLowerCase();
         }
 
