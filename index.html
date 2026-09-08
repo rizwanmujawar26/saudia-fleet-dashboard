@@ -6528,8 +6528,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.104.0';
-        const APP_BUILD    = '2026.09.08.01';
+        const APP_VERSION  = '2.105.0';
+        const APP_BUILD    = '2026.09.08.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15438,11 +15438,13 @@
                 const serial = formatSimSerial(u.serial || '');
                 unitFitments(u).forEach(f => {
                     const tail = f.aircraft || '';
-                    // Active fleet only, exactly like every other programme event above —
-                    // a card on an aircraft still In Retrofit stays off the Overview until
-                    // the airframe enters service, same as its software and hardware work.
-                    if (!inScope(tail)) return;
-                    const air = byTail[tail] || {};
+                    // Any airframe in the roster, NOT Active-only (user, 2026-09-08). A card
+                    // fitted to or pulled from an aircraft is a physical event, like a MODMAN
+                    // fitment and an operational period — it reaches the Timeline even while
+                    // the airframe is still In Retrofit (when the card is first fitted).
+                    // Requires a real tail, so a fitment with no aircraft emits nothing.
+                    if (!byTail[tail]) return;
+                    const air = byTail[tail];
                     // A fitment stores no location of its own; inventing one from the
                     // aircraft would be a guess, so it carries none, like a media load.
                     const fitIso = toISODate(f.fittedDate);
@@ -15476,9 +15478,15 @@
             // MODMAN swaps are NOT also logged on /activities, so a box is only ever here.
             Object.entries(modmansLive || {}).forEach(([, m]) => {
                 const tail = m.aircraft || '';
-                // Active fleet only, like every other programme event above.
-                if (!inScope(tail)) return;
-                const air = byTail[tail] || {};
+                // Any airframe in the roster, NOT Active-only (user, 2026-09-08). A box
+                // going on or off an aircraft is a physical event that happened, exactly
+                // like an operational out-of-service period — so it reaches the Timeline
+                // even while the airframe is still In Retrofit (which is precisely when a
+                // MODMAN is fitted). ASO's box was invisible here because the old
+                // inScope() gate hid every non-Active tail's fitment. Still requires a
+                // real tail, so an off-wing/spare box (no aircraft) emits nothing.
+                if (!byTail[tail]) return;
+                const air = byTail[tail];
                 const serial = (air.type === 'A321XLR' ? m.astronicsSn : m.eclipseSn) || '';
                 const sub = serial ? `S/N ${serial}` : '';
                 const fitIso = toISODate(m.installDate);
