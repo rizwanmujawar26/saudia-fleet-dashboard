@@ -970,7 +970,7 @@ single shape (`{ iso, kind, tail, type, location, title, sub }`):
 |---|---|---|
 | **Activation** | `/aircraft` — every Active aircraft that has one. Title is `Entered Service` | `activatedDate` |
 | **Operational** | `/aircraft/{tail}/ops` for the open period, `opsLog` for closed ones. A closed period yields **two** rows — going out, and `Returned to service` on its `until` | `ops.since` · `opsLog.since` / `.until` |
-| Software | `/aircraft` completion fields — `Middleware {swVersion}` for retrofit, `SBC Configuration A.13` for the linefit pair when `beamcfgStatus === 'done'` | `completionDate` |
+| Software | `/aircraft` completion fields — `Middleware {swVersion}` for retrofit, `SBC Configuration A.13` for the linefit pair when `beamcfgStatus === 'done'`; **plus `OTA Patch #2`/`#3`** (v2.106, below) | `completionDate` · `otaPatchUTC` · `otaPatch3UTC` |
 | Media | `/aircraft/{tail}/media` | `loadedDateUTC` |
 | Maintenance | `/activities` whose category maps to `maintenance` | `date` |
 | Hardware | `/activities` with `category === 'hardware_rr'`, **plus SIM fitments and MODMAN boxes** (below) | `date` · `fittedDate`/`removedDate` · `installDate`/`removalDate` |
@@ -991,14 +991,26 @@ service yields up to two Hardware rows naming the unit's S/N:
 - **MODMAN** — a flat pass over `modmansLive` (one record per box, dates stored on it, NOT
   per fitment). `MODMAN fitted` on `installDate`, `MODMAN removed` on `removalDate`. The
   serial **follows the supplier**, as the Satcom table does: `air.type === 'A321XLR'` →
-  Astronics S/N, else Eclipse S/N. ⚠️ **No de-dup guard** — MODMAN swaps are NOT also on
-  `/activities`, so a box reaches the Timeline once. The lone free-text `Modman Replacement`
-  activity (ASBB 18-Aug, empty `lruId`) coexists with its register rows; no clean signal to
-  suppress it on, left for the user to keep or delete.
+  Astronics S/N, else Eclipse S/N — the Eclipse S/N shown **without its `SN_` prefix**
+  (`eclipseSnDisplay()`, v2.107; `SN_066` → `066`). ⚠️ **No de-dup guard** — MODMAN swaps
+  are NOT also on `/activities`, so a box reaches the Timeline once. The lone free-text
+  `Modman Replacement` activity (ASBB 18-Aug, empty `lruId`) coexists with its register
+  rows; no clean signal to suppress it on, left for the user to keep or delete.
+- **OTA patches (v2.106)** — a pass over `aircraftData` emitting one **Software**-kind row
+  per patch stamp: `OTA Patch #2` from `otaPatchUTC`, `OTA Patch #3` from `otaPatch3UTC`
+  (both full UTC timestamps; sub is the `hh:mm UTC` time). Location-independent, like a
+  media load.
 
-Both passes are **Active-fleet-only** (`inScope`), like every other programme event, and
-carry **no location pill** — a fitment/box stores no location and inventing one from the
-aircraft would be a guess (same as a media load).
+⚠️ **The SIM, MODMAN and OTA-patch passes are NOT Active-only (v2.105 / v2.106).** They
+run over the **whole roster** — the fitment passes require only a real tail
+(`if (!byTail[tail]) return;`), the OTA pass emits for every aircraft carrying a stamp —
+because a physical box/card fitment or an over-the-air patch is a real event whatever the
+airframe's service state, and it is precisely **while a tail is still In Retrofit** that a
+MODMAN/SIM is first fitted (ASO, 08-Sep, was invisible under the old gate). The
+Activation, Software-completion and **Maintenance/Hardware activity** passes keep the
+Active-only rule (`inScope` — still defined, still used by the activity pass). All these
+passes carry **no location pill** — a fitment/box/patch stores no location and inventing
+one from the aircraft would be a guess (same as a media load).
 
 **Baseline serial records are excluded** (`isBaselineRecord()`). They state what
 is fitted rather than describing a day's work, and there is one per unit per
@@ -1911,11 +1923,19 @@ now scrolls ~47px — acceptable on the HSCROLL table). **Supplier-specific N/A 
 `satcomRows()` derives `isAstronics = ac.type === 'A321XLR'`; the serial columns that do not
 belong to a box's supplier render a static grey **N/A** pill (`.sn-na`) via `serialCell()`,
 in read AND edit mode (no input) — Eclipse/Kontron N/A on an Astronics box, Astronics N/A on
-a legacy box (and on any off-wing/unassigned box, which default to legacy). ⚠️ **Add MODMAN
-modal (v2.96):** `syncAddModmanSerials()` greys the non-applicable serials for the chosen
-airframe, and the **required identifier follows the supplier** — Astronics S/N for an XLR box
-(it has no Kontron), Kontron S/N otherwise — with dedup keyed on whichever applies; only the
-applicable serials are written. Comments was
+a legacy box (and on any off-wing/unassigned box, which default to legacy). ⚠️ **Eclipse
+S/N shows without its `SN_` prefix (v2.107, user)** — `eclipseSnDisplay()` strips the leading
+`SN_` for **display only** (`SN_066` → `066`), threaded through `serialCell`/`idCell` as an
+optional `fmt`; the **edit input keeps the raw stored value**, so a save never loses `SN_`,
+and the record, edit field and search haystack all keep the full form. The cell's `data-sort`
+uses the stripped value. Astronics/Kontron serials are untouched. ⚠️ **Add MODMAN modal
+(v2.96):** `syncAddModmanSerials()` greys the non-applicable serials for the chosen airframe,
+and the **required identifier follows the supplier** — Astronics S/N for an XLR box (it has no
+Kontron), Kontron S/N otherwise — with dedup keyed on whichever applies; only the applicable
+serials are written. ⚠️ **New on-wing box defaults (v2.104, user):** a non-spare box written
+by the modal now starts `commTaurus`/`commHughes` = **`todo`** (IPHO left Disabled, no
+`iphoStatus` written), so a freshly-assigned tail begins un-commissioned — not the `active`→
+`done` `defComm` default. Comments was
 **removed** (v2.77) and replaced by the Commissioning pair. **Removal Date moved**
 (v2.77.2) from the far end to the front of MODMAN Details, between Install Date and Eclipse
 S/N, so install → removal reads left to right; its head wraps to two lines
@@ -1996,11 +2016,13 @@ of the Commissioning Status box (see the box paragraph above), now `data-col=15`
 before v2.95's Astronics insert) and still sortable. `satcomRows()` looks up the
 box's tail in `aircraftData`: a tiny green
 **ENABLED** / amber **DISABLED** pill (`#satcomTable .status-badge.ipho-on/off`, auto-9px).
-⚠️ **Applies to an active retrofit aircraft OR any A321XLR (v2.97, user)** — `iphoApplies =
-!offWing && ((fit==='retrofit' && Active) || isAstronics)`. The XLR uses IPHO too, whatever
-its activation state, so the pill is live/editable as soon as a box is added to one. **Grey
-N/A** (`.ipho-na`) only for off-wing (spare/removed/unassigned) rows and other airframes not
-yet Active. Editable in Edit mode (Disabled/Enabled dropdown, `data-field="iphoStatus"`); a
+⚠️ **Applies to ANY retrofit box on wing OR any A321XLR (v2.104, user; was active-retrofit
+only in v2.97)** — `iphoApplies = !offWing && (fit==='retrofit' || isAstronics)`. The
+`&& Active` gate was dropped: a box assigned to a still-**In Retrofit** tail (e.g. ASO) read
+a non-editable N/A and its mode could not be set, though In Retrofit is exactly when the box
+is fitted. It now shows an editable cell **defaulting to Disabled**. **Grey N/A** (`.ipho-na`)
+only for off-wing (spare/removed/unassigned) rows — no longer for not-yet-Active airframes.
+Editable in Edit mode (Disabled/Enabled dropdown, `data-field="iphoStatus"`); a
 staged value overrides the aircraft value so the pill updates before Save. ⚠️
 `handleSatcomEdit()` now **repaints on an `aircraft` change** (v2.96) so switching a box's
 tail flips the serial AND IPHO cells between value and N/A live. ⚠️ **Cross-entity write:**

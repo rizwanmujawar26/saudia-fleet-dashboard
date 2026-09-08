@@ -13,6 +13,62 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.107.0 — Eclipse S/N shows without its `SN_` prefix
+Request from the user (2026-09-08).
+
+Eclipse MODMAN serials are stored with an `SN_` prefix (data entry keeps it, e.g.
+`SN_066`) but the web app now shows only the number (`066`). New `eclipseSnDisplay()`
+strips the leading `SN_` for **display only** — the stored Firebase record, the edit
+field and the search haystack all keep the full form, so a save never loses the prefix
+and searching either `066` or `SN_066` still matches.
+
+Applied on the **Satcom table** — via an optional display formatter (`fmt`) threaded
+through `serialCell`/`idCell`; the edit `<input>` still renders the raw `value`, so
+editing is unaffected — and on the **Timeline** MODMAN rows (`S/N 066`). The cell's
+`data-sort` uses the stripped value so the column sorts by what is shown. **Astronics**
+serials carry no prefix and are untouched.
+
+### v2.106.0 — OTA Patch #2 and #3 on the Timeline
+Request from the user (2026-09-08).
+
+The Software tab's two over-the-air patch stamps — `otaPatchUTC` (**Patch #2**) and
+`otaPatch3UTC` (**Patch #3**), each a full UTC timestamp — now appear on the Timeline
+under the **Software** pill. **Derived, never stored**: a new pass in
+`timelineActivities()` emits one `software`-kind row per stamp, titled to match the
+Software column headers (`OTA Patch #2` / `OTA Patch #3`), with the UTC time in the
+subtitle. Location-independent (pushed over the air), so no pill, like a media load.
+
+Over the **whole roster**, not Active-only (user: "for all aircraft") — an OTA patch
+reaches an airframe whatever its service state, the same reasoning as the v2.105.0
+fitment relaxation. At release: 42 Patch #2 rows, 2 Patch #3 (AS53, AS55). A stamp
+edited on the Software tab updates the Timeline with it.
+
+### v2.105.0 — MODMAN/SIM fitment reaches the Timeline for In-Retrofit tails
+Request from the user (2026-09-08).
+
+The Timeline's MODMAN and 4G SIM passes gated on `inScope()` (`fleetStatus === 'Active'`),
+so a box or card fitted to an aircraft **still In Retrofit** never appeared — which is
+exactly when a MODMAN/SIM is first fitted. ASO (assigned a MODMAN `SN_066` and a SIM on
+08-Sep while In Retrofit) was invisible. A physical fitment/removal is a real event, like
+an operational out-of-service period (already emitted over the whole roster), so both
+passes now include **any airframe in the roster** (`if (!byTail[tail]) return;`), requiring
+only a real tail — an off-wing/spare box with no aircraft still emits nothing. The
+Maintenance/Hardware **activity** pass keeps its Active-only rule (`inScope`, still used).
+
+### v2.104.0 — IPHO editable for in-retrofit tails; new-box comm defaults
+Request from the user (2026-09-08).
+
+**Satcom IPHO:** the IPHO Mode cell gated on `ac.fit === 'retrofit' && ac.fleetStatus ===
+'Active'`, so a box assigned to a still-In-Retrofit tail (e.g. ASO) read a non-editable
+`N/A` and the mode could not be set. `iphoApplies` now covers **any retrofit (or A321XLR)
+box on wing regardless of fleet state**, so it shows an editable Disabled/Enabled cell
+defaulting to **Disabled**.
+
+**Add MODMAN defaults:** an on-wing box added via the Add MODMAN modal now starts
+`commTaurus`/`commHughes` = **To-Do** (IPHO left Disabled, no `iphoStatus` written), so a
+freshly-assigned aircraft begins un-commissioned as intended — previously an `active` box
+defaulted its commissioning to Done via `defComm`.
+
 ### v2.103.0 — MODMAN install/removal on the Timeline
 Request from the user (2026-09-06), the Satcom counterpart to v2.102.0.
 
