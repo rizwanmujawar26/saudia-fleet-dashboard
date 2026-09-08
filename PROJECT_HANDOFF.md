@@ -2115,6 +2115,47 @@ them back. Load-bearing:
 **Reset** uses the project-wide `.icon-btn`/`.reset-btn` pattern — see *Filter
 bar → The Reset / icon-button pattern*. `resetTimeline()` clears the kind, the
 search and the sort (back to Newest First), which drops the focused view.
+
+**The calendar strip is a four-level drill-down** (v2.112–v2.114, user) so it
+cannot grow without bound: **year → month → week → day**. It is built from the
+filtered `dateKeys` inside `renderTimeline()`, grouped `year → month → day`.
+- **Year tile** (`.cal-tile-year`, brand-green header, stacked-pages box-shadow):
+  earlier years fold to one tile; the current year is open (its months on show).
+  State: `timelineYearOverrides` / `timelineYearIsOpen()` (default open = current
+  year) / `toggleTimelineYear()`. Year groups are fenced by `.cal-year-sep`.
+- **Month tile** (`.cal-tile-group`, blue header): a past month folds/opens via
+  `timelineMonthOverrides` / `timelineMonthIsOpen()` (default open = current
+  month) / `toggleTimelineMonth()` — plain `›` sep + all its days.
+- **The CURRENT month is special** (`.cal-tile-current`, faint green accent): it
+  never fully collapses — it opens on **this week only** (Sunday-start, Saudi),
+  older days folded, and `toggleCurrentMonthFull()` (state
+  `timelineCurrentMonthFull`) swaps to the whole month, **split week by week**.
+  Caret says which: `▸` this-week, `▾` whole-month. The tile's sub-line reads the
+  live week number (`WEEK 37`) in week view, `N days` in full view.
+- **Week markers** (`.cal-week-sep`, "W" over the number) front each week's run of
+  day tiles. Weeks run **Sunday→Saturday**: `weekStartSundayISO()` keys a day to
+  its week, `weekNumberSunday()` is the Sunday-week-of-year (week 1 contains 1 Jan).
+  `curWeekSunday` is the **most recent** week that has activity, so an empty
+  current calendar week never blanks the strip.
+
+⚠️ **Tile aspect ratio (v2.116).** The tiles are fixed-width; the sub-line
+(`.cal-tile-month`) and count (`.cal-tile-count`) are `white-space:nowrap` (9px,
+tight tracking, ellipsis) so `12 MONTHS` / `10 DAYS` cannot wrap and stretch the
+tile tall-and-thin. `body { text-size-adjust:100% }` stops mobile pinch-zoom
+font-boosting, which was the real trigger for the reflow.
+
+**Reset doubles as Back-to-top** (v2.115, user). `#timelineResetBtn`'s onclick is
+`timelineResetOrTop()`: past `TIMELINE_TOPBTN_AT` (500px) of scroll on the
+Overview, `syncTimelineTopBtn()` adds `.to-top` — the button morphs to a green
+`↑ Top` (label "Top", tooltip "Back to top") that scrolls to the top; at the top
+it is `↺ Reset` again. Driven by one rAF-throttled `scroll` listener (registered
+in the `load` handler) and re-synced on every `switchTab()` so it reverts off the
+Overview. The pinned `.tl-controls` keeps it on screen throughout.
+
+⚠️ **`timelineHaystack()` must fold in the MOD START / MOD END phase label**
+(v2.111): a modification row's phase is drawn on the row from `modPhase`, not from
+title/sub, so without adding `mod start` / `mod end` to the haystack a search for
+either returned an empty Timeline.
 ### 2. Software
 
  (tab id is still `aircraft`) — **one** widget row of three cards:

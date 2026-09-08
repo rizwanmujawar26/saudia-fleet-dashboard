@@ -13,6 +13,40 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.111.0–v2.116.0 — Timeline calendar strip: year/week layers, Reset↔Top, aspect ratio
+Requests from the user (2026-09-08/09). Each shipped as its own deployed commit; see
+`git log` for the full reasoning. All bump `APP_BUILD` as well as `APP_VERSION`.
+
+- **v2.111.0 — Search matches MOD START / MOD END.** The phase label is drawn on the
+  row from `modPhase`, not title/sub, so it was absent from `timelineHaystack()`;
+  searching `mod start` / `mod end` returned an empty Timeline. Fold the phase text in.
+- **v2.112.0 — Year layer.** The strip grouped by month only and grew without bound.
+  Added a third drill-down level (year → month → day): earlier years fold to one
+  brand-green `.cal-tile-year` (stacked-pages box-shadow), the current year opens with
+  its months; `.cal-year-sep` fences year groups. State: `timelineYearOverrides` /
+  `timelineYearIsOpen()` / `toggleTimelineYear()`.
+- **v2.113.0 — Current month opens on THIS WEEK only.** Sunday-start (Saudi). Older days
+  fold; `toggleCurrentMonthFull()` swaps to the whole month, split week by week, each
+  week fronted by a `.cal-week-sep` marker carrying the Sunday-week number. Caret `▸`
+  this-week / `▾` whole-month; the current month wears a faint green accent
+  (`.cal-tile-current`). Helpers `weekStartSundayISO()` / `weekNumberSunday()`.
+- **v2.114.0 — Week label reads `WEEK 37` in full** on the current-month tile sub-line
+  (was `wk 37`).
+- **v2.115.0 — Reset doubles as Back-to-top.** Past 500px of scroll on the Overview the
+  pinned Reset morphs to a green `↑ Top` (`.to-top`); at the top it is `↺ Reset` again.
+  `timelineResetOrTop()` + `syncTimelineTopBtn()`, one rAF-throttled scroll listener,
+  re-synced on `switchTab()`.
+- **v2.116.0 — Tile aspect ratio.** `.cal-tile-month` / `.cal-tile-count` are
+  `white-space:nowrap` (9px, ellipsis) so `12 MONTHS` / `10 DAYS` cannot wrap and
+  stretch the fixed-width tile; `body { text-size-adjust:100% }` stops mobile pinch-zoom
+  font-boosting — the real trigger for the reflow.
+
+⚠️ **Deploy lesson (recurring).** The stale-page auto-reload guard compares `APP_BUILD`,
+NOT `APP_VERSION` (`checkForNewBuild()` → `deployed === APP_BUILD`). Three deploys this
+session bumped only the version, so `version.json` never changed and open tabs never
+reloaded. **Bump `APP_BUILD` on every deploy** (format `YYYY.MM.DD.NN`), then
+`version-stamp.sh` (check.sh runs it) rewrites `version.json`.
+
 ### v2.110.0 — Modification derives from the Fleet retrofit window
 Request from the user (2026-09-08).
 
