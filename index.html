@@ -6528,10 +6528,10 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.103.0';
-        const APP_BUILD    = '2026.09.06.05';
+        const APP_VERSION  = '2.104.0';
+        const APP_BUILD    = '2026.09.08.01';
         const APP_ENV      = 'Production';
-        const APP_DEPLOYED = '2026-09-03T13:50:00Z';
+        const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
         // ===== Live data sync (Firebase Realtime Database) =====
         // aircraftStatic holds fixed facts (id/type/station). aircraftLive holds the
@@ -12946,14 +12946,15 @@
                 // "derive, don't trust the raw field" rule the commissioning/IPHO cells use.
                 const isAstronics = !!ac && ac.type === 'A321XLR';
                 // IPHO Mode is the aircraft's top-level iphoStatus, surfaced on the box
-                // fitted to it. It applies to an active RETROFIT aircraft OR to any A321XLR
-                // (Astronics) aircraft (user, 2026-09-04 — the XLR uses IPHO too, whatever
-                // its activation state, so it is selectable as soon as a box is added to
-                // one). An off-wing box (spare/removed) is on no aircraft, and any other
-                // airframe not yet Active, read N/A. A staged edit (pendingSatcom) is read
-                // first so the pill updates before Save, like the status/commissioning cells.
+                // fitted to it. It applies to any RETROFIT aircraft with a box on wing OR to
+                // any A321XLR (Astronics) aircraft — whatever the fleet state (user,
+                // 2026-09-08: a box assigned to a still-In-Retrofit tail must be editable too,
+                // defaulting to Disabled; the earlier Active-only gate hid the field for such
+                // freshly-assigned aircraft). An off-wing box (spare/removed) is on no
+                // aircraft and reads N/A. A staged edit (pendingSatcom) is read first so the
+                // pill updates before Save, like the status/commissioning cells.
                 const iphoApplies = !notApplicable && !!ac
-                    && ((ac.fit === 'retrofit' && ac.fleetStatus === 'Active') || isAstronics);
+                    && (ac.fit === 'retrofit' || isAstronics);
                 const iphoRaw = staged.iphoStatus !== undefined
                     ? staged.iphoStatus : (ac ? (ac.iphoStatus || '') : '');
                 const ipho = !iphoApplies ? 'na' : (iphoRaw === 'completed' ? 'enabled' : 'disabled');
@@ -13466,6 +13467,12 @@
                 put('notes', val('addMmNotes'));
 
                 if (status !== 'spare') {
+                    // A box on wing starts un-commissioned by default (user, 2026-09-08):
+                    // Taurus and Hughes To-Do, and IPHO left Disabled (no iphoStatus written).
+                    // These are the derived cells' starting point for a freshly-assigned tail;
+                    // the user commissions them as the work completes.
+                    entry.commTaurus = 'todo';
+                    entry.commHughes = 'todo';
                     const tail = document.getElementById('addMmAircraft').value;
                     if (tail) entry.aircraft = tail;
                     const inst = val('addMmInstall');
