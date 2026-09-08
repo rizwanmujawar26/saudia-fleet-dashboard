@@ -6528,8 +6528,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.105.0';
-        const APP_BUILD    = '2026.09.08.02';
+        const APP_VERSION  = '2.106.0';
+        const APP_BUILD    = '2026.09.08.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15418,6 +15418,31 @@
                            location: '',
                            title: `${cycleToDisplay(cycle)} cycle closed`,
                            sub: `${st.done} of ${st.scope} aircraft · ${st.pct}%` });
+            });
+
+            // --- OTA patches: Patch #2 and Patch #3, from the Software tab ---
+            // Each aircraft carries at most one stamp per patch — otaPatchUTC (#2) and
+            // otaPatch3UTC (#3) — a full UTC timestamp (YYYY-MM-DDThh:mm:ssZ). Derived,
+            // never stored: the whole fleet's patch history appears at once and a stamp
+            // corrected on the Software tab corrects the Timeline with it, exactly as
+            // Software completion and Activation are derived from their own dates.
+            //
+            // Over the WHOLE roster (user, 2026-09-08: "for all aircraft"), NOT just
+            // Active — an OTA patch is pushed to an airframe whatever its service state,
+            // the same reasoning that puts a MODMAN/SIM fitment here for an In-Retrofit
+            // tail. An OTA patch is location-independent (pushed over the air), so it
+            // carries no pill, like a media load — and the UTC time rides in the subtitle
+            // the way the fitment passes carry the S/N.
+            aircraftData.forEach(a => {
+                [['otaPatchUTC', 'OTA Patch #2'], ['otaPatch3UTC', 'OTA Patch #3']].forEach(([field, label]) => {
+                    const stamp = a[field] || '';
+                    const iso = toISODate(stamp.slice(0, 10));
+                    if (!iso) return;
+                    const time = stamp.slice(11, 16);
+                    out.push({ iso, kind: 'software', tail: a.id, type: a.type || '',
+                               location: '',
+                               title: label, sub: time ? `${time} UTC` : '' });
+                });
             });
 
             // --- 4G SIM cards: install and removal, straight from the register ---
