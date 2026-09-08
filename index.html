@@ -2339,6 +2339,10 @@
         .tl-kind-media       { background: #e6f7f4; color: #10695c; border-color: #c9ebe4; }
         .tl-kind-maintenance { background: #fdf1e3; color: #8a5312; border-color: #f6ddc0; }
         .tl-kind-hardware    { background: #f1ecfa; color: #55408f; border-color: #ddd3f0; }
+        /* Commissioning — bringing a modem online. Its own cyan, kept off the amber
+           maintenance vocabulary the user asked it not to share, and off software's
+           blue and media's green-teal. */
+        .tl-kind-commission  { background: #e2f4f7; color: #0d6b83; border-color: #c2e6ee; }
 
         /* Activation is the milestone the other three kinds are work towards, so it
            takes the Saudia green rather than another pastel — and it is the one kind
@@ -2699,6 +2703,7 @@
         .maint-act.kind-media       { border-left-color: #10695c; }
         .maint-act.kind-maintenance { border-left-color: #d08a2c; }
         .maint-act.kind-hardware    { border-left-color: #6f52ad; }
+        .maint-act.kind-commission  { border-left-color: #0d6b83; }
         /* Operational-history cards (out-of-service periods). A red accent like the
            Timeline's ops-out marker; the open period a touch warmer still. */
         .maint-act.kind-operational { border-left-color: #d0454b; }
@@ -6057,7 +6062,7 @@
         const ACTIVITY_CATEGORIES = [
             { value: 'hardware_rr',         label: 'Hardware Replacement / R&R', kind: 'hardware' },
             { value: 'software_update',     label: 'Software Update',            kind: 'software' },
-            { value: 'modem_commissioning', label: 'Modem Commissioning',        kind: 'maintenance' },
+            { value: 'modem_commissioning', label: 'Modem Commissioning',        kind: 'commission' },
             { value: 'troubleshooting',     label: 'Troubleshooting',            kind: 'maintenance' },
             { value: 'maintenance',         label: 'Maintenance',                kind: 'maintenance' },
             { value: 'configuration',       label: 'Configuration',              kind: 'maintenance' },
@@ -6528,8 +6533,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.107.0';
-        const APP_BUILD    = '2026.09.08.04';
+        const APP_VERSION  = '2.108.0';
+        const APP_BUILD    = '2026.09.08.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15193,9 +15198,10 @@
 
         // The kind set: quick pills for the three loading streams (Software, Hardware,
         // Media — see the `timeline` bar), the rest reachable in the Show dropdown.
-        // Maintenance is its own filter (2026-09-03, user): modem commissioning,
-        // troubleshooting, inspections and the like all carry kind 'maintenance', and it
-        // now has a dropdown option instead of only appearing under All.
+        // Maintenance is its own filter (2026-09-03, user): troubleshooting, inspections
+        // and the like all carry kind 'maintenance', and it now has a dropdown option
+        // instead of only appearing under All. Commission (2026-09-08, user) split modem
+        // commissioning out of 'maintenance' into its own kind, pill and filter.
         const TIMELINE_KINDS = [
             { value: '',           label: 'All' },
             // First after All: it is the milestone the others are work towards.
@@ -15203,6 +15209,7 @@
             { value: 'software', label: 'Software' },
             { value: 'hardware', label: 'Hardware' },
             { value: 'media',    label: 'Media' },
+            { value: 'commission', label: 'Commission' },
             { value: 'maintenance', label: 'Maintenance' },
             // Out-of-service periods. Last because it is the exception, not the work.
             { value: 'operational', label: 'Operational' },
