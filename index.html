@@ -944,6 +944,59 @@
             user-select: none;
         }
 
+        /* ── Year tile ─────────────────────────────────────────────────────────
+           The grouping level above the month. Same page shape as a day/month tile so
+           the strip stays one family, but three things set it apart at a glance:
+           the brand-green header (red=day, blue=month, green=year — the calendar
+           climbs its own hierarchy), a hair more width, and a stacked-pages edge drawn
+           with layered box-shadows so it reads as a *bundle* of months, not one page.
+           The shadows sit outside the tile — box-shadow is not clipped by the tile's
+           overflow:hidden — and stay within the strip's 4px top / 10px gap breathing
+           room. */
+        .cal-tile-year {
+            width: 68px;
+            border-color: #bcd8c6;
+            box-shadow:
+                3px -3px 0 -1px #cde4d4,
+                6px -6px 0 -1px #e0f0e6,
+                0 2px 8px rgba(0,0,0,0.15);
+        }
+        .cal-tile-year:hover { transform: translateY(-3px); }
+        .cal-tile-year.open {
+            box-shadow:
+                3px -3px 0 -1px #cde4d4,
+                6px -6px 0 -1px #e0f0e6,
+                0 2px 12px rgba(10, 92, 52, 0.28);
+            border-color: #8fc4a5;
+        }
+        .cal-tile-year .cal-tile-header {
+            background: #0a5c34;   /* Saudia brand green — the top of the hierarchy. */
+            letter-spacing: 1.2px;
+        }
+        /* The year number sits in the same fixed-height slot the day number and month
+           abbreviation use, so year, month and day tiles line up to the pixel. */
+        .cal-tile-yr {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 30px;
+            font-weight: 800;
+            font-size: 16px;
+            letter-spacing: 0.3px;
+            color: #0a5c34;
+        }
+
+        /* A wider, quieter break than .cal-sep: it fences one year group off from the
+           next with air plus a faint hairline, without shouting like a tile would. */
+        .cal-year-sep {
+            flex: 0 0 auto;
+            align-self: stretch;
+            width: 1px;
+            margin: 4px 9px;
+            background: linear-gradient(to bottom, transparent, #d7dde3 22%, #d7dde3 78%, transparent);
+            user-select: none;
+        }
+
         /* Progressive disclosure for the day list: a week is visible, the rest is one
            click away. Keeps the Overview a screen rather than an archive. */
         .tl-more {
@@ -6545,7 +6598,7 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.111.0';
+        const APP_VERSION  = '2.112.0';
         const APP_BUILD    = '2026.09.08.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
@@ -15656,9 +15709,17 @@
         // default stays right when the month rolls over rather than freezing whatever
         // was current when the page loaded.
         const timelineMonthOverrides = {};
+        // The same idea one level up: the strip is grouped by year, and a year the user
+        // has not touched folds by the rule — the current year is open (its months on
+        // show), every earlier year is compressed to a single year tile until clicked.
+        const timelineYearOverrides = {};
 
         function currentMonthKey() {
             return new Date().toISOString().slice(0, 7);
+        }
+
+        function currentYearKey() {
+            return new Date().toISOString().slice(0, 4);
         }
 
         function timelineMonthIsOpen(key) {
@@ -15669,6 +15730,17 @@
 
         function toggleTimelineMonth(key) {
             timelineMonthOverrides[key] = !timelineMonthIsOpen(key);
+            renderTimeline();
+        }
+
+        function timelineYearIsOpen(year) {
+            return (year in timelineYearOverrides)
+                ? timelineYearOverrides[year]
+                : year === currentYearKey();
+        }
+
+        function toggleTimelineYear(year) {
+            timelineYearOverrides[year] = !timelineYearIsOpen(year);
             renderTimeline();
         }
 
@@ -15739,9 +15811,11 @@
             const plural = n => `${n} ${n === 1 ? 'activity' : 'activities'}`;
 
             // ===== Calendar strip =====
-            // Only the current month gets a tile per day. Everything older collapses to
-            // one tile per month, which expands on click — otherwise the strip grows
-            // without bound and the useful end of it scrolls off.
+            // A three-level drill-down so the strip cannot grow without bound: year →
+            // month → day. Earlier years fold to a single year tile, the current year is
+            // open with its months on show, the current month is open with its days on
+            // show; each level expands on click. The useful, recent end therefore stays
+            // short whatever the depth of history behind it.
             const stripEl = document.getElementById('timelineCalendarStrip');
             if (stripEl) {
                 const dayTile = key => {
@@ -15773,23 +15847,52 @@
                     </div>`;
                 };
 
-                // Every month gets a tile, the current one included, so the whole strip
-                // is navigable by month and the current month's total is the first thing
-                // read. Months keep the position their dates would have had, so the
-                // grouping is correct in both sort directions.
-                const monthsInOrder = [];
-                const monthDays = {};
+                // A whole year folded into one tile \u2014 the grouping level above the month.
+                // Deliberately the third page-shape in the strip: red day, blue month, and
+                // now a green (brand) year with a stacked-pages edge, so the eye reads it as
+                // a bundle of months at a glance. Open, it stays on as the group anchor and
+                // its caret turns down; its months follow it until the next year separator.
+                const yearTile = (year, months) => {
+                    const dayCount = months.reduce((n, m) => n + monthDays[m].length, 0);
+                    const total = months.reduce((n, m) =>
+                        n + monthDays[m].reduce((s, k) => s + groups[k].length, 0), 0);
+                    const open = timelineYearIsOpen(year);
+                    const monLabel = `${months.length} ${months.length === 1 ? 'month' : 'months'}`;
+                    return `<div class="cal-tile cal-tile-year ${open ? 'open' : ''}" title="${escAttr(`${year}: ${total} activities across ${monLabel} / ${dayCount} days \u2014 click to ${open ? 'collapse the year' : 'expand into months'}`)}" onclick="toggleTimelineYear('${year}')">
+                        <div class="cal-tile-header">YEAR</div>
+                        <div class="cal-tile-yr">${year}</div>
+                        <div class="cal-tile-month">${monLabel}</div>
+                        <div class="cal-tile-count">${total} <span class="cal-caret">${open ? '\u25BE' : '\u25B8'}</span></div>
+                    </div>`;
+                };
+
+                // Two-level grouping: year -> month -> day. Every year and month keeps the
+                // position its dates would have had, so the strip is correct in both sort
+                // directions. Months and days are recorded even for a folded year, so the
+                // moment it opens the totals it carries are already to hand.
+                const yearsInOrder = [];
+                const yearMonths = {};   // year -> [monthKey, ...]
+                const monthDays = {};    // monthKey -> [dayKey, ...]
                 dateKeys.forEach(k => {
-                    const m = k.slice(0, 7);
-                    if (!monthDays[m]) { monthDays[m] = []; monthsInOrder.push(m); }
+                    const y = k.slice(0, 4), m = k.slice(0, 7);
+                    if (!yearMonths[y]) { yearMonths[y] = []; yearsInOrder.push(y); }
+                    if (!monthDays[m]) { monthDays[m] = []; yearMonths[y].push(m); }
                     monthDays[m].push(k);
                 });
 
-                stripEl.innerHTML = monthsInOrder.map(m => {
-                    let html = monthTile(m, monthDays[m]);
-                    if (timelineMonthIsOpen(m)) {
-                        html += '<div class="cal-sep" aria-hidden="true">\u203A</div>';
-                        html += monthDays[m].map(dayTile).join('');
+                stripEl.innerHTML = yearsInOrder.map((y, i) => {
+                    // A clear break between year groups so a run of months never bleeds
+                    // from one year straight into the next.
+                    let html = i > 0 ? '<div class="cal-year-sep" aria-hidden="true"></div>' : '';
+                    html += yearTile(y, yearMonths[y]);
+                    if (timelineYearIsOpen(y)) {
+                        yearMonths[y].forEach(m => {
+                            html += monthTile(m, monthDays[m]);
+                            if (timelineMonthIsOpen(m)) {
+                                html += '<div class="cal-sep" aria-hidden="true">\u203A</div>';
+                                html += monthDays[m].map(dayTile).join('');
+                            }
+                        });
                     }
                     return html;
                 }).join('');
