@@ -2716,7 +2716,6 @@
         .maint-act.kind-maintenance { border-left-color: #d08a2c; }
         .maint-act.kind-hardware    { border-left-color: #6f52ad; }
         .maint-act.kind-commission  { border-left-color: #0d6b83; }
-        .maint-act.kind-modification { border-left-color: #5b6b7d; }
         /* Operational-history cards (out-of-service periods). A red accent like the
            Timeline's ops-out marker; the open period a touch warmer still. */
         .maint-act.kind-operational { border-left-color: #d0454b; }
@@ -5591,20 +5590,6 @@
                 </div>
             </div>
 
-            <div class="act-extra" id="actExtraModif">
-                <div class="act-extra-label">Modification Period — the <b>Date</b> above is the Mod START</div>
-                <div class="act-row">
-                    <div>
-                        <label class="add-sched-label">Mod End Date <span style="text-transform:none; font-weight:400;">(blank while still in progress)</span></label>
-                        <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="addActModEnd" class="add-sched-input">
-                    </div>
-                    <div>
-                        <label class="add-sched-label">Grounded <span style="text-transform:none; font-weight:400;">(auto)</span></label>
-                        <input id="addActModDays" class="add-sched-input" readonly placeholder="—" style="background:#f6f7f8; color:#465563; font-weight:600;">
-                    </div>
-                </div>
-            </div>
-
             <label class="add-sched-label" style="margin-top:14px;">Notes <span style="text-transform:none; font-weight:400;">(optional)</span></label>
             <textarea id="addActNotes" class="add-sched-input" maxlength="1000"></textarea>
 
@@ -6094,7 +6079,7 @@
             { value: 'maintenance',         label: 'Maintenance',                kind: 'maintenance' },
             { value: 'configuration',       label: 'Configuration',              kind: 'maintenance' },
             { value: 'inspection',          label: 'Inspection',                 kind: 'maintenance' },
-            { value: 'modification',        label: 'Modification',               kind: 'modification' },
+            { value: 'modification',        label: 'Modification',               kind: 'maintenance' },
             { value: 'other',               label: 'Other',                      kind: 'maintenance' },
         ];
 
@@ -6560,8 +6545,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.109.0';
-        const APP_BUILD    = '2026.09.08.06';
+        const APP_VERSION  = '2.110.0';
+        const APP_BUILD    = '2026.09.08.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -11397,18 +11382,12 @@
                 tech('Version', d.version),
                 tech('Modem', d.modemType),
                 tech('Result', d.commissioningResult),
-                tech('Mod ended', d.modEnd),
-                tech('Grounded', d.modEnd ? groundedDaysLabel(act.date, d.modEnd) : ''),
             ].filter(Boolean).join('');
-
-            // The Timeline shortens 'modification' to MOD START / MOD END; the history
-            // card is a single entry, so it carries the plain MOD badge.
-            const kindPill = cat.kind === 'modification' ? 'MOD' : cat.kind;
 
             return `<li class="maint-act kind-${cat.kind}">
                 <div class="maint-act-top">
                     <span class="maint-act-date">${escAttr(act.date || '—')}</span>
-                    <span class="tl-kind tl-kind-${cat.kind}">${kindPill}</span>
+                    <span class="tl-kind tl-kind-${cat.kind}">${cat.kind}</span>
                     ${act.location ? `<span class="tl-loc-pill" style="background:${(LOCATION_PILL_COLORS[act.location] || NEUTRAL_PILL).bg}; color:${(LOCATION_PILL_COLORS[act.location] || NEUTRAL_PILL).fg}; border-color:${(LOCATION_PILL_COLORS[act.location] || NEUTRAL_PILL).bd}">📍 ${escAttr(act.location)}</span>` : ''}
                     <span class="maint-act-cat">${escAttr(cat.label)}</span>
                     ${canEdit() ? `<button class="maint-act-edit" title="Edit this activity" onclick="openEditActivity('${escAttr(act.id)}')">✏️</button>` : ''}
@@ -11568,7 +11547,6 @@
             hardware_rr:         'actExtraHardware',
             software_update:     'actExtraSoftware',
             modem_commissioning: 'actExtraModem',
-            modification:        'actExtraModif',
         };
 
         // The part list follows the aircraft, because retrofit and linefit carry
@@ -11615,7 +11593,6 @@
             modem_commissioning: ['e.g. Post-installation commissioning', 'Modem type and result are recorded below.'],
             troubleshooting:     ['e.g. Intermittent SSID dropout',      ''],
             inspection:          ['e.g. Routine antenna inspection',     ''],
-            modification:        ['e.g. Antenna structural modification', 'The Date above is the Mod START; set the Mod End below.'],
         };
 
         function syncActExtras() {
@@ -11630,18 +11607,6 @@
             const h = document.getElementById('addActTitleHint');
             if (t) t.placeholder = ph;
             if (h) h.textContent = hint;
-            syncActModDays();
-        }
-
-        // Live preview of the grounded span from the Date (Mod START) and Mod End fields,
-        // so the count is confirmed before saving. Reads whatever is typed — a blank or an
-        // impossible range simply shows the em dash, matching the readonly field default.
-        function syncActModDays() {
-            const out = document.getElementById('addActModDays');
-            if (!out) return;
-            const start = (document.getElementById('addActDate') || {}).value || '';
-            const end = (document.getElementById('addActModEnd') || {}).value || '';
-            out.value = (start && end) ? (groundedDaysLabel(start, end) || '—') : '';
         }
 
         // null when adding, the activity id when correcting an existing one. The
@@ -11654,7 +11619,7 @@
         // often long after — must survive an edit untouched. Rebuilding details from
         // the form alone would silently drop a shop finding.
         const ACT_FORM_DETAIL_FIELDS = ['lruId', 'position', 'removalReason',
-            'softwareName', 'version', 'modemType', 'commissioningResult', 'modEnd'];
+            'softwareName', 'version', 'modemType', 'commissioningResult'];
 
         // Everything both entry points need: the pickers built and populated, the
         // one-time listeners bound.
@@ -11670,9 +11635,6 @@
                 catSel.addEventListener('change', syncActExtras);
                 acSel.addEventListener('change', syncActParts);
                 document.getElementById('addActPart').addEventListener('change', syncActPositions);
-                // Recompute the grounded span as either date is typed.
-                document.getElementById('addActDate').addEventListener('input', syncActModDays);
-                document.getElementById('addActModEnd').addEventListener('input', syncActModDays);
             }
             const err = document.getElementById('addActError');
             err.textContent = ''; err.style.display = 'none';
@@ -11717,8 +11679,7 @@
             document.getElementById('addActDate').value = toDMY(new Date().toISOString().slice(0, 10));
             ['addActTitle', 'addActTask', 'addActOutcome', 'addActNotes',
              'addActOldPart', 'addActNewPart', 'addActRemovalReason',
-             'addActSoftwareName', 'addActVersion', 'addActModemType', 'addActCommissioningResult',
-             'addActModEnd', 'addActModDays']
+             'addActSoftwareName', 'addActVersion', 'addActModemType', 'addActCommissioningResult']
                 .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
             // Blank on every open: the remembered value is only there to survive an
@@ -11762,7 +11723,6 @@
             set('addActVersion', d.version);
             set('addActModemType', d.modemType);
             set('addActCommissioningResult', d.commissioningResult);
-            set('addActModEnd', toDMY(d.modEnd));
             set('addActRemovalReason', d.removalReason);
             // Shown read-only so the record still reads completely; not saved from here.
             set('addActOldPart', d.oldPart);
@@ -11827,11 +11787,6 @@
                     modem_commissioning: {
                         modemType: val('addActModemType'), commissioningResult: val('addActCommissioningResult'),
                     },
-                    // The activity's own date is the Mod START; only the end is stored here.
-                    // Blank end = still in progress, so an empty modEnd is simply not sent.
-                    modification: {
-                        modEnd: fmtDate(val('addActModEnd')) || '',
-                    },
                 };
                 // Start from what is already stored when editing, minus the fields
                 // this form owns, so recordType, the serials and the shop's verdict
@@ -11859,20 +11814,6 @@
                     err.textContent = 'Choose which part this was. Add it on the Hardware tab first if it is not listed.';
                     err.style.display = 'block';
                     return;
-                }
-                if (category === 'modification') {
-                    const rawEnd = val('addActModEnd');
-                    // A typed-but-unparseable end must not silently vanish into "ongoing".
-                    if (rawEnd && !details.modEnd) {
-                        err.textContent = 'Mod End Date is not a valid date — use dd-mm-yyyy, or leave it blank while still in progress.';
-                        err.style.display = 'block';
-                        return;
-                    }
-                    if (details.modEnd && groundedDays(entry.date, details.modEnd) == null) {
-                        err.textContent = 'Mod End Date cannot be before the Date (Mod START).';
-                        err.style.display = 'block';
-                        return;
-                    }
                 }
 
                 const token = await getIdToken();
@@ -15292,6 +15233,9 @@
         // and the like all carry kind 'maintenance', and it now has a dropdown option
         // instead of only appearing under All. Commission (2026-09-08, user) split modem
         // commissioning out of 'maintenance' into its own kind, pill and filter.
+        // Modification (2026-09-08, user) is NOT an activity: it is derived from the Fleet
+        // retrofit window (retrofitStart/End + retrofitLocation) and rendered as MOD START /
+        // MOD END rows, so the Fleet column is its single source — see timelineActivities().
         const TIMELINE_KINDS = [
             { value: '',           label: 'All' },
             // First after All: it is the milestone the others are work towards.
@@ -15514,6 +15458,36 @@
                 });
             });
 
+            // --- Modification: the retrofit window, straight off the Fleet page ---
+            // The mod dates are NOT a hand-typed activity — they are the retrofit grounding
+            // dates already on the aircraft (retrofitStart = Mod Start, retrofitEnd = Mod
+            // End on the Fleet page), so the Fleet column is the single source and the
+            // Timeline just mirrors it. The install site (retrofitLocation) is the location
+            // on both rows, so each entry says when AND where the modification happened.
+            // Iterated over the WHOLE roster like the ops periods above — an In-Retrofit
+            // airframe is mid-modification, so its Mod Start must show, not just Active
+            // tails. A line-fit is built with WiFi and has no retrofit window, so it is
+            // skipped. A start with no end reads as ONGOING (one row).
+            aircraftData.forEach(a => {
+                if (isLinefit(a)) return;
+                const sIso = toISODate(a.retrofitStart);
+                if (!sIso) return;
+                const eIso = toISODate(a.retrofitEnd);
+                const loc = a.retrofitLocation || aircraftLocationOf(a);
+                const sysShown = a.system || systemDefault(fitOf(a));
+                const title = sysShown ? `${sysShown} retrofit` : 'Retrofit modification';
+                out.push({ iso: sIso, kind: 'modification', modPhase: 'start',
+                           tail: a.id, type: a.type, location: loc, title,
+                           modStartDate: a.retrofitStart, modEndDate: a.retrofitEnd || '',
+                           ongoing: !eIso });
+                if (eIso) {
+                    out.push({ iso: eIso, kind: 'modification', modPhase: 'end',
+                               tail: a.id, type: a.type, location: loc, title,
+                               modStartDate: a.retrofitStart, modEndDate: a.retrofitEnd,
+                               modSpan: groundedDaysLabel(a.retrofitStart, a.retrofitEnd) });
+                }
+            });
+
             // --- Media cycle close: one row per cycle, on the day it ended ---
             // Derived, never stored — the same reasoning as the Activation milestone.
             // It reports how many aircraft took that cycle and what share of the fleet
@@ -15657,31 +15631,8 @@
                 const cat = activityCategory(act.category);
                 const air = byTail[act.aircraft] || {};
                 const title = act.title || cat.label;
-                const loc = act.location || aircraftLocationOf(air);
-
-                // A modification is a PERIOD, not a point: it grounds the aircraft from the
-                // activity date (Mod START) until details.modEnd (Mod END). Like an ops
-                // out/back period it emits two events on two days — the start, and the end
-                // carrying the days grounded — so both dates land on the calendar and read
-                // at a glance. A blank modEnd means it is still in progress (one row only).
-                if (cat.kind === 'modification') {
-                    const modEnd = (act.details || {}).modEnd || '';
-                    const endIso = toISODate(modEnd);
-                    const span = endIso ? groundedDaysLabel(act.date, modEnd) : '';
-                    out.push({ iso, kind: 'modification', modPhase: 'start',
-                               tail: act.aircraft, type: air.type || '', location: loc,
-                               title, sub: dedupeSubtitle(title, act.task || ''),
-                               modStartDate: act.date, modEndDate: modEnd, ongoing: !endIso });
-                    if (endIso) {
-                        out.push({ iso: endIso, kind: 'modification', modPhase: 'end',
-                                   tail: act.aircraft, type: air.type || '', location: loc,
-                                   title, modStartDate: act.date, modEndDate: modEnd, modSpan: span });
-                    }
-                    return;
-                }
-
                 out.push({ iso, kind: cat.kind, tail: act.aircraft, type: air.type || '',
-                           location: loc,
+                           location: act.location || aircraftLocationOf(air),
                            title, sub: dedupeSubtitle(title, activitySubtitle(act)) });
             });
 
