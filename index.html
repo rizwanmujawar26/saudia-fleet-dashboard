@@ -1370,6 +1370,18 @@
            shrink. The label→circle collapse below 700px is the shared .reset-btn rule. */
         .tl-reset { flex: 0 0 auto; }
 
+        /* When the Reset button has taken on its Back-to-top job (deep scroll) it fills
+           in with the brand green so the swap is unmistakable — same pill, clearly a
+           different action now. The ↑ icon lifts a hair on hover to hint the direction. */
+        .tl-reset.to-top {
+            background: #0a5c34;
+            border-color: #0a5c34;
+            color: #fff;
+        }
+        .tl-reset.to-top:hover { background: #0c6d3e; border-color: #0c6d3e; }
+        .tl-reset.to-top .ib-icon { font-size: 15px; transition: transform 0.15s; }
+        .tl-reset.to-top:hover .ib-icon { transform: translateY(-2px); }
+
         /* One label per step. Only .tl-lab-lg shows by default; each query
            below swaps which single span is visible. */
         .tl-lab-md, .tl-lab-sm { display: none; }
@@ -5133,7 +5145,7 @@
                                  there is room, a bare ↺ circle below 700px. Clears the kind, the
                                  search and the sort, which drops the focused view and brings the
                                  widgets and pinned banner back. -->
-                            <button id="timelineResetBtn" class="qf-btn icon-btn reset-btn tl-reset" onclick="resetTimeline()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
+                            <button id="timelineResetBtn" class="qf-btn icon-btn reset-btn tl-reset" onclick="timelineResetOrTop()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                         </div>
                         <div class="cal-strip" id="timelineCalendarStrip"></div>
                         <!-- What is out of service right now. Sits above the day list and
@@ -6640,8 +6652,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.114.0';
-        const APP_BUILD    = '2026.09.08.10';
+        const APP_VERSION  = '2.115.0';
+        const APP_BUILD    = '2026.09.08.11';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -7795,6 +7807,9 @@
             // leaving the Overview restores them, returning with a filter still set hides
             // them again. (No scroll — that belongs only to an active filter/search.)
             syncTimelineFocus();
+            // Reset ⇄ Back-to-top belongs only to the Overview: leaving it must put the
+            // button back to Reset; returning re-reads the scroll position.
+            if (typeof syncTimelineTopBtn === 'function') syncTimelineTopBtn();
         }
 
         let editMode = false;
@@ -15448,6 +15463,39 @@
             renderTimeline();
         }
 
+        // Expanding the oldest month can make the day list very long, and by the time you
+        // are at the bottom the Reset control (pinned though it is) is the only thing
+        // reachable that could get you back up. So it earns a second job: once you have
+        // scrolled deep, it MORPHS into Back to top — one press returns you up, and at the
+        // top it turns straight back into Reset. Same button, whichever you need where you
+        // are. The pinned .tl-controls keeps it on screen throughout.
+        const TIMELINE_TOPBTN_AT = 500;   // px scrolled before Reset becomes Back-to-top
+
+        function timelineResetOrTop() {
+            const btn = document.getElementById('timelineResetBtn');
+            if (btn && btn.classList.contains('to-top')) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                resetTimeline();
+            }
+        }
+
+        function syncTimelineTopBtn() {
+            const btn = document.getElementById('timelineResetBtn');
+            if (!btn) return;
+            const overview = document.getElementById('overview');
+            const onOverview = overview && overview.classList.contains('active');
+            const toTop = !!onOverview && window.scrollY > TIMELINE_TOPBTN_AT;
+            if (toTop === btn.classList.contains('to-top')) return;   // no change, no DOM churn
+            btn.classList.toggle('to-top', toTop);
+            const icon = btn.querySelector('.ib-icon');
+            const label = btn.querySelector('.ib-label');
+            if (icon) icon.textContent = toTop ? '↑' : '↺';
+            if (label) label.textContent = toTop ? 'Top' : 'Reset';
+            btn.title = toTop ? 'Back to top' : 'Reset filters';
+            btn.setAttribute('aria-label', toTop ? 'Back to top' : 'Reset filters');
+        }
+
         // Where an activity happened, best available. Software carries its own
         // completion location; media and the airframe fall back to the base station.
         function aircraftLocationOf(a) {
@@ -16844,6 +16892,16 @@
             renderObjectives();
             connectLiveSync();
             startVersionWatch();   // reload the tab when a newer build is deployed
+
+            // The Timeline Reset button doubles as Back-to-top once you have scrolled deep
+            // (see syncTimelineTopBtn). One rAF-throttled scroll listener drives the swap.
+            let topBtnTick = false;
+            window.addEventListener('scroll', () => {
+                if (topBtnTick) return;
+                topBtnTick = true;
+                requestAnimationFrame(() => { topBtnTick = false; syncTimelineTopBtn(); });
+            }, { passive: true });
+            syncTimelineTopBtn();
         });
     </script>
 </body>
