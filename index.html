@@ -6528,8 +6528,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.106.0';
-        const APP_BUILD    = '2026.09.08.03';
+        const APP_VERSION  = '2.107.0';
+        const APP_BUILD    = '2026.09.08.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12087,6 +12087,16 @@
             return /^[0-9]+$/.test(raw) ? raw.replace(/(.{6})(?=.)/g, '$1 ') : raw;
         }
 
+        // Eclipse MODMAN serials are stored with an "SN_" prefix (data entry keeps it,
+        // e.g. SN_066) but the web app shows only the number (066). DISPLAY-ONLY: the
+        // stored value is never rewritten, so the edit field, search haystack and Firebase
+        // record all keep the full SN_ form — this strips the prefix at the moment of
+        // display, on the Satcom table and the Timeline (user, 2026-09-08). Only the
+        // leading SN_ is stripped; a serial without it is returned unchanged.
+        function eclipseSnDisplay(v) {
+            return String(v || '').replace(/^SN_/i, '');
+        }
+
         // The same grouping, but with the LAST six digits promoted — that is the part
         // that actually distinguishes one card from another here, since every serial
         // on the programme shares its opening digits. The leading groups are dimmed
@@ -13087,20 +13097,24 @@
                 // otherwise. `promote` runs the value through modemIdHTML() so the unit
                 // number inside a Chassis ID or TID stands out, exactly as on the Modem
                 // tab; everything else renders plain.
-                const idCell = (field, value, promote) => {
+                // fmt (optional) transforms the value for DISPLAY ONLY — the edit input
+                // keeps the raw stored value, so a save never loses what fmt hides (the
+                // Eclipse S/N's SN_ prefix is the one caller: shown 066, stored SN_066).
+                const idCell = (field, value, promote, fmt) => {
                     if (editing) {
                         return `<input class="edit-text" style="width:100%" value="${escAttr(value)}" placeholder="—" data-mm="${escAttr(r.id)}" data-field="${field}" onchange="handleSatcomEdit(this)">`;
                     }
                     if (!value) return '<span class="fleet-notset">—</span>';
-                    return promote ? modemIdHTML(value) : escAttr(value);
+                    const shown = fmt ? fmt(value) : value;
+                    return promote ? modemIdHTML(shown) : escAttr(shown);
                 };
 
                 // A serial that belongs to this box's supplier renders like any other
                 // identifier; one that does not (Eclipse/Kontron on an Astronics box, or
                 // Astronics on a legacy box) shows a static grey N/A and offers no input,
                 // even in edit mode — the same treatment the N/A commissioning cells get.
-                const serialCell = (field, value, applicable) =>
-                    applicable ? idCell(field, value, false)
+                const serialCell = (field, value, applicable, fmt) =>
+                    applicable ? idCell(field, value, false, fmt)
                                : '<span class="status-badge sn-na">N/A</span>';
 
                 const tailCell = editing
@@ -13162,7 +13176,7 @@
                     <td>${idx + 1}</td>
                     <td data-sort="${insSort}">${dateCell('installDate', r.installDate)}</td>
                     <td class="satcom-tight" data-sort="${remSort}">${dateCell('removalDate', r.removalDate)}</td>
-                    <td class="satcom-serial" data-sort="${escAttr(r.isAstronics ? '' : r.eclipseSn)}">${serialCell('eclipseSn', r.eclipseSn, !r.isAstronics)}</td>
+                    <td class="satcom-serial" data-sort="${escAttr(r.isAstronics ? '' : eclipseSnDisplay(r.eclipseSn))}">${serialCell('eclipseSn', r.eclipseSn, !r.isAstronics, eclipseSnDisplay)}</td>
                     <td class="satcom-serial" data-sort="${escAttr(r.isAstronics ? '' : r.kontronSn)}">${serialCell('kontronSn', r.kontronSn, !r.isAstronics)}</td>
                     <td class="satcom-serial" data-sort="${escAttr(r.isAstronics ? r.astronicsSn : '')}">${serialCell('astronicsSn', r.astronicsSn, r.isAstronics)}</td>
                     <td class="satcom-group-start" data-sort="${escAttr(r.taurusOldMgId)}">${idCell('taurusOldMgId', r.taurusOldMgId, false)}</td>
@@ -15512,7 +15526,9 @@
                 // real tail, so an off-wing/spare box (no aircraft) emits nothing.
                 if (!byTail[tail]) return;
                 const air = byTail[tail];
-                const serial = (air.type === 'A321XLR' ? m.astronicsSn : m.eclipseSn) || '';
+                // The Eclipse S/N shows without its stored SN_ prefix (066, not SN_066),
+                // exactly as on the Satcom table; the Astronics S/N carries no prefix.
+                const serial = (air.type === 'A321XLR' ? m.astronicsSn : eclipseSnDisplay(m.eclipseSn)) || '';
                 const sub = serial ? `S/N ${serial}` : '';
                 const fitIso = toISODate(m.installDate);
                 if (fitIso) {
