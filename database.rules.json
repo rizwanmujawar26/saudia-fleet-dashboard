@@ -107,7 +107,25 @@
         "delivered":   { ".validate": "newData.isBoolean()" },
         "regUnknown":  { ".validate": "newData.isBoolean()" },
 
+        "config":      { ".validate": "newData.isString() && newData.val().length <= 20" },
+
         "$other":      { ".validate": false }
+      }
+    },
+
+    "configs": {
+      ".read": true,
+
+      "$code": {
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
+
+        "manufacturer": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "family":       { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "model":        { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "ifeSupplier":  { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "ifeSystem":    { ".validate": "newData.isString() && newData.val().length <= 40" },
+
+        "$other":       { ".validate": false }
       }
     },
 

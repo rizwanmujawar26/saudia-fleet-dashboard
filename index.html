@@ -6831,6 +6831,13 @@
         // by the Fleet page's Aircraft Age column and its age sort.
         let fleetSpecsLive = {};
 
+        // /configs/{code} — the configuration register: one record per cabin/IFE config
+        // code (32U, 333, 33R…), each heading a group of fleet aircraft that reference it
+        // by /fleet/{tail}/config. Holds the IFE supplier + system (and model/family) once,
+        // so a whole class of aircraft is described in one place. Low-traffic; polled with
+        // the other reference nodes. Boeing configs (773, 789…) join here later.
+        let configsLive = {};
+
         function unitEntries() {
             return Object.entries(unitsLive).map(([id, u]) => ({ id, ...u }));
         }
@@ -6940,8 +6947,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.125.2';
-        const APP_BUILD    = '2026.09.11.05';
+        const APP_VERSION  = '2.126.0';
+        const APP_BUILD    = '2026.09.11.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -6972,6 +6979,8 @@
                 // to 'retrofit' / 'Active' would falsely count it as an active retrofit.
                 fit: v.fit || '', fleetStatus: v.fleetStatus || '', comments: v.comments || '',
                 scope: v.scope || '', system: v.system || '',
+                // Configuration code (/configs key) — the aircraft's IFE/cabin class.
+                config: v.config || '',
                 // delivered === false is a Future / undelivered airframe (still with the
                 // manufacturer); absent means delivered. regUnknown flags an auto
                 // placeholder registration shown as UNKNOWN until the real tail is set.
@@ -7162,9 +7171,9 @@
             // to LOW_TRAFFIC_POLL_MS late, and since the Media widgets are built from
             // it, every monthly card was missing for the first 25 seconds of each page
             // load — the strip looked broken.
-            Promise.all(['hardware', 'units', 'activities', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr'].map(n =>
+            Promise.all(['hardware', 'units', 'activities', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr', 'configs'].map(n =>
                 fetch(`${FIREBASE_DB_URL}/${n}.json`).then(r => r.json()).catch(() => null)
-            )).then(([hw, un, ac, ml, mm, fs, av]) => {
+            )).then(([hw, un, ac, ml, mm, fs, av, cf]) => {
                 hardwareLive   = hw || {};
                 unitsLive      = un || {};
                 activitiesLive = ac || {};
@@ -7172,6 +7181,7 @@
                 modmansLive    = mm || {};
                 fleetSpecsLive = fs || {};
                 avrLive        = av || {};
+                configsLive    = cf || {};
                 markDataSync();
                 rebuildAircraftData();     // current media is derived from the log
                 renderHardwarePage();      // fitment is derived from units
@@ -7221,6 +7231,7 @@
                 modmans:    d => { modmansLive = d || {}; },
                 fleetSpecs: d => { fleetSpecsLive = d || {}; },
                 avr:        d => { avrLive = d || {}; },
+                configs:    d => { configsLive = d || {}; },
             };
             let changed = false;
 
@@ -7258,6 +7269,7 @@
                 modmans:    JSON.stringify(Object.keys(modmansLive).length ? modmansLive : null),
                 fleetSpecs: JSON.stringify(Object.keys(fleetSpecsLive).length ? fleetSpecsLive : null),
                 avr:        JSON.stringify(Object.keys(avrLive).length ? avrLive : null),
+                configs:    JSON.stringify(Object.keys(configsLive).length ? configsLive : null),
             };
             setInterval(pollLowTrafficNodes, LOW_TRAFFIC_POLL_MS);
         }
@@ -12216,11 +12228,18 @@
         }
 
         // The IFE (In-Flight Entertainment) system — distinct from the IFC connectivity
-        // this dashboard tracks. A type-level fact, not stored per aircraft: every A321XLR
-        // carries Panasonic's Astrova (user, 2026-09-10). Add a type here as it is confirmed;
-        // an unmapped type returns '' and the dossier simply omits the IFE row.
+        // this dashboard tracks. Derived from the aircraft's configuration: /fleet/{tail}/config
+        // points at a /configs record that carries the IFE supplier + system for that whole
+        // class (e.g. config 333 → Thales i5000). Returns the combined "Supplier System"
+        // string; an aircraft with no config (or an unknown one) falls back to the legacy
+        // type map, and otherwise returns '' so the dossier simply omits the IFE row.
         const IFE_BY_TYPE = { A321XLR: 'Panasonic Astrova' };
-        function ifeSystemOf(a) { return (a && IFE_BY_TYPE[a.type]) || ''; }
+        function ifeConfigOf(a) { return (a && a.config && configsLive[a.config]) || null; }
+        function ifeSystemOf(a) {
+            const c = ifeConfigOf(a);
+            if (c && (c.ifeSupplier || c.ifeSystem)) return [c.ifeSupplier, c.ifeSystem].filter(Boolean).join(' ');
+            return (a && IFE_BY_TYPE[a.type]) || '';
+        }
 
         // ===== Aircraft dossier — every fact we hold about the airframe, in one place =====
         function avrDossierData(tail) {
