@@ -4004,6 +4004,44 @@
         .avr-linkitem .li-cat { color: #8a97a3; }
         .avr-linkempty { padding: 10px; color: #9aa7b2; font-size: 12px; text-align: center; }
 
+        /* View toggle (Activities ⇄ Visit Reports) */
+        .avr-viewtoggle { display: inline-flex; border: 1px solid #d7dee5; border-radius: 8px; overflow: hidden; background: #f4f7fa; }
+        .avr-vt-btn { border: none; background: transparent; padding: 6px 12px; font-size: 12.5px; font-weight: 700;
+            color: #5a6b78; cursor: pointer; white-space: nowrap; }
+        .avr-vt-btn.active { background: #0a5c34; color: #fff; }
+
+        /* Activities repository — day groups + rows */
+        .repo-day { margin-bottom: 14px; }
+        .repo-day-head { display: flex; align-items: baseline; gap: 10px; padding: 4px 2px 6px; border-bottom: 2px solid #eef2f6; margin-bottom: 4px; }
+        .repo-day-date { font-weight: 800; font-size: 13.5px; color: #0a5c34; }
+        .repo-day-count { font-size: 11.5px; color: #9aa7b2; font-weight: 600; }
+        .repo-day-items { list-style: none; margin: 0; padding: 0; }
+        .repo-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 6px;
+            border-bottom: 1px solid #f2f5f8; font-size: 13px; }
+        .repo-row:last-child { border-bottom: none; }
+        .repo-row:hover { background: #f8fafc; }
+        .repo-row .tl-title { font-weight: 600; color: #26333d; }
+        .repo-row .tl-sub { color: #8a97a3; font-size: 12px; }
+        .repo-visit-chip { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+            background: #e7f4ec; color: #146c3a; border: 1px solid #bfe3cd; white-space: nowrap; }
+        .repo-src { font-size: 9.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+            color: #9aa7b2; background: #f0f3f6; border-radius: 4px; padding: 2px 6px; }
+        .repo-actions { display: inline-flex; gap: 2px; }
+        .avr-report-list .repo-row:hover { background: transparent; }
+
+        /* Assign-to-visit popover */
+        .avr-assign-backdrop { position: fixed; inset: 0; z-index: 1200; }
+        .avr-assign-menu { position: fixed; z-index: 1201; width: 260px; max-height: 320px; overflow-y: auto;
+            background: #fff; border: 1px solid #d7dee5; border-radius: 10px; box-shadow: 0 8px 28px rgba(20,40,60,.18); padding: 6px; }
+        .avr-assign-title { font-size: 11px; font-weight: 700; color: #7c8894; padding: 6px 8px; }
+        .avr-assign-item { display: block; width: 100%; text-align: left; border: none; background: transparent;
+            border-radius: 7px; padding: 8px 10px; cursor: pointer; }
+        .avr-assign-item:hover { background: #f2f7f4; }
+        .avr-assign-ref { display: block; font-weight: 700; font-size: 12.5px; color: #0a5c34; }
+        .avr-assign-sub { display: block; font-size: 11px; color: #8a97a3; }
+        .avr-assign-none { padding: 8px 10px; font-size: 12px; color: #9aa7b2; }
+        .avr-assign-new { border-top: 1px solid #eef2f6; margin-top: 4px; color: #2350b8; font-weight: 700; font-size: 12.5px; }
+
         /* ===== AVR print sheet ===== */
         #avrPrint { display: none; }
         @media print {
@@ -5376,6 +5414,10 @@
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="maintenance"></div>
                     <div class="fb-actions">
+                        <div class="avr-viewtoggle" role="tablist" aria-label="Activity view">
+                            <button id="avrTabActs" class="avr-vt-btn active" role="tab" onclick="setAvrView('activities')">🗂️ Activities</button>
+                            <button id="avrTabVisits" class="avr-vt-btn" role="tab" onclick="setAvrView('visits')">📋 Visit Reports</button>
+                        </div>
                         <button id="avrAddBtn" class="qf-btn" style="display:none;" onclick="openAvrEditor('__new')">➕ Add Visit</button>
                         <button id="maintAddActivityBtn" class="qf-btn" style="display:none;" onclick="openAddActivity()">➕ Add Activity</button>
                         <button id="maintResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetMaintenancePage()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
@@ -6805,8 +6847,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.117.0';
-        const APP_BUILD    = '2026.09.10.01';
+        const APP_VERSION  = '2.118.0';
+        const APP_BUILD    = '2026.09.10.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -8888,16 +8930,23 @@
             // only the feed (not the bar), so typing in the search box keeps its focus —
             // the same discipline the Media bar uses. Published / Draft are single-select
             // quick pills on a hidden `status` axis (neither lit = all).
+            // The Activity tab has two views on one bar: the Activities repository (all
+            // Timeline entries) and the Visit Reports feed. `apply` repaints only the
+            // active view's feed, so the search box keeps focus. The Kind filter belongs
+            // to the repository, Mode/Status to the visits feed — renderMaintenancePage()
+            // flips each filter's `hidden` flag to the current view before fbRender.
             maintenance: {
-                apply: () => renderAvrFeed(),
-                search: 'Search visits — tail, ref, person, task',
-                quick: [
-                    { filter: 'status', value: 'published', label: 'Published' },
-                    { filter: 'status', value: 'draft',     label: 'Draft' },
-                ],
+                apply: () => renderActivityFeedOnly(),
+                search: 'Search — tail, task, part, S/N, ref, person',
                 filters: [
-                    { id: 'type', label: 'Type', options: () => fbTypeOptions(avrTypeFleet()) },
-                    { id: 'mode', label: 'Mode', options: AVR_MODES.map(m => ({ v: m.value, l: m.label })) },
+                    { id: 'type', label: 'Type', options: () => fbTypeOptions(activeFleet()) },
+                    { id: 'kind', label: 'Kind', options: [
+                        { v: 'software', l: 'Software' }, { v: 'media', l: 'Media' },
+                        { v: 'hardware', l: 'Hardware' }, { v: 'commission', l: 'Commissioning' },
+                        { v: 'maintenance', l: 'Maintenance' }, { v: 'modification', l: 'Modification' },
+                        { v: 'operational', l: 'Operational' }, { v: 'activation', l: 'Activation' },
+                    ] },
+                    { id: 'mode', label: 'Mode', hidden: true, options: AVR_MODES.map(m => ({ v: m.value, l: m.label })) },
                     { id: 'status', label: 'Status', hidden: true, options: [
                         { v: 'published', l: 'Published' },
                         { v: 'draft',     l: 'Draft' },
@@ -11689,11 +11738,31 @@
         // repaints only the feed and the box keeps focus.
         let avrExpanded = new Set();   // ids of visits shown expanded
         let avrEditingId = null;       // '__new' while adding, an id while editing
-        let avrShowUnassigned = false;
+        let avrView = 'activities';    // 'activities' (the repository) | 'visits' (AVR feed)
+
+        // Which filters belong to which view — flipped on the shared bar each render.
+        function avrSyncBarFilters() {
+            const bar = FILTER_BARS.maintenance;
+            const acts = avrView === 'activities';
+            bar.filters.forEach(f => {
+                if (f.id === 'kind') f.hidden = !acts;
+                if (f.id === 'mode' || f.id === 'status') f.hidden = acts;
+            });
+        }
+
+        function setAvrView(v) {
+            if (v === avrView) return;
+            avrView = v;
+            // Clear the other view's filter selections so a stale, now-hidden filter can
+            // never quietly narrow the list you are looking at.
+            ['kind', 'mode', 'status'].forEach(id => fbSel('maintenance', id).clear());
+            renderMaintenancePage();
+        }
 
         function renderMaintenancePage() {
+            avrSyncBarFilters();
             fbRender('maintenance');
-            renderAvrFeed();
+            renderActivityFeedOnly();
             renderAvrExtras();
             updateAvrEditUI();
         }
@@ -11704,6 +11773,169 @@
             const addAct = document.getElementById('maintAddActivityBtn');
             if (add) add.style.display = show;
             if (addAct) addAct.style.display = show;
+            const ta = document.getElementById('avrTabActs'), tv = document.getElementById('avrTabVisits');
+            if (ta) ta.classList.toggle('active', avrView === 'activities');
+            if (tv) {
+                tv.classList.toggle('active', avrView === 'visits');
+                const n = avrEntries().filter(v => canEdit() || v.status === 'published').length;
+                tv.textContent = `📋 Visit Reports${n ? ' (' + n + ')' : ''}`;
+            }
+        }
+
+        // The bar's `apply` — repaints ONLY the active view's feed (not the bar), so the
+        // search box keeps focus while typing.
+        function renderActivityFeedOnly() {
+            if (avrView === 'visits') renderAvrFeed();
+            else renderActivityRepo();
+        }
+
+        // ===== Activities repository — every Timeline entry, view + edit + assign =====
+        function renderActivityRepo() {
+            const host = document.getElementById('avrFeed');
+            if (!host) return;
+            const q = (fbQuery['maintenance'] || '').trim().toLowerCase();
+            const rows = timelineRepoEntries().filter(x => {
+                if (!fbMatch('maintenance', 'type', x.type)) return false;
+                if (!fbMatch('maintenance', 'kind', x.kind)) return false;
+                if (q) {
+                    const hay = `${x.tail} ${x.title} ${x.sub} ${x.kind}`.toLowerCase();
+                    if (!q.split(/\s+/).every(w => hay.includes(w))) return false;
+                }
+                return true;
+            });
+
+            if (!rows.length) {
+                host.innerHTML = '<div class="avr-empty">No activities match these filters.</div>';
+                return;
+            }
+
+            // Group by date, newest first.
+            const groups = {};
+            rows.forEach(x => { (groups[x.iso] = groups[x.iso] || []).push(x); });
+            Object.keys(groups).forEach(k => groups[k].sort((a, b) =>
+                a.tail.localeCompare(b.tail) || a.kind.localeCompare(b.kind)));
+            const dateKeys = Object.keys(groups).sort().reverse();
+
+            const dayLabel = iso => {
+                const d = new Date(iso + 'T00:00:00Z');
+                return isNaN(d) ? iso : d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+            };
+
+            host.innerHTML = dateKeys.map(iso => `
+                <div class="repo-day">
+                    <div class="repo-day-head"><span class="repo-day-date">${escAttr(dayLabel(iso))}</span><span class="repo-day-count">${groups[iso].length} ${groups[iso].length === 1 ? 'activity' : 'activities'}</span></div>
+                    <ul class="repo-day-items">${groups[iso].map(renderRepoRow).join('')}</ul>
+                </div>`).join('');
+        }
+
+        function renderRepoRow(x) {
+            const pillStyle = c => `background:${c.bg}; color:${c.fg}; border-color:${c.bd}`;
+            const typeColor = TYPE_PILL_COLORS[x.type] || NEUTRAL_PILL;
+            const typeLabel = TYPE_SHORT_LABEL[x.type] || x.type;
+            const locColor = LOCATION_PILL_COLORS[x.location] || NEUTRAL_PILL;
+            const editor = canEdit();
+            const isAct = !!x.actId;
+
+            // A visit chip when this activity is assigned; the AVR's ref if we can find it.
+            let visitChip = '';
+            if (isAct && x.visitId) {
+                const v = avrLive[x.visitId];
+                visitChip = `<span class="repo-visit-chip" title="In a visit report">📋 ${escAttr(v && v.ref ? v.ref : 'Visit')}</span>`;
+            }
+
+            // Derived (non-activity) rows name their source so it is clear they are
+            // maintained on their own tab, not editable inline.
+            const srcTag = !isAct ? `<span class="repo-src" title="Maintained on its source tab">${escAttr(repoSourceLabel(x))}</span>` : '';
+
+            const actions = editor ? `<span class="repo-actions">
+                ${isAct ? `<button class="avr-act-btn" title="Edit activity" onclick="openEditActivity('${escAttr(x.actId)}')">✏️</button>` : ''}
+                ${isAct ? (x.visitId
+                    ? `<button class="avr-act-btn" title="Remove from visit" onclick="assignActivityToVisit('${escAttr(x.actId)}','')">🔓</button>`
+                    : `<button class="avr-act-btn" title="Add to a visit report" onclick="openAssignMenu(event,'${escAttr(x.actId)}')">📋</button>`) : ''}
+            </span>` : '';
+
+            return `<li class="repo-row kind-${x.kind}">
+                ${x.kind === 'operational' ? `<span class="tl-ops-mark" aria-hidden="true">${x.opsReturn ? '✔' : '⚠'}</span>` : ''}
+                ${x.kind === 'activation' ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>' : ''}
+                ${x.kind === 'modification' ? `<span class="tl-mod-mark" aria-hidden="true">${x.modPhase === 'start' ? '🔧' : '🏁'}</span>` : ''}
+                <span class="tl-reg">${escAttr(x.tail || '—')}</span>
+                ${typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : ''}
+                ${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}
+                <span class="tl-kind tl-kind-${x.kind}">${x.kind === 'modification' ? (x.modPhase === 'start' ? 'MOD START' : 'MOD END') : x.kind}</span>
+                <span class="tl-title">${escAttr(x.title)}</span>
+                ${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}
+                <span class="avr-spacer"></span>
+                ${visitChip}${srcTag}${actions}
+            </li>`;
+        }
+
+        function repoSourceLabel(x) {
+            if (x.kind === 'media') return x.milestone === 'cycle' ? 'Cycle' : 'Media';
+            if (x.kind === 'operational') return 'Ops';
+            if (x.kind === 'modification') return 'Fleet';
+            if (x.kind === 'activation') return 'Fleet';
+            if (x.title && /MODMAN/.test(x.title)) return 'Satcom';
+            if (x.title && /SIM/.test(x.title)) return '4G SIM';
+            if (x.kind === 'software') return 'Software';
+            return 'Derived';
+        }
+
+        // ===== Assign an activity to a visit report =====
+        function closeAssignMenu() {
+            document.querySelectorAll('.avr-assign-menu, .avr-assign-backdrop').forEach(el => el.remove());
+        }
+
+        function openAssignMenu(event, actId) {
+            event.stopPropagation();
+            closeAssignMenu();
+            const act = activitiesLive[actId];
+            if (!act) return;
+            const visits = avrEntries()
+                .filter(v => v.aircraft === act.aircraft)
+                .sort((a, b) => dateSortKey(toISODate(b.dateStart)).localeCompare(dateSortKey(toISODate(a.dateStart))));
+
+            const backdrop = document.createElement('div');
+            backdrop.className = 'avr-assign-backdrop';
+            backdrop.onclick = closeAssignMenu;
+            document.body.appendChild(backdrop);
+
+            const menu = document.createElement('div');
+            menu.className = 'avr-assign-menu';
+            menu.innerHTML = `
+                <div class="avr-assign-title">Add ${escAttr(act.aircraft)} · ${escAttr(act.date || '')} to…</div>
+                ${visits.length ? visits.map(v => `<button class="avr-assign-item" onclick="assignActivityToVisit('${escAttr(actId)}','${escAttr(v.id)}')">
+                    <span class="avr-assign-ref">${escAttr(v.ref || 'Visit')}</span>
+                    <span class="avr-assign-sub">${escAttr(avrDateLabel(v))} · ${escAttr(avrMode(v.mode).label)}</span>
+                </button>`).join('') : '<div class="avr-assign-none">No visit reports for this aircraft yet.</div>'}
+                <button class="avr-assign-item avr-assign-new" onclick="closeAssignMenu(); openAvrEditor('__new', {aircraft:'${escAttr(act.aircraft)}', date:'${escAttr(act.date || '')}', actId:'${escAttr(actId)}'})">➕ New visit with this activity</button>`;
+            document.body.appendChild(menu);
+
+            const r = event.currentTarget.getBoundingClientRect();
+            const w = 260;
+            menu.style.top = (r.bottom + 6) + 'px';
+            menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
+        }
+
+        async function assignActivityToVisit(actId, visitId) {
+            closeAssignMenu();
+            if (!canEdit()) { requireSignIn(); return; }
+            const token = await getIdToken();
+            if (!token) return;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/activities/${actId}/visitId.json?auth=${token}`, {
+                    method: 'PUT', body: JSON.stringify(visitId || null),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                if (activitiesLive[actId]) {
+                    if (visitId) activitiesLive[actId].visitId = visitId;
+                    else delete activitiesLive[actId].visitId;
+                }
+                renderMaintenancePage();
+                setSyncStatus(visitId ? '🟢 Activity added to visit' : '🟢 Activity removed from visit', '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not update — ${e.message}`, '#dc3545');
+            }
         }
 
         // Every visit as a plain object, plus a couple of derived helpers.
@@ -11800,19 +12032,46 @@
             host.innerHTML = list.map(renderAvrCard).join('');
         }
 
+        // The report's members: derived Timeline events for this tail within the visit
+        // window (media, MODMAN/SIM, activation, OTA…) plus every hand-logged activity
+        // explicitly assigned to the visit (by visitId, any date). Derived events join by
+        // date so the ASO retrofit close-out reads complete without linking each one.
+        function avrReportMembers(v) {
+            const startIso = toISODate(v.dateStart);
+            const endIso = toISODate(v.dateEnd || v.dateStart) || startIso;
+            const inWin = i => startIso && i && i >= startIso && (!endIso || i <= endIso);
+            return timelineRepoEntries()
+                .filter(x => x.tail === v.aircraft && (x.actId ? x.visitId === v.id : inWin(x.iso)))
+                .sort((a, b) => a.iso.localeCompare(b.iso) || a.kind.localeCompare(b.kind));
+        }
+
+        // One compact report row — the Timeline vocabulary without the repo's edit/assign
+        // controls, so a published report reads clean.
+        function avrReportRowHTML(x) {
+            const pillStyle = c => `background:${c.bg}; color:${c.fg}; border-color:${c.bd}`;
+            const locColor = LOCATION_PILL_COLORS[x.location] || NEUTRAL_PILL;
+            return `<li class="repo-row kind-${x.kind}">
+                <span class="tl-reg" style="font-size:11px;color:#8a97a3;">${escAttr(x.iso ? x.iso.slice(8) + '/' + x.iso.slice(5, 7) : '')}</span>
+                ${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}
+                <span class="tl-kind tl-kind-${x.kind}">${x.kind === 'modification' ? (x.modPhase === 'start' ? 'MOD START' : 'MOD END') : x.kind}</span>
+                <span class="tl-title">${escAttr(x.title)}</span>
+                ${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}
+            </li>`;
+        }
+
         function renderAvrCard(v) {
             const open = avrExpanded.has(v.id);
             const status = v.status || 'draft';
             const mode = avrMode(v.mode);
-            const acts = avrLinkedActivities(v.id);
+            const members = avrReportMembers(v);
             const people = avrAttendees(v);
             const type = avrTypeOf(v.aircraft);
             const editor = canEdit();
 
-            const kinds = [...new Set(acts.map(a => activityCategory(a.category).label))];
-            const summaryLine = acts.length
-                ? `<span class="avr-taskcount">${acts.length} ${acts.length === 1 ? 'task' : 'tasks'}</span> · ${escAttr(kinds.slice(0, 4).join(' · '))}${kinds.length > 4 ? ' · …' : ''}`
-                : '<span style="color:#b7c2cc;">No activities linked yet</span>';
+            const kinds = [...new Set(members.map(m => m.title))];
+            const summaryLine = members.length
+                ? `<span class="avr-taskcount">${members.length} ${members.length === 1 ? 'entry' : 'entries'}</span> · ${escAttr(kinds.slice(0, 3).join(' · '))}${kinds.length > 3 ? ' · …' : ''}`
+                : '<span style="color:#b7c2cc;">No activities in this window yet</span>';
 
             const head = `<div class="avr-head" onclick="avrToggle('${escAttr(v.id)}')">
                 <span class="avr-caret">▶</span>
@@ -11845,10 +12104,10 @@
                 }).join('')}</div>` : ''}
                 ${meta ? `<div class="avr-meta">${meta}</div>` : ''}
                 ${v.summary ? `<div class="avr-section-label">Summary</div><div class="avr-note">${escAttr(v.summary)}</div>` : ''}
-                <div class="avr-section-label">Work carried out — ${acts.length} ${acts.length === 1 ? 'activity' : 'activities'}</div>
-                <ul class="maint-history">${
-                    acts.length ? acts.map(renderActivityCard).join('')
-                        : '<li class="maint-empty">No activities linked. ' + (editor ? 'Edit the visit to tick the Timeline activities it covers.' : '') + '</li>'
+                <div class="avr-section-label">Work carried out — ${members.length} ${members.length === 1 ? 'entry' : 'entries'}</div>
+                <ul class="repo-day-items avr-report-list">${
+                    members.length ? members.map(avrReportRowHTML).join('')
+                        : '<li class="maint-empty">Nothing recorded in this window yet. ' + (editor ? 'Set the visit dates, or assign activities to it from the Activities view.' : '') + '</li>'
                 }</ul>
                 <div class="avr-body-actions">
                     <button class="qf-btn" onclick="printAvr('${escAttr(v.id)}')">🖨️ Print / PDF</button>
@@ -11870,26 +12129,10 @@
         function renderAvrExtras() {
             const host = document.getElementById('avrExtras');
             if (!host) return;
-            if (!canEdit()) { host.innerHTML = ''; return; }
-
-            // Activities on the Timeline not yet part of any visit — the pool to club.
-            const linkedIds = new Set();
-            avrEntries().forEach(v => avrLinkedActivities(v.id).forEach(a => linkedIds.add(a.id)));
-            const unassigned = activityEntries()
-                .filter(a => !a.visitId && !isBaselineRecord(a))
-                .sort((x, y) => dateSortKey(toISODate(y.date)).localeCompare(dateSortKey(toISODate(x.date))) || y.id.localeCompare(x.id));
-
-            const unassignedSection = `
-                <div class="avr-section-label" style="margin-top:22px;">
-                    Unassigned activities
-                    <button class="maint-fold" style="margin-left:8px;" onclick="avrShowUnassigned=!avrShowUnassigned; renderAvrExtras();">${
-                        avrShowUnassigned ? 'Hide' : `Show ${unassigned.length}`
-                    }</button>
-                </div>
-                ${avrShowUnassigned ? (unassigned.length
-                    ? `<div style="font-size:12px;color:#8a97a3;margin-bottom:6px;">These Timeline activities are not in any visit report yet. Add a visit and tick them in, or open the aircraft's visit.</div>
-                       <ul class="maint-history">${unassigned.map(renderActivityCard).join('')}</ul>`
-                    : '<div class="avr-linkempty">Every activity is already part of a visit report.</div>') : ''}`;
+            // The Operational-History editor is a supporting tool shown under the Visit
+            // Reports view; the Activities repository already lists every ops period as a
+            // row, so repeating the editor there would just be noise.
+            if (!canEdit() || avrView !== 'visits') { host.innerHTML = ''; return; }
 
             // Operational History — out-of-service periods, fleet-wide, editable. Same
             // ops / opsLog single source as the Fleet column and the Timeline.
@@ -11937,7 +12180,7 @@
                     </div>`).join('')
                     : '<div class="avr-linkempty">No out-of-service periods recorded — the fleet has stayed in service.</div>'}`;
 
-            host.innerHTML = unassignedSection + opsSection;
+            host.innerHTML = opsSection;
         }
 
         function avrAddOpsPeriod() {
@@ -11962,7 +12205,7 @@
             if (box) box.insertAdjacentHTML('beforeend', avrAttRowHTML({}));
         }
 
-        function openAvrEditor(id) {
+        function openAvrEditor(id, prefill) {
             if (!canEdit()) { requireSignIn(); return; }
             avrEditingId = id;
             const isNew = id === '__new';
@@ -12041,8 +12284,22 @@
             document.getElementById('avrEditError').style.display = 'none';
             const overlay = document.getElementById('avrOverlay');
             overlay.style.display = 'flex';
+
+            // Prefill from "New visit with this activity": seed aircraft + dates from the
+            // activity so its row is auto-suggested (and force-ticked) in the link list.
+            if (isNew && prefill) {
+                if (prefill.aircraft) document.getElementById('avrAircraft').value = prefill.aircraft;
+                if (prefill.date) {
+                    document.getElementById('avrDateStart').value = toDMY(prefill.date) || '';
+                    document.getElementById('avrDateEnd').value = toDMY(prefill.date) || '';
+                }
+                avrPrefillActId = prefill.actId || '';
+            } else {
+                avrPrefillActId = '';
+            }
             avrRefreshLinkList();
         }
+        let avrPrefillActId = '';
 
         function closeAvrEditor() {
             document.getElementById('avrOverlay').style.display = 'none';
@@ -12086,7 +12343,7 @@
                 const rebuilt = host.dataset.built === '1';
                 // On first build, auto-tick in-window + already-linked. On a rebuild, keep
                 // whatever the user had ticked, and still add newly in-window ones.
-                const checked = rebuilt ? (prevChecked.has(a.id) || inWindow) : (linkedHere || inWindow);
+                const checked = a.id === avrPrefillActId || (rebuilt ? (prevChecked.has(a.id) || inWindow) : (linkedHere || inWindow));
                 const cat = activityCategory(a.category);
                 return `<label class="avr-linkitem">
                     <input type="checkbox" data-aid="${escAttr(a.id)}" ${checked ? 'checked' : ''}>
@@ -12267,26 +12524,35 @@
         function printAvr(id) {
             const v = avrLive[id];
             if (!v) return;
-            const acts = avrLinkedActivities(id);
+            const members = avrReportMembers(v);
             const people = avrAttendees(v);
             const type = avrTypeOf(v.aircraft);
             const rowsPeople = people.length
                 ? people.map(p => `${escAttr(p.name || '—')}${p.company ? ' (' + escAttr(p.company) + ')' : ''}${p.role ? ' — ' + escAttr(p.role) : ''}`).join('<br>')
                 : '—';
             const hangar = v.hangar === 'inside' ? 'Inside hangar' : v.hangar === 'outside' ? 'Outside / apron' : '—';
-            const actRows = acts.length ? acts.map(a => {
-                const d = a.details || {};
-                const tech = [
-                    d.softwareName && `SW: ${d.softwareName}`, d.version && `v${d.version}`,
-                    d.partNumber && `P/N ${d.partNumber}`, d.oldPart && `Old S/N ${d.oldPart}`,
-                    d.newPart && `New S/N ${d.newPart}`, d.modemType, d.commissioningResult,
-                ].filter(Boolean).map(escAttr).join(' · ');
+            const kindLabel = k => ({ software: 'Software', media: 'Media', hardware: 'Hardware', commission: 'Commissioning', maintenance: 'Maintenance', modification: 'Modification', operational: 'Operational', activation: 'Activation' }[k] || k);
+            const actRows = members.length ? members.map(x => {
+                let details = `<b>${escAttr(x.title || '')}</b>`;
+                if (x.actId && activitiesLive[x.actId]) {
+                    const a = activitiesLive[x.actId], d = a.details || {};
+                    const tech = [
+                        d.softwareName && `SW: ${d.softwareName}`, d.version && `v${d.version}`,
+                        d.partNumber && `P/N ${d.partNumber}`, d.oldPart && `Old S/N ${d.oldPart}`,
+                        d.newPart && `New S/N ${d.newPart}`, d.modemType, d.commissioningResult,
+                    ].filter(Boolean).map(escAttr).join(' · ');
+                    if (a.task) details += '<br>' + escAttr(a.task);
+                    if (a.outcome) details += '<br><i>Outcome: ' + escAttr(a.outcome) + '</i>';
+                    if (tech) details += '<br><span style="color:#555;">' + tech + '</span>';
+                } else if (x.sub) {
+                    details += '<br><span style="color:#555;">' + escAttr(x.sub) + '</span>';
+                }
                 return `<tr>
-                    <td>${escAttr(a.date || '')}</td>
-                    <td>${escAttr(activityCategory(a.category).label)}</td>
-                    <td><b>${escAttr(a.title || '')}</b>${a.task ? '<br>' + escAttr(a.task) : ''}${a.outcome ? '<br><i>Outcome: ' + escAttr(a.outcome) + '</i>' : ''}${tech ? '<br><span style="color:#555;">' + tech + '</span>' : ''}</td>
+                    <td>${escAttr(fmtDate(x.iso) || '')}</td>
+                    <td>${escAttr(kindLabel(x.kind))}</td>
+                    <td>${details}</td>
                 </tr>`;
-            }).join('') : '<tr><td colspan="3">No activities linked.</td></tr>';
+            }).join('') : '<tr><td colspan="3">No activities in this window.</td></tr>';
 
             document.getElementById('avrPrint').innerHTML = `
                 <div class="avr-print-sheet">
@@ -16572,13 +16838,26 @@
                 const cat = activityCategory(act.category);
                 const air = byTail[act.aircraft] || {};
                 const title = act.title || cat.label;
+                // actId marks this as an editable /activities record (vs a derived event)
+                // and carries the visit link, which the Activity-tab repository reads to
+                // draw its Edit and Assign-to-visit controls. The Overview Timeline ignores
+                // these extra fields.
                 out.push({ iso, kind: cat.kind, tail: act.aircraft, type: air.type || '',
                            location: act.location || aircraftLocationOf(air),
-                           title, sub: dedupeSubtitle(title, activitySubtitle(act)) });
+                           title, sub: dedupeSubtitle(title, activitySubtitle(act)),
+                           actId: act.id, category: act.category, visitId: act.visitId || '' });
             });
 
             return out;
         }
+
+        // The whole Timeline set, unfiltered by the Active-only gate — the Activity tab's
+        // repository shows the same rows the Overview Timeline does. (timelineActivities
+        // already emits ops / modification / fitment rows for the whole roster; the only
+        // Active-only gate is on the software/activation/media and the /activities passes,
+        // which is the intended Overview scope. The repository reuses it as-is so the two
+        // never diverge.)
+        function timelineRepoEntries() { return timelineActivities(); }
 
         // How many day cards the list shows before the rest is folded away. One week
         // of activity: enough to be the day-to-day view without the Overview running
