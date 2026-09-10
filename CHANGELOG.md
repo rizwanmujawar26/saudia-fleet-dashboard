@@ -13,6 +13,49 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.123.0 — Activity/Reports overhaul: inline ops editing, report types, attendee mode, report redesign
+User-directed (2026-09-10), three items in one deploy. **Rules deployed before the page**
+— two new `/avr` fields (`reportType`, attendee `mode`). No new node.
+
+- **Operational History panel removed** from the Activity tab (`renderAvrExtras` now just
+  clears its host). Every out-of-service period already shows as a row in the Activities
+  repository, and those rows now carry an inline ✏️ that opens the same `opsEdit` modal.
+  The derived operational Timeline rows gained an **`opsKey`** (`'__open'` or the `opsLog`
+  key — `timelineActivities` switched `Object.values`→`Object.entries`); `renderRepoRow`
+  reads it to draw the pencil (`openOpsPeriod(tail, opsKey)`). New periods still start from
+  the Fleet page's Operational State control.
+- **Reports are typed.** New `/avr/{id}/reportType` — rules validate **any lowercase slug**
+  (`/^[a-z_]{2,30}$/`) so a new kind is one line in the `REPORT_TYPES` const, no rules
+  change. Set: visit, remote_support, flight_test, test_flight, other; default `visit`.
+  Shown as a header badge + in-report banner, chosen in the editor. The "Visit Reports"
+  tab/toggle is renamed **Reports** (`avrView` values `activities|visits` unchanged).
+- **Attendee mode.** New per-attendee `mode` (`present|remote`) — `present` is the default
+  and is NOT stored (only a non-default `remote` is written). Distinguishes who was on the
+  aircraft vs supporting remotely.
+- **Report presentation redesigned** (`renderAvrCard`): type banner, **summary moved to the
+  top** (was buried under the dossier), People with on-aircraft/remote badges, collapsible
+  Aircraft dossier — now with a **Flightradar24 link** beside the tail (`fr24Url`/`FR24_ICON`)
+  and an **IFE row** (`ifeSystemOf` → `IFE_BY_TYPE`; A321XLR = Panasonic Astrova, derived by
+  type, not stored) — and **Work Carried Out** as a collapsible date/category/detail table.
+  The print sheet mirrors it (title = report type, attendee modes) and **defers
+  `window.print()` past two rAFs + a 60ms tick** so the just-injected `#avrPrint` sheet has
+  painted (fix for blank-page prints).
+- **Data:** ASBA AVR reclassified `remote_support`; its three NSG attendees marked `remote`,
+  the Airbus rep left `present`.
+
+### v2.122.0 — IFE server dual serial (Kontron + Eclipse) on the Serials tab
+User request (2026-09-10). The IFE server is a dual-identity box like the MODMAN: one
+physical unit carrying a **Kontron S/N** (the primary `/units serial`) AND an **Eclipse
+S/N**. The second serial rides in the unit's existing **`altSerial`** field — already in
+the rules, so **no rules change and no new node**. The IFE-server LRUs gained
+`serialLabel`/`altSerialLabel`, which drives a paired display on the Serials tab (Kontron
+on top, Eclipse beneath), editable in Edit mode via `saveUnitAltSerial` (a box property, so
+it PATCHes `/units/{id}`, not a fitment). Serial search + CSV include the alt serial. Any
+future two-serial box inherits this by config alone. Data: ASO 488493001/73 (removed) +
+482607007/36 (on wing), ASD 476600004/60 (first fit) now carry their Eclipse S/N. ⚠️ AQB's
+IFE server has `serial:69` (Eclipse-style) in the Kontron slot, no Eclipse — flagged to the
+user, left untouched.
+
 ### v2.117.0–v2.121.0 — Activity tab reborn as the activity repository + Aircraft Visit Reports (AVR)
 User-directed redesign (2026-09-10), shipped as deployed commits; `git log` has the full
 reasoning. All bump `APP_BUILD` as well as `APP_VERSION`. **New node `/avr` and a new

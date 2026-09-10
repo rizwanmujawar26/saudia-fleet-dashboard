@@ -6,7 +6,22 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.117.0–v2.121.0 (2026-09-10): the Activity tab was reborn.** It is no longer
+**Latest — v2.122.0–v2.123.0 (2026-09-10).** Two follow-ons in the same day. **v2.122**:
+the **IFE server** is now a dual-identity box (Kontron S/N = `/units serial`, Eclipse S/N =
+`altSerial`), shown paired on the Serials tab — no new node, `altSerial` was already in the
+rules. **v2.123**: the Activity tab's **"Visit Reports" view is renamed "Reports"** and made
+extensible — reports carry a `reportType` (visit / remote_support / flight_test / test_flight
+/ other; the rule allows any slug so a new kind is code-only) and attendees a `mode`
+(present/remote); the **Operational History panel was removed** (each ops period now edits
+inline from its Activities-repository row via a new `opsKey`); and the **opened report was
+redesigned** — type banner, summary at the top, on-aircraft/remote people badges, a
+collapsible dossier with a **Flightradar24 link** and a derived **IFE row** (A321XLR =
+Panasonic Astrova via `IFE_BY_TYPE`), Work Carried Out as a table, and a hardened print
+sheet. Read CHANGELOG v2.122–v2.123 and the `/avr`, `/units` data-model entries before
+touching. ⚠️ IFE (entertainment, derived by type) is distinct from IFC (connectivity, the
+`/fleet system` + `/fleetSpecs` fields below).
+
+**v2.117.0–v2.121.0 (2026-09-10): the Activity tab was reborn.** It is no longer
 the aircraft-first maintenance two-pane; it is the **activity repository + Aircraft Visit
 Reports (AVR)**, and it is now **public** (published reports readable by the airline). New
 node **`/avr`**, new field **`/activities/{id}/visitId`**, new `/fleetSpecs` fields
@@ -451,24 +466,31 @@ entered twice.
 
 ### `/avr/{id}` — Aircraft Visit Reports (v2.117)
 
-The grouping layer above `/activities`, read by the Activity tab's Visit Reports view.
-Holds only **visit-level** facts; the report's work list is DERIVED (see *§4 Activity*).
-On all four node lists (rules + backup/restore/verify).
+The grouping layer above `/activities`, read by the Activity tab's **Reports** view
+(renamed from "Visit Reports" in v2.123). Holds only **visit-level** facts; the report's
+work list is DERIVED (see *§4 Activity*). On all four node lists (rules + backup/restore/verify).
 
 | field | notes |
 |---|---|
 | `aircraft` | bare tail |
 | `ref` | `AVR-<TAIL>-<YEAR>-<nnn>`, auto (`avrNextRef` = max suffix + 1 for that tail+year) |
 | `dateStart` / `dateEnd` | `DD-Mon-YYYY`; equal = single day. The report auto-includes the tail's derived Timeline events **within this window** |
-| `mode` | `on_site` \| `remote` \| `ota` \| `monitoring` — how WE engaged (the coloured chip). WHO performed the work is carried by each attendee's Company |
+| `reportType` (v2.123) | what KIND of report — `visit` \| `remote_support` \| `flight_test` \| `test_flight` \| `other`; default `visit`. **The rule validates any lowercase slug** (`/^[a-z_]{2,30}$/`), so a new kind is one line in the `REPORT_TYPES` const and needs **no rules change**. Shown as a header badge + banner |
+| `mode` | `on_site` \| `remote` \| `ota` \| `monitoring` — how WE engaged (the coloured chip). Distinct from `reportType` and from each attendee's `mode` |
 | `location`, `bay`, `hangar` | station (free text), optional bay/stand, `inside`\|`outside`\|`na` |
-| `summary` | free text; "✨ Generate from activities" builds a grouped bullet list |
+| `summary` | free text; "✨ Generate from activities" builds a grouped bullet list. Shown **at the top** of an opened report (v2.123) |
 | `status` | `draft` \| `published` — viewers see published only; the tab is public |
-| `attendees` | keyed sub-object `{ name, company, role }` per person, all optional |
+| `attendees` | keyed sub-object `{ name, company, role, mode }` per person, all optional. **`mode`** (v2.123) = `present` \| `remote` — physically on the aircraft vs supporting remotely; `present` is the default and is **NOT stored** (only a non-default `remote` is written). Rendered as an on-aircraft/remote badge |
 | `createdAt` / `updatedAt` | ISO stamps |
 
 Polled with the other low-traffic nodes, so `saveAvr` **mirrors `avrLive` locally**.
-Adding a field needs a rules edit first (`$other: false`).
+Adding a field needs a rules edit first (`$other: false`) — except a new `reportType`
+value, which the slug rule already allows.
+
+⚠️ **IFE is derived by type, not stored.** The dossier's IFE row comes from `ifeSystemOf`
+→ `IFE_BY_TYPE` (A321XLR = Panasonic Astrova as of v2.123); add a type there as confirmed.
+An unmapped type omits the row. Distinct from the stored **IFC** (`/fleet system` + the
+`/fleetSpecs ifcPrevious`/`ifcNote`).
 
 ### `/units/{unitId}` — the unit register: one physical box, and its life
 
@@ -479,8 +501,9 @@ individual box.
 | field | notes |
 |---|---|
 | `lruId` | catalogue id — which equipment this is |
-| `serial` | the identity. Unique **within** an `lruId`; two different LRUs may share a number |
-| `partNumber`, `altPartNumber`, `altSerial`, `revision`, `modDots`, `vendor`, `notes` | per-unit attributes. **Declared in the rules and deliberately unused** — they are where mod dots, revisions and alternates go when there is a UI for them |
+| `serial` | the identity. Unique **within** an `lruId`; two different LRUs may share a number. For a **dual-identity box** it is the PRIMARY serial (the IFE server's **Kontron S/N**) |
+| `altSerial` (v2.122) | the SECOND serial of a dual-identity box (the IFE server's **Eclipse S/N**). Surfaced only for LRUs whose catalogue entry carries `altSerialLabel` (currently the IFE server); shown/edited on the Serials tab beneath the primary, saved by `saveUnitAltSerial` (PATCH `/units/{id}`, mirrored). Any future two-serial box gets it by adding `serialLabel`/`altSerialLabel` to its LRU — no code change |
+| `partNumber`, `altPartNumber`, `revision`, `modDots`, `vendor`, `notes` | per-unit attributes. **Declared in the rules; `partNumber`/`altPartNumber` still have no UI** — they are where the two IFE-server part numbers and mod dots/revisions go when there is a UI for them |
 | `addedAt` | ISO stamp |
 | `fitments/{id}` | `aircraft`, `position`, `state`, `condition`, `fittedDate`, `removedDate`, `removalReason`, `shopStatus`, `shopRef`, `shopFinding`, `activityId`, **`roaming`**, `notes`, `loggedAt` |
 
@@ -3403,7 +3426,13 @@ live.
 - **Whether the Kontron serial should be the unit's primary serial.** MODMAN writes
   Kontron to `/units.serial` and Eclipse to `altSerial`, so AQB now reads `484569029`
   on the Serials and Hardware tabs where it used to read `44`. A one-line swap if the
-  short Eclipse number should be primary.
+  short Eclipse number should be primary. **The IFE server follows the same convention**
+  (v2.122): Kontron = `serial`, Eclipse = `altSerial`.
+- **AQB's IFE server serial looks mis-slotted.** Its `/units serial` is `69` — an
+  Eclipse-style number — with no `altSerial`, where ASO/ASD carry a 9-digit Kontron S/N
+  as `serial` and the short Eclipse number as `altSerial`. Flagged to the user
+  (2026-09-10), left untouched pending their call (move `69` to `altSerial`, or confirm
+  it is genuinely the Kontron number).
 - **Whether `/aircraft/{tail}/media` should be cleared.** Superseded by `/mediaLoads`
   and unread, left in place rather than deleted.
 - **Whether the cycle-closed Timeline figure should freeze.** It currently rises when a
