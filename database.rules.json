@@ -150,6 +150,7 @@
         "outcome":  { ".validate": "newData.isString() && newData.val().length <= 1000" },
         "notes":    { ".validate": "newData.isString() && newData.val().length <= 1000" },
         "loggedAt": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/)" },
+        "visitId":  { ".validate": "newData.isString() && newData.val().length <= 40" },
 
         "details": {
           "partReplaced":        { ".validate": "newData.isString() && newData.val().length <= 120" },
@@ -304,6 +305,38 @@
       },
 
       "$other": { ".write": false }
+    },
+
+    "avr": {
+      ".read": true,
+
+      "$id": {
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
+
+        "aircraft":  { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "ref":       { ".validate": "newData.isString() && newData.val().matches(/^AVR-[A-Z0-9]{2,8}-[0-9]{4}-[0-9]{3,4}$/)" },
+        "dateStart": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
+        "dateEnd":   { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
+        "mode":      { ".validate": "newData.isString() && newData.val().matches(/^(on_site|remote|ota|monitoring)$/)" },
+        "location":  { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "bay":       { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "hangar":    { ".validate": "newData.isString() && newData.val().matches(/^(inside|outside|na)$/)" },
+        "summary":   { ".validate": "newData.isString() && newData.val().length <= 2000" },
+        "status":    { ".validate": "newData.isString() && newData.val().matches(/^(draft|published)$/)" },
+        "createdAt": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/)" },
+        "updatedAt": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/)" },
+
+        "attendees": {
+          "$person": {
+            "name":    { ".validate": "newData.isString() && newData.val().length <= 80" },
+            "company": { ".validate": "newData.isString() && newData.val().length <= 80" },
+            "role":    { ".validate": "newData.isString() && newData.val().length <= 60" },
+            "$other":  { ".validate": false }
+          }
+        },
+
+        "$other":    { ".validate": false }
+      }
     },
 
     "editors": {

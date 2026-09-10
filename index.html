@@ -3931,6 +3931,101 @@
         .ac-edit-btn-primary:disabled { opacity: .6; cursor: default; }
         @media (max-width: 560px) { .ac-edit-grid { grid-template-columns: 1fr; } }
 
+        /* ===== Aircraft Visit Reports (AVR) feed ===== */
+        .avr-feed { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+        .avr-empty { padding: 40px 20px; text-align: center; color: #8a97a3; font-size: 14px;
+            background: #fbfcfd; border: 1px dashed #d7dee5; border-radius: 12px; }
+        .avr-card { border: 1px solid #e3e8ee; border-radius: 12px; background: #fff;
+            box-shadow: 0 1px 2px rgba(20,40,60,.04); overflow: hidden; }
+        .avr-card.is-draft { border-style: dashed; background: #fffdf7; }
+        .avr-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            padding: 12px 14px; cursor: pointer; }
+        .avr-head:hover { background: #f8fafc; }
+        .avr-caret { color: #9aa7b2; font-size: 12px; transition: transform .15s; margin-left: -2px; }
+        .avr-card.is-open .avr-caret { transform: rotate(90deg); }
+        .avr-reg { font-weight: 800; font-size: 15px; color: #14202b; letter-spacing: .3px; }
+        .avr-ref { font-size: 11px; color: #8a97a3; font-weight: 700; letter-spacing: .4px; }
+        .avr-dates { font-size: 12.5px; color: #43535f; font-weight: 600; }
+        .avr-summary-line { flex: 1 1 220px; min-width: 0; color: #5a6b78; font-size: 12.5px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .avr-taskcount { color: #0a5c34; font-weight: 700; }
+        .avr-spacer { flex: 1 1 auto; }
+
+        /* Mode chip — how WE engaged */
+        .avr-mode { font-size: 10.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
+            padding: 2px 8px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; }
+        .avr-mode-onsite     { background: #e7f4ec; color: #146c3a; border-color: #bfe3cd; }
+        .avr-mode-remote     { background: #e8eefc; color: #2350b8; border-color: #c6d6f6; }
+        .avr-mode-ota        { background: #f3e9fb; color: #7a34b0; border-color: #e0c9f2; }
+        .avr-mode-monitoring { background: #eef1f4; color: #55636e; border-color: #d8dfe5; }
+        .avr-status { font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
+            padding: 2px 7px; border-radius: 5px; }
+        .avr-status-draft     { background: #fff3cd; color: #8a6d00; }
+        .avr-status-published { background: #e7f4ec; color: #146c3a; }
+        .avr-person { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+            background: #eef2f6; color: #3d4b57; white-space: nowrap; }
+        .avr-person .avr-person-co { color: #8493a0; font-weight: 600; }
+        .avr-act-btn { border: none; background: transparent; cursor: pointer; font-size: 14px;
+            padding: 2px 4px; border-radius: 6px; color: #6b7883; }
+        .avr-act-btn:hover { background: #eef2f6; }
+
+        .avr-body { padding: 4px 16px 16px; border-top: 1px solid #eef2f6; }
+        .avr-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 12px 0; font-size: 12.5px; }
+        .avr-meta-cell { min-width: 120px; }
+        .avr-meta-key { font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .4px; color: #9aa7b2; margin-bottom: 1px; }
+        .avr-meta-val { color: #26333d; font-weight: 600; }
+        .avr-people { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+        .avr-people .avr-person { font-size: 12px; }
+        .avr-note { background: #f8fafc; border: 1px solid #eef2f6; border-radius: 8px;
+            padding: 8px 11px; font-size: 13px; color: #37454f; line-height: 1.5; margin: 8px 0; white-space: pre-wrap; }
+        .avr-section-label { font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
+            color: #7c8894; margin: 14px 0 6px; }
+        .avr-body .maint-history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+        .avr-body-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+        /* Attendee editor rows in the modal */
+        .avr-att-row { display: grid; grid-template-columns: 1fr 1fr 0.9fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .avr-att-row input { min-width: 0; }
+        .avr-att-del { border: none; background: #f4e6e6; color: #b23; border-radius: 6px; cursor: pointer;
+            font-size: 13px; width: 30px; height: 30px; }
+        .avr-att-add { border: 1px dashed #bcd; background: #f5f9ff; color: #2350b8; border-radius: 8px;
+            cursor: pointer; padding: 6px 12px; font-size: 12.5px; font-weight: 700; }
+        @media (max-width: 560px) { .avr-att-row { grid-template-columns: 1fr 1fr; } }
+
+        /* Activity-link tick list */
+        .avr-linklist { border: 1px solid #e3e8ee; border-radius: 8px; max-height: 180px; overflow-y: auto; }
+        .avr-linkitem { display: flex; gap: 8px; align-items: flex-start; padding: 7px 10px;
+            border-bottom: 1px solid #f0f3f6; font-size: 12.5px; cursor: pointer; }
+        .avr-linkitem:last-child { border-bottom: none; }
+        .avr-linkitem:hover { background: #f8fafc; }
+        .avr-linkitem input { margin-top: 2px; }
+        .avr-linkitem .li-date { font-weight: 700; color: #43535f; }
+        .avr-linkitem .li-cat { color: #8a97a3; }
+        .avr-linkempty { padding: 10px; color: #9aa7b2; font-size: 12px; text-align: center; }
+
+        /* ===== AVR print sheet ===== */
+        #avrPrint { display: none; }
+        @media print {
+            body.printing-avr { background: #fff !important; }
+            body.printing-avr > *:not(#avrPrint) { display: none !important; }
+            body.printing-avr #avrPrint { display: block !important; }
+            .avr-print-sheet { font-family: Arial, Helvetica, sans-serif; color: #111; padding: 8px 4px; max-width: 780px; margin: 0 auto; }
+            .avr-print-head { border-bottom: 3px solid #0a5c34; padding-bottom: 10px; margin-bottom: 14px; }
+            .avr-print-title { font-size: 20px; font-weight: 800; color: #0a5c34; margin: 0; }
+            .avr-print-sub { font-size: 12px; color: #444; margin: 3px 0 0; }
+            .avr-print-ref { float: right; font-size: 12px; font-weight: 700; color: #0a5c34; }
+            .avr-print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; margin-bottom: 14px; font-size: 12.5px; }
+            .avr-print-grid .k { font-weight: 700; color: #555; }
+            .avr-print-sec { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+                color: #0a5c34; border-bottom: 1px solid #cdd; padding-bottom: 3px; margin: 14px 0 8px; }
+            .avr-print-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            .avr-print-table th, .avr-print-table td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
+            .avr-print-table th { background: #eef4f0; }
+            .avr-print-note { font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; }
+            .avr-print-foot { margin-top: 20px; padding-top: 8px; border-top: 1px solid #ccc; font-size: 10.5px; color: #777; }
+        }
+
         /* Overdue but still inside the 24h grace window */
         .sched-overdue-row {
             background: #fffaf0;
@@ -5120,7 +5215,7 @@
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
                 <button class="tab-button" onclick="switchTab('sim')">📶 4G SIM</button>
                 <button class="tab-button" onclick="switchTab('satcom')">📡 Satcom</button>
-                <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('maintenance')">🛠️ Activity</button>
+                <button class="tab-button" onclick="switchTab('maintenance')">🛠️ Activity</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('hardware')">🔧 Hardware</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('serials')">🏷️ Serials</button>
                 <!-- The way back in for a signed-out viewer. It sits where the hidden
@@ -5270,31 +5365,25 @@
                  card counts against, so the tab and the card cannot disagree.
                  Per-aircraft activities live at /activities and are the single source
                  for the Maintenance and Hardware entries on the Timeline. -->
+            <!-- Activity tab — Aircraft Visit Reports (AVR).
+                 A feed of visit cards, newest first, each grouping the activities of one
+                 engagement (one aircraft, a date range) that already live on the Timeline.
+                 Public read: viewers see PUBLISHED reports read-only; editors see drafts,
+                 the Add controls, the unassigned-activity clubber and Operational History.
+                 The AVR contents are DERIVED from /activities by matching visitId — no
+                 duplicate records, so an edit here and the Timeline never disagree. -->
             <div id="maintenance" class="tab-content">
-                <div class="media-widget-section">
-                    <span class="filter-group-label">Fleet Maintenance</span>
-                    <div class="media-widget-strip" id="maintenanceWidgets"></div>
-                </div>
-
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="maintenance"></div>
                     <div class="fb-actions">
-                        <button id="maintAddActivityBtn" class="qf-btn" style="display:none;" onclick="openAddActivity()">➕ Add New Activity</button>
-                        <button id="maintEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleMaintEdit()">🔒 Edit</button>
+                        <button id="avrAddBtn" class="qf-btn" style="display:none;" onclick="openAvrEditor('__new')">➕ Add Visit</button>
+                        <button id="maintAddActivityBtn" class="qf-btn" style="display:none;" onclick="openAddActivity()">➕ Add Activity</button>
                         <button id="maintResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetMaintenancePage()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
-                <div class="maint-split">
-                    <div class="maint-list-panel">
-                        <div class="maint-list-head">
-                            <span>Aircraft</span>
-                            <span id="maintListCount"></span>
-                        </div>
-                        <ul class="maint-list" id="maintList"></ul>
-                    </div>
-                    <div class="maint-detail-panel" id="maintDetailPanel"></div>
-                </div>
+                <div id="avrFeed" class="avr-feed"></div>
+                <div id="avrExtras"></div>
             </div>
 
             <!-- Hardware Tab -->
@@ -5607,6 +5696,30 @@
             </div>
         </footer>
     </div>
+
+    <!-- Add / Edit Visit (AVR). Reuses the .ac-edit-* modal shell; the body is built
+         by openAvrEditor() so the sections can change with the chosen mode. -->
+    <div id="avrOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1001; align-items:center; justify-content:center;">
+        <div class="ac-edit-panel">
+            <div class="ac-edit-head">
+                <div>
+                    <h3 style="margin:0; color:#0a5c34; font-size:17px;" id="avrEditTitle">Add Visit</h3>
+                    <p id="avrEditSub" class="ac-edit-sub"></p>
+                </div>
+                <button id="avrEditClose" class="ac-edit-x" title="Close" aria-label="Close" onclick="closeAvrEditor()">✕</button>
+            </div>
+            <div id="avrEditBody" class="ac-edit-body"></div>
+            <div id="avrEditError" class="ac-edit-error" style="display:none;"></div>
+            <div class="ac-edit-foot">
+                <button class="ac-edit-btn-secondary" onclick="closeAvrEditor()">Cancel</button>
+                <button id="avrEditSave" class="ac-edit-btn-primary" onclick="saveAvr()">Save visit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Off-screen container the browser prints as the AVR. printAvr() fills it and adds
+         body.printing-avr; the print stylesheet then shows only this. -->
+    <div id="avrPrint" aria-hidden="true"></div>
 
     <div id="addActOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
         <div class="act-modal">
@@ -6191,6 +6304,31 @@
         // Timeline collection to keep in step.
         let activitiesLive = {};
 
+        // ===== Aircraft Visit Reports (AVR) =====
+        // /avr/{id} groups the activities of one engagement (one aircraft, a date range)
+        // into a report Saudia Engineering can read and download. Activities stay the
+        // single source of work done; an AVR carries only the visit-level facts (who
+        // visited, mode, location, bay/hangar, summary) and its contents are DERIVED by
+        // matching activities whose `visitId` points at it. Polled with the other
+        // low-traffic nodes, so every save is mirrored into avrLive locally.
+        let avrLive = {};
+
+        // How WE engaged on the visit — the coloured chip. Distinct from WHO performed
+        // the work, which is carried by each attendee's editable Company field.
+        const AVR_MODES = [
+            { value: 'on_site',    label: 'On-site',    css: 'onsite' },
+            { value: 'remote',     label: 'Remote',     css: 'remote' },
+            { value: 'ota',        label: 'OTA',        css: 'ota' },
+            { value: 'monitoring', label: 'Monitoring', css: 'monitoring' },
+        ];
+        const AVR_HANGAR = [
+            { value: '',        label: '—' },
+            { value: 'inside',  label: 'Inside hangar' },
+            { value: 'outside', label: 'Outside / apron' },
+            { value: 'na',      label: 'N/A' },
+        ];
+        function avrMode(v) { return AVR_MODES.find(m => m.value === v) || AVR_MODES[0]; }
+
         // category -> label, plus the Timeline kind it maps to. Hardware R&R shows as
         // Hardware, a software update as Software, and everything else as Maintenance.
         const ACTIVITY_CATEGORIES = [
@@ -6667,8 +6805,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.116.0';
-        const APP_BUILD    = '2026.09.08.12';
+        const APP_VERSION  = '2.117.0';
+        const APP_BUILD    = '2026.09.10.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -6889,15 +7027,16 @@
             // to LOW_TRAFFIC_POLL_MS late, and since the Media widgets are built from
             // it, every monthly card was missing for the first 25 seconds of each page
             // load — the strip looked broken.
-            Promise.all(['hardware', 'units', 'activities', 'mediaLoads', 'modmans', 'fleetSpecs'].map(n =>
+            Promise.all(['hardware', 'units', 'activities', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr'].map(n =>
                 fetch(`${FIREBASE_DB_URL}/${n}.json`).then(r => r.json()).catch(() => null)
-            )).then(([hw, un, ac, ml, mm, fs]) => {
+            )).then(([hw, un, ac, ml, mm, fs, av]) => {
                 hardwareLive   = hw || {};
                 unitsLive      = un || {};
                 activitiesLive = ac || {};
                 mediaLoadsLive = ml || {};
                 modmansLive    = mm || {};
                 fleetSpecsLive = fs || {};
+                avrLive        = av || {};
                 markDataSync();
                 rebuildAircraftData();     // current media is derived from the log
                 renderHardwarePage();      // fitment is derived from units
@@ -6946,6 +7085,7 @@
                 mediaLoads: d => { mediaLoadsLive = d || {}; },
                 modmans:    d => { modmansLive = d || {}; },
                 fleetSpecs: d => { fleetSpecsLive = d || {}; },
+                avr:        d => { avrLive = d || {}; },
             };
             let changed = false;
 
@@ -6982,6 +7122,7 @@
                 mediaLoads: JSON.stringify(Object.keys(mediaLoadsLive).length ? mediaLoadsLive : null),
                 modmans:    JSON.stringify(Object.keys(modmansLive).length ? modmansLive : null),
                 fleetSpecs: JSON.stringify(Object.keys(fleetSpecsLive).length ? fleetSpecsLive : null),
+                avr:        JSON.stringify(Object.keys(avrLive).length ? avrLive : null),
             };
             setInterval(pollLowTrafficNodes, LOW_TRAFFIC_POLL_MS);
         }
@@ -7620,7 +7761,10 @@
         // `sim` was here while the page was being settled and went PUBLIC on
         // 2026-08-25 once it was signed off; editing it still needs sign-in, like
         // every other page.
-        const RESTRICTED_TABS = ['maintenance', 'hardware', 'serials'];
+        // Activity (maintenance) is public so Saudia Engineering / the airline can read
+        // PUBLISHED visit reports; viewers see published AVRs read-only, editing is gated
+        // on canEdit(). Hardware and Serials stay editor-only working surfaces.
+        const RESTRICTED_TABS = ['hardware', 'serials'];
 
         // The trust boundary is the editor allowlist, the same one canEdit() uses — an
         // account that is not on it can sign in but is not recognised, and revealing the
@@ -8740,13 +8884,23 @@
                 ],
             },
 
+            // The Activity tab is now a feed of Aircraft Visit Reports. `apply` re-renders
+            // only the feed (not the bar), so typing in the search box keeps its focus —
+            // the same discipline the Media bar uses. Published / Draft are single-select
+            // quick pills on a hidden `status` axis (neither lit = all).
             maintenance: {
-                apply: () => renderMaintenancePage(),
+                apply: () => renderAvrFeed(),
+                search: 'Search visits — tail, ref, person, task',
+                quick: [
+                    { filter: 'status', value: 'published', label: 'Published' },
+                    { filter: 'status', value: 'draft',     label: 'Draft' },
+                ],
                 filters: [
-                    { id: 'type', label: 'Type', options: () => fbTypeOptions(activeFleet()) },
-                    { id: 'mflag', label: 'Maintenance', options: [
-                        { v: 'open', l: 'Flagged' },
-                        { v: 'serviceable', l: 'Serviceable' },
+                    { id: 'type', label: 'Type', options: () => fbTypeOptions(avrTypeFleet()) },
+                    { id: 'mode', label: 'Mode', options: AVR_MODES.map(m => ({ v: m.value, l: m.label })) },
+                    { id: 'status', label: 'Status', hidden: true, options: [
+                        { v: 'published', l: 'Published' },
+                        { v: 'draft',     l: 'Draft' },
                     ] },
                 ],
             },
@@ -11528,14 +11682,641 @@
             </li>`;
         }
 
-        // Single entry point for the tab — the list, the detail panel and the widgets
-        // are always redrawn together so they cannot disagree.
+        // ===== Activity tab entry point — the Aircraft Visit Report feed =====
+        // The bar, the feed and the editor-only extras are redrawn together. The feed
+        // reads /avr (visit-level facts) and joins /activities by visitId; nothing is
+        // stored twice. renderAvrFeed() alone is the bar's `apply`, so typing in search
+        // repaints only the feed and the box keeps focus.
+        let avrExpanded = new Set();   // ids of visits shown expanded
+        let avrEditingId = null;       // '__new' while adding, an id while editing
+        let avrShowUnassigned = false;
+
         function renderMaintenancePage() {
-            renderMaintenanceWidgets();
             fbRender('maintenance');
-            renderMaintDetail();     // resolves the selection first
-            renderMaintList();
-            updateMaintEditUI();
+            renderAvrFeed();
+            renderAvrExtras();
+            updateAvrEditUI();
+        }
+
+        function updateAvrEditUI() {
+            const show = canEdit() ? '' : 'none';
+            const add = document.getElementById('avrAddBtn');
+            const addAct = document.getElementById('maintAddActivityBtn');
+            if (add) add.style.display = show;
+            if (addAct) addAct.style.display = show;
+        }
+
+        // Every visit as a plain object, plus a couple of derived helpers.
+        function avrEntries() {
+            return Object.entries(avrLive || {}).map(([id, v]) => ({ id, ...v }));
+        }
+        function avrAttendees(v) {
+            return Object.values((v && v.attendees) || {})
+                .filter(p => p && (p.name || p.company || p.role));
+        }
+        // Activities belonging to a visit, newest first.
+        function avrLinkedActivities(id) {
+            return activityEntries()
+                .filter(a => a.visitId === id && !isBaselineRecord(a))
+                .sort((x, y) => dateSortKey(toISODate(y.date)).localeCompare(dateSortKey(toISODate(x.date))) || y.id.localeCompare(x.id));
+        }
+        // The type-filter options come from aircraft that actually have visits, falling
+        // back to the active fleet before any visit exists so the dropdown is never empty.
+        function avrTypeFleet() {
+            const tails = new Set(avrEntries().map(v => v.aircraft));
+            const list = aircraftData.filter(a => tails.has(a.id));
+            return list.length ? list : activeFleet();
+        }
+        function avrTypeOf(tail) {
+            const a = aircraftData.find(x => x.id === tail);
+            return a ? a.type : '';
+        }
+
+        // Search haystack: tail, ref, mode, location, every attendee field, the summary,
+        // and each linked activity's title / task / category.
+        function avrHaystack(v) {
+            const acts = avrLinkedActivities(v.id);
+            return [
+                v.aircraft, v.ref, avrMode(v.mode).label, v.location, v.bay, v.summary,
+                avrAttendees(v).map(p => `${p.name || ''} ${p.company || ''} ${p.role || ''}`).join(' '),
+                acts.map(a => `${a.date || ''} ${a.title || ''} ${a.task || ''} ${activityCategory(a.category).label}`).join(' '),
+            ].join(' ').toLowerCase();
+        }
+
+        function avrVisibleList() {
+            const q = (fbQuery['maintenance'] || '').trim().toLowerCase();
+            const editor = canEdit();
+            return avrEntries()
+                .filter(v => {
+                    const status = v.status || 'draft';
+                    if (!editor && status !== 'published') return false;   // viewers see published only
+                    if (!fbMatch('maintenance', 'status', status)) return false;
+                    if (!fbMatch('maintenance', 'mode', v.mode)) return false;
+                    if (!fbMatch('maintenance', 'type', avrTypeOf(v.aircraft))) return false;
+                    if (q) {
+                        const hay = avrHaystack(v);
+                        if (!q.split(/\s+/).every(w => hay.includes(w))) return false;
+                    }
+                    return true;
+                })
+                .sort((a, b) =>
+                    dateSortKey(toISODate(b.dateEnd || b.dateStart)).localeCompare(dateSortKey(toISODate(a.dateEnd || a.dateStart)))
+                    || dateSortKey(toISODate(b.dateStart)).localeCompare(dateSortKey(toISODate(a.dateStart)))
+                    || b.id.localeCompare(a.id));
+        }
+
+        function avrDateLabel(v) {
+            const s = v.dateStart || '';
+            const e = v.dateEnd || '';
+            if (!s) return '—';
+            if (!e || e === s) return s;
+            // Same month/year → collapse "08–09 Sep 2026"
+            const ms = s.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})$/);
+            const me = e.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})$/);
+            if (ms && me && ms[2] === me[2] && ms[3] === me[3]) return `${ms[1]}–${me[1]} ${ms[2]} ${ms[3]}`;
+            return `${s} → ${e}`;
+        }
+
+        function personChip(p) {
+            const name = p.name || p.company || p.role || '—';
+            const co = p.company && p.name ? `<span class="avr-person-co"> · ${escAttr(p.company)}</span>` : '';
+            return `<span class="avr-person">${escAttr(name)}${co}</span>`;
+        }
+
+        function renderAvrFeed() {
+            const host = document.getElementById('avrFeed');
+            if (!host) return;
+            const list = avrVisibleList();
+            if (!list.length) {
+                const any = avrEntries().length;
+                host.innerHTML = `<div class="avr-empty">${
+                    any ? 'No visit reports match these filters.'
+                        : (canEdit()
+                            ? 'No visit reports yet. Click <b>➕ Add Visit</b> to record an aircraft visit and pull its Timeline activities into one report.'
+                            : 'No visit reports have been published yet.')
+                }</div>`;
+                return;
+            }
+            host.innerHTML = list.map(renderAvrCard).join('');
+        }
+
+        function renderAvrCard(v) {
+            const open = avrExpanded.has(v.id);
+            const status = v.status || 'draft';
+            const mode = avrMode(v.mode);
+            const acts = avrLinkedActivities(v.id);
+            const people = avrAttendees(v);
+            const type = avrTypeOf(v.aircraft);
+            const editor = canEdit();
+
+            const kinds = [...new Set(acts.map(a => activityCategory(a.category).label))];
+            const summaryLine = acts.length
+                ? `<span class="avr-taskcount">${acts.length} ${acts.length === 1 ? 'task' : 'tasks'}</span> · ${escAttr(kinds.slice(0, 4).join(' · '))}${kinds.length > 4 ? ' · …' : ''}`
+                : '<span style="color:#b7c2cc;">No activities linked yet</span>';
+
+            const head = `<div class="avr-head" onclick="avrToggle('${escAttr(v.id)}')">
+                <span class="avr-caret">▶</span>
+                <span class="avr-reg">${escAttr(v.aircraft)}</span>
+                ${type ? `<span class="tl-pill" style="background:${(TYPE_PILL_COLORS[type] || NEUTRAL_PILL).bg}; color:${(TYPE_PILL_COLORS[type] || NEUTRAL_PILL).fg}; border-color:${(TYPE_PILL_COLORS[type] || NEUTRAL_PILL).bd}">${escAttr(TYPE_SHORT_LABEL[type] || type)}</span>` : ''}
+                <span class="avr-dates">${escAttr(avrDateLabel(v))}</span>
+                <span class="avr-mode avr-mode-${mode.css}">${escAttr(mode.label)}</span>
+                ${v.location ? `<span class="tl-loc-pill" style="background:${(LOCATION_PILL_COLORS[v.location] || NEUTRAL_PILL).bg}; color:${(LOCATION_PILL_COLORS[v.location] || NEUTRAL_PILL).fg}; border-color:${(LOCATION_PILL_COLORS[v.location] || NEUTRAL_PILL).bd}">📍 ${escAttr(locationCode(v.location))}</span>` : ''}
+                <span class="avr-summary-line">${summaryLine}</span>
+                <span class="avr-spacer"></span>
+                ${people.slice(0, 2).map(personChip).join('')}${people.length > 2 ? `<span class="avr-person">+${people.length - 2}</span>` : ''}
+                ${editor && status === 'draft' ? '<span class="avr-status avr-status-draft">Draft</span>' : ''}
+                ${v.ref ? `<span class="avr-ref">${escAttr(v.ref)}</span>` : ''}
+            </div>`;
+
+            if (!open) return `<div class="avr-card ${status === 'draft' ? 'is-draft' : ''}">${head}</div>`;
+
+            const meta = [
+                v.location ? `<div class="avr-meta-cell"><div class="avr-meta-key">Location</div><div class="avr-meta-val">${escAttr(v.location)}</div></div>` : '',
+                v.bay ? `<div class="avr-meta-cell"><div class="avr-meta-key">Bay / Stand</div><div class="avr-meta-val">${escAttr(v.bay)}</div></div>` : '',
+                (v.hangar && v.hangar !== 'na') ? `<div class="avr-meta-cell"><div class="avr-meta-key">Hangar</div><div class="avr-meta-val">${v.hangar === 'inside' ? 'Inside hangar' : 'Outside / apron'}</div></div>` : '',
+                `<div class="avr-meta-cell"><div class="avr-meta-key">Dates</div><div class="avr-meta-val">${escAttr(avrDateLabel(v))}</div></div>`,
+            ].filter(Boolean).join('');
+
+            const body = `<div class="avr-body">
+                ${people.length ? `<div class="avr-section-label">Attended by</div><div class="avr-people">${people.map(p => {
+                    const role = p.role ? ` · ${escAttr(p.role)}` : '';
+                    const co = p.company ? `<span class="avr-person-co"> · ${escAttr(p.company)}</span>` : '';
+                    return `<span class="avr-person">${escAttr(p.name || '—')}${co}${role ? `<span class="avr-person-co">${role}</span>` : ''}</span>`;
+                }).join('')}</div>` : ''}
+                ${meta ? `<div class="avr-meta">${meta}</div>` : ''}
+                ${v.summary ? `<div class="avr-section-label">Summary</div><div class="avr-note">${escAttr(v.summary)}</div>` : ''}
+                <div class="avr-section-label">Work carried out — ${acts.length} ${acts.length === 1 ? 'activity' : 'activities'}</div>
+                <ul class="maint-history">${
+                    acts.length ? acts.map(renderActivityCard).join('')
+                        : '<li class="maint-empty">No activities linked. ' + (editor ? 'Edit the visit to tick the Timeline activities it covers.' : '') + '</li>'
+                }</ul>
+                <div class="avr-body-actions">
+                    <button class="qf-btn" onclick="printAvr('${escAttr(v.id)}')">🖨️ Print / PDF</button>
+                    ${editor ? `<button class="qf-btn" onclick="openAvrEditor('${escAttr(v.id)}')">✏️ Edit visit</button>` : ''}
+                    ${editor ? `<button class="qf-btn" onclick="avrToggleStatus('${escAttr(v.id)}')">${status === 'published' ? '↩️ Unpublish' : '✅ Publish'}</button>` : ''}
+                    ${editor ? `<button class="qf-btn" onclick="deleteAvr('${escAttr(v.id)}')">🗑 Delete</button>` : ''}
+                </div>
+            </div>`;
+
+            return `<div class="avr-card is-open ${status === 'draft' ? 'is-draft' : ''}">${head}${body}</div>`;
+        }
+
+        function avrToggle(id) {
+            if (avrExpanded.has(id)) avrExpanded.delete(id); else avrExpanded.add(id);
+            renderAvrFeed();
+        }
+
+        // ===== Editor-only extras: unassigned activities + Operational History =====
+        function renderAvrExtras() {
+            const host = document.getElementById('avrExtras');
+            if (!host) return;
+            if (!canEdit()) { host.innerHTML = ''; return; }
+
+            // Activities on the Timeline not yet part of any visit — the pool to club.
+            const linkedIds = new Set();
+            avrEntries().forEach(v => avrLinkedActivities(v.id).forEach(a => linkedIds.add(a.id)));
+            const unassigned = activityEntries()
+                .filter(a => !a.visitId && !isBaselineRecord(a))
+                .sort((x, y) => dateSortKey(toISODate(y.date)).localeCompare(dateSortKey(toISODate(x.date))) || y.id.localeCompare(x.id));
+
+            const unassignedSection = `
+                <div class="avr-section-label" style="margin-top:22px;">
+                    Unassigned activities
+                    <button class="maint-fold" style="margin-left:8px;" onclick="avrShowUnassigned=!avrShowUnassigned; renderAvrExtras();">${
+                        avrShowUnassigned ? 'Hide' : `Show ${unassigned.length}`
+                    }</button>
+                </div>
+                ${avrShowUnassigned ? (unassigned.length
+                    ? `<div style="font-size:12px;color:#8a97a3;margin-bottom:6px;">These Timeline activities are not in any visit report yet. Add a visit and tick them in, or open the aircraft's visit.</div>
+                       <ul class="maint-history">${unassigned.map(renderActivityCard).join('')}</ul>`
+                    : '<div class="avr-linkempty">Every activity is already part of a visit report.</div>') : ''}`;
+
+            // Operational History — out-of-service periods, fleet-wide, editable. Same
+            // ops / opsLog single source as the Fleet column and the Timeline.
+            const opsAircraft = aircraftData
+                .map(a => ({ a, periods: opsPeriodsForAircraft(a.id) }))
+                .filter(x => x.periods.length)
+                .sort((x, y) => {
+                    const xo = x.periods.some(p => p.open) ? 0 : 1;
+                    const yo = y.periods.some(p => p.open) ? 0 : 1;
+                    return xo - yo || x.a.id.localeCompare(y.a.id);
+                });
+            const totalPeriods = opsAircraft.reduce((n, x) => n + x.periods.length, 0);
+
+            const opsCard = (aid, p) => {
+                const d = opsDef(p.state);
+                const span = p.until ? dateSpan(p.since, p.until) : (p.since ? activationAge(p.since) : '');
+                return `<li class="maint-act kind-operational ops-hist${p.open ? ' ops-hist-open' : ''}">
+                    <div class="maint-act-top">
+                        <span class="status-badge ops-${d.css}"${d.full ? ` title="${escAttr(d.full)}"` : ''}>${escAttr(d.short)}</span>
+                        <span class="ops-hist-range"><span class="fleet-date">${escAttr(p.since || '—')}</span><span class="ops-hist-arrow">→</span>${p.until ? `<span class="fleet-date">${escAttr(p.until)}</span>` : '<span class="ops-hist-ongoing">Ongoing</span>'}</span>
+                        ${span ? `<span class="age-pill">${escAttr(span)}</span>` : ''}
+                        ${p.location ? `<span class="tl-loc-pill" style="background:${(LOCATION_PILL_COLORS[p.location] || NEUTRAL_PILL).bg}; color:${(LOCATION_PILL_COLORS[p.location] || NEUTRAL_PILL).fg}; border-color:${(LOCATION_PILL_COLORS[p.location] || NEUTRAL_PILL).bd}">📍 ${escAttr(locationCode(p.location))}</span>` : ''}
+                        <button class="maint-act-edit" title="Edit this period" onclick="openOpsPeriod('${escAttr(aid)}','${escAttr(p.key)}')">✏️</button>
+                        <button class="maint-act-del" title="Delete this period" onclick="deleteOpsPeriod('${escAttr(aid)}','${escAttr(p.key)}')">🗑</button>
+                    </div>
+                    ${p.reason ? `<div class="maint-act-title">${escAttr(p.reason)}</div>` : ''}
+                </li>`;
+            };
+
+            const opsSection = `
+                <div class="avr-section-label" style="margin-top:22px;">Operational History — out-of-service periods</div>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+                    <span style="font-size:12px;color:#8a97a3;">${totalPeriods} ${totalPeriods === 1 ? 'period' : 'periods'} across ${opsAircraft.length} aircraft</span>
+                    <select id="opsAddTail" class="edit-select" style="max-width:220px;">
+                        <option value="">Add period for…</option>
+                        ${maintenanceFleet().map(a => `<option value="${escAttr(a.id)}">${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</option>`).join('')}
+                    </select>
+                    <button class="qf-btn" onclick="avrAddOpsPeriod()">➕ Add out-of-service period</button>
+                </div>
+                ${opsAircraft.length ? opsAircraft.map(x => `
+                    <div style="margin-bottom:10px;">
+                        <div style="font-weight:800;font-size:13px;color:#26333d;margin-bottom:4px;">${escAttr(x.a.id)}
+                            <span style="font-weight:600;color:#9aa7b2;font-size:11px;">${escAttr(TYPE_SHORT_LABEL[x.a.type] || x.a.type)}</span></div>
+                        <ul class="maint-history">${x.periods.map(p => opsCard(x.a.id, p)).join('')}</ul>
+                    </div>`).join('')
+                    : '<div class="avr-linkempty">No out-of-service periods recorded — the fleet has stayed in service.</div>'}`;
+
+            host.innerHTML = unassignedSection + opsSection;
+        }
+
+        function avrAddOpsPeriod() {
+            const sel = document.getElementById('opsAddTail');
+            const tail = sel && sel.value;
+            if (!tail) { setSyncStatus('🔴 Choose an aircraft first', '#dc3545'); return; }
+            openOpsPeriod(tail, '__new');
+        }
+
+        // ===== Add / Edit Visit modal =====
+        function avrAttRowHTML(p) {
+            p = p || {};
+            return `<div class="avr-att-row">
+                <input class="edit-text" maxlength="80" placeholder="Name" value="${escAttr(p.name || '')}">
+                <input class="edit-text" maxlength="80" placeholder="Company" value="${escAttr(p.company || '')}">
+                <input class="edit-text" maxlength="60" placeholder="Role" value="${escAttr(p.role || '')}">
+                <button type="button" class="avr-att-del" title="Remove" onclick="this.closest('.avr-att-row').remove()">✕</button>
+            </div>`;
+        }
+        function avrAddAttendee() {
+            const box = document.getElementById('avrAttList');
+            if (box) box.insertAdjacentHTML('beforeend', avrAttRowHTML({}));
+        }
+
+        function openAvrEditor(id) {
+            if (!canEdit()) { requireSignIn(); return; }
+            avrEditingId = id;
+            const isNew = id === '__new';
+            const v = isNew ? {} : (avrLive[id] ? { id, ...avrLive[id] } : {});
+            document.getElementById('avrEditTitle').textContent = isNew ? 'Add Visit' : 'Edit Visit';
+            document.getElementById('avrEditSub').textContent = isNew
+                ? 'Group an aircraft visit and the Timeline activities it covers into one report.'
+                : (v.ref || '');
+
+            const att = avrAttendees(v);
+            const rows = (att.length ? att : [{}]).map(avrAttRowHTML).join('');
+            const acOpts = maintenanceFleet()
+                .map(a => `<option value="${escAttr(a.id)}" ${a.id === v.aircraft ? 'selected' : ''}>${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</option>`).join('');
+
+            document.getElementById('avrEditBody').innerHTML = `
+                <div class="ac-edit-section-title">Visit</div>
+                <div class="ac-edit-grid">
+                    <div class="ac-edit-field">
+                        <label>Aircraft *</label>
+                        <select id="avrAircraft" onchange="avrOnAircraftChange()">
+                            <option value="">Select…</option>${acOpts}
+                        </select>
+                    </div>
+                    <div class="ac-edit-field">
+                        <label>Mode — how we engaged</label>
+                        <select id="avrMode">${AVR_MODES.map(m => `<option value="${m.value}" ${m.value === (v.mode || 'on_site') ? 'selected' : ''}>${m.label}</option>`).join('')}</select>
+                    </div>
+                    <div class="ac-edit-field">
+                        <label>Date — from *</label>
+                        <input id="avrDateStart" type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" value="${toDMY(v.dateStart) || ''}" onchange="avrRefreshLinkList()">
+                    </div>
+                    <div class="ac-edit-field">
+                        <label>Date — to</label>
+                        <input id="avrDateEnd" type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy (same day if blank)" autocomplete="off" value="${toDMY(v.dateEnd) || ''}" onchange="avrRefreshLinkList()">
+                    </div>
+                </div>
+
+                <div class="ac-edit-section-title">Location</div>
+                <div class="ac-edit-grid">
+                    <div class="ac-edit-field">
+                        <label>Station / airport</label>
+                        <input id="avrLocation" class="edit-text" maxlength="60" placeholder="e.g. Jeddah" value="${escAttr(v.location || '')}">
+                    </div>
+                    <div class="ac-edit-field">
+                        <label>Bay / stand <span style="font-weight:400;color:#aaa;">(optional)</span></label>
+                        <input id="avrBay" class="edit-text" maxlength="40" placeholder="e.g. Bay 12 / Stand A3" value="${escAttr(v.bay || '')}">
+                    </div>
+                    <div class="ac-edit-field">
+                        <label>Hangar</label>
+                        <select id="avrHangar">${AVR_HANGAR.map(h => `<option value="${h.value}" ${h.value === (v.hangar || '') ? 'selected' : ''}>${h.label}</option>`).join('')}</select>
+                    </div>
+                    <div class="ac-edit-field">
+                        <label>Status</label>
+                        <select id="avrStatus">
+                            <option value="draft" ${(v.status || 'draft') === 'draft' ? 'selected' : ''}>Draft — editors only</option>
+                            <option value="published" ${v.status === 'published' ? 'selected' : ''}>Published — visible to the airline</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="ac-edit-section-title">People — name, company, role (all optional)</div>
+                <div id="avrAttList">${rows}</div>
+                <button type="button" class="avr-att-add" onclick="avrAddAttendee()">➕ Add person</button>
+
+                <div class="ac-edit-section-title">Summary</div>
+                <div class="ac-edit-grid">
+                    <div class="ac-edit-field full">
+                        <textarea id="avrSummary" maxlength="2000" placeholder="What was accomplished on this visit — the headline for the report.">${escAttr(v.summary || '')}</textarea>
+                    </div>
+                </div>
+
+                <div class="ac-edit-section-title">Activities in this visit</div>
+                <div class="fld-hint" style="font-size:11px;color:#8a97a3;margin-bottom:6px;">Tick the Timeline activities this visit covers. Ones dated inside the visit window are suggested automatically.</div>
+                <div id="avrLinkList" class="avr-linklist"></div>`;
+
+            document.getElementById('avrEditError').style.display = 'none';
+            const overlay = document.getElementById('avrOverlay');
+            overlay.style.display = 'flex';
+            avrRefreshLinkList();
+        }
+
+        function closeAvrEditor() {
+            document.getElementById('avrOverlay').style.display = 'none';
+            avrEditingId = null;
+        }
+
+        function avrOnAircraftChange() {
+            // Convenience: fill an empty location from the aircraft's known site.
+            const ac = document.getElementById('avrAircraft').value;
+            const locEl = document.getElementById('avrLocation');
+            if (locEl && !locEl.value.trim() && ac) {
+                const a = aircraftData.find(x => x.id === ac) || {};
+                locEl.value = a.completionLocation || a.retrofitLocation || '';
+            }
+            avrRefreshLinkList();
+        }
+
+        function avrRefreshLinkList() {
+            const host = document.getElementById('avrLinkList');
+            if (!host) return;
+            const tail = (document.getElementById('avrAircraft') || {}).value || '';
+            if (!tail) { host.innerHTML = '<div class="avr-linkempty">Choose an aircraft to see its activities.</div>'; return; }
+
+            const startIso = toISODate(fmtDate((document.getElementById('avrDateStart') || {}).value || '') || '');
+            const endRaw = fmtDate((document.getElementById('avrDateEnd') || {}).value || '') || '';
+            const endIso = toISODate(endRaw) || startIso;
+
+            // Preserve any manual ticks already on screen before we rebuild.
+            const prevChecked = new Set();
+            host.querySelectorAll('input[type=checkbox]:checked').forEach(cb => prevChecked.add(cb.dataset.aid));
+
+            const cands = activitiesForAircraft(tail)
+                .filter(a => !isBaselineRecord(a) && (!a.visitId || a.visitId === avrEditingId));
+
+            if (!cands.length) { host.innerHTML = '<div class="avr-linkempty">No activities recorded for this aircraft.</div>'; return; }
+
+            host.innerHTML = cands.map(a => {
+                const aIso = toISODate(a.date) || '';
+                const inWindow = startIso && aIso && aIso >= startIso && (!endIso || aIso <= endIso);
+                const linkedHere = a.visitId === avrEditingId && avrEditingId !== '__new';
+                const rebuilt = host.dataset.built === '1';
+                // On first build, auto-tick in-window + already-linked. On a rebuild, keep
+                // whatever the user had ticked, and still add newly in-window ones.
+                const checked = rebuilt ? (prevChecked.has(a.id) || inWindow) : (linkedHere || inWindow);
+                const cat = activityCategory(a.category);
+                return `<label class="avr-linkitem">
+                    <input type="checkbox" data-aid="${escAttr(a.id)}" ${checked ? 'checked' : ''}>
+                    <span><span class="li-date">${escAttr(a.date || '—')}</span> · ${escAttr(a.title || cat.label)}
+                        <span class="li-cat">— ${escAttr(cat.label)}${a.location ? ' · 📍' + escAttr(a.location) : ''}</span></span>
+                </label>`;
+            }).join('');
+            host.dataset.built = '1';
+        }
+
+        function avrNextRef(tail, year) {
+            const clean = String(tail || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const prefix = `AVR-${clean}-${year}-`;
+            let max = 0;
+            avrEntries().forEach(v => {
+                if (v.ref && v.ref.indexOf(prefix) === 0) {
+                    const n = parseInt(v.ref.slice(prefix.length), 10);
+                    if (!isNaN(n) && n > max) max = n;
+                }
+            });
+            return prefix + String(max + 1).padStart(3, '0');
+        }
+
+        async function saveAvr() {
+            const err = document.getElementById('avrEditError');
+            const show = msg => { err.textContent = msg; err.style.display = 'block'; };
+
+            const aircraft = (document.getElementById('avrAircraft').value || '').trim();
+            const dsEl = document.getElementById('avrDateStart');
+            const deEl = document.getElementById('avrDateEnd');
+            const dateStart = readDateField(dsEl);
+            const dateEndRaw = readDateField(deEl);
+            if (!aircraft) return show('Choose an aircraft.');
+            if (!dateStart) return show('A valid start date (dd-mm-yyyy) is required.');
+            if (dateEndRaw === false) return show('The "to" date is not a valid dd-mm-yyyy date.');
+            const dateEnd = dateEndRaw || dateStart;
+            if (dateSortKey(toISODate(dateEnd)) < dateSortKey(toISODate(dateStart)))
+                return show('The "to" date is before the "from" date.');
+
+            // Attendees → keyed object, empty rows dropped.
+            const attendees = {};
+            let ai = 0;
+            document.querySelectorAll('#avrAttList .avr-att-row').forEach(row => {
+                const [n, c, r] = row.querySelectorAll('input');
+                const name = n.value.trim(), company = c.value.trim(), role = r.value.trim();
+                if (!name && !company && !role) return;
+                const p = {};
+                if (name) p.name = name;
+                if (company) p.company = company;
+                if (role) p.role = role;
+                attendees['p' + (ai++)] = p;
+            });
+
+            const isNew = avrEditingId === '__new';
+            const existing = isNew ? {} : (avrLive[avrEditingId] || {});
+            const nowUTC = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+            const year = (dateStart.match(/-(\d{4})$/) || [])[1] || String(new Date().getUTCFullYear());
+            const id = isNew ? ('v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)) : avrEditingId;
+            const ref = existing.ref || avrNextRef(aircraft, year);
+            if (!/^AVR-[A-Z0-9]{2,8}-[0-9]{4}-[0-9]{3,4}$/.test(ref))
+                return show(`Could not form a reference number from tail "${aircraft}".`);
+
+            const entry = {
+                aircraft, ref, dateStart, dateEnd,
+                mode: document.getElementById('avrMode').value,
+                status: document.getElementById('avrStatus').value,
+                createdAt: existing.createdAt || nowUTC,
+                updatedAt: nowUTC,
+            };
+            const location = document.getElementById('avrLocation').value.trim();
+            const bay = document.getElementById('avrBay').value.trim();
+            const hangar = document.getElementById('avrHangar').value;
+            const summary = document.getElementById('avrSummary').value.trim();
+            if (location) entry.location = location;
+            if (bay) entry.bay = bay;
+            if (hangar) entry.hangar = hangar;
+            if (summary) entry.summary = summary;
+            if (Object.keys(attendees).length) entry.attendees = attendees;
+
+            // Which activities the visit covers, and which to unlink.
+            const desired = new Set();
+            document.querySelectorAll('#avrLinkList input[type=checkbox]:checked').forEach(cb => desired.add(cb.dataset.aid));
+            const prevLinked = activityEntries().filter(a => a.visitId === id).map(a => a.id);
+            const actPatch = {};
+            desired.forEach(aid => { if (!activitiesLive[aid] || activitiesLive[aid].visitId !== id) actPatch[`${aid}/visitId`] = id; });
+            prevLinked.forEach(aid => { if (!desired.has(aid)) actPatch[`${aid}/visitId`] = null; });
+
+            const token = await getIdToken();
+            if (!token) return;
+            const btn = document.getElementById('avrEditSave');
+            btn.disabled = true; btn.textContent = 'Saving…';
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/avr/${id}.json?auth=${token}`, {
+                    method: 'PUT', body: JSON.stringify(entry),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                avrLive[id] = entry;   // polled node — mirror locally so the card shows at once
+
+                if (Object.keys(actPatch).length) {
+                    const ares = await fetchWithTimeout(`${FIREBASE_DB_URL}/activities.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(actPatch),
+                    });
+                    const adata = await ares.json();
+                    if (!ares.ok || (adata && adata.error))
+                        throw new Error('visit saved, but linking its activities failed — ' + ((adata && adata.error) || 'write failed'));
+                    Object.keys(actPatch).forEach(path => {
+                        const [aid] = path.split('/');
+                        if (activitiesLive[aid]) {
+                            if (actPatch[path] === null) delete activitiesLive[aid].visitId;
+                            else activitiesLive[aid].visitId = actPatch[path];
+                        }
+                    });
+                }
+
+                avrExpanded.add(id);
+                closeAvrEditor();
+                renderMaintenancePage();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (e) {
+                show(`Could not save the visit — ${e.message}`);
+            } finally {
+                btn.disabled = false; btn.textContent = 'Save visit';
+            }
+        }
+
+        async function avrToggleStatus(id) {
+            const v = avrLive[id];
+            if (!v || !canEdit()) return;
+            const next = v.status === 'published' ? 'draft' : 'published';
+            const token = await getIdToken();
+            if (!token) return;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/avr/${id}/status.json?auth=${token}`, {
+                    method: 'PUT', body: JSON.stringify(next),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                avrLive[id].status = next;
+                renderMaintenancePage();
+                setSyncStatus(`🟢 Visit ${next === 'published' ? 'published' : 'moved to draft'}`, '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not update — ${e.message}`, '#dc3545');
+            }
+        }
+
+        async function deleteAvr(id) {
+            const v = avrLive[id];
+            if (!v || !canEdit()) return;
+            const linked = activityEntries().filter(a => a.visitId === id);
+            if (!confirm(`Delete visit report ${v.ref || ''} (${v.aircraft}, ${avrDateLabel(v)})?\n\n${
+                linked.length ? `Its ${linked.length} ${linked.length === 1 ? 'activity stays' : 'activities stay'} on the Timeline — only the report is removed.` : 'No activities are linked.'
+            }`)) return;
+            const token = await getIdToken();
+            if (!token) return;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/avr/${id}.json?auth=${token}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'delete failed');
+                delete avrLive[id];
+                if (linked.length) {
+                    const patch = {};
+                    linked.forEach(a => { patch[`${a.id}/visitId`] = null; });
+                    await fetchWithTimeout(`${FIREBASE_DB_URL}/activities.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(patch),
+                    }).catch(() => {});
+                    linked.forEach(a => { if (activitiesLive[a.id]) delete activitiesLive[a.id].visitId; });
+                }
+                avrExpanded.delete(id);
+                renderMaintenancePage();
+                setSyncStatus('🟢 Visit report deleted', '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not delete — ${e.message}`, '#dc3545');
+            }
+        }
+
+        // ===== Print / PDF — fill the off-screen sheet and let the browser print it =====
+        function printAvr(id) {
+            const v = avrLive[id];
+            if (!v) return;
+            const acts = avrLinkedActivities(id);
+            const people = avrAttendees(v);
+            const type = avrTypeOf(v.aircraft);
+            const rowsPeople = people.length
+                ? people.map(p => `${escAttr(p.name || '—')}${p.company ? ' (' + escAttr(p.company) + ')' : ''}${p.role ? ' — ' + escAttr(p.role) : ''}`).join('<br>')
+                : '—';
+            const hangar = v.hangar === 'inside' ? 'Inside hangar' : v.hangar === 'outside' ? 'Outside / apron' : '—';
+            const actRows = acts.length ? acts.map(a => {
+                const d = a.details || {};
+                const tech = [
+                    d.softwareName && `SW: ${d.softwareName}`, d.version && `v${d.version}`,
+                    d.partNumber && `P/N ${d.partNumber}`, d.oldPart && `Old S/N ${d.oldPart}`,
+                    d.newPart && `New S/N ${d.newPart}`, d.modemType, d.commissioningResult,
+                ].filter(Boolean).map(escAttr).join(' · ');
+                return `<tr>
+                    <td>${escAttr(a.date || '')}</td>
+                    <td>${escAttr(activityCategory(a.category).label)}</td>
+                    <td><b>${escAttr(a.title || '')}</b>${a.task ? '<br>' + escAttr(a.task) : ''}${a.outcome ? '<br><i>Outcome: ' + escAttr(a.outcome) + '</i>' : ''}${tech ? '<br><span style="color:#555;">' + tech + '</span>' : ''}</td>
+                </tr>`;
+            }).join('') : '<tr><td colspan="3">No activities linked.</td></tr>';
+
+            document.getElementById('avrPrint').innerHTML = `
+                <div class="avr-print-sheet">
+                    <div class="avr-print-head">
+                        <span class="avr-print-ref">${escAttr(v.ref || '')}</span>
+                        <h1 class="avr-print-title">Aircraft Visit Report</h1>
+                        <p class="avr-print-sub">Saudia Connectivity / IFEC Programme${v.status === 'draft' ? ' — DRAFT' : ''}</p>
+                    </div>
+                    <div class="avr-print-grid">
+                        <div><span class="k">Aircraft:</span> ${escAttr(v.aircraft)}${type ? ' (' + escAttr(type) + ')' : ''}</div>
+                        <div><span class="k">Dates:</span> ${escAttr(avrDateLabel(v))}</div>
+                        <div><span class="k">Mode:</span> ${escAttr(avrMode(v.mode).label)}</div>
+                        <div><span class="k">Location:</span> ${escAttr(v.location || '—')}${v.bay ? ' · ' + escAttr(v.bay) : ''}</div>
+                        <div><span class="k">Hangar:</span> ${hangar}</div>
+                        <div><span class="k">Attendees:</span><br>${rowsPeople}</div>
+                    </div>
+                    ${v.summary ? `<div class="avr-print-sec">Summary</div><div class="avr-print-note">${escAttr(v.summary)}</div>` : ''}
+                    <div class="avr-print-sec">Work Carried Out</div>
+                    <table class="avr-print-table">
+                        <thead><tr><th style="width:90px;">Date</th><th style="width:120px;">Category</th><th>Details</th></tr></thead>
+                        <tbody>${actRows}</tbody>
+                    </table>
+                    <div class="avr-print-foot">Generated from the Saudia Connectivity Fleet Status dashboard · ${escAttr(v.ref || '')} · printed ${new Date().toISOString().slice(0, 10)}</div>
+                </div>`;
+            document.body.classList.add('printing-avr');
+            const cleanup = () => { document.body.classList.remove('printing-avr'); window.removeEventListener('afterprint', cleanup); };
+            window.addEventListener('afterprint', cleanup);
+            window.print();
+            // Fallback for browsers that fire no afterprint.
+            setTimeout(cleanup, 1500);
         }
 
         // Counts come from committed data, so these read the same as the global card:
@@ -11566,8 +12347,6 @@
 
         function resetMaintenancePage() {
             fbClear('maintenance');
-            fbRender('maintenance');
-            maintSelectedId = '';
             renderMaintenancePage();
         }
 
