@@ -4042,6 +4042,16 @@
         .avr-assign-none { padding: 8px 10px; font-size: 12px; color: #9aa7b2; }
         .avr-assign-new { border-top: 1px solid #eef2f6; margin-top: 4px; color: #2350b8; font-weight: 700; font-size: 12.5px; }
 
+        /* Aircraft dossier inside a report */
+        .avr-dossier { border: 1px solid #e3e8ee; border-radius: 10px; background: #fbfcfd; padding: 4px 12px 12px; margin: 12px 0; }
+        .avr-dossier-summary { cursor: pointer; font-weight: 800; font-size: 12.5px; color: #0a5c34; padding: 8px 2px; list-style: none; }
+        .avr-dossier-summary::-webkit-details-marker { display: none; }
+        .avr-dossier-summary::before { content: '▸ '; color: #9aa7b2; }
+        .avr-dossier[open] .avr-dossier-summary::before { content: '▾ '; }
+        .avr-dossier .maint-equip-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+        .avr-dossier .maint-equip-table th, .avr-dossier .maint-equip-table td { border-bottom: 1px solid #eef2f6; padding: 5px 8px; text-align: left; }
+        .avr-dossier .hw-serial { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
+
         /* ===== AVR print sheet ===== */
         #avrPrint { display: none; }
         @media print {
@@ -6847,8 +6857,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.118.0';
-        const APP_BUILD    = '2026.09.10.02';
+        const APP_VERSION  = '2.119.0';
+        const APP_BUILD    = '2026.09.10.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12059,6 +12069,133 @@
             </li>`;
         }
 
+        // ===== Aircraft dossier — every fact we hold about the airframe, in one place =====
+        function avrDossierData(tail) {
+            const a = aircraftData.find(x => x.id === tail) || { id: tail };
+            const spec = fleetSpecsLive[tail] || {};
+            const modman = satcomRows().find(r => r.aircraft === tail && r.status !== 'removed') || null;
+            const equip = aircraftFitment(a).filter(r => r.serial || r.vacant || r.removals || r.date);
+            const linefit = isLinefit(a);
+            const system = a.system || systemDefault(fitOf(a));
+            const retro = a.retrofitStart
+                ? (a.retrofitEnd ? `${a.retrofitStart} → ${a.retrofitEnd}` : `${a.retrofitStart} → ongoing`) : '';
+            const retroSpan = a.retrofitStart && a.retrofitEnd
+                ? groundedDaysLabel(a.retrofitStart, a.retrofitEnd)
+                : (a.retrofitStart ? dateSpan(a.retrofitStart, '') : '');
+            return { a, spec, modman, equip, linefit, system, retro, retroSpan, media: a.media || {} };
+        }
+
+        // Shared cell rows for both the screen dossier and the print sheet.
+        function avrDossierRows(tail) {
+            const { a, spec, linefit, system, retro, retroSpan, media } = avrDossierData(tail);
+            const ota = (a.otaPatchUTC || '').slice(0, 10);
+            const ota3 = (a.otaPatch3UTC || '').slice(0, 10);
+            const del = spec.deliveryDate ? `${deliveryLong(spec.deliveryDate)}${deliveryAge(spec.deliveryDate) ? ' · ' + deliveryAge(spec.deliveryDate) : ''}` : '';
+            const engines = spec.engineModel ? `${spec.engineMfr ? spec.engineMfr + ' ' : ''}${spec.engineModel}${spec.engineQty ? ' ×' + spec.engineQty : ''}` : '';
+            const aircraftRows = [
+                ['Type', spec.variant || a.type || ''],
+                ['MSN', spec.msn || ''],
+                ['Delivery / age', del],
+                ['Seats', spec.seatConfig || (spec.seatTotal ? String(spec.seatTotal) : '')],
+                ['Engines', engines],
+                ['Fleet status', fleetStatusOf(a) || ''],
+            ];
+            const connRows = [
+                ['System', system],
+                ['Fit', linefit ? 'Linefit' : (fitOf(a) === 'retrofit' ? 'Retrofit' : '')],
+                ['Install site', a.retrofitLocation || ''],
+                ['Mod window', retro + (retroSpan ? ` (${retroSpan})` : '')],
+                [linefit ? 'SBC config' : 'Completion', linefit
+                    ? (a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
+                    : (a.completionLocation ? `${a.completionLocation}${a.completionDate ? ' · ' + a.completionDate : ''}` : '')],
+                [linefit ? '' : 'Middleware', linefit ? '' : (a.swVersion || '')],
+                ['OTA patch', [ota && `#2 ${ota}`, ota3 && `#3 ${ota3}`].filter(Boolean).join(' · ')],
+                ['Activated', a.activatedDate || ''],
+                ['Media cycle', media.mediaCycle ? cycleToDisplay(media.mediaCycle) : ''],
+                ['UGO / Tiles', [a.ugoVersion && `UGO ${a.ugoVersion}`, a.tilesVersion && `Tiles ${a.tilesVersion}`].filter(Boolean).join(' · ')],
+                ['SIM roaming', a.simRoaming ? (a.simRoaming === 'active' ? 'Active' : 'Inactive') : ''],
+                ['WiFi visibility', a.wifiVisibility ? a.wifiVisibility.charAt(0).toUpperCase() + a.wifiVisibility.slice(1) : ''],
+            ];
+            return { aircraftRows: aircraftRows.filter(r => r[0]), connRows: connRows.filter(r => r[0] && r[1]) };
+        }
+
+        function avrDossierHTML(tail) {
+            const { a, modman, equip } = avrDossierData(tail);
+            const { aircraftRows, connRows } = avrDossierRows(tail);
+            const cell = ([k, val]) => `<div class="avr-meta-cell"><div class="avr-meta-key">${escAttr(k)}</div><div class="avr-meta-val">${escAttr(val) || '—'}</div></div>`;
+
+            const equipMulti = equip.some(r => r.position);
+            const equipTable = equip.length ? `
+                <div class="avr-section-label">Installed equipment — ${equip.filter(r => r.serial).length} of ${equip.length} with serials</div>
+                <div class="table-scroll-wrapper"><table class="maint-equip-table"><thead><tr>
+                    <th>Equipment</th>${equipMulti ? '<th>Pos</th>' : ''}<th>Serial fitted</th><th>Installed</th><th>Changes</th>
+                </tr></thead><tbody>${equip.map(r => `<tr>
+                    <td class="maint-equip-lru">${escAttr(r.lru.label)}</td>
+                    ${equipMulti ? `<td>${r.position ? escAttr(r.position + '/' + r.qty) : '—'}</td>` : ''}
+                    <td>${r.vacant ? '<span class="hw-vacant">removed — none fitted</span>' : (r.serial ? `<span class="hw-serial">${escAttr(r.serial)}</span>` : '<span class="hw-none">no record</span>')}</td>
+                    <td>${r.date ? escAttr(r.date) : '—'}</td>
+                    <td>${r.removals ? escAttr(r.removals) + ' removed' : '—'}</td>
+                </tr>`).join('')}</tbody></table></div>` : '';
+
+            let modmanBlock = '';
+            if (modman) {
+                const snLabel = modman.isAstronics ? 'Astronics S/N' : 'Eclipse S/N';
+                const snVal = modman.isAstronics ? modman.astronicsSn : eclipseSnDisplay(modman.eclipseSn);
+                const taurus = [modman.taurusOldMgId && `MGID ${modman.taurusOldMgId}`, modman.taurusNewMgId && `→ ${modman.taurusNewMgId}`].filter(Boolean).join(' ');
+                const tid = [modman.taurusOldTid && `TID ${modman.taurusOldTid}`, modman.taurusNewTid && `→ ${modman.taurusNewTid}`].filter(Boolean).join(' ');
+                const rows = [
+                    ['Kontron S/N', modman.kontronSn], [snLabel, snVal],
+                    ['Taurus', taurus], ['Taurus TID', tid],
+                    ['Hughes chassis', modman.hnsChassisId], ['Hughes ESN', modman.hnsEsn], ['Hughes MAC', modman.hnsMac],
+                    ['Commissioning', [modman.commTaurus !== 'na' && `Taurus ${modman.commTaurus}`, modman.commHughes !== 'na' && `Hughes ${modman.commHughes}`].filter(Boolean).join(' · ')],
+                    ['IPHO', modman.ipho !== 'na' ? modman.ipho : ''],
+                    ['Fitted', modman.installDate],
+                ].filter(r => r[1]);
+                modmanBlock = rows.length ? `<div class="avr-section-label">MODMAN (Satcom register)</div><div class="avr-meta">${rows.map(cell).join('')}</div>` : '';
+            }
+
+            return `<details class="avr-dossier" open>
+                <summary class="avr-dossier-summary">🛩️ Aircraft dossier — ${escAttr(tail)}</summary>
+                <div class="avr-section-label">Aircraft</div>
+                <div class="avr-meta">${aircraftRows.map(cell).join('')}</div>
+                <div class="avr-section-label">Connectivity &amp; retrofit</div>
+                <div class="avr-meta">${connRows.map(cell).join('')}</div>
+                ${equipTable}
+                ${modmanBlock}
+            </details>`;
+        }
+
+        // Auto-generated bullet summary from the visit's members — grouped by kind.
+        function avrAutoSummaryText(v) {
+            const m = avrReportMembers(v);
+            if (!m.length) return '';
+            const by = {};
+            m.forEach(x => { (by[x.kind] = by[x.kind] || []).push(x); });
+            const lines = [];
+            const add = (label, kind, fmt) => { if (by[kind]) lines.push(`• ${label}: ${by[kind].map(fmt).join('; ')}`); };
+            add('Software', 'software', x => x.sub && /UTC/.test(x.sub) ? `${x.title} (${x.sub})` : x.title);
+            add('Media', 'media', x => x.sub ? `${x.title} — ${x.sub}` : x.title);
+            add('Hardware', 'hardware', x => x.sub ? `${x.title} (${x.sub})` : x.title);
+            add('Commissioning', 'commission', x => x.sub ? `${x.title} — ${x.sub}` : x.title);
+            add('Maintenance', 'maintenance', x => x.title);
+            add('Modification', 'modification', x => `${x.title} ${x.modPhase === 'start' ? 'started' : 'completed'}`);
+            add('Operational', 'operational', x => x.sub ? `${x.title} (${x.sub})` : x.title);
+            add('Milestone', 'activation', x => x.title);
+            return lines.join('\n');
+        }
+
+        function avrGenerateSummary() {
+            const tail = (document.getElementById('avrAircraft') || {}).value || '';
+            if (!tail) { setSyncStatus('🔴 Choose an aircraft first', '#dc3545'); return; }
+            const ds = fmtDate((document.getElementById('avrDateStart') || {}).value || '') || '';
+            const de = fmtDate((document.getElementById('avrDateEnd') || {}).value || '') || ds;
+            const text = avrAutoSummaryText({ id: avrEditingId, aircraft: tail, dateStart: ds, dateEnd: de });
+            if (!text) { setSyncStatus('🟡 No activities in this window to summarise yet', '#e0a800'); return; }
+            const ta = document.getElementById('avrSummary');
+            if (ta.value.trim() && !confirm('Replace the current summary with an auto-generated one?')) return;
+            ta.value = text;
+        }
+
         function renderAvrCard(v) {
             const open = avrExpanded.has(v.id);
             const status = v.status || 'draft';
@@ -12103,6 +12240,7 @@
                     return `<span class="avr-person">${escAttr(p.name || '—')}${co}${role ? `<span class="avr-person-co">${role}</span>` : ''}</span>`;
                 }).join('')}</div>` : ''}
                 ${meta ? `<div class="avr-meta">${meta}</div>` : ''}
+                ${avrDossierHTML(v.aircraft)}
                 ${v.summary ? `<div class="avr-section-label">Summary</div><div class="avr-note">${escAttr(v.summary)}</div>` : ''}
                 <div class="avr-section-label">Work carried out — ${members.length} ${members.length === 1 ? 'entry' : 'entries'}</div>
                 <ul class="repo-day-items avr-report-list">${
@@ -12270,10 +12408,12 @@
                 <div id="avrAttList">${rows}</div>
                 <button type="button" class="avr-att-add" onclick="avrAddAttendee()">➕ Add person</button>
 
-                <div class="ac-edit-section-title">Summary</div>
+                <div class="ac-edit-section-title">Summary
+                    <button type="button" class="avr-att-add" style="margin-left:8px;padding:3px 10px;" onclick="avrGenerateSummary()">✨ Generate from activities</button>
+                </div>
                 <div class="ac-edit-grid">
                     <div class="ac-edit-field full">
-                        <textarea id="avrSummary" maxlength="2000" placeholder="What was accomplished on this visit — the headline for the report.">${escAttr(v.summary || '')}</textarea>
+                        <textarea id="avrSummary" maxlength="2000" placeholder="What was accomplished on this visit — or click ✨ Generate to build a bullet list from the activities, then edit.">${escAttr(v.summary || '')}</textarea>
                     </div>
                 </div>
 
@@ -12554,6 +12694,29 @@
                 </tr>`;
             }).join('') : '<tr><td colspan="3">No activities in this window.</td></tr>';
 
+            // Aircraft dossier for print — specs + connectivity, installed serials, MODMAN.
+            const { aircraftRows, connRows } = avrDossierRows(v.aircraft);
+            const { equip, modman } = avrDossierData(v.aircraft);
+            const dossierGrid = rows => rows.map(([k, val]) => `<div><span class="k">${escAttr(k)}:</span> ${escAttr(val) || '—'}</div>`).join('');
+            const equipMulti = equip.some(r => r.position);
+            const equipPrint = equip.length ? `
+                <div class="avr-print-sec">Installed Equipment</div>
+                <table class="avr-print-table"><thead><tr><th>Equipment</th>${equipMulti ? '<th>Pos</th>' : ''}<th>Serial</th><th>Installed</th></tr></thead>
+                <tbody>${equip.map(r => `<tr><td>${escAttr(r.lru.label)}</td>${equipMulti ? `<td>${r.position ? escAttr(r.position + '/' + r.qty) : '—'}</td>` : ''}<td>${r.vacant ? 'removed' : escAttr(r.serial || '—')}</td><td>${escAttr(r.date || '—')}</td></tr>`).join('')}</tbody></table>` : '';
+            let modmanPrint = '';
+            if (modman) {
+                const snLabel = modman.isAstronics ? 'Astronics S/N' : 'Eclipse S/N';
+                const snVal = modman.isAstronics ? modman.astronicsSn : eclipseSnDisplay(modman.eclipseSn);
+                const mrows = [
+                    ['Kontron S/N', modman.kontronSn], [snLabel, snVal],
+                    ['Taurus MGID', [modman.taurusOldMgId, modman.taurusNewMgId].filter(Boolean).join(' → ')],
+                    ['Taurus TID', [modman.taurusOldTid, modman.taurusNewTid].filter(Boolean).join(' → ')],
+                    ['Hughes chassis', modman.hnsChassisId], ['Hughes ESN', modman.hnsEsn], ['Hughes MAC', modman.hnsMac],
+                    ['Fitted', modman.installDate],
+                ].filter(r => r[1]);
+                modmanPrint = mrows.length ? `<div class="avr-print-sec">MODMAN</div><div class="avr-print-grid">${dossierGrid(mrows)}</div>` : '';
+            }
+
             document.getElementById('avrPrint').innerHTML = `
                 <div class="avr-print-sheet">
                     <div class="avr-print-head">
@@ -12569,6 +12732,12 @@
                         <div><span class="k">Hangar:</span> ${hangar}</div>
                         <div><span class="k">Attendees:</span><br>${rowsPeople}</div>
                     </div>
+                    <div class="avr-print-sec">Aircraft</div>
+                    <div class="avr-print-grid">${dossierGrid(aircraftRows)}</div>
+                    <div class="avr-print-sec">Connectivity &amp; Retrofit</div>
+                    <div class="avr-print-grid">${dossierGrid(connRows)}</div>
+                    ${equipPrint}
+                    ${modmanPrint}
                     ${v.summary ? `<div class="avr-print-sec">Summary</div><div class="avr-print-note">${escAttr(v.summary)}</div>` : ''}
                     <div class="avr-print-sec">Work Carried Out</div>
                     <table class="avr-print-table">
