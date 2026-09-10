@@ -3476,6 +3476,18 @@
         .sr-days { font-variant-numeric: tabular-nums; font-weight: 600; }
         .sr-reason { white-space: normal; max-width: 260px; font-size: 11.5px; color: #6b7780; }
 
+        /* A dual-identity unit — the IFE server carries a Kontron S/N AND an Eclipse
+           S/N — shows both in the Serial cell: the primary on top, the alternate as a
+           muted second line beneath. Driven by the LRU's serialLabel/altSerialLabel, so
+           any future two-serial box gets it with no code change. */
+        .sr-serial-label { display: block; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #96a0a8; }
+        .sr-alt { margin-top: 4px; }
+        .sr-alt .hw-serial { color: #4a555d; }
+        .sr-alt-input {
+            margin-top: 2px; width: 96px; padding: 3px 6px; border: 1px solid #d7dde1; border-radius: 5px;
+            font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px;
+        }
+
         .sr-date-input {
             padding: 3px 6px;
             border: 1px solid #d7dde1;
@@ -6428,7 +6440,12 @@
         // two fits can share alias spellings without colliding.
         const HARDWARE_LRUS = [
             { id: 'sim',        label: 'SIM Card',   fit: 'retrofit', aliases: ['sim', 'sim card', 'simcard'] },
-            { id: 'ife_server', label: 'IFE Server', fit: 'retrofit', aliases: ['ife server', 'ifeserver', 'ife'] },
+            // The IFE server is a dual-identity box like the MODMAN: one physical unit
+            // carrying a Kontron S/N (the primary serial) AND an Eclipse S/N. The second
+            // serial rides in the unit's `altSerial`; altSerialLabel is what turns on the
+            // paired display/entry on the Serials tab.
+            { id: 'ife_server', label: 'IFE Server', fit: 'retrofit', aliases: ['ife server', 'ifeserver', 'ife'],
+              serialLabel: 'Kontron S/N', altSerialLabel: 'Eclipse S/N' },
             { id: 'modman',     label: 'MODMAN',     fit: 'retrofit', aliases: ['modman', 'mod man'] },
             { id: 'kandu',      label: 'KANDU',      fit: 'retrofit', aliases: ['kandu'] },
             { id: 'krfu',       label: 'KRFU',       fit: 'retrofit', aliases: ['krfu'] },
@@ -6455,7 +6472,8 @@
             // lf_cwap at the end is the one CONFIRMED entry. Correcting the rest is an
             // edit to this array and nothing else.
             { id: 'lf_sim',        label: 'SIM Card',   fit: 'linefit', aliases: ['sim', 'sim card', 'simcard'] },
-            { id: 'lf_ife_server', label: 'IFE Server', fit: 'linefit', aliases: ['ife server', 'ifeserver', 'ife'] },
+            { id: 'lf_ife_server', label: 'IFE Server', fit: 'linefit', aliases: ['ife server', 'ifeserver', 'ife'],
+              serialLabel: 'Kontron S/N', altSerialLabel: 'Eclipse S/N' },
             { id: 'lf_modman',     label: 'MODMAN',     fit: 'linefit', aliases: ['modman', 'mod man'] },
             { id: 'lf_kandu',      label: 'KANDU',      fit: 'linefit', aliases: ['kandu'] },
             { id: 'lf_krfu',       label: 'KRFU',       fit: 'linefit', aliases: ['krfu'] },
@@ -6864,8 +6882,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.121.0';
-        const APP_BUILD    = '2026.09.10.05';
+        const APP_VERSION  = '2.122.0';
+        const APP_BUILD    = '2026.09.10.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15885,7 +15903,8 @@
                    (!srFilters.lru   || r.unit.lruId === srFilters.lru)
                 && (!srFilters.tail  || r.tail === srFilters.tail)
                 && (!srFilters.state || r.state === srFilters.state)
-                && (!q || String(r.unit.serial || '').toLowerCase().includes(q)));
+                && (!q || String(r.unit.serial || '').toLowerCase().includes(q)
+                       || String(r.unit.altSerial || '').toLowerCase().includes(q)));
         }
 
         const SR_STATES = [
@@ -15952,9 +15971,30 @@
                         onchange="saveFitmentDate(this)">`;
             };
 
+            // The Serial cell. A single-identity unit shows just its serial, as before.
+            // A dual-identity box (the IFE server: Kontron S/N + Eclipse S/N) shows both,
+            // labelled, with the alternate serial editable in Edit mode — the alternate
+            // is a property of the box, so it saves to /units/{id}, not to a fitment.
+            const srSerialCell = (r) => {
+                const primary = `<span class="hw-serial">${escAttr(r.unit.serial || '')}</span>`;
+                const lru = r.lru;
+                if (!lru || !lru.altSerialLabel) return primary;   // single-identity unit
+                const head = lru.serialLabel
+                    ? `<span class="sr-serial-label">${escAttr(lru.serialLabel)}</span>${primary}`
+                    : primary;
+                const alt = r.unit.altSerial || '';
+                const altBlock = editable
+                    ? `<div class="sr-alt"><span class="sr-serial-label">${escAttr(lru.altSerialLabel)}</span>`
+                        + `<input type="text" maxlength="60" autocomplete="off" class="sr-alt-input" value="${escAttr(alt)}"`
+                        + ` placeholder="${escAttr(lru.altSerialLabel)}" data-unit="${escAttr(r.unit.id)}" onchange="saveUnitAltSerial(this)"></div>`
+                    : `<div class="sr-alt"><span class="sr-serial-label">${escAttr(lru.altSerialLabel)}</span>`
+                        + (alt ? `<span class="hw-serial">${escAttr(alt)}</span>` : '<span class="hw-none">not recorded</span>') + `</div>`;
+                return head + altBlock;
+            };
+
             body.innerHTML = rows.length ? rows.map(r => `<tr>
                 <td>${escAttr(r.lru ? r.lru.label : r.unit.lruId)}</td>
-                <td><span class="hw-serial">${escAttr(r.unit.serial || '')}</span></td>
+                <td>${srSerialCell(r)}</td>
                 <td>${r.tail ? `<strong>${escAttr(r.tail)}</strong>` : '<span class="hw-none">spare</span>'}</td>
                 <td>${r.position ? `<span class="bl-pos">${escAttr(r.position)}</span>` : '<span class="hw-none">&mdash;</span>'}</td>
                 <td><span class="sr-state ${r.state === 'on_wing' ? 'on' : 'off'}">${r.state === 'on_wing' ? 'ON WING' : (r.state === 'spare' ? 'SPARE' : 'REMOVED')}</span></td>
@@ -16009,11 +16049,41 @@
             }
         }
 
+        // The alternate serial — the IFE server's Eclipse S/N beside its Kontron S/N —
+        // belongs to the BOX, not a fitment, so it saves to /units/{id} rather than to a
+        // fitment. Same mirror-then-rerender shape as saveFitmentDate: /units is polled,
+        // so the local store is updated in place or the edit would appear to vanish on the
+        // next poll. Blank clears the field (null).
+        async function saveUnitAltSerial(el) {
+            const unitId = el.dataset.unit;
+            const u = unitsLive[unitId];
+            if (!u) return;
+            const value = el.value.trim();
+            const token = await getIdToken();
+            if (!token) return;
+            el.disabled = true;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units/${unitId}.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify({ altSerial: value || null }),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                if (!value) delete u.altSerial; else u.altSerial = value;
+                renderSerialsPage();
+                renderHardwarePage();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not save serial — ${ex.message}`, '#dc3545');
+            } finally {
+                el.disabled = false;
+            }
+        }
+
         // The register as a spreadsheet. Data gathering happens in more places than this
         // page, and a CSV is the honest handover format for the ones it does not cover.
         function exportSerialsCsv() {
             const rows = serialRowsFiltered();
-            const head = ['Equipment', 'Fit', 'Serial', 'Part Number', 'Aircraft', 'Type',
+            const head = ['Equipment', 'Fit', 'Serial', 'Alt Serial', 'Part Number', 'Aircraft', 'Type',
                           'Position', 'Status', 'Fitted', 'Removed', 'Days On Wing',
                           'Slot Changes', 'Removal Reason', 'Shop Status', 'Shop Ref', 'Shop Finding'];
             const cell = v => {
@@ -16026,6 +16096,7 @@
                     r.lru ? r.lru.label : r.unit.lruId,
                     r.lru ? r.lru.fit : '',
                     r.unit.serial || '',
+                    r.unit.altSerial || '',
                     r.unit.partNumber || '',
                     r.tail, r.type || '', r.position,
                     r.state === 'on_wing' ? 'On Wing' : (r.state === 'spare' ? 'Spare' : 'Removed'),
