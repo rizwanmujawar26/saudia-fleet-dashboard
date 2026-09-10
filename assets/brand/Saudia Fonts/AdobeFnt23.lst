@@ -1,0 +1,163 @@
+%!Adobe-FontList 1.23
+%Locale:0x409
+
+%BeginFont
+Handler:DirectoryHandler
+FontType:Invalid
+OutlineFileName:/Users/chesterm/Desktop/80323537-007_Saudia_AlFursan_Guidelines_ZONE_MC_2_8_23 Folder/Document fonts/AdobeFnt23.lst
+FileLength:3492
+FileModTime:713441734
+%EndFont
+
+%BeginFont
+Handler:DirectoryHandler
+FontType:TrueType
+FontName:Arial-BoldMT
+FamilyName:Arial
+StyleName:Bold
+MenuName:Arial
+StyleBits:2
+WeightClass:700
+WidthClass:5
+AngleClass:0
+FullName:Arial Bold
+WritingScript:Roman
+OutlineFileName:/Users/chesterm/Desktop/80323537-007_Saudia_AlFursan_Guidelines_ZONE_MC_2_8_23 Folder/Document fonts/Arial Bold.ttf
+DataFormat:sfntData
+hasSVG:no
+hasCOLR:no
+VariableFontType:NonVariableFont
+FileLength:750984
+FileModTime:708516509
+NameArray:0,Mac,4,Arial Bold
+NameArray:0,Win,1,Arial
+%EndFont
+
+%BeginFont
+Handler:DirectoryHandler
+FontType:TrueType
+FontName:ArialMT
+FamilyName:Arial
+StyleName:Regular
+MenuName:Arial
+StyleBits:0
+WeightClass:400
+WidthClass:5
+AngleClass:0
+FullName:Arial
+WritingScript:Roman
+OutlineFileName:/Users/chesterm/Desktop/80323537-007_Saudia_AlFursan_Guidelines_ZONE_MC_2_8_23 Folder/Document fonts/Arial.ttf
+DataFormat:sfntData
+hasSVG:no
+hasCOLR:no
+VariableFontType:NonVariableFont
+FileLength:773236
+FileModTime:708516509
+NameArray:0,Mac,4,Arial
+NameArray:0,Win,1,Arial
+%EndFont
+
+%BeginFont
+Handler:DirectoryHandler
+FontType:Type1
+FontName:SaudiaSans-Bold
+FamilyName:Saudia Sans
+StyleName:Bold
+MenuName:Saudia Sans Bold
+StyleBits:0
+WeightClass:700
+WidthClass:5
+AngleClass:0
+FullName:Saudia Sans Bold
+WritingScript:Roman
+OutlineFileName:/Users/chesterm/Desktop/80323537-007_Saudia_AlFursan_Guidelines_ZONE_MC_2_8_23 Folder/Document fonts/SaudiaSans-Bold.otf
+DataFormat:sfntData
+UsesStandardEncoding:yes
+isCFF:yes
+hasSVG:no
+hasCOLR:no
+VariableFontType:NonVariableFont
+FileLength:127428
+FileModTime:710229245
+NameArray:0,Win,1,Saudia Sans Bold
+NameArray:0,Win,16,Saudia Sans
+%EndFont
+
+%BeginFont
+Handler:DirectoryHandler
+FontType:Type1
+FontName:SaudiaSans-Light
+FamilyName:Saudia Sans
+StyleName:Light
+MenuName:Saudia Sans Light
+StyleBits:0
+WeightClass:300
+WidthClass:5
+AngleClass:0
+FullName:Saudia Sans Light
+WritingScript:Roman
+OutlineFileName:/Users/chesterm/Desktop/80323537-007_Saudia_AlFursan_Guidelines_ZONE_MC_2_8_23 Folder/Document fonts/SaudiaSans-Light.otf
+DataFormat:sfntData
+UsesStandardEncoding:yes
+isCFF:yes
+hasSVG:no
+hasCOLR:no
+VariableFontType:NonVariableFont
+FileLength:125136
+FileModTime:710229243
+NameArray:0,Win,1,Saudia Sans Light
+NameArray:0,Win,16,Saudia Sans
+%EndFont
+
+%BeginFont
+Handler:DirectoryHandler
+FontType:Type1
+FontName:SaudiaSans-Medium
+FamilyName:Saudia Sans
+StyleName:Medium
+MenuName:Saudia Sans Medium
+StyleBits:0
+WeightClass:500
+WidthClass:5
+AngleClass:0
+FullName:Saudia Sans Medium
+WritingScript:Roman
+OutlineFileName:/Users/chesterm/Desktop/80323537-007_Saudia_AlFursan_Guidelines_ZONE_MC_2_8_23 Folder/Document fonts/SaudiaSans-Medium.otf
+DataFormat:sfntData
+UsesStandardEncoding:yes
+isCFF:yes
+hasSVG:no
+hasCOLR:no
+VariableFontType:NonVariableFont
+FileLength:125904
+FileModTime:710229244
+NameArray:0,Win,1,Saudia Sans Medium
+NameArray:0,Win,16,Saudia Sans
+%EndFont
+
+%BeginFont
+Handler:DirectoryHandler
+FontType:Type1
+FontName:SaudiaSans-Regular
+FamilyName:Saudia Sans
+StyleName:Regular
+MenuName:Saudia Sans
+StyleBits:0
+WeightClass:400
+WidthClass:5
+AngleClass:0
+FullName:Saudia Sans
+WritingScript:Roman
+OutlineFileName:/Users/chesterm/Desktop/80323537-007_Saudia_AlFursan_Guidelines_ZONE_MC_2_8_23 Folder/Document fonts/SaudiaSans-Regular.otf
+DataFormat:sfntData
+UsesStandardEncoding:yes
+isCFF:yes
+hasSVG:no
+hasCOLR:no
+VariableFontType:NonVariableFont
+FileLength:124748
+FileModTime:710229245
+NameArray:0,Win,1,Saudia Sans
+NameArray:0,Win,16,Saudia Sans
+%EndFont
+

@@ -4118,27 +4118,9 @@
         .avr-work-sub { color: #6b7780; }
         .avr-work-loc { font-size: 11px; color: #8a97a3; }
 
-        /* ===== AVR print sheet ===== */
-        #avrPrint { display: none; }
-        @media print {
-            body.printing-avr { background: #fff !important; }
-            body.printing-avr > *:not(#avrPrint) { display: none !important; }
-            body.printing-avr #avrPrint { display: block !important; }
-            .avr-print-sheet { font-family: Arial, Helvetica, sans-serif; color: #111; padding: 8px 4px; max-width: 780px; margin: 0 auto; }
-            .avr-print-head { border-bottom: 3px solid #0a5c34; padding-bottom: 10px; margin-bottom: 14px; }
-            .avr-print-title { font-size: 20px; font-weight: 800; color: #0a5c34; margin: 0; }
-            .avr-print-sub { font-size: 12px; color: #444; margin: 3px 0 0; }
-            .avr-print-ref { float: right; font-size: 12px; font-weight: 700; color: #0a5c34; }
-            .avr-print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; margin-bottom: 14px; font-size: 12.5px; }
-            .avr-print-grid .k { font-weight: 700; color: #555; }
-            .avr-print-sec { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
-                color: #0a5c34; border-bottom: 1px solid #cdd; padding-bottom: 3px; margin: 14px 0 8px; }
-            .avr-print-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            .avr-print-table th, .avr-print-table td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
-            .avr-print-table th { background: #eef4f0; }
-            .avr-print-note { font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; }
-            .avr-print-foot { margin-top: 20px; padding-top: 8px; border-top: 1px solid #ccc; font-size: 10.5px; color: #777; }
-        }
+        /* The AVR report now prints from a standalone new-tab document (printAvr opens a
+           self-contained page with its own print CSS), so the old in-page #avrPrint sheet
+           and its @media print rules were removed. */
 
         /* Overdue but still inside the 24h grace window */
         .sched-overdue-row {
@@ -5836,10 +5818,6 @@
         </div>
     </div>
 
-    <!-- Off-screen container the browser prints as the AVR. printAvr() fills it and adds
-         body.printing-avr; the print stylesheet then shows only this. -->
-    <div id="avrPrint" aria-hidden="true"></div>
-
     <div id="addActOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
         <div class="act-modal">
             <h3 style="color:#0a5c34; margin-bottom:6px;" id="addActHeading">Add New Activity</h3>
@@ -6962,8 +6940,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.124.2';
-        const APP_BUILD    = '2026.09.11.02';
+        const APP_VERSION  = '2.125.0';
+        const APP_BUILD    = '2026.09.11.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12875,7 +12853,28 @@
             }
         }
 
-        // ===== Print / PDF — fill the off-screen sheet and let the browser print it =====
+        // The two partner logos for the printable report. Saudia is reused from the page
+        // header (already an inline data-URI, single-colour green mark). NSG is a clean
+        // wordmark placeholder — swap NSG_REPORT_LOGO for the official asset once the file
+        // lands in assets/logos/ (see the report-template notes).
+        function saudiaReportLogo() {
+            const img = document.querySelector('.header-brand img');
+            return (img && img.src) || '';
+        }
+        // Inline SVG NSG wordmark (placeholder, NSG navy). Replace with the official logo
+        // baked to a data URI when assets/logos/nsg-logo.svg is provided.
+        const NSG_REPORT_LOGO = `data:image/svg+xml;utf8,${encodeURIComponent(
+            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 70">
+              <text x="0" y="42" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="800" letter-spacing="2" fill="#0b1f3a">NSG</text>
+              <text x="132" y="30" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="1.5" fill="#0b1f3a">NEO SPACE</text>
+              <text x="132" y="50" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="1.5" fill="#0b1f3a">GROUP</text>
+            </svg>`)}`;
+
+        // ===== Print / PDF — open a standalone, printable report in a new browser tab =====
+        // Self-contained: all CSS is inline and both logos are data-URIs, so the new tab
+        // (about:blank, written via document.write) needs nothing from this origin. A
+        // repeating header (logos + title) and footer (download stamp + ref) sit in the
+        // @page margins so they recur on every printed page.
         function printAvr(id) {
             const v = avrLive[id];
             if (!v) return;
@@ -12883,9 +12882,6 @@
             const people = avrAttendees(v);
             const type = avrTypeOf(v.aircraft);
             const rt = avrReportType(v);
-            const rowsPeople = people.length
-                ? people.map(p => `${escAttr(p.name || '—')}${p.company ? ' (' + escAttr(p.company) + ')' : ''}${p.role ? ' — ' + escAttr(p.role) : ''} — ${escAttr(attMode(p.mode).short)}`).join('<br>')
-                : '—';
             const hangar = v.hangar === 'inside' ? 'Inside hangar' : v.hangar === 'outside' ? 'Outside / apron' : '—';
             const kindLabel = k => ({ software: 'Software', media: 'Media', hardware: 'Hardware', commission: 'Commissioning', maintenance: 'Maintenance', modification: 'Modification', operational: 'Operational', activation: 'Activation' }[k] || k);
             const actRows = members.length ? members.map(x => {
@@ -12919,10 +12915,10 @@
             const removedTxt = r => r.removedUnits && r.removedUnits.length
                 ? `<br><span style="color:#a52834;font-size:10.5px;">replaced ${r.removedUnits.map(u => `${escAttr(u.serial)}${u.removed ? ' (off ' + escAttr(u.removed) + ')' : ''}`).join(', ')}</span>` : '';
             const equipPrint = equip.length ? `
-                <div class="avr-print-sec">Installed Equipment</div>
-                <table class="avr-print-table"><thead><tr><th>Equipment</th>${equipMulti ? '<th>Pos</th>' : ''}<th>Serial</th><th>Installed</th></tr></thead>
+                <div class="sec">Installed Equipment</div>
+                <table class="tbl"><thead><tr><th>Equipment</th>${equipMulti ? '<th>Pos</th>' : ''}<th>Serial</th><th>Installed</th></tr></thead>
                 <tbody>${equip.map(r => `<tr><td>${escAttr(r.lru.label)}</td>${equipMulti ? `<td>${r.position ? escAttr(r.position + '/' + r.qty) : '—'}</td>` : ''}<td>${r.vacant ? 'removed' : escAttr(r.serial || '—')}${removedTxt(r)}</td><td>${escAttr(r.date || '—')}</td></tr>`).join('')}</tbody></table>` : '';
-            const ifcNotePrint = dspec.ifcNote ? `<div class="avr-print-note" style="margin-top:6px;"><b>IFC mod:</b> ${escAttr(dspec.ifcNote)}</div>` : '';
+            const ifcNotePrint = dspec.ifcNote ? `<div class="note" style="margin-top:6px;"><b>IFC mod:</b> ${escAttr(dspec.ifcNote)}</div>` : '';
             let modmanPrint = '';
             if (modman) {
                 const snLabel = modman.isAstronics ? 'Astronics S/N' : 'Eclipse S/N';
@@ -12934,51 +12930,162 @@
                     ['IPHO', modman.ipho !== 'na' ? modman.ipho : ''],
                     ['Hughes Chassis ID', modman.hnsChassisId], ['Hughes MAC', modman.hnsMac], ['Hughes ESN', modman.hnsEsn],
                 ].filter(r => r[1]);
-                modmanPrint = mrows.length ? `<div class="avr-print-sec">MODMAN</div><div class="avr-print-grid">${dossierGrid(mrows)}</div>` : '';
+                modmanPrint = mrows.length ? `<div class="sec">MODMAN</div><div class="rpt-grid">${dossierGrid(mrows)}</div>` : '';
             }
 
-            document.getElementById('avrPrint').innerHTML = `
-                <div class="avr-print-sheet">
-                    <div class="avr-print-head">
-                        <span class="avr-print-ref">${escAttr(v.ref || '')}</span>
-                        <h1 class="avr-print-title">${escAttr(rt.label)}</h1>
-                        <p class="avr-print-sub">Saudia Connectivity / IFEC Programme${v.status === 'draft' ? ' — DRAFT' : ''}</p>
-                    </div>
-                    <div class="avr-print-grid">
-                        <div><span class="k">Aircraft:</span> ${escAttr(v.aircraft)}${type ? ' (' + escAttr(type) + ')' : ''}</div>
-                        <div><span class="k">Dates:</span> ${escAttr(avrDateLabel(v))}</div>
-                        <div><span class="k">Engagement:</span> ${escAttr(avrMode(v.mode).label)}</div>
-                        <div><span class="k">Location:</span> ${escAttr(v.location || '—')}${v.bay ? ' · ' + escAttr(v.bay) : ''}</div>
-                        <div><span class="k">Hangar:</span> ${hangar}</div>
-                        <div><span class="k">Attendees:</span><br>${rowsPeople}</div>
-                    </div>
-                    <div class="avr-print-sec">Aircraft</div>
-                    <div class="avr-print-grid">${dossierGrid(aircraftRows)}</div>
-                    <div class="avr-print-sec">Hardware</div>
-                    <div class="avr-print-grid">${dossierGrid(hardwareRows)}</div>
-                    ${ifcNotePrint}
-                    ${equipPrint}
-                    ${modmanPrint}
-                    ${softwareRows.length ? `<div class="avr-print-sec">Software</div><div class="avr-print-grid">${dossierGrid(softwareRows)}</div>` : ''}
-                    ${v.summary ? `<div class="avr-print-sec">Summary</div><div class="avr-print-note">${escAttr(v.summary)}</div>` : ''}
-                    <div class="avr-print-sec">Work Carried Out</div>
-                    <table class="avr-print-table">
-                        <thead><tr><th style="width:90px;">Date</th><th style="width:120px;">Category</th><th>Details</th></tr></thead>
-                        <tbody>${actRows}</tbody>
-                    </table>
-                    <div class="avr-print-foot">Generated from the Saudia Connectivity Fleet Status dashboard · ${escAttr(v.ref || '')} · printed ${new Date().toISOString().slice(0, 10)}</div>
-                </div>`;
-            document.body.classList.add('printing-avr');
-            const cleanup = () => { document.body.classList.remove('printing-avr'); window.removeEventListener('afterprint', cleanup); };
-            window.addEventListener('afterprint', cleanup);
-            // Defer the print one frame + tick: calling window.print() synchronously right
-            // after injecting the sheet can print before the (until now display:none) sheet
-            // is laid out, which shows as a blank page in some browsers. Two rAFs plus a
-            // short timeout guarantees a paint first.
-            requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
-                window.print();
-                setTimeout(cleanup, 1500);   // fallback for browsers that fire no afterprint
-            }, 60)));
+            // Download stamp — day-first date + time, captured the moment the report opens
+            // (re-open to refresh). Never US month-first.
+            const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const now = new Date();
+            const p2 = n => String(n).padStart(2, '0');
+            const stamp = `${p2(now.getDate())} ${MON[now.getMonth()]} ${now.getFullYear()}, ${p2(now.getHours())}:${p2(now.getMinutes())}`;
+            const isDraft = v.status === 'draft';
+            const title = `${rt.label} — ${v.aircraft}${v.ref ? ' · ' + v.ref : ''}`;
+
+            const metaGrid = `<div class="rpt-grid">
+                <div><span class="k">Aircraft</span> ${escAttr(v.aircraft)}${type ? ' <span class="muted">(' + escAttr(type) + ')</span>' : ''}</div>
+                <div><span class="k">Dates</span> ${escAttr(avrDateLabel(v))}</div>
+                <div><span class="k">Engagement</span> ${escAttr(avrMode(v.mode).label)}</div>
+                <div><span class="k">Location</span> ${escAttr(v.location || '—')}${v.bay ? ' · ' + escAttr(v.bay) : ''}</div>
+                <div><span class="k">Hangar</span> ${hangar}</div>
+                ${rt.value === 'retrofit' ? `<div><span class="k">Mod start</span> ${escAttr((aircraftData.find(a => a.id === v.aircraft) || {}).retrofitStart || '—')}</div>
+                <div><span class="k">Mod end</span> ${escAttr((aircraftData.find(a => a.id === v.aircraft) || {}).retrofitEnd || ((aircraftData.find(a => a.id === v.aircraft) || {}).retrofitStart ? 'Ongoing' : '—'))}</div>` : ''}
+            </div>`;
+
+            const doc = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escAttr(v.ref || rt.label)} — ${escAttr(v.aircraft)}</title>
+<style>
+  :root { --green:#006936; --navy:#0b1f3a; --ink:#1f2a33; --muted:#7c8894; --line:#e3e8ee; --soft:#f6f8fa; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#eef1f4; color:var(--ink); font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  a { color: var(--green); }
+  .toolbar { position: sticky; top:0; z-index:5; display:flex; align-items:center; gap:14px;
+    background:#fff; border-bottom:1px solid var(--line); padding:10px 16px; }
+  .toolbar .sp { flex:1 1 auto; }
+  .toolbar .stamp { color:var(--muted); font-size:12px; }
+  .btn { border:1px solid var(--green); background:var(--green); color:#fff; border-radius:8px;
+    font-size:13px; font-weight:700; padding:8px 16px; cursor:pointer; }
+  .btn:hover { background:#00572c; }
+  .sheet { background:#fff; max-width:820px; margin:20px auto; padding:34px 40px 30px;
+    box-shadow:0 2px 14px rgba(20,40,60,.10); position:relative; }
+  .rpt-header { display:flex; align-items:center; justify-content:space-between; gap:18px;
+    border-bottom:3px solid var(--green); padding-bottom:14px; }
+  .rpt-header img.saudia { height:52px; width:auto; }
+  .rpt-header img.nsg { height:34px; width:auto; }
+  .rpt-titleband { margin:16px 0 8px; }
+  .rpt-kicker { font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
+  .rpt-title { font-size:22px; font-weight:800; color:var(--navy); margin:2px 0 4px; }
+  .rpt-ref { font-size:12px; font-weight:700; color:var(--green); letter-spacing:.4px; }
+  .draft-flag { display:inline-block; margin-left:8px; background:#fff3cd; color:#8a6d00;
+    font-size:10px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; padding:2px 7px; border-radius:5px; vertical-align:2px; }
+  .rpt-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px 22px; margin:12px 0 4px; font-size:12.5px; }
+  .rpt-grid .k, .k { display:block; font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); }
+  .muted { color:var(--muted); }
+  .sec { font-size:12px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--navy);
+    margin:20px 0 8px; padding-bottom:4px; border-bottom:1px solid var(--line); }
+  .note { background:var(--soft); border:1px solid var(--line); border-left:3px solid var(--green);
+    border-radius:6px; padding:9px 12px; font-size:12.5px; white-space:pre-wrap; }
+  table.tbl { width:100%; border-collapse:collapse; font-size:12px; }
+  table.tbl th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted);
+    border-bottom:1.5px solid var(--line); padding:6px 8px; }
+  table.tbl td { border-bottom:1px solid #eef2f6; padding:6px 8px; vertical-align:top; }
+  table.tbl tbody tr:nth-child(even) td { background:#fafbfc; }
+  .people { display:flex; flex-wrap:wrap; gap:14px 26px; font-size:12.5px; }
+  .people .grp-label { font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); }
+  .rpt-footer { display:flex; justify-content:space-between; gap:12px; color:var(--muted); font-size:10.5px;
+    border-top:1px solid var(--line); margin-top:22px; padding-top:10px; }
+  /* The repeating margin bars exist only for print; keep them out of the on-screen view. */
+  .print-running-head, .print-running-foot { display:none; }
+  @media print {
+    body { background:#fff; }
+    .toolbar { display:none; }
+    .sheet { box-shadow:none; margin:0; max-width:none; padding:0; }
+    @page { size:A4; margin:26mm 14mm 18mm; }
+    /* Repeat the header/footer bars in the page margins on every printed page (Chrome
+       recurs position:fixed elements). Page numbers via @page counters where supported. */
+    .print-running-head { position:fixed; top:-20mm; left:0; right:0; height:16mm;
+      display:flex; align-items:center; justify-content:space-between;
+      border-bottom:2px solid var(--green); padding-bottom:3mm; }
+    .print-running-head img.saudia { height:11mm; }
+    .print-running-head img.nsg { height:7mm; }
+    .print-running-head .rh-title { font-size:10px; font-weight:800; color:var(--navy); text-transform:uppercase; letter-spacing:.5px; text-align:right; max-width:60mm; }
+    .print-running-foot { position:fixed; bottom:-14mm; left:0; right:0; height:10mm;
+      display:flex; align-items:center; justify-content:space-between;
+      color:var(--muted); font-size:8.5px; border-top:1px solid var(--line); padding-top:2mm; }
+    .print-running-foot .pageno::after { content: counter(page); }
+    .rpt-header, .rpt-footer { display:none; }   /* on-screen header/footer; margins carry print copies */
+    thead { display: table-header-group; }
+    tr, .note { break-inside: avoid; }
+  }
+</style></head>
+<body>
+  <div class="toolbar">
+    <button class="btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    <span class="sp"></span>
+    <span class="stamp">Downloaded ${escAttr(stamp)}</span>
+  </div>
+
+  <!-- Running header/footer copies that live in the printed page margins -->
+  <div class="print-running-head">
+    <img class="saudia" src="${saudiaReportLogo()}" alt="Saudia">
+    <span class="rh-title">${escAttr(rt.label)} · ${escAttr(v.aircraft)}</span>
+    <img class="nsg" src="${NSG_REPORT_LOGO}" alt="NSG">
+  </div>
+  <div class="print-running-foot">
+    <span>Saudia Connectivity / IFEC Programme${v.ref ? ' · ' + escAttr(v.ref) : ''}</span>
+    <span>Downloaded ${escAttr(stamp)}</span>
+    <span class="pageno">Page </span>
+  </div>
+
+  <div class="sheet">
+    <div class="rpt-header">
+      <img class="saudia" src="${saudiaReportLogo()}" alt="Saudia">
+      <img class="nsg" src="${NSG_REPORT_LOGO}" alt="NSG — Neo Space Group">
+    </div>
+    <div class="rpt-titleband">
+      <div class="rpt-kicker">Saudia Connectivity / IFEC Programme</div>
+      <div class="rpt-title">${escAttr(rt.label)}${isDraft ? '<span class="draft-flag">Draft</span>' : ''}</div>
+      <div class="rpt-ref">${escAttr(v.aircraft)}${type ? ' · ' + escAttr(type) : ''}${v.ref ? ' · ' + escAttr(v.ref) : ''}</div>
+    </div>
+    ${metaGrid}
+    ${people.length ? `<div class="sec">People</div><div class="people">${
+        ['present', 'remote'].map(m => {
+            const list = people.filter(p => attMode(p.mode).value === m);
+            if (!list.length) return '';
+            return `<div><span class="grp-label">${m === 'present' ? 'On aircraft' : 'Remote'}</span>${
+                list.map(p => `${escAttr(p.name || '—')}${p.company ? ' <span class="muted">· ' + escAttr(p.company) + '</span>' : ''}${p.role ? ' <span class="muted">· ' + escAttr(p.role) + '</span>' : ''}`).join('<br>')
+            }</div>`;
+        }).join('')
+    }</div>` : ''}
+    <div class="sec">Aircraft</div>
+    <div class="rpt-grid">${dossierGrid(aircraftRows)}</div>
+    <div class="sec">Hardware</div>
+    <div class="rpt-grid">${dossierGrid(hardwareRows)}</div>
+    ${ifcNotePrint}
+    ${equipPrint}
+    ${modmanPrint}
+    ${softwareRows.length ? `<div class="sec">Software</div><div class="rpt-grid">${dossierGrid(softwareRows)}</div>` : ''}
+    ${v.summary ? `<div class="sec">Summary</div><div class="note">${escAttr(v.summary)}</div>` : ''}
+    <div class="sec">Work Carried Out — ${members.length} ${members.length === 1 ? 'entry' : 'entries'}</div>
+    <table class="tbl">
+      <thead><tr><th style="width:88px;">Date</th><th style="width:120px;">Category</th><th>Details</th></tr></thead>
+      <tbody>${actRows}</tbody>
+    </table>
+    <div class="rpt-footer">
+      <span>Generated from the Saudia Connectivity Fleet Status dashboard</span>
+      <span>Downloaded ${escAttr(stamp)}</span>
+    </div>
+  </div>
+</body></html>`;
+
+            const w = window.open('', '_blank');
+            if (!w) { setSyncStatus('🔴 Pop-up blocked — allow pop-ups to open the report', '#dc3545'); return; }
+            w.document.open();
+            w.document.write(doc);
+            w.document.close();
+            w.focus();
         }
 
         // Counts come from committed data, so these read the same as the global card:
