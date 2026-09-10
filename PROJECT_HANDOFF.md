@@ -6,7 +6,26 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.101.0 (2026-09-06).** Two Fleet-page sessions on top of everything below:
+**Latest — v2.117.0–v2.121.0 (2026-09-10): the Activity tab was reborn.** It is no longer
+the aircraft-first maintenance two-pane; it is the **activity repository + Aircraft Visit
+Reports (AVR)**, and it is now **public** (published reports readable by the airline). New
+node **`/avr`**, new field **`/activities/{id}/visitId`**, new `/fleetSpecs` fields
+**`ifcPrevious` / `ifcNote`**, and a new Fleet column **Prev. IFC** (which added a third
+`/fleetSpecs` write path to `commitFleetChanges`). A visit report carries a full **aircraft
+dossier** (specs, connectivity, installed serials incl. removed units, MODMAN) and an
+auto-generated bullet summary, and prints to PDF. Read **§4 Activity**, the `/avr` and
+`/activities` data-model entries, CHANGELOG v2.117–v2.121, and the memory note
+`activity-avr-redesign-v2117` before touching. ⚠️ **This is IFC (In-Flight Connectivity),
+not IFE** — the current IFC system is the `/fleet` `system` field; `ifcPrevious` is the
+system removed in the mod (ASO: Taqnia). Between v2.101 and this: v2.104–v2.116 (Satcom/
+Timeline fixes, calendar strip) — see CHANGELOG.
+
+**Open now:** the user is to enter ASO's `ifcPrevious` = `Taqnia` and `ifcNote` =
+"Taqnia IFC system de-modified and Eclipse IFC system installed (STS, Jeddah)"; and two
+open questions — whether to add a dedicated **Modified-by / vendor** field (STS), and
+whether **Prev. IFC** belongs in the Retrofit column group (where it is) or Connectivity.
+
+**Before that — v2.101.0 (2026-09-06).** Two Fleet-page sessions on top of everything below:
 - **v2.100.0 — Fleet filter bar rebuilt into a "logical bar":** quick pills **All / Active
   / AOG**, each with a live count bullet; a **Type** dropdown with per-type counts; and one
   **"Filters"** dropdown grouping the least-used axes (Fit / Status / Operational / SSID).
@@ -319,12 +338,17 @@ leaf. `saveAircraftEditor` / `collectAcEdit` / `acReloadInto`.
 
 ### `/fleetSpecs/{tail}` — airframe reference data (captured, not yet shown)
 
-Imported with the fleet (v2.89.0) for all 90 aircraft in the source files. **Nothing
-renders it yet** — it is the home for the fields the roster had nowhere to put, ready
-for a later UI. `manufacturer`, `family` (e.g. `A320`), `variant` (e.g. `A320-214`),
+Imported with the fleet (v2.89.0) and now **rendered in the AVR aircraft dossier**
+(v2.119). `manufacturer`, `family` (e.g. `A320`), `variant` (e.g. `A320-214`),
 `engineMfr`, `engineModel`, `engineQty` (num), `seatConfig`, `seatBusiness`/`seatEconomy`/
-`seatTotal` (num), `deliveryDate`, `msn`, `remark`. Null source fields were omitted, not
-stored as null. It is a **node**, so it is on the four backup/restore/verify lists.
+`seatTotal` (num — shown readable as "Business 20 · Economy 145 · Total 165"),
+`deliveryDate`, `msn`, `remark`, and (v2.121) **`ifcPrevious`** + **`ifcNote`** — the
+In-Flight **Connectivity** system removed in the mod (e.g. Taqnia) and a mod note. NB
+this is IFC, not IFE: the *current* IFC system is the `/fleet` `system` field, not a
+spec field. `ifcPrevious` is editable inline via the Fleet **Prev. IFC** column (writes
+`/fleetSpecs` — the third bucket in `commitFleetChanges`); `ifcNote` via the ✎ modal.
+Null source fields were omitted, not stored as null. It is a **node**, so it is on the
+four backup/restore/verify lists.
 
 ⚠️ **`deliveryDate` is now day-level `DD-Mon-YYYY`** for 99 of 105 tails (verified live
 2026-09-05 — the earlier "month-year e.g. `May 2012`" note was stale). `parseDeliveryDate`
@@ -400,10 +424,11 @@ clobber the other.
 ### `/activities/{id}` — what was actually done to an aircraft
 
 `aircraft`, `date` (DD-Mon-YYYY), `location` (free text), `category`, `title`,
-`task`, `outcome`, `notes`, `loggedAt`, and a `details` sub-object whose fields
-depend on the category (`partReplaced`/`partNumber`/`oldPart`/`newPart`
-plus `removalReason`, `shopStatus`, `shopRef`, `shopFinding`;
-`softwareName`/`version`; `modemType`/`commissioningResult`).
+`task`, `outcome`, `notes`, `loggedAt`, **`visitId`** (v2.117 — the AVR this activity
+belongs to, or absent; a report DERIVES its members by matching it, so nothing is stored
+twice), and a `details` sub-object whose fields depend on the category
+(`partReplaced`/`partNumber`/`oldPart`/`newPart` plus `removalReason`, `shopStatus`,
+`shopRef`, `shopFinding`; `softwareName`/`version`; `modemType`/`commissioningResult`).
 
 `details.recordType` is `baseline` on records written by **Record Installed
 Serials** and absent on everything else. It marks the record as *inventory* — a
@@ -423,6 +448,27 @@ plus the regex in the rules.
 This is the only record of maintenance work. The aircraft history reads it and
 the Timeline derives from it — there is no Timeline collection and nothing is
 entered twice.
+
+### `/avr/{id}` — Aircraft Visit Reports (v2.117)
+
+The grouping layer above `/activities`, read by the Activity tab's Visit Reports view.
+Holds only **visit-level** facts; the report's work list is DERIVED (see *§4 Activity*).
+On all four node lists (rules + backup/restore/verify).
+
+| field | notes |
+|---|---|
+| `aircraft` | bare tail |
+| `ref` | `AVR-<TAIL>-<YEAR>-<nnn>`, auto (`avrNextRef` = max suffix + 1 for that tail+year) |
+| `dateStart` / `dateEnd` | `DD-Mon-YYYY`; equal = single day. The report auto-includes the tail's derived Timeline events **within this window** |
+| `mode` | `on_site` \| `remote` \| `ota` \| `monitoring` — how WE engaged (the coloured chip). WHO performed the work is carried by each attendee's Company |
+| `location`, `bay`, `hangar` | station (free text), optional bay/stand, `inside`\|`outside`\|`na` |
+| `summary` | free text; "✨ Generate from activities" builds a grouped bullet list |
+| `status` | `draft` \| `published` — viewers see published only; the tab is public |
+| `attendees` | keyed sub-object `{ name, company, role }` per person, all optional |
+| `createdAt` / `updatedAt` | ISO stamps |
+
+Polled with the other low-traffic nodes, so `saveAvr` **mirrors `avrLive` locally**.
+Adding a field needs a rules edit first (`$other: false`).
 
 ### `/units/{unitId}` — the unit register: one physical box, and its life
 
@@ -2290,17 +2336,32 @@ match the rules' pattern is refused at the input and never staged, so it cannot 
 the atomic save down with it.
 ### 4. Activity
 
- (tab id is still `maintenance`, like Software's is still `aircraft`)
-— the **active** fleet only (`fleetStatus === 'active'`), the same
-set the global Maintenance card counts against, so the two cannot disagree.
-**Two panels, Outlook-style** (`.maint-split`): the aircraft list on the left
-(`renderMaintList`), the selected aircraft on the right (`renderMaintDetail`)
-— profile grid on top, activity history below, newest first. There is no
-expandable row; `maintSelectedId` is the selection and it re-resolves to a
-valid aircraft whenever a filter hides the current one.
-The profile fields that are editable (retrofit location, WiFi, activated,
-flag, reason) become inputs in Edit mode, using the same staged-then-Save
-flow the table used — nothing that could be edited before was lost.
+(tab id is still `maintenance`, like Software's is still `aircraft`.)
+
+⚠️ **Fully redesigned v2.117–v2.121 (2026-09-10).** The old aircraft-first two-pane
+(`renderMaintList` / `renderMaintDetail`, `.maint-split`) is **gone** — those functions
+still exist but are unused. The tab is now the **activity repository + Aircraft Visit
+Reports (AVR)**, and it is **public** (removed from `RESTRICTED_TABS`; viewers see
+PUBLISHED reports read-only, editing gated on `canEdit()`). See the memory note
+`activity-avr-redesign-v2117` and CHANGELOG v2.117–v2.121 for the full shape. In brief:
+
+- **`renderMaintenancePage()`** now runs `fbRender('maintenance')` → `renderActivityFeedOnly()`
+  (the bar's `apply`, so search keeps focus) → `renderAvrExtras()`. `avrView` toggles the
+  two feeds (`setAvrView`); `avrSyncBarFilters()` flips each filter's `hidden` per view
+  (Kind for the repo, Mode/Status for visits).
+- **Activities view (default)** — `renderActivityRepo()` renders the whole
+  `timelineActivities()` set (via `timelineRepoEntries()`) grouped by date. `/activities`
+  rows (those carrying `actId`) get ✏️ `openEditActivity` and a 📋 assign menu
+  (`openAssignMenu` → `assignActivityToVisit`, sets `/activities/{id}/visitId`); derived
+  rows carry a source tag and are edited on their own tab.
+- **Visit Reports view** — `renderAvrFeed()` / `renderAvrCard()`. A report's members
+  (`avrReportMembers`) = the tail's derived Timeline events in the visit window PLUS its
+  assigned activities PLUS non-SIM/MODMAN `/units` fit-remove events in-window (so a
+  component R&R shows). Each expanded card carries the **aircraft dossier**
+  (`avrDossierHTML`: specs, connectivity, installed serials with `removedUnits`, MODMAN)
+  and a Print/PDF button (`printAvr` → `#avrPrint` + `body.printing-avr`). Add/Edit modal
+  is `openAvrEditor`/`saveAvr`; "✨ Generate from activities" fills the summary
+  (`avrAutoSummaryText`).
 **Add New Activity** writes one `/activities` record and nothing else — the
 aircraft history and the Timeline both derive from it.
 **Every activity card carries ✏️ Edit as well as 🗑 Delete.** Edit reuses the same
@@ -2326,26 +2387,18 @@ unit — not a text correction. Re-running `unitWritesForActivity()` on an edit 
 also mint duplicate units against an `activityId` the register already holds.
 No rules change was needed: `.write` on `/activities/$id` is per-record, so a PUT
 to an existing id was already allowed.
-**Installed Equipment** sits between the profile and the history: every LRU
-this aircraft carries with the serial currently fitted, from
-`aircraftFitment(a)` — the same derivation `hardwareFitment()` does, pivoted
-from one-unit-across-the-fleet to one-aircraft-across-its-units. Baseline
-records are **folded out of that aircraft's activity history** behind a
-"Show N" control, so ten of them cannot bury one real event.
-Two widgets only — Open Issues and Serviceable — complements of one total, so a
-third card on that strip would just restate them.
-**"Serviceable", not "Clear"** — the MRO term for an aircraft with nothing
-outstanding against it. The badge, the widget and the filter pill all use it;
-the `mflag` dataset value is `serviceable`.
-Filters are Aircraft Type and Maintenance status. There is no station filter —
-the tab is about the retrofit and its systems, not which base an aircraft flies
-from. Base Station is one of the profile fields.
-**Operational History** (v2.101.0) sits between Installed Equipment and Activity
-History: every out-of-service period for the aircraft (`opsPeriodsForAircraft`),
-editable in place through the ops-period modal — see *Operational state → Editable
-in the Activity tab*. These are **not** `/activities` records; they read and write
-the `ops`/`opsLog` single source, so they cannot drift from the Fleet column or
-Timeline.
+**Installed Equipment** is no longer a standalone panel — `aircraftFitment(a)` now
+feeds the AVR **aircraft dossier** (with `removedUnits` per slot). The old widget strip
+(Open Issues / Serviceable) and the aircraft-first maintenance-flag editing are gone from
+this tab; the flag data (`maintenance.open`/`reason`) is still editable on the Fleet ✎
+per-aircraft modal. Filters on the shared bar are now search + Type + Kind (repo) and
+Mode + Status (visits) — no station filter (removed fleet-wide in v2.99).
+**Operational History** (v2.101.0) is kept, now **fleet-wide** in `renderAvrExtras()`
+(editor-only, under the Visit Reports view): every out-of-service period across the roster
+(`opsPeriodsForAircraft` per tail), editable in place through the ops-period modal — see
+*Operational state → Editable in the Activity tab*. These are **not** `/activities`
+records; they read and write the `ops`/`opsLog` single source, so they cannot drift from
+the Fleet column or Timeline.
 ### 5. Hardware
 
 the LRU catalogue on the left in two fit groups, the selected unit

@@ -13,6 +13,41 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.117.0–v2.121.0 — Activity tab reborn as the activity repository + Aircraft Visit Reports (AVR)
+User-directed redesign (2026-09-10), shipped as deployed commits; `git log` has the full
+reasoning. All bump `APP_BUILD` as well as `APP_VERSION`. **New node `/avr` and a new
+field `/activities/{id}/visitId`** — rules deployed before the page each time; `/avr`
+added to all four node lists (rules + backup/restore/verify).
+
+- **v2.117.0 — AVR foundation.** The Activity tab (internal id `maintenance`) stopped
+  being the aircraft-first maintenance two-pane and became a feed of Aircraft Visit
+  Reports. New `/avr/{id}` holds visit-level facts (aircraft, ref `AVR-<TAIL>-<YEAR>-<nnn>`,
+  dateStart/End, mode on_site|remote|ota|monitoring, location, bay, hangar, summary,
+  status draft|published, attendees `{name,company,role}`). Activities gained `visitId`;
+  a report's contents are DERIVED by matching it — no duplicate records. Tab made PUBLIC
+  (removed from `RESTRICTED_TABS`): viewers see PUBLISHED reports read-only, editing gated
+  on `canEdit()`. Draft→Publish gate (the DB is public-read). Print-to-PDF via a print
+  stylesheet + `#avrPrint` + `body.printing-avr`.
+- **v2.118.0 — Repository first.** Default view is the **Activities repository** —
+  the whole `timelineActivities()` set grouped by date, view + edit (`/activities` rows)
+  + a 📋 assign-to-visit menu; Visit Reports became a second view (`avrView` toggle). A
+  report AUTO-INCLUDES the tail's derived Timeline events in the visit window plus its
+  assigned activities. `apply` repaints only the active feed so search keeps focus.
+- **v2.119.0 — Dossier + auto-summary.** Report/PDF carry a full aircraft dossier
+  (`/fleetSpecs`, retrofit window, connectivity, installed serials, MODMAN identifiers).
+  "✨ Generate from activities" builds a grouped bullet summary in the modal.
+- **v2.120.0 — Component R&R.** `aircraftFitment` gained `removedUnits` (a swap shows
+  "new S/N · replaced old S/N (off date)"); `avrReportMembers` also emits non-SIM/MODMAN
+  `/units` fit/remove events in-window, so an IFE-server-style R&R reaches Work Carried
+  Out. Readable seating (Business/Economy/Total).
+- **v2.121.0 — IFC not IFE.** Corrected framing: this is In-Flight Connectivity, IFE is
+  untouched. Current IFC system = existing `/fleet system`. New `/fleetSpecs` fields
+  `ifcPrevious` (system removed in the mod, e.g. Taqnia) + `ifcNote`. New Fleet column
+  **Prev. IFC** (Retrofit group, col 13; Comments → 14), inline-editable — which required
+  a THIRD write path in `commitFleetChanges` → `/fleetSpecs` (`spMulti` + mirror). ⚠️
+  Lesson: the Fleet save only wrote `/fleet` and `/aircraft`; a `/fleetSpecs` column needs
+  its own bucket, PATCH and local mirror or the inline edit silently does nothing.
+
 ### v2.111.0–v2.116.0 — Timeline calendar strip: year/week layers, Reset↔Top, aspect ratio
 Requests from the user (2026-09-08/09). Each shipped as its own deployed commit; see
 `git log` for the full reasoning. All bump `APP_BUILD` as well as `APP_VERSION`.
