@@ -3958,10 +3958,18 @@
         .avr-reg { font-weight: 800; font-size: 15px; color: #14202b; letter-spacing: .3px; }
         .avr-ref { font-size: 11px; color: #8a97a3; font-weight: 700; letter-spacing: .4px; }
         .avr-dates { font-size: 12.5px; color: #43535f; font-weight: 600; }
-        .avr-summary-line { flex: 1 1 220px; min-width: 0; color: #5a6b78; font-size: 12.5px;
+        .avr-summary-line { flex: 0 1 auto; min-width: 0; color: #5a6b78; font-size: 12.5px;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .avr-taskcount { color: #0a5c34; font-weight: 700; }
         .avr-spacer { flex: 1 1 auto; }
+
+        /* Action buttons live on the head row — visible whether the card is open or
+           collapsed — and right-align via margin-left:auto. Viewers get Print only. */
+        .avr-head-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .avr-headbtn { border: 1px solid #dce3ea; background: #fff; color: #3d4b57; border-radius: 7px;
+            cursor: pointer; font-size: 11.5px; font-weight: 700; padding: 4px 9px; line-height: 1; white-space: nowrap; }
+        .avr-headbtn:hover { background: #f1f5f9; border-color: #c3ccd5; }
+        .avr-headbtn-danger:hover { background: #fdecec; border-color: #f0b7b7; color: #b1242f; }
 
         /* Mode chip — how WE engaged */
         .avr-mode { font-size: 10.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
@@ -4075,6 +4083,7 @@
         .avr-rtype-visit  { background: #e8f1fb; color: #1c4e8a; border-color: #c7ddf3; }
         .avr-rtype-remote { background: #eee9fb; color: #5b3aa6; border-color: #d9cef5; }
         .avr-rtype-flight { background: #e6f5ee; color: #0a6b3c; border-color: #c4e7d4; }
+        .avr-rtype-retrofit { background: #fbeee0; color: #97530f; border-color: #f0d3ae; }
         .avr-rtype-other  { background: #eef1f4; color: #566573; border-color: #dbe2e8; }
 
         /* The banner strip at the top of an opened report */
@@ -4083,14 +4092,20 @@
         .avr-summary-note { font-size: 13px; line-height: 1.5; white-space: pre-wrap; background: #fbfcf6; border: 1px solid #ececcf;
             border-left: 3px solid #d8c86a; border-radius: 8px; padding: 10px 12px; color: #3a4048; }
 
-        /* People with an on-aircraft / remote tag */
-        .avr-people { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+        /* People grouped by where they were — On aircraft vs Remote — so the names
+           club together under one tag instead of every chip carrying its own badge. */
+        .avr-people-groups { display: flex; flex-direction: column; gap: 7px; margin: 2px 0 8px; }
+        .avr-people-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .avr-people-glabel { flex: 0 0 auto; font-size: 9.5px; font-weight: 800; letter-spacing: .5px;
+            text-transform: uppercase; padding: 3px 9px; border-radius: 6px; min-width: 78px; text-align: center; }
+        .avr-people-chips { display: flex; flex-wrap: wrap; gap: 6px; }
         .avr-person-name { font-weight: 700; }
-        .avr-att-badge { margin-left: 6px; font-size: 8.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
-            padding: 1px 5px; border-radius: 4px; vertical-align: 1px; }
         .avr-att-present { background: #e3f3ea; color: #0a5c34; }
         .avr-att-remote  { background: #eee9fb; color: #5b3aa6; }
-        .avr-person.avr-person-remote { border-style: dashed; }
+        .avr-person-present { background: #e9f5ee; color: #1a6b3f; }
+        .avr-person-present .avr-person-co { color: #5f9377; }
+        .avr-person-remote  { background: #efeafb; color: #543a9e; }
+        .avr-person-remote .avr-person-co { color: #8a7fb8; }
 
         /* Work-carried-out table */
         .avr-worksec { border: 1px solid #e3e8ee; border-radius: 10px; background: #fbfcfd; padding: 4px 12px 10px; margin: 12px 0; }
@@ -6439,6 +6454,10 @@
         // reports began life as Aircraft Visit Reports.
         const REPORT_TYPES = [
             { value: 'visit',          label: 'Visit Report',          short: 'VISIT',   css: 'visit' },
+            // The end-to-end retrofit write-up — done once per aircraft. Covers the whole
+            // install-and-activation campaign (hardware fitment, commissioning, first
+            // activation), so it carries the Mod start/end window the plain visit report omits.
+            { value: 'retrofit',       label: 'Retrofit & Activation Report', short: 'RETROFIT', css: 'retrofit' },
             { value: 'remote_support', label: 'Remote Support Report', short: 'REMOTE',  css: 'remote' },
             { value: 'flight_test',    label: 'Flight Test Report',    short: 'FLT TEST',css: 'flight' },
             { value: 'test_flight',    label: 'Test Flight Report',    short: 'TEST FLT',css: 'flight' },
@@ -6943,8 +6962,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.123.0';
-        const APP_BUILD    = '2026.09.10.07';
+        const APP_VERSION  = '2.124.0';
+        const APP_BUILD    = '2026.09.10.08';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12192,8 +12211,12 @@
                     if (f.aircraft !== v.aircraft) return;
                     const fi = toISODate(f.fittedDate), ri = toISODate(f.removedDate);
                     const sub = u.serial ? `S/N ${u.serial}` : '';
-                    if (fi && inWin(fi)) base.push({ iso: fi, kind: 'hardware', tail: v.aircraft, type, location: '', title: `${label} fitted`, sub });
-                    if (ri && inWin(ri)) base.push({ iso: ri, kind: 'hardware', tail: v.aircraft, type, location: '', title: `${label} removed`, sub });
+                    // Multi-position LRUs (CWAP 1/2/3, antennas) carry the slot number on the
+                    // fitment — surface it so the report reads "CWAP 1 fitted", not three
+                    // indistinguishable "CWAP fitted" rows.
+                    const pos = f.position ? ` ${f.position}` : '';
+                    if (fi && inWin(fi)) base.push({ iso: fi, kind: 'hardware', tail: v.aircraft, type, location: '', title: `${label}${pos} fitted`, sub });
+                    if (ri && inWin(ri)) base.push({ iso: ri, kind: 'hardware', tail: v.aircraft, type, location: '', title: `${label}${pos} removed`, sub });
                 });
             });
 
@@ -12260,16 +12283,25 @@
                 ['Engines', engines],
                 ['Fleet status', fleetStatusOf(a) || ''],
             ];
-            const connRows = [
+            // Hardware — the box-and-airframe facts: which IFC/IFE system, how it is fitted,
+            // where and when the retrofit happened. Serials and MODMAN live in their own
+            // tables under this same Hardware heading in the dossier.
+            const hardwareRows = [
                 ['IFC system', system],
                 ['Previous IFC', spec.ifcPrevious || ''],
                 ['IFE system', ifeSystemOf(a)],
                 ['Fit', linefit ? 'Linefit' : (fitOf(a) === 'retrofit' ? 'Retrofit' : '')],
                 ['Install site', a.retrofitLocation || ''],
-                ['Mod window', retro + (retroSpan ? ` (${retroSpan})` : '')],
+                ['Mod start', a.retrofitStart || ''],
+                ['Mod end', a.retrofitEnd || (a.retrofitStart ? 'Ongoing' : '')],
+                ['Mod window', retro && retroSpan ? retroSpan : ''],
                 [linefit ? 'SBC config' : 'Completion', linefit
                     ? (a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
                     : (a.completionLocation ? `${a.completionLocation}${a.completionDate ? ' · ' + a.completionDate : ''}` : '')],
+            ];
+            // Software — the loadable, changeable state: middleware, OTA patches, media,
+            // activation and the connectivity toggles.
+            const softwareRows = [
                 [linefit ? '' : 'Middleware', linefit ? '' : (a.swVersion || '')],
                 ['OTA patch', [ota && `#2 ${ota}`, ota3 && `#3 ${ota3}`].filter(Boolean).join(' · ')],
                 ['Activated', a.activatedDate || ''],
@@ -12278,12 +12310,16 @@
                 ['SIM roaming', a.simRoaming ? (a.simRoaming === 'active' ? 'Active' : 'Inactive') : ''],
                 ['WiFi visibility', a.wifiVisibility ? a.wifiVisibility.charAt(0).toUpperCase() + a.wifiVisibility.slice(1) : ''],
             ];
-            return { aircraftRows: aircraftRows.filter(r => r[0]), connRows: connRows.filter(r => r[0] && r[1]) };
+            return {
+                aircraftRows: aircraftRows.filter(r => r[0]),
+                hardwareRows: hardwareRows.filter(r => r[0] && r[1]),
+                softwareRows: softwareRows.filter(r => r[0] && r[1]),
+            };
         }
 
         function avrDossierHTML(tail) {
             const { a, spec, modman, equip } = avrDossierData(tail);
-            const { aircraftRows, connRows } = avrDossierRows(tail);
+            const { aircraftRows, hardwareRows, softwareRows } = avrDossierRows(tail);
             const cell = ([k, val]) => `<div class="avr-meta-cell"><div class="avr-meta-key">${escAttr(k)}</div><div class="avr-meta-val">${escAttr(val) || '—'}</div></div>`;
 
             const equipMulti = equip.some(r => r.position);
@@ -12319,15 +12355,19 @@
                 modmanBlock = rows.length ? `<div class="avr-section-label">MODMAN (Satcom register)</div><div class="avr-meta">${rows.map(cell).join('')}</div>` : '';
             }
 
+            const softwareBlock = softwareRows.length
+                ? `<div class="avr-section-label">Software</div><div class="avr-meta">${softwareRows.map(cell).join('')}</div>` : '';
+
             return `<details class="avr-dossier" open>
                 <summary class="avr-dossier-summary">🛩️ Aircraft dossier — ${escAttr(tail)}<a class="fr24-link" href="${escAttr(fr24Url(tail))}" target="_blank" rel="noopener" title="Open ${escAttr(tail)} on Flightradar24" onclick="event.stopPropagation();">${FR24_ICON}</a></summary>
-                <div class="avr-section-label">Aircraft</div>
+                <div class="avr-section-label">✈️ Aircraft</div>
                 <div class="avr-meta">${aircraftRows.map(cell).join('')}</div>
-                <div class="avr-section-label">Connectivity &amp; retrofit</div>
-                <div class="avr-meta">${connRows.map(cell).join('')}</div>
+                <div class="avr-section-label">🔧 Hardware</div>
+                <div class="avr-meta">${hardwareRows.map(cell).join('')}</div>
                 ${ifcNote}
                 ${equipTable}
                 ${modmanBlock}
+                ${softwareBlock}
             </details>`;
         }
 
@@ -12371,12 +12411,23 @@
             const type = avrTypeOf(v.aircraft);
             const editor = canEdit();
 
-            const kinds = [...new Set(members.map(m => m.title))];
+            const refBit = v.ref ? ` · <span class="avr-ref">${escAttr(v.ref)}</span>` : '';
             const summaryLine = members.length
-                ? `<span class="avr-taskcount">${members.length} ${members.length === 1 ? 'entry' : 'entries'}</span> · ${escAttr(kinds.slice(0, 3).join(' · '))}${kinds.length > 3 ? ' · …' : ''}`
-                : '<span style="color:#b7c2cc;">No activities in this window yet</span>';
+                ? `<span class="avr-taskcount">${members.length} ${members.length === 1 ? 'entry' : 'entries'}</span>${refBit}`
+                : `<span style="color:#b7c2cc;">No activities in this window yet</span>${refBit}`;
 
             const rt = avrReportType(v);
+
+            // Action buttons ride the head row so they are reachable open OR collapsed, and
+            // right-align via .avr-head-actions. stopPropagation keeps a click off the
+            // toggle. Viewers get Print only; editors get the full set.
+            const headActions = `<div class="avr-head-actions">
+                ${editor && status === 'draft' ? '<span class="avr-status avr-status-draft">Draft</span>' : ''}
+                <button class="avr-headbtn" onclick="event.stopPropagation();printAvr('${escAttr(v.id)}')">🖨️ Print / PDF</button>
+                ${editor ? `<button class="avr-headbtn" onclick="event.stopPropagation();openAvrEditor('${escAttr(v.id)}')">✏️ Edit</button>` : ''}
+                ${editor ? `<button class="avr-headbtn" onclick="event.stopPropagation();avrToggleStatus('${escAttr(v.id)}')">${status === 'published' ? '↩️ Unpublish' : '✅ Publish'}</button>` : ''}
+                ${editor ? `<button class="avr-headbtn avr-headbtn-danger" onclick="event.stopPropagation();deleteAvr('${escAttr(v.id)}')">🗑 Delete</button>` : ''}
+            </div>`;
 
             const head = `<div class="avr-head" onclick="avrToggle('${escAttr(v.id)}')">
                 <span class="avr-caret">▶</span>
@@ -12387,32 +12438,41 @@
                 <span class="avr-mode avr-mode-${mode.css}">${escAttr(mode.label)}</span>
                 ${v.location ? `<span class="tl-loc-pill" style="background:${(LOCATION_PILL_COLORS[v.location] || NEUTRAL_PILL).bg}; color:${(LOCATION_PILL_COLORS[v.location] || NEUTRAL_PILL).fg}; border-color:${(LOCATION_PILL_COLORS[v.location] || NEUTRAL_PILL).bd}">📍 ${escAttr(locationCode(v.location))}</span>` : ''}
                 <span class="avr-summary-line">${summaryLine}</span>
-                <span class="avr-spacer"></span>
-                ${people.slice(0, 2).map(personChip).join('')}${people.length > 2 ? `<span class="avr-person">+${people.length - 2}</span>` : ''}
-                ${editor && status === 'draft' ? '<span class="avr-status avr-status-draft">Draft</span>' : ''}
-                ${v.ref ? `<span class="avr-ref">${escAttr(v.ref)}</span>` : ''}
+                ${headActions}
             </div>`;
 
             if (!open) return `<div class="avr-card ${status === 'draft' ? 'is-draft' : ''}">${head}</div>`;
 
             const cell = ([k, val]) => `<div class="avr-meta-cell"><div class="avr-meta-key">${escAttr(k)}</div><div class="avr-meta-val">${escAttr(val) || '—'}</div></div>`;
+            const ac = aircraftData.find(x => x.id === v.aircraft) || {};
+            const isRetro = rt.value === 'retrofit';
             const metaCells = [
                 ['Report', rt.label],
                 ['Dates', avrDateLabel(v)],
                 ['Engagement', mode.label],
                 v.location ? ['Location', v.location + (v.bay ? ` · ${v.bay}` : '')] : null,
                 (v.hangar && v.hangar !== 'na') ? ['Hangar', v.hangar === 'inside' ? 'Inside hangar' : 'Outside / apron'] : null,
+                // A retrofit report carries the whole modification window up top, not just the visit dates.
+                isRetro ? ['Mod start', ac.retrofitStart || '—'] : null,
+                isRetro ? ['Mod end', ac.retrofitEnd || (ac.retrofitStart ? 'Ongoing' : '—')] : null,
             ].filter(Boolean);
 
-            // People, each tagged on-aircraft vs remote — so a report can show (e.g.) that
-            // NSG supported remotely while an Airbus rep stood at the aircraft.
-            const peopleBlock = people.length ? `<div class="avr-people">${people.map(p => {
+            // People, grouped into On aircraft / Remote — the names club under one tag per
+            // group instead of every chip carrying its own badge, so a report can show (e.g.)
+            // that NSG supported remotely while an Airbus rep stood at the aircraft.
+            const personChipHTML = p => {
                 const m = attMode(p.mode);
                 const bits = [p.company, p.role].filter(Boolean).map(escAttr).join(' · ');
-                return `<span class="avr-person avr-person-${m.css}">
-                    <span class="avr-person-name">${escAttr(p.name || '—')}</span>${bits ? `<span class="avr-person-co"> · ${bits}</span>` : ''}
-                    <span class="avr-att-badge avr-att-${m.css}">${escAttr(m.short)}</span></span>`;
-            }).join('')}</div>` : '';
+                return `<span class="avr-person avr-person-${m.css}"><span class="avr-person-name">${escAttr(p.name || '—')}</span>${bits ? `<span class="avr-person-co"> · ${bits}</span>` : ''}</span>`;
+            };
+            const pGroup = (label, css, list) => list.length ? `<div class="avr-people-group">
+                <span class="avr-people-glabel avr-att-${css}">${label}</span>
+                <div class="avr-people-chips">${list.map(personChipHTML).join('')}</div></div>` : '';
+            const onAircraftPeople = people.filter(p => attMode(p.mode).value === 'present');
+            const remotePeople = people.filter(p => attMode(p.mode).value === 'remote');
+            const peopleBlock = people.length
+                ? `<div class="avr-people-groups">${pGroup('On aircraft', 'present', onAircraftPeople)}${pGroup('Remote', 'remote', remotePeople)}</div>`
+                : '';
 
             // Work carried out as a table — date, category, detail — grouped visually by
             // the category pill, which reads far cleaner than the flat pill list did.
@@ -12431,7 +12491,6 @@
                 <div class="avr-report-banner">
                     <span class="avr-rtype avr-rtype-${rt.css} avr-rtype-lg">${escAttr(rt.label)}</span>
                     <span class="avr-mode avr-mode-${mode.css}">${escAttr(mode.label)}</span>
-                    ${v.ref ? `<span class="avr-ref">${escAttr(v.ref)}</span>` : ''}
                 </div>
                 <div class="avr-meta">${metaCells.map(cell).join('')}</div>
                 ${v.summary ? `<div class="avr-section-label">Summary</div><div class="avr-note avr-summary-note">${escAttr(v.summary)}</div>` : ''}
@@ -12441,12 +12500,6 @@
                     <summary class="avr-dossier-summary">🛠️ Work carried out — ${members.length} ${members.length === 1 ? 'entry' : 'entries'}</summary>
                     ${workTable}
                 </details>
-                <div class="avr-body-actions">
-                    <button class="qf-btn" onclick="printAvr('${escAttr(v.id)}')">🖨️ Print / PDF</button>
-                    ${editor ? `<button class="qf-btn" onclick="openAvrEditor('${escAttr(v.id)}')">✏️ Edit report</button>` : ''}
-                    ${editor ? `<button class="qf-btn" onclick="avrToggleStatus('${escAttr(v.id)}')">${status === 'published' ? '↩️ Unpublish' : '✅ Publish'}</button>` : ''}
-                    ${editor ? `<button class="qf-btn" onclick="deleteAvr('${escAttr(v.id)}')">🗑 Delete</button>` : ''}
-                </div>
             </div>`;
 
             return `<div class="avr-card is-open ${status === 'draft' ? 'is-draft' : ''}">${head}${body}</div>`;
@@ -12855,8 +12908,9 @@
                 </tr>`;
             }).join('') : '<tr><td colspan="3">No activities in this window.</td></tr>';
 
-            // Aircraft dossier for print — specs + connectivity, installed serials, MODMAN.
-            const { aircraftRows, connRows } = avrDossierRows(v.aircraft);
+            // Aircraft dossier for print — grouped Aircraft / Hardware / Software, plus
+            // installed serials and MODMAN under Hardware.
+            const { aircraftRows, hardwareRows, softwareRows } = avrDossierRows(v.aircraft);
             const { spec: dspec, equip, modman } = avrDossierData(v.aircraft);
             const dossierGrid = rows => rows.map(([k, val]) => `<div><span class="k">${escAttr(k)}:</span> ${escAttr(val) || '—'}</div>`).join('');
             const equipMulti = equip.some(r => r.position);
@@ -12898,11 +12952,12 @@
                     </div>
                     <div class="avr-print-sec">Aircraft</div>
                     <div class="avr-print-grid">${dossierGrid(aircraftRows)}</div>
-                    <div class="avr-print-sec">Connectivity &amp; Retrofit</div>
-                    <div class="avr-print-grid">${dossierGrid(connRows)}</div>
+                    <div class="avr-print-sec">Hardware</div>
+                    <div class="avr-print-grid">${dossierGrid(hardwareRows)}</div>
                     ${ifcNotePrint}
                     ${equipPrint}
                     ${modmanPrint}
+                    ${softwareRows.length ? `<div class="avr-print-sec">Software</div><div class="avr-print-grid">${dossierGrid(softwareRows)}</div>` : ''}
                     ${v.summary ? `<div class="avr-print-sec">Summary</div><div class="avr-print-note">${escAttr(v.summary)}</div>` : ''}
                     <div class="avr-print-sec">Work Carried Out</div>
                     <table class="avr-print-table">
