@@ -3997,8 +3997,8 @@
         .avr-body-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 
         /* Attendee editor rows in the modal */
-        .avr-att-row { display: grid; grid-template-columns: 1fr 1fr 0.9fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
-        .avr-att-row input { min-width: 0; }
+        .avr-att-row { display: grid; grid-template-columns: 1fr 1fr 0.9fr 0.85fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .avr-att-row input, .avr-att-row select { min-width: 0; }
         .avr-att-del { border: none; background: #f4e6e6; color: #b23; border-radius: 6px; cursor: pointer;
             font-size: 13px; width: 30px; height: 30px; }
         .avr-att-add { border: 1px dashed #bcd; background: #f5f9ff; color: #2350b8; border-radius: 8px;
@@ -4064,6 +4064,44 @@
         .avr-dossier .maint-equip-table th, .avr-dossier .maint-equip-table td { border-bottom: 1px solid #eef2f6; padding: 5px 8px; text-align: left; }
         .avr-dossier .hw-serial { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
         .avr-removed { font-size: 10.5px; color: #a52834; margin-top: 2px; }
+        /* FR24 icon sits on the dossier summary; keep it from triggering the toggle caret spacing */
+        .avr-dossier-summary .fr24-link { vertical-align: -0.15em; }
+
+        /* Report-type badge — a small coloured tag naming what KIND of report this is
+           (visit, remote support, flight test…). The -lg variant is the in-report banner. */
+        .avr-rtype { display: inline-flex; align-items: center; font-size: 9.5px; font-weight: 800; letter-spacing: .5px;
+            text-transform: uppercase; padding: 2px 7px; border-radius: 5px; border: 1px solid transparent; white-space: nowrap; }
+        .avr-rtype-lg { font-size: 11.5px; padding: 4px 11px; letter-spacing: .4px; }
+        .avr-rtype-visit  { background: #e8f1fb; color: #1c4e8a; border-color: #c7ddf3; }
+        .avr-rtype-remote { background: #eee9fb; color: #5b3aa6; border-color: #d9cef5; }
+        .avr-rtype-flight { background: #e6f5ee; color: #0a6b3c; border-color: #c4e7d4; }
+        .avr-rtype-other  { background: #eef1f4; color: #566573; border-color: #dbe2e8; }
+
+        /* The banner strip at the top of an opened report */
+        .avr-report-banner { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
+        .avr-report-banner .avr-ref { margin-left: auto; }
+        .avr-summary-note { font-size: 13px; line-height: 1.5; white-space: pre-wrap; background: #fbfcf6; border: 1px solid #ececcf;
+            border-left: 3px solid #d8c86a; border-radius: 8px; padding: 10px 12px; color: #3a4048; }
+
+        /* People with an on-aircraft / remote tag */
+        .avr-people { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+        .avr-person-name { font-weight: 700; }
+        .avr-att-badge { margin-left: 6px; font-size: 8.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+            padding: 1px 5px; border-radius: 4px; vertical-align: 1px; }
+        .avr-att-present { background: #e3f3ea; color: #0a5c34; }
+        .avr-att-remote  { background: #eee9fb; color: #5b3aa6; }
+        .avr-person.avr-person-remote { border-style: dashed; }
+
+        /* Work-carried-out table */
+        .avr-worksec { border: 1px solid #e3e8ee; border-radius: 10px; background: #fbfcfd; padding: 4px 12px 10px; margin: 12px 0; }
+        .avr-work-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+        .avr-work-table th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: #8a97a3;
+            border-bottom: 1.5px solid #e6ebf0; padding: 5px 8px; }
+        .avr-work-table td { border-bottom: 1px solid #eef2f6; padding: 6px 8px; vertical-align: top; }
+        .avr-work-date { font-variant-numeric: tabular-nums; color: #56626c; white-space: nowrap; }
+        .avr-work-title { font-weight: 600; }
+        .avr-work-sub { color: #6b7780; }
+        .avr-work-loc { font-size: 11px; color: #8a97a3; }
 
         /* ===== AVR print sheet ===== */
         #avrPrint { display: none; }
@@ -5439,7 +5477,7 @@
                     <div class="fb-actions">
                         <div class="avr-viewtoggle" role="tablist" aria-label="Activity view">
                             <button id="avrTabActs" class="avr-vt-btn active" role="tab" onclick="setAvrView('activities')">🗂️ Activities</button>
-                            <button id="avrTabVisits" class="avr-vt-btn" role="tab" onclick="setAvrView('visits')">📋 Visit Reports</button>
+                            <button id="avrTabVisits" class="avr-vt-btn" role="tab" onclick="setAvrView('visits')">📋 Reports</button>
                         </div>
                         <button id="avrAddBtn" class="qf-btn" style="display:none;" onclick="openAvrEditor('__new')">➕ Add Visit</button>
                         <button id="maintAddActivityBtn" class="qf-btn" style="display:none;" onclick="openAddActivity()">➕ Add Activity</button>
@@ -6395,6 +6433,29 @@
         ];
         function avrMode(v) { return AVR_MODES.find(m => m.value === v) || AVR_MODES[0]; }
 
+        // What KIND of report this is. Kept deliberately open (the rules validate any
+        // lowercase slug) so a new kind is one line here and no rules change: a visit, a
+        // remote-support write-up, a flight test, a test flight. Default is 'visit' — the
+        // reports began life as Aircraft Visit Reports.
+        const REPORT_TYPES = [
+            { value: 'visit',          label: 'Visit Report',          short: 'VISIT',   css: 'visit' },
+            { value: 'remote_support', label: 'Remote Support Report', short: 'REMOTE',  css: 'remote' },
+            { value: 'flight_test',    label: 'Flight Test Report',    short: 'FLT TEST',css: 'flight' },
+            { value: 'test_flight',    label: 'Test Flight Report',    short: 'TEST FLT',css: 'flight' },
+            { value: 'other',          label: 'Report',                short: 'REPORT',  css: 'other' },
+        ];
+        function reportType(v) { return REPORT_TYPES.find(t => t.value === v) || REPORT_TYPES[0]; }
+        function avrReportType(v) { return reportType((v || {}).reportType); }
+
+        // Whether an attendee was physically on the aircraft or supporting remotely —
+        // so a report can show that (e.g.) NSG dialled in while an Airbus rep stood at
+        // the aircraft. Default 'present': a named attendee is on-site unless said otherwise.
+        const ATT_MODES = [
+            { value: 'present', label: 'On aircraft', short: 'On aircraft', css: 'present' },
+            { value: 'remote',  label: 'Remote',      short: 'Remote',      css: 'remote' },
+        ];
+        function attMode(v) { return ATT_MODES.find(m => m.value === v) || ATT_MODES[0]; }
+
         // category -> label, plus the Timeline kind it maps to. Hardware R&R shows as
         // Hardware, a software update as Software, and everything else as Maintenance.
         const ACTIVITY_CATEGORIES = [
@@ -6882,8 +6943,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.122.0';
-        const APP_BUILD    = '2026.09.10.06';
+        const APP_VERSION  = '2.123.0';
+        const APP_BUILD    = '2026.09.10.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -11845,7 +11906,7 @@
             if (tv) {
                 tv.classList.toggle('active', avrView === 'visits');
                 const n = avrEntries().filter(v => canEdit() || v.status === 'published').length;
-                tv.textContent = `📋 Visit Reports${n ? ' (' + n + ')' : ''}`;
+                tv.textContent = `📋 Reports${n ? ' (' + n + ')' : ''}`;
             }
         }
 
@@ -11914,11 +11975,17 @@
             // maintained on their own tab, not editable inline.
             const srcTag = !isAct ? `<span class="repo-src" title="Maintained on its source tab">${escAttr(repoSourceLabel(x))}</span>` : '';
 
+            // An operational row is a derived out-of-service period, not a /activities
+            // record — but it edits in place through the same opsEdit modal the (now
+            // removed) Operational-History panel used, keyed by opsKey. That is the
+            // inline "edit button in the timeline" that replaced the standalone panel.
+            const isOps = x.kind === 'operational' && !!x.opsKey;
             const actions = editor ? `<span class="repo-actions">
                 ${isAct ? `<button class="avr-act-btn" title="Edit activity" onclick="openEditActivity('${escAttr(x.actId)}')">✏️</button>` : ''}
                 ${isAct ? (x.visitId
                     ? `<button class="avr-act-btn" title="Remove from visit" onclick="assignActivityToVisit('${escAttr(x.actId)}','')">🔓</button>`
                     : `<button class="avr-act-btn" title="Add to a visit report" onclick="openAssignMenu(event,'${escAttr(x.actId)}')">📋</button>`) : ''}
+                ${isOps ? `<button class="avr-act-btn" title="Edit out-of-service period" onclick="openOpsPeriod('${escAttr(x.tail)}','${escAttr(x.opsKey)}')">✏️</button>` : ''}
             </span>` : '';
 
             return `<li class="repo-row kind-${x.kind}">
@@ -12147,6 +12214,13 @@
             </li>`;
         }
 
+        // The IFE (In-Flight Entertainment) system — distinct from the IFC connectivity
+        // this dashboard tracks. A type-level fact, not stored per aircraft: every A321XLR
+        // carries Panasonic's Astrova (user, 2026-09-10). Add a type here as it is confirmed;
+        // an unmapped type returns '' and the dossier simply omits the IFE row.
+        const IFE_BY_TYPE = { A321XLR: 'Panasonic Astrova' };
+        function ifeSystemOf(a) { return (a && IFE_BY_TYPE[a.type]) || ''; }
+
         // ===== Aircraft dossier — every fact we hold about the airframe, in one place =====
         function avrDossierData(tail) {
             const a = aircraftData.find(x => x.id === tail) || { id: tail };
@@ -12189,6 +12263,7 @@
             const connRows = [
                 ['IFC system', system],
                 ['Previous IFC', spec.ifcPrevious || ''],
+                ['IFE system', ifeSystemOf(a)],
                 ['Fit', linefit ? 'Linefit' : (fitOf(a) === 'retrofit' ? 'Retrofit' : '')],
                 ['Install site', a.retrofitLocation || ''],
                 ['Mod window', retro + (retroSpan ? ` (${retroSpan})` : '')],
@@ -12245,7 +12320,7 @@
             }
 
             return `<details class="avr-dossier" open>
-                <summary class="avr-dossier-summary">🛩️ Aircraft dossier — ${escAttr(tail)}</summary>
+                <summary class="avr-dossier-summary">🛩️ Aircraft dossier — ${escAttr(tail)}<a class="fr24-link" href="${escAttr(fr24Url(tail))}" target="_blank" rel="noopener" title="Open ${escAttr(tail)} on Flightradar24" onclick="event.stopPropagation();">${FR24_ICON}</a></summary>
                 <div class="avr-section-label">Aircraft</div>
                 <div class="avr-meta">${aircraftRows.map(cell).join('')}</div>
                 <div class="avr-section-label">Connectivity &amp; retrofit</div>
@@ -12301,10 +12376,13 @@
                 ? `<span class="avr-taskcount">${members.length} ${members.length === 1 ? 'entry' : 'entries'}</span> · ${escAttr(kinds.slice(0, 3).join(' · '))}${kinds.length > 3 ? ' · …' : ''}`
                 : '<span style="color:#b7c2cc;">No activities in this window yet</span>';
 
+            const rt = avrReportType(v);
+
             const head = `<div class="avr-head" onclick="avrToggle('${escAttr(v.id)}')">
                 <span class="avr-caret">▶</span>
                 <span class="avr-reg">${escAttr(v.aircraft)}</span>
                 ${type ? `<span class="tl-pill" style="background:${(TYPE_PILL_COLORS[type] || NEUTRAL_PILL).bg}; color:${(TYPE_PILL_COLORS[type] || NEUTRAL_PILL).fg}; border-color:${(TYPE_PILL_COLORS[type] || NEUTRAL_PILL).bd}">${escAttr(TYPE_SHORT_LABEL[type] || type)}</span>` : ''}
+                <span class="avr-rtype avr-rtype-${rt.css}" title="${escAttr(rt.label)}">${escAttr(rt.short)}</span>
                 <span class="avr-dates">${escAttr(avrDateLabel(v))}</span>
                 <span class="avr-mode avr-mode-${mode.css}">${escAttr(mode.label)}</span>
                 ${v.location ? `<span class="tl-loc-pill" style="background:${(LOCATION_PILL_COLORS[v.location] || NEUTRAL_PILL).bg}; color:${(LOCATION_PILL_COLORS[v.location] || NEUTRAL_PILL).fg}; border-color:${(LOCATION_PILL_COLORS[v.location] || NEUTRAL_PILL).bd}">📍 ${escAttr(locationCode(v.location))}</span>` : ''}
@@ -12317,30 +12395,55 @@
 
             if (!open) return `<div class="avr-card ${status === 'draft' ? 'is-draft' : ''}">${head}</div>`;
 
-            const meta = [
-                v.location ? `<div class="avr-meta-cell"><div class="avr-meta-key">Location</div><div class="avr-meta-val">${escAttr(v.location)}</div></div>` : '',
-                v.bay ? `<div class="avr-meta-cell"><div class="avr-meta-key">Bay / Stand</div><div class="avr-meta-val">${escAttr(v.bay)}</div></div>` : '',
-                (v.hangar && v.hangar !== 'na') ? `<div class="avr-meta-cell"><div class="avr-meta-key">Hangar</div><div class="avr-meta-val">${v.hangar === 'inside' ? 'Inside hangar' : 'Outside / apron'}</div></div>` : '',
-                `<div class="avr-meta-cell"><div class="avr-meta-key">Dates</div><div class="avr-meta-val">${escAttr(avrDateLabel(v))}</div></div>`,
-            ].filter(Boolean).join('');
+            const cell = ([k, val]) => `<div class="avr-meta-cell"><div class="avr-meta-key">${escAttr(k)}</div><div class="avr-meta-val">${escAttr(val) || '—'}</div></div>`;
+            const metaCells = [
+                ['Report', rt.label],
+                ['Dates', avrDateLabel(v)],
+                ['Engagement', mode.label],
+                v.location ? ['Location', v.location + (v.bay ? ` · ${v.bay}` : '')] : null,
+                (v.hangar && v.hangar !== 'na') ? ['Hangar', v.hangar === 'inside' ? 'Inside hangar' : 'Outside / apron'] : null,
+            ].filter(Boolean);
+
+            // People, each tagged on-aircraft vs remote — so a report can show (e.g.) that
+            // NSG supported remotely while an Airbus rep stood at the aircraft.
+            const peopleBlock = people.length ? `<div class="avr-people">${people.map(p => {
+                const m = attMode(p.mode);
+                const bits = [p.company, p.role].filter(Boolean).map(escAttr).join(' · ');
+                return `<span class="avr-person avr-person-${m.css}">
+                    <span class="avr-person-name">${escAttr(p.name || '—')}</span>${bits ? `<span class="avr-person-co"> · ${bits}</span>` : ''}
+                    <span class="avr-att-badge avr-att-${m.css}">${escAttr(m.short)}</span></span>`;
+            }).join('')}</div>` : '';
+
+            // Work carried out as a table — date, category, detail — grouped visually by
+            // the category pill, which reads far cleaner than the flat pill list did.
+            const kindPill = x => `<span class="tl-kind tl-kind-${x.kind}">${x.kind === 'modification' ? (x.modPhase === 'start' ? 'MOD START' : 'MOD END') : x.kind}</span>`;
+            const workTable = members.length ? `
+                <div class="table-scroll-wrapper"><table class="avr-work-table"><thead><tr>
+                    <th style="width:92px;">Date</th><th style="width:118px;">Category</th><th>Detail</th>
+                </tr></thead><tbody>${members.map(x => `<tr>
+                    <td class="avr-work-date">${escAttr(fmtDate(x.iso) || x.iso || '—')}</td>
+                    <td>${kindPill(x)}</td>
+                    <td><span class="avr-work-title">${escAttr(x.title)}</span>${x.sub ? ` <span class="avr-work-sub">${escAttr(x.sub)}</span>` : ''}${x.location ? ` <span class="avr-work-loc">📍 ${escAttr(locationCode(x.location))}</span>` : ''}</td>
+                </tr>`).join('')}</tbody></table></div>`
+                : `<div class="maint-empty">Nothing recorded in this window yet.${editor ? ' Set the report dates, or assign activities to it from the Activities view.' : ''}</div>`;
 
             const body = `<div class="avr-body">
-                ${people.length ? `<div class="avr-section-label">Attended by</div><div class="avr-people">${people.map(p => {
-                    const role = p.role ? ` · ${escAttr(p.role)}` : '';
-                    const co = p.company ? `<span class="avr-person-co"> · ${escAttr(p.company)}</span>` : '';
-                    return `<span class="avr-person">${escAttr(p.name || '—')}${co}${role ? `<span class="avr-person-co">${role}</span>` : ''}</span>`;
-                }).join('')}</div>` : ''}
-                ${meta ? `<div class="avr-meta">${meta}</div>` : ''}
+                <div class="avr-report-banner">
+                    <span class="avr-rtype avr-rtype-${rt.css} avr-rtype-lg">${escAttr(rt.label)}</span>
+                    <span class="avr-mode avr-mode-${mode.css}">${escAttr(mode.label)}</span>
+                    ${v.ref ? `<span class="avr-ref">${escAttr(v.ref)}</span>` : ''}
+                </div>
+                <div class="avr-meta">${metaCells.map(cell).join('')}</div>
+                ${v.summary ? `<div class="avr-section-label">Summary</div><div class="avr-note avr-summary-note">${escAttr(v.summary)}</div>` : ''}
+                ${people.length ? `<div class="avr-section-label">People</div>${peopleBlock}` : ''}
                 ${avrDossierHTML(v.aircraft)}
-                ${v.summary ? `<div class="avr-section-label">Summary</div><div class="avr-note">${escAttr(v.summary)}</div>` : ''}
-                <div class="avr-section-label">Work carried out — ${members.length} ${members.length === 1 ? 'entry' : 'entries'}</div>
-                <ul class="repo-day-items avr-report-list">${
-                    members.length ? members.map(avrReportRowHTML).join('')
-                        : '<li class="maint-empty">Nothing recorded in this window yet. ' + (editor ? 'Set the visit dates, or assign activities to it from the Activities view.' : '') + '</li>'
-                }</ul>
+                <details class="avr-worksec" open>
+                    <summary class="avr-dossier-summary">🛠️ Work carried out — ${members.length} ${members.length === 1 ? 'entry' : 'entries'}</summary>
+                    ${workTable}
+                </details>
                 <div class="avr-body-actions">
                     <button class="qf-btn" onclick="printAvr('${escAttr(v.id)}')">🖨️ Print / PDF</button>
-                    ${editor ? `<button class="qf-btn" onclick="openAvrEditor('${escAttr(v.id)}')">✏️ Edit visit</button>` : ''}
+                    ${editor ? `<button class="qf-btn" onclick="openAvrEditor('${escAttr(v.id)}')">✏️ Edit report</button>` : ''}
                     ${editor ? `<button class="qf-btn" onclick="avrToggleStatus('${escAttr(v.id)}')">${status === 'published' ? '↩️ Unpublish' : '✅ Publish'}</button>` : ''}
                     ${editor ? `<button class="qf-btn" onclick="deleteAvr('${escAttr(v.id)}')">🗑 Delete</button>` : ''}
                 </div>
@@ -12355,61 +12458,15 @@
         }
 
         // ===== Editor-only extras: unassigned activities + Operational History =====
+        // The standalone Operational-History panel was removed (user, 2026-09-10): every
+        // out-of-service period already appears as a row in the Activities repository, and
+        // each of those rows now carries its own ✏️ that opens the same opsEdit modal
+        // (see renderRepoRow / opsKey). Editing lives with the event, not in a separate
+        // panel. New periods start from the Fleet page's Operational State control. The
+        // #avrExtras host is kept and simply cleared so nothing else has to change.
         function renderAvrExtras() {
             const host = document.getElementById('avrExtras');
-            if (!host) return;
-            // The Operational-History editor is a supporting tool shown under the Visit
-            // Reports view; the Activities repository already lists every ops period as a
-            // row, so repeating the editor there would just be noise.
-            if (!canEdit() || avrView !== 'visits') { host.innerHTML = ''; return; }
-
-            // Operational History — out-of-service periods, fleet-wide, editable. Same
-            // ops / opsLog single source as the Fleet column and the Timeline.
-            const opsAircraft = aircraftData
-                .map(a => ({ a, periods: opsPeriodsForAircraft(a.id) }))
-                .filter(x => x.periods.length)
-                .sort((x, y) => {
-                    const xo = x.periods.some(p => p.open) ? 0 : 1;
-                    const yo = y.periods.some(p => p.open) ? 0 : 1;
-                    return xo - yo || x.a.id.localeCompare(y.a.id);
-                });
-            const totalPeriods = opsAircraft.reduce((n, x) => n + x.periods.length, 0);
-
-            const opsCard = (aid, p) => {
-                const d = opsDef(p.state);
-                const span = p.until ? dateSpan(p.since, p.until) : (p.since ? activationAge(p.since) : '');
-                return `<li class="maint-act kind-operational ops-hist${p.open ? ' ops-hist-open' : ''}">
-                    <div class="maint-act-top">
-                        <span class="status-badge ops-${d.css}"${d.full ? ` title="${escAttr(d.full)}"` : ''}>${escAttr(d.short)}</span>
-                        <span class="ops-hist-range"><span class="fleet-date">${escAttr(p.since || '—')}</span><span class="ops-hist-arrow">→</span>${p.until ? `<span class="fleet-date">${escAttr(p.until)}</span>` : '<span class="ops-hist-ongoing">Ongoing</span>'}</span>
-                        ${span ? `<span class="age-pill">${escAttr(span)}</span>` : ''}
-                        ${p.location ? `<span class="tl-loc-pill" style="background:${(LOCATION_PILL_COLORS[p.location] || NEUTRAL_PILL).bg}; color:${(LOCATION_PILL_COLORS[p.location] || NEUTRAL_PILL).fg}; border-color:${(LOCATION_PILL_COLORS[p.location] || NEUTRAL_PILL).bd}">📍 ${escAttr(locationCode(p.location))}</span>` : ''}
-                        <button class="maint-act-edit" title="Edit this period" onclick="openOpsPeriod('${escAttr(aid)}','${escAttr(p.key)}')">✏️</button>
-                        <button class="maint-act-del" title="Delete this period" onclick="deleteOpsPeriod('${escAttr(aid)}','${escAttr(p.key)}')">🗑</button>
-                    </div>
-                    ${p.reason ? `<div class="maint-act-title">${escAttr(p.reason)}</div>` : ''}
-                </li>`;
-            };
-
-            const opsSection = `
-                <div class="avr-section-label" style="margin-top:22px;">Operational History — out-of-service periods</div>
-                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
-                    <span style="font-size:12px;color:#8a97a3;">${totalPeriods} ${totalPeriods === 1 ? 'period' : 'periods'} across ${opsAircraft.length} aircraft</span>
-                    <select id="opsAddTail" class="edit-select" style="max-width:220px;">
-                        <option value="">Add period for…</option>
-                        ${maintenanceFleet().map(a => `<option value="${escAttr(a.id)}">${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</option>`).join('')}
-                    </select>
-                    <button class="qf-btn" onclick="avrAddOpsPeriod()">➕ Add out-of-service period</button>
-                </div>
-                ${opsAircraft.length ? opsAircraft.map(x => `
-                    <div style="margin-bottom:10px;">
-                        <div style="font-weight:800;font-size:13px;color:#26333d;margin-bottom:4px;">${escAttr(x.a.id)}
-                            <span style="font-weight:600;color:#9aa7b2;font-size:11px;">${escAttr(TYPE_SHORT_LABEL[x.a.type] || x.a.type)}</span></div>
-                        <ul class="maint-history">${x.periods.map(p => opsCard(x.a.id, p)).join('')}</ul>
-                    </div>`).join('')
-                    : '<div class="avr-linkempty">No out-of-service periods recorded — the fleet has stayed in service.</div>'}`;
-
-            host.innerHTML = opsSection;
+            if (host) host.innerHTML = '';
         }
 
         function avrAddOpsPeriod() {
@@ -12422,10 +12479,12 @@
         // ===== Add / Edit Visit modal =====
         function avrAttRowHTML(p) {
             p = p || {};
+            const modeOpts = ATT_MODES.map(m => `<option value="${m.value}" ${m.value === (p.mode || 'present') ? 'selected' : ''}>${m.label}</option>`).join('');
             return `<div class="avr-att-row">
                 <input class="edit-text" maxlength="80" placeholder="Name" value="${escAttr(p.name || '')}">
                 <input class="edit-text" maxlength="80" placeholder="Company" value="${escAttr(p.company || '')}">
                 <input class="edit-text" maxlength="60" placeholder="Role" value="${escAttr(p.role || '')}">
+                <select class="edit-select avr-att-mode" title="Physically on the aircraft, or supporting remotely">${modeOpts}</select>
                 <button type="button" class="avr-att-del" title="Remove" onclick="this.closest('.avr-att-row').remove()">✕</button>
             </div>`;
         }
@@ -12439,9 +12498,9 @@
             avrEditingId = id;
             const isNew = id === '__new';
             const v = isNew ? {} : (avrLive[id] ? { id, ...avrLive[id] } : {});
-            document.getElementById('avrEditTitle').textContent = isNew ? 'Add Visit' : 'Edit Visit';
+            document.getElementById('avrEditTitle').textContent = isNew ? 'Add Report' : 'Edit Report';
             document.getElementById('avrEditSub').textContent = isNew
-                ? 'Group an aircraft visit and the Timeline activities it covers into one report.'
+                ? 'Group an aircraft visit or support event and the Timeline activities it covers into one report.'
                 : (v.ref || '');
 
             const att = avrAttendees(v);
@@ -12450,8 +12509,12 @@
                 .map(a => `<option value="${escAttr(a.id)}" ${a.id === v.aircraft ? 'selected' : ''}>${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</option>`).join('');
 
             document.getElementById('avrEditBody').innerHTML = `
-                <div class="ac-edit-section-title">Visit</div>
+                <div class="ac-edit-section-title">Report</div>
                 <div class="ac-edit-grid">
+                    <div class="ac-edit-field">
+                        <label>Report type</label>
+                        <select id="avrReportType">${REPORT_TYPES.map(t => `<option value="${t.value}" ${t.value === (v.reportType || 'visit') ? 'selected' : ''}>${t.label}</option>`).join('')}</select>
+                    </div>
                     <div class="ac-edit-field">
                         <label>Aircraft *</label>
                         <select id="avrAircraft" onchange="avrOnAircraftChange()">
@@ -12619,12 +12682,17 @@
             let ai = 0;
             document.querySelectorAll('#avrAttList .avr-att-row').forEach(row => {
                 const [n, c, r] = row.querySelectorAll('input');
+                const modeSel = row.querySelector('.avr-att-mode');
                 const name = n.value.trim(), company = c.value.trim(), role = r.value.trim();
                 if (!name && !company && !role) return;
                 const p = {};
                 if (name) p.name = name;
                 if (company) p.company = company;
                 if (role) p.role = role;
+                // Only store a non-default mode — 'present' is the assumed norm, so the
+                // field stays absent unless someone was explicitly remote.
+                const mode = modeSel ? modeSel.value : 'present';
+                if (mode && mode !== 'present') p.mode = mode;
                 attendees['p' + (ai++)] = p;
             });
 
@@ -12640,6 +12708,7 @@
             const entry = {
                 aircraft, ref, dateStart, dateEnd,
                 mode: document.getElementById('avrMode').value,
+                reportType: document.getElementById('avrReportType').value || 'visit',
                 status: document.getElementById('avrStatus').value,
                 createdAt: existing.createdAt || nowUTC,
                 updatedAt: nowUTC,
@@ -12758,8 +12827,9 @@
             const members = avrReportMembers(v);
             const people = avrAttendees(v);
             const type = avrTypeOf(v.aircraft);
+            const rt = avrReportType(v);
             const rowsPeople = people.length
-                ? people.map(p => `${escAttr(p.name || '—')}${p.company ? ' (' + escAttr(p.company) + ')' : ''}${p.role ? ' — ' + escAttr(p.role) : ''}`).join('<br>')
+                ? people.map(p => `${escAttr(p.name || '—')}${p.company ? ' (' + escAttr(p.company) + ')' : ''}${p.role ? ' — ' + escAttr(p.role) : ''} — ${escAttr(attMode(p.mode).short)}`).join('<br>')
                 : '—';
             const hangar = v.hangar === 'inside' ? 'Inside hangar' : v.hangar === 'outside' ? 'Outside / apron' : '—';
             const kindLabel = k => ({ software: 'Software', media: 'Media', hardware: 'Hardware', commission: 'Commissioning', maintenance: 'Maintenance', modification: 'Modification', operational: 'Operational', activation: 'Activation' }[k] || k);
@@ -12815,13 +12885,13 @@
                 <div class="avr-print-sheet">
                     <div class="avr-print-head">
                         <span class="avr-print-ref">${escAttr(v.ref || '')}</span>
-                        <h1 class="avr-print-title">Aircraft Visit Report</h1>
+                        <h1 class="avr-print-title">${escAttr(rt.label)}</h1>
                         <p class="avr-print-sub">Saudia Connectivity / IFEC Programme${v.status === 'draft' ? ' — DRAFT' : ''}</p>
                     </div>
                     <div class="avr-print-grid">
                         <div><span class="k">Aircraft:</span> ${escAttr(v.aircraft)}${type ? ' (' + escAttr(type) + ')' : ''}</div>
                         <div><span class="k">Dates:</span> ${escAttr(avrDateLabel(v))}</div>
-                        <div><span class="k">Mode:</span> ${escAttr(avrMode(v.mode).label)}</div>
+                        <div><span class="k">Engagement:</span> ${escAttr(avrMode(v.mode).label)}</div>
                         <div><span class="k">Location:</span> ${escAttr(v.location || '—')}${v.bay ? ' · ' + escAttr(v.bay) : ''}</div>
                         <div><span class="k">Hangar:</span> ${hangar}</div>
                         <div><span class="k">Attendees:</span><br>${rowsPeople}</div>
@@ -12844,9 +12914,14 @@
             document.body.classList.add('printing-avr');
             const cleanup = () => { document.body.classList.remove('printing-avr'); window.removeEventListener('afterprint', cleanup); };
             window.addEventListener('afterprint', cleanup);
-            window.print();
-            // Fallback for browsers that fire no afterprint.
-            setTimeout(cleanup, 1500);
+            // Defer the print one frame + tick: calling window.print() synchronously right
+            // after injecting the sheet can print before the (until now display:none) sheet
+            // is laid out, which shows as a blank page in some browsers. Two rAFs plus a
+            // short timeout guarantees a paint first.
+            requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+                window.print();
+                setTimeout(cleanup, 1500);   // fallback for browsers that fire no afterprint
+            }, 60)));
         }
 
         // Counts come from committed data, so these read the same as the global card:
@@ -16958,15 +17033,18 @@
                 const ops = a.ops || {};
                 if (opsIsOut(ops.state) && toISODate(ops.since)) {
                     const d = opsDef(ops.state);
-                    out.push({ iso: toISODate(ops.since), kind: 'operational', opsState: ops.state,
+                    // opsKey lets the Activities-repository row edit this period in place
+                    // (openOpsPeriod) — '__open' is the live open period, an opsLog key a
+                    // closed one. It rides on the row but the Overview Timeline ignores it.
+                    out.push({ iso: toISODate(ops.since), kind: 'operational', opsState: ops.state, opsKey: '__open',
                                tail: a.id, type: a.type, location: ops.location || aircraftLocationOf(a),
                                title: `Out of service — ${d.label}`, sub: ops.reason || '' });
                 }
-                Object.values(a.opsLog || {}).forEach(pd => {
+                Object.entries(a.opsLog || {}).forEach(([opsKey, pd]) => {
                     const d = opsDef(pd.state);
                     const sIso = toISODate(pd.since), uIso = toISODate(pd.until);
                     if (sIso) {
-                        out.push({ iso: sIso, kind: 'operational', opsState: pd.state,
+                        out.push({ iso: sIso, kind: 'operational', opsState: pd.state, opsKey,
                                    tail: a.id, type: a.type, location: pd.location || aircraftLocationOf(a),
                                    title: `Out of service — ${d.label}`, sub: pd.reason || '' });
                     }
@@ -16974,7 +17052,7 @@
                     // back is the thing anyone reading that day actually wants to see.
                     if (uIso) {
                         const span = dateSpan(pd.since, pd.until);
-                        out.push({ iso: uIso, kind: 'operational', opsState: '', opsReturn: true,
+                        out.push({ iso: uIso, kind: 'operational', opsState: '', opsReturn: true, opsKey,
                                    tail: a.id, type: a.type, location: pd.location || aircraftLocationOf(a),
                                    title: 'Returned to service',
                                    sub: span ? `${d.label} · ${span}` : d.label });
