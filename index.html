@@ -6962,8 +6962,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.124.1';
-        const APP_BUILD    = '2026.09.11.01';
+        const APP_VERSION  = '2.124.2';
+        const APP_BUILD    = '2026.09.11.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12342,15 +12342,17 @@
             if (modman) {
                 const snLabel = modman.isAstronics ? 'Astronics S/N' : 'Eclipse S/N';
                 const snVal = modman.isAstronics ? modman.astronicsSn : eclipseSnDisplay(modman.eclipseSn);
-                const taurus = [modman.taurusOldMgId && `MGID ${modman.taurusOldMgId}`, modman.taurusNewMgId && `→ ${modman.taurusNewMgId}`].filter(Boolean).join(' ');
-                const tid = [modman.taurusOldTid && `TID ${modman.taurusOldTid}`, modman.taurusNewTid && `→ ${modman.taurusNewTid}`].filter(Boolean).join(' ');
+                // Plain current value, no old→new arrow — the register keeps the current
+                // MG ID / TID; fall back to the old field only when no new one is recorded.
+                const taurusMg = modman.taurusNewMgId || modman.taurusOldMgId || '';
+                const taurusTid = modman.taurusNewTid || modman.taurusOldTid || '';
                 const rows = [
                     ['Kontron S/N', modman.kontronSn], [snLabel, snVal],
-                    ['Taurus', taurus], ['Taurus TID', tid],
-                    ['Hughes chassis', modman.hnsChassisId], ['Hughes ESN', modman.hnsEsn], ['Hughes MAC', modman.hnsMac],
+                    // Taurus modem — MG ID, TID and IPHO together.
+                    ['Taurus MG ID', taurusMg], ['Taurus TID', taurusTid], ['IPHO', modman.ipho !== 'na' ? modman.ipho : ''],
+                    // Hughes modem — Chassis ID, MAC, ESN.
+                    ['Hughes Chassis ID', modman.hnsChassisId], ['Hughes MAC', modman.hnsMac], ['Hughes ESN', modman.hnsEsn],
                     ['Commissioning', [modman.commTaurus !== 'na' && `Taurus ${modman.commTaurus}`, modman.commHughes !== 'na' && `Hughes ${modman.commHughes}`].filter(Boolean).join(' · ')],
-                    ['IPHO', modman.ipho !== 'na' ? modman.ipho : ''],
-                    ['Fitted', modman.installDate],
                 ].filter(r => r[1]);
                 modmanBlock = rows.length ? `<div class="avr-section-label">MODMAN (Satcom register)</div><div class="avr-meta">${rows.map(cell).join('')}</div>` : '';
             }
@@ -12927,10 +12929,10 @@
                 const snVal = modman.isAstronics ? modman.astronicsSn : eclipseSnDisplay(modman.eclipseSn);
                 const mrows = [
                     ['Kontron S/N', modman.kontronSn], [snLabel, snVal],
-                    ['Taurus MGID', [modman.taurusOldMgId, modman.taurusNewMgId].filter(Boolean).join(' → ')],
-                    ['Taurus TID', [modman.taurusOldTid, modman.taurusNewTid].filter(Boolean).join(' → ')],
-                    ['Hughes chassis', modman.hnsChassisId], ['Hughes ESN', modman.hnsEsn], ['Hughes MAC', modman.hnsMac],
-                    ['Fitted', modman.installDate],
+                    ['Taurus MG ID', modman.taurusNewMgId || modman.taurusOldMgId || ''],
+                    ['Taurus TID', modman.taurusNewTid || modman.taurusOldTid || ''],
+                    ['IPHO', modman.ipho !== 'na' ? modman.ipho : ''],
+                    ['Hughes Chassis ID', modman.hnsChassisId], ['Hughes MAC', modman.hnsMac], ['Hughes ESN', modman.hnsEsn],
                 ].filter(r => r[1]);
                 modmanPrint = mrows.length ? `<div class="avr-print-sec">MODMAN</div><div class="avr-print-grid">${dossierGrid(mrows)}</div>` : '';
             }
