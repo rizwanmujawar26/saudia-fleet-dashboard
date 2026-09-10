@@ -4051,6 +4051,7 @@
         .avr-dossier .maint-equip-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
         .avr-dossier .maint-equip-table th, .avr-dossier .maint-equip-table td { border-bottom: 1px solid #eef2f6; padding: 5px 8px; text-align: left; }
         .avr-dossier .hw-serial { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
+        .avr-removed { font-size: 10.5px; color: #a52834; margin-top: 2px; }
 
         /* ===== AVR print sheet ===== */
         #avrPrint { display: none; }
@@ -6699,6 +6700,11 @@
                         removals: history.filter(x => !fitmentIsOn(x.fitment)).length,
                         changes: history.length,
                         daysOnWing: current ? fitmentDaysOnWing(current.fitment) : null,
+                        // The units that came OFF this slot — serial + when — so a report can
+                        // say what a swap removed, not just what is fitted now.
+                        removedUnits: history.filter(x => !fitmentIsOn(x.fitment))
+                            .map(x => ({ serial: x.unit.serial, removed: x.fitment.removedDate || '', fitted: x.fitment.fittedDate || '' }))
+                            .sort((p, q) => dateSortKey(toISODate(q.removed)).localeCompare(dateSortKey(toISODate(p.removed)))),
                     });
                 });
             });
@@ -6857,8 +6863,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.119.0';
-        const APP_BUILD    = '2026.09.10.03';
+        const APP_VERSION  = '2.120.0';
+        const APP_BUILD    = '2026.09.10.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -9471,6 +9477,9 @@
                     { node: 'spec', key: 'seatTotal',    label: 'Total Seats', kind: 'num' },
                     { node: 'spec', key: 'deliveryDate', label: 'Delivery Date', kind: 'text', max: 20, hint: 'dd-mmm-yyyy or as recorded' },
                     { node: 'spec', key: 'msn',          label: 'MSN', kind: 'text', max: 20 },
+                    { node: 'spec', key: 'ifeSystem',    label: 'IFE System', kind: 'text', max: 80, hint: 'e.g. Thales i5000' },
+                    { node: 'spec', key: 'ifePrevious',  label: 'Previous IFE', kind: 'text', max: 80, hint: 'e.g. Taqnia IFC (de-modified)' },
+                    { node: 'spec', key: 'ifeNote',      label: 'IFE Note', kind: 'textarea', max: 500, full: true, hint: 'history / mod context' },
                     { node: 'spec', key: 'remark',       label: 'Remark', kind: 'text', max: 200, full: true },
                 ]},
             ];
@@ -9587,7 +9596,7 @@
         }
         const AC_MOVE_FLEET = ['type', 'fit', 'scope', 'system', 'fleetStatus', 'comments', 'delivered'];
         const AC_MOVE_AC = ['completionDate', 'otaPatchUTC', 'otaPatch3UTC', 'completionLocation', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'note', 'swVersion', 'retrofitLocation', 'retrofitStart', 'retrofitEnd', 'wifiVisibility', 'activatedDate', 'simRoaming', 'ugoVersion', 'tilesVersion', 'ops', 'opsLog', 'maintenance', 'modem', 'media'];
-        const AC_MOVE_SPEC = ['manufacturer', 'family', 'variant', 'engineMfr', 'engineModel', 'engineQty', 'seatConfig', 'seatBusiness', 'seatEconomy', 'seatTotal', 'deliveryDate', 'msn', 'remark'];
+        const AC_MOVE_SPEC = ['manufacturer', 'family', 'variant', 'engineMfr', 'engineModel', 'engineQty', 'seatConfig', 'seatBusiness', 'seatEconomy', 'seatTotal', 'deliveryDate', 'msn', 'remark', 'ifeSystem', 'ifePrevious', 'ifeNote'];
 
         async function acPatch(path, body, token) {
             if (!Object.keys(body).length) return;
@@ -12050,9 +12059,30 @@
             const startIso = toISODate(v.dateStart);
             const endIso = toISODate(v.dateEnd || v.dateStart) || startIso;
             const inWin = i => startIso && i && i >= startIso && (!endIso || i <= endIso);
-            return timelineRepoEntries()
-                .filter(x => x.tail === v.aircraft && (x.actId ? x.visitId === v.id : inWin(x.iso)))
-                .sort((a, b) => a.iso.localeCompare(b.iso) || a.kind.localeCompare(b.kind));
+            const base = timelineRepoEntries()
+                .filter(x => x.tail === v.aircraft && (x.actId ? x.visitId === v.id : inWin(x.iso)));
+
+            // LRU fit/remove events for this tail in the window, straight from /units — so
+            // a component swap (e.g. the IFE server R&R: old S/N off, new S/N on) is on the
+            // report even when it was recorded only in the unit register. SIM comes from the
+            // register's own Timeline pass and MODMAN from /modmans, so both are skipped here
+            // to avoid a second copy.
+            const skip = new Set(SIM_LRU_IDS.concat(['modman']));
+            const type = avrTypeOf(v.aircraft);
+            unitEntries().forEach(u => {
+                if (skip.has(u.lruId)) return;
+                const lru = lruById(u.lruId);
+                const label = lru ? lru.label : u.lruId;
+                unitFitmentsSorted(u).forEach(f => {
+                    if (f.aircraft !== v.aircraft) return;
+                    const fi = toISODate(f.fittedDate), ri = toISODate(f.removedDate);
+                    const sub = u.serial ? `S/N ${u.serial}` : '';
+                    if (fi && inWin(fi)) base.push({ iso: fi, kind: 'hardware', tail: v.aircraft, type, location: '', title: `${label} fitted`, sub });
+                    if (ri && inWin(ri)) base.push({ iso: ri, kind: 'hardware', tail: v.aircraft, type, location: '', title: `${label} removed`, sub });
+                });
+            });
+
+            return base.sort((a, b) => a.iso.localeCompare(b.iso) || a.kind.localeCompare(b.kind) || String(a.title).localeCompare(String(b.title)));
         }
 
         // One compact report row — the Timeline vocabulary without the repo's edit/assign
@@ -12092,12 +12122,22 @@
             const ota3 = (a.otaPatch3UTC || '').slice(0, 10);
             const del = spec.deliveryDate ? `${deliveryLong(spec.deliveryDate)}${deliveryAge(spec.deliveryDate) ? ' · ' + deliveryAge(spec.deliveryDate) : ''}` : '';
             const engines = spec.engineModel ? `${spec.engineMfr ? spec.engineMfr + ' ' : ''}${spec.engineModel}${spec.engineQty ? ' ×' + spec.engineQty : ''}` : '';
+            // Human-readable cabin: "Business 20 · Economy 145 · Total 165", falling back to
+            // the raw config code (C20Y145) only when the split seats are not recorded.
+            const seatBits = [
+                spec.seatBusiness ? `Business ${spec.seatBusiness}` : '',
+                spec.seatEconomy ? `Economy ${spec.seatEconomy}` : '',
+                spec.seatTotal ? `Total ${spec.seatTotal}` : '',
+            ].filter(Boolean).join(' · ');
+            const seats = seatBits || spec.seatConfig || '';
             const aircraftRows = [
                 ['Type', spec.variant || a.type || ''],
                 ['MSN', spec.msn || ''],
                 ['Delivery / age', del],
-                ['Seats', spec.seatConfig || (spec.seatTotal ? String(spec.seatTotal) : '')],
+                ['Seating', seats],
                 ['Engines', engines],
+                ['IFE system', spec.ifeSystem || ''],
+                ['Previous IFE', spec.ifePrevious || ''],
                 ['Fleet status', fleetStatusOf(a) || ''],
             ];
             const connRows = [
@@ -12120,11 +12160,13 @@
         }
 
         function avrDossierHTML(tail) {
-            const { a, modman, equip } = avrDossierData(tail);
+            const { a, spec, modman, equip } = avrDossierData(tail);
             const { aircraftRows, connRows } = avrDossierRows(tail);
             const cell = ([k, val]) => `<div class="avr-meta-cell"><div class="avr-meta-key">${escAttr(k)}</div><div class="avr-meta-val">${escAttr(val) || '—'}</div></div>`;
 
             const equipMulti = equip.some(r => r.position);
+            const removedLine = r => r.removedUnits && r.removedUnits.length
+                ? `<div class="avr-removed">⟲ replaced ${r.removedUnits.map(u => `${escAttr(u.serial)}${u.removed ? ` (off ${escAttr(u.removed)})` : ''}`).join(', ')}</div>` : '';
             const equipTable = equip.length ? `
                 <div class="avr-section-label">Installed equipment — ${equip.filter(r => r.serial).length} of ${equip.length} with serials</div>
                 <div class="table-scroll-wrapper"><table class="maint-equip-table"><thead><tr>
@@ -12132,10 +12174,11 @@
                 </tr></thead><tbody>${equip.map(r => `<tr>
                     <td class="maint-equip-lru">${escAttr(r.lru.label)}</td>
                     ${equipMulti ? `<td>${r.position ? escAttr(r.position + '/' + r.qty) : '—'}</td>` : ''}
-                    <td>${r.vacant ? '<span class="hw-vacant">removed — none fitted</span>' : (r.serial ? `<span class="hw-serial">${escAttr(r.serial)}</span>` : '<span class="hw-none">no record</span>')}</td>
+                    <td>${r.vacant ? '<span class="hw-vacant">removed — none fitted</span>' : (r.serial ? `<span class="hw-serial">${escAttr(r.serial)}</span>` : '<span class="hw-none">no record</span>')}${removedLine(r)}</td>
                     <td>${r.date ? escAttr(r.date) : '—'}</td>
                     <td>${r.removals ? escAttr(r.removals) + ' removed' : '—'}</td>
                 </tr>`).join('')}</tbody></table></div>` : '';
+            const ifeNote = spec.ifeNote ? `<div class="avr-note" style="margin-top:6px;">${escAttr(spec.ifeNote)}</div>` : '';
 
             let modmanBlock = '';
             if (modman) {
@@ -12158,6 +12201,7 @@
                 <summary class="avr-dossier-summary">🛩️ Aircraft dossier — ${escAttr(tail)}</summary>
                 <div class="avr-section-label">Aircraft</div>
                 <div class="avr-meta">${aircraftRows.map(cell).join('')}</div>
+                ${ifeNote}
                 <div class="avr-section-label">Connectivity &amp; retrofit</div>
                 <div class="avr-meta">${connRows.map(cell).join('')}</div>
                 ${equipTable}
@@ -12696,13 +12740,16 @@
 
             // Aircraft dossier for print — specs + connectivity, installed serials, MODMAN.
             const { aircraftRows, connRows } = avrDossierRows(v.aircraft);
-            const { equip, modman } = avrDossierData(v.aircraft);
+            const { spec: dspec, equip, modman } = avrDossierData(v.aircraft);
             const dossierGrid = rows => rows.map(([k, val]) => `<div><span class="k">${escAttr(k)}:</span> ${escAttr(val) || '—'}</div>`).join('');
             const equipMulti = equip.some(r => r.position);
+            const removedTxt = r => r.removedUnits && r.removedUnits.length
+                ? `<br><span style="color:#a52834;font-size:10.5px;">replaced ${r.removedUnits.map(u => `${escAttr(u.serial)}${u.removed ? ' (off ' + escAttr(u.removed) + ')' : ''}`).join(', ')}</span>` : '';
             const equipPrint = equip.length ? `
                 <div class="avr-print-sec">Installed Equipment</div>
                 <table class="avr-print-table"><thead><tr><th>Equipment</th>${equipMulti ? '<th>Pos</th>' : ''}<th>Serial</th><th>Installed</th></tr></thead>
-                <tbody>${equip.map(r => `<tr><td>${escAttr(r.lru.label)}</td>${equipMulti ? `<td>${r.position ? escAttr(r.position + '/' + r.qty) : '—'}</td>` : ''}<td>${r.vacant ? 'removed' : escAttr(r.serial || '—')}</td><td>${escAttr(r.date || '—')}</td></tr>`).join('')}</tbody></table>` : '';
+                <tbody>${equip.map(r => `<tr><td>${escAttr(r.lru.label)}</td>${equipMulti ? `<td>${r.position ? escAttr(r.position + '/' + r.qty) : '—'}</td>` : ''}<td>${r.vacant ? 'removed' : escAttr(r.serial || '—')}${removedTxt(r)}</td><td>${escAttr(r.date || '—')}</td></tr>`).join('')}</tbody></table>` : '';
+            const ifeNotePrint = dspec.ifeNote ? `<div class="avr-print-note" style="margin-top:6px;"><b>IFE:</b> ${escAttr(dspec.ifeNote)}</div>` : '';
             let modmanPrint = '';
             if (modman) {
                 const snLabel = modman.isAstronics ? 'Astronics S/N' : 'Eclipse S/N';
@@ -12734,6 +12781,7 @@
                     </div>
                     <div class="avr-print-sec">Aircraft</div>
                     <div class="avr-print-grid">${dossierGrid(aircraftRows)}</div>
+                    ${ifeNotePrint}
                     <div class="avr-print-sec">Connectivity &amp; Retrofit</div>
                     <div class="avr-print-grid">${dossierGrid(connRows)}</div>
                     ${equipPrint}

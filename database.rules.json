@@ -130,6 +130,9 @@
         "deliveryDate": { ".validate": "newData.isString() && newData.val().length <= 20" },
         "msn":          { ".validate": "newData.isString() && newData.val().length <= 20" },
         "remark":       { ".validate": "newData.isString() && newData.val().length <= 200" },
+        "ifeSystem":    { ".validate": "newData.isString() && newData.val().length <= 80" },
+        "ifePrevious":  { ".validate": "newData.isString() && newData.val().length <= 80" },
+        "ifeNote":      { ".validate": "newData.isString() && newData.val().length <= 500" },
 
         "$other":       { ".validate": false }
       }
