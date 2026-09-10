@@ -6940,8 +6940,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.125.1';
-        const APP_BUILD    = '2026.09.11.04';
+        const APP_VERSION  = '2.125.2';
+        const APP_BUILD    = '2026.09.11.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12887,11 +12887,12 @@
                     if (a.outcome) details += '<br><i>Outcome: ' + escAttr(a.outcome) + '</i>';
                     if (tech) details += '<br><span style="color:#555;">' + tech + '</span>';
                 } else if (x.sub) {
-                    details += '<br><span style="color:#555;">' + escAttr(x.sub) + '</span>';
+                    // Keep the S/N on the same line as the title, and never break the value itself.
+                    details += ' <span class="sub" style="color:#6b7883; white-space:nowrap;">· ' + escAttr(x.sub) + '</span>';
                 }
                 return `<tr>
-                    <td>${escAttr(fmtDate(x.iso) || '')}</td>
-                    <td>${escAttr(kindLabel(x.kind))}</td>
+                    <td class="c-date">${escAttr(fmtDate(x.iso) || '')}</td>
+                    <td class="c-cat">${escAttr(kindLabel(x.kind))}</td>
                     <td>${details}</td>
                 </tr>`;
             }).join('') : '<tr><td colspan="3">No activities in this window.</td></tr>';
@@ -12913,12 +12914,14 @@
             if (modman) {
                 const snLabel = modman.isAstronics ? 'Astronics S/N' : 'Eclipse S/N';
                 const snVal = modman.isAstronics ? modman.astronicsSn : eclipseSnDisplay(modman.eclipseSn);
+                // Row 1: the box identities + ESN. Row 2: Taurus modem (IPHO, MG ID, TID).
+                // Row 3: Hughes chassis + MAC. (3-column grid fills left-to-right.)
                 const mrows = [
-                    ['Kontron S/N', modman.kontronSn], [snLabel, snVal],
+                    ['Kontron S/N', modman.kontronSn], [snLabel, snVal], ['ESN', modman.hnsEsn],
+                    ['IPHO', modman.ipho !== 'na' ? modman.ipho : ''],
                     ['Taurus MG ID', modman.taurusNewMgId || modman.taurusOldMgId || ''],
                     ['Taurus TID', modman.taurusNewTid || modman.taurusOldTid || ''],
-                    ['IPHO', modman.ipho !== 'na' ? modman.ipho : ''],
-                    ['Hughes Chassis ID', modman.hnsChassisId], ['Hughes MAC', modman.hnsMac], ['Hughes ESN', modman.hnsEsn],
+                    ['Hughes Chassis ID', modman.hnsChassisId], ['MAC Address', modman.hnsMac],
                 ].filter(r => r[1]);
                 modmanPrint = mrows.length ? `<div class="sec">MODMAN &amp; Commissioning</div><div class="rpt-grid">${dossierGrid(mrows)}</div>` : '';
             }
@@ -12974,7 +12977,7 @@
   .rpt-header { display:flex; align-items:center; justify-content:space-between; gap:18px;
     border-bottom:3px solid var(--green); padding-bottom:14px; }
   .rpt-header img.saudia { height:52px; width:auto; }
-  .rpt-header img.nsg { height:34px; width:auto; }
+  .rpt-header img.nsg { height:52px; width:auto; }
   .rpt-titleband { margin:16px 0 8px; }
   .rpt-kicker { font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
   .rpt-title { font-size:22px; font-weight:800; color:var(--navy); margin:2px 0 4px; }
@@ -12992,6 +12995,7 @@
   table.tbl th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted);
     border-bottom:1.5px solid var(--line); padding:6px 8px; }
   table.tbl td { border-bottom:1px solid #eef2f6; padding:6px 8px; vertical-align:top; }
+  table.tbl td.c-date, table.tbl td.c-cat { white-space:nowrap; }
   table.tbl tbody tr:nth-child(even) td { background:#fafbfc; }
   .people { display:grid; grid-template-columns:1fr 1fr; gap:12px 26px; margin-top:6px; font-size:12.5px; }
   .people .pcol { min-width:0; }
@@ -13014,7 +13018,7 @@
       display:flex; align-items:center; justify-content:space-between;
       border-bottom:2px solid var(--green); padding-bottom:3mm; }
     .print-running-head img.saudia { height:11mm; }
-    .print-running-head img.nsg { height:7mm; }
+    .print-running-head img.nsg { height:11mm; }
     .print-running-head .rh-title { font-size:10px; font-weight:800; color:var(--navy); text-transform:uppercase; letter-spacing:.5px; text-align:right; max-width:60mm; }
     .print-running-foot { position:fixed; bottom:-14mm; left:0; right:0; height:10mm;
       display:flex; align-items:center; justify-content:space-between;
@@ -13067,7 +13071,7 @@
     ${softwareRows.length ? `<div class="sec">Software &amp; Media</div><div class="rpt-grid">${dossierGrid(softwareRows)}</div>` : ''}
     <div class="sec">Work Carried Out — ${members.length} ${members.length === 1 ? 'entry' : 'entries'}</div>
     <table class="tbl">
-      <thead><tr><th style="width:88px;">Date</th><th style="width:120px;">Category</th><th>Details</th></tr></thead>
+      <thead><tr><th style="width:96px; white-space:nowrap;">Date</th><th style="width:118px; white-space:nowrap;">Category</th><th>Details</th></tr></thead>
       <tbody>${actRows}</tbody>
     </table>
     <div class="rpt-footer">
