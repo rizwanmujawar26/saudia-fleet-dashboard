@@ -5655,8 +5655,8 @@
                                 <th rowspan="2">#</th>
                                 <th colspan="4" class="fleet-group fleet-group-air">Aircraft</th>
                                 <th colspan="4" class="fleet-group fleet-group-conn fleet-group-start">Connectivity</th>
-                                <th colspan="4" class="fleet-group fleet-group-retro fleet-group-start">Retrofit</th>
-                                <th rowspan="2" class="sortable-th col-comment fleet-group-start" data-col="13" data-label="Comments" onclick="sortFleetTable(13)">Comments</th>
+                                <th colspan="5" class="fleet-group fleet-group-retro fleet-group-start">Retrofit</th>
+                                <th rowspan="2" class="sortable-th col-comment fleet-group-start" data-col="14" data-label="Comments" onclick="sortFleetTable(14)">Comments</th>
                                 <th rowspan="2" id="fleetActionsHead" style="display:none;">Actions</th>
                             </tr>
                             <tr>
@@ -5672,6 +5672,7 @@
                                 <th class="sortable-th" data-col="10" data-label="Mod End" onclick="sortFleetTable(10)">Mod End</th>
                                 <th class="sortable-th" data-col="11" data-label="Install Site" onclick="sortFleetTable(11)">Install Site</th>
                                 <th class="sortable-th" data-col="12" data-label="Fit" onclick="sortFleetTable(12)">Fit</th>
+                                <th class="sortable-th" data-col="13" data-label="Prev. IFC" onclick="sortFleetTable(13)">Prev. IFC</th>
                             </tr>
                         </thead>
                         <tbody id="fleetTableBody">
@@ -6863,8 +6864,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.120.0';
-        const APP_BUILD    = '2026.09.10.04';
+        const APP_VERSION  = '2.121.0';
+        const APP_BUILD    = '2026.09.10.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -9477,9 +9478,8 @@
                     { node: 'spec', key: 'seatTotal',    label: 'Total Seats', kind: 'num' },
                     { node: 'spec', key: 'deliveryDate', label: 'Delivery Date', kind: 'text', max: 20, hint: 'dd-mmm-yyyy or as recorded' },
                     { node: 'spec', key: 'msn',          label: 'MSN', kind: 'text', max: 20 },
-                    { node: 'spec', key: 'ifeSystem',    label: 'IFE System', kind: 'text', max: 80, hint: 'e.g. Thales i5000' },
-                    { node: 'spec', key: 'ifePrevious',  label: 'Previous IFE', kind: 'text', max: 80, hint: 'e.g. Taqnia IFC (de-modified)' },
-                    { node: 'spec', key: 'ifeNote',      label: 'IFE Note', kind: 'textarea', max: 500, full: true, hint: 'history / mod context' },
+                    { node: 'spec', key: 'ifcPrevious',  label: 'Previous IFC System', kind: 'text', max: 80, hint: 'IFC system removed in this mod, e.g. Taqnia' },
+                    { node: 'spec', key: 'ifcNote',      label: 'IFC Mod Note', kind: 'textarea', max: 500, full: true, hint: 'de-mod / new-system context' },
                     { node: 'spec', key: 'remark',       label: 'Remark', kind: 'text', max: 200, full: true },
                 ]},
             ];
@@ -9596,7 +9596,7 @@
         }
         const AC_MOVE_FLEET = ['type', 'fit', 'scope', 'system', 'fleetStatus', 'comments', 'delivered'];
         const AC_MOVE_AC = ['completionDate', 'otaPatchUTC', 'otaPatch3UTC', 'completionLocation', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'note', 'swVersion', 'retrofitLocation', 'retrofitStart', 'retrofitEnd', 'wifiVisibility', 'activatedDate', 'simRoaming', 'ugoVersion', 'tilesVersion', 'ops', 'opsLog', 'maintenance', 'modem', 'media'];
-        const AC_MOVE_SPEC = ['manufacturer', 'family', 'variant', 'engineMfr', 'engineModel', 'engineQty', 'seatConfig', 'seatBusiness', 'seatEconomy', 'seatTotal', 'deliveryDate', 'msn', 'remark', 'ifeSystem', 'ifePrevious', 'ifeNote'];
+        const AC_MOVE_SPEC = ['manufacturer', 'family', 'variant', 'engineMfr', 'engineModel', 'engineQty', 'seatConfig', 'seatBusiness', 'seatEconomy', 'seatTotal', 'deliveryDate', 'msn', 'remark', 'ifcPrevious', 'ifcNote'];
 
         async function acPatch(path, body, token) {
             if (!Object.keys(body).length) return;
@@ -10446,6 +10446,18 @@
                     ? `<input class="edit-text comment-input" value="${escAttr(comments)}" placeholder="Add a comment" data-id="${a.id}" data-field="comments" onchange="handleFleetEdit(this)">`
                     : `<span class="comment-text">${comments ? escAttr(comments) : '—'}</span>`;
 
+                // Previous IFC system — the connectivity system removed in this mod (e.g.
+                // Taqnia), on /fleetSpecs. Editable inline for bulk entry; the longer mod
+                // note (ifcNote) rides as this cell's tooltip and is edited in the ✎ modal.
+                const spec = fleetSpecsLive[a.id] || {};
+                const prevIfc = (pendingFleet[a.id] && pendingFleet[a.id].ifcPrevious !== undefined)
+                    ? pendingFleet[a.id].ifcPrevious : (spec.ifcPrevious || '');
+                const ifcCell = editing
+                    ? `<input class="edit-text" style="width:100%;min-width:90px;" maxlength="80" value="${escAttr(prevIfc)}" placeholder="e.g. Taqnia" data-id="${a.id}" data-field="ifcPrevious" onchange="handleFleetEdit(this)">`
+                    : (prevIfc
+                        ? `<span class="prev-ifc"${spec.ifcNote ? ` title="${escAttr(spec.ifcNote)}"` : ''}>${escAttr(prevIfc)}</span>`
+                        : '<span class="fleet-notset">—</span>');
+
                 const actionCell = editing
                     ? `<td><button class="fleet-edit-btn" title="View / edit all data for ${escAttr(a.id)}" onclick="openAircraftEditor('${escAttr(a.id)}')">✎</button><button class="sched-del-btn" title="Remove from fleet" onclick="removeAircraft('${escAttr(a.id)}')">🗑</button></td>`
                     : '';
@@ -10486,6 +10498,7 @@
                     <td class="mod-cell" data-sort="${isLine ? 'zzzz' : (dateSortKey(toISODate(rEnd)) || '00000000')}">${modEndCell}</td>
                     <td data-sort="${escAttr((isOutstation(loc) ? '0' : '1') + loc)}">${locCell}</td>
                     <td data-sort="${escAttr(fitview)}">${fitCell}</td>
+                    <td data-sort="${escAttr((prevIfc || 'zzzz').toLowerCase())}">${ifcCell}</td>
                     <td class="col-comment" data-sort="${escAttr(comments)}">${commentCell}</td>
                     ${actionCell}
                 `;
@@ -10717,7 +10730,7 @@
             // activatedDate is a property of the aircraft, not of the roster entry, so it
             // goes to /aircraft while everything else goes to /fleet. Two nodes, two
             // writes, one Save — the same split the Hardware tab uses for SIM roaming.
-            const multi = {}, acMulti = {};
+            const multi = {}, acMulti = {}, spMulti = {};
             // What each aircraft's ops record becomes, kept so the local mirror after a
             // successful write says the same thing the PATCH did.
             const opsAfter = {}, opsArchived = {};
@@ -10783,6 +10796,8 @@
                     if (f === 'activatedDate' || f === 'wifiVisibility' || f === 'retrofitLocation' || f === 'retrofitStart' || f === 'retrofitEnd') {
                         acMulti[`${id}/${f}`] = v || null; return;
                     }
+                    // /fleetSpecs fields — the IFC-history bucket, empty clears the field.
+                    if (f === 'ifcPrevious' || f === 'ifcNote') { spMulti[`${id}/${f}`] = v || null; return; }
                     // These fields are optional and enum/length-validated: an empty
                     // string is not a legal value, so clearing one writes null (removes
                     // it) rather than sending '' — which the rules would reject.
@@ -10826,6 +10841,21 @@
                         const clean = {};
                         Object.entries(rec).forEach(([f, v]) => { if (v) clean[f] = v; });
                         aircraftLive[id].ops = clean;
+                    });
+                }
+                if (Object.keys(spMulti).length) {
+                    const res3 = await fetchWithTimeout(`${FIREBASE_DB_URL}/fleetSpecs.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(spMulti),
+                    });
+                    const data3 = await res3.json();
+                    if (!res3.ok || (data3 && data3.error)) throw new Error((data3 && data3.error) || 'write failed');
+                    Object.keys(pendingFleet).forEach(id => {
+                        ['ifcPrevious', 'ifcNote'].forEach(f => {
+                            const v = pendingFleet[id][f];
+                            if (v === undefined) return;
+                            fleetSpecsLive[id] = fleetSpecsLive[id] || {};
+                            if (v) fleetSpecsLive[id][f] = v; else delete fleetSpecsLive[id][f];
+                        });
                     });
                 }
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
@@ -12136,12 +12166,11 @@
                 ['Delivery / age', del],
                 ['Seating', seats],
                 ['Engines', engines],
-                ['IFE system', spec.ifeSystem || ''],
-                ['Previous IFE', spec.ifePrevious || ''],
                 ['Fleet status', fleetStatusOf(a) || ''],
             ];
             const connRows = [
-                ['System', system],
+                ['IFC system', system],
+                ['Previous IFC', spec.ifcPrevious || ''],
                 ['Fit', linefit ? 'Linefit' : (fitOf(a) === 'retrofit' ? 'Retrofit' : '')],
                 ['Install site', a.retrofitLocation || ''],
                 ['Mod window', retro + (retroSpan ? ` (${retroSpan})` : '')],
@@ -12178,7 +12207,7 @@
                     <td>${r.date ? escAttr(r.date) : '—'}</td>
                     <td>${r.removals ? escAttr(r.removals) + ' removed' : '—'}</td>
                 </tr>`).join('')}</tbody></table></div>` : '';
-            const ifeNote = spec.ifeNote ? `<div class="avr-note" style="margin-top:6px;">${escAttr(spec.ifeNote)}</div>` : '';
+            const ifcNote = spec.ifcNote ? `<div class="avr-note" style="margin-top:6px;">${escAttr(spec.ifcNote)}</div>` : '';
 
             let modmanBlock = '';
             if (modman) {
@@ -12201,9 +12230,9 @@
                 <summary class="avr-dossier-summary">🛩️ Aircraft dossier — ${escAttr(tail)}</summary>
                 <div class="avr-section-label">Aircraft</div>
                 <div class="avr-meta">${aircraftRows.map(cell).join('')}</div>
-                ${ifeNote}
                 <div class="avr-section-label">Connectivity &amp; retrofit</div>
                 <div class="avr-meta">${connRows.map(cell).join('')}</div>
+                ${ifcNote}
                 ${equipTable}
                 ${modmanBlock}
             </details>`;
@@ -12749,7 +12778,7 @@
                 <div class="avr-print-sec">Installed Equipment</div>
                 <table class="avr-print-table"><thead><tr><th>Equipment</th>${equipMulti ? '<th>Pos</th>' : ''}<th>Serial</th><th>Installed</th></tr></thead>
                 <tbody>${equip.map(r => `<tr><td>${escAttr(r.lru.label)}</td>${equipMulti ? `<td>${r.position ? escAttr(r.position + '/' + r.qty) : '—'}</td>` : ''}<td>${r.vacant ? 'removed' : escAttr(r.serial || '—')}${removedTxt(r)}</td><td>${escAttr(r.date || '—')}</td></tr>`).join('')}</tbody></table>` : '';
-            const ifeNotePrint = dspec.ifeNote ? `<div class="avr-print-note" style="margin-top:6px;"><b>IFE:</b> ${escAttr(dspec.ifeNote)}</div>` : '';
+            const ifcNotePrint = dspec.ifcNote ? `<div class="avr-print-note" style="margin-top:6px;"><b>IFC mod:</b> ${escAttr(dspec.ifcNote)}</div>` : '';
             let modmanPrint = '';
             if (modman) {
                 const snLabel = modman.isAstronics ? 'Astronics S/N' : 'Eclipse S/N';
@@ -12781,9 +12810,9 @@
                     </div>
                     <div class="avr-print-sec">Aircraft</div>
                     <div class="avr-print-grid">${dossierGrid(aircraftRows)}</div>
-                    ${ifeNotePrint}
                     <div class="avr-print-sec">Connectivity &amp; Retrofit</div>
                     <div class="avr-print-grid">${dossierGrid(connRows)}</div>
+                    ${ifcNotePrint}
                     ${equipPrint}
                     ${modmanPrint}
                     ${v.summary ? `<div class="avr-print-sec">Summary</div><div class="avr-print-note">${escAttr(v.summary)}</div>` : ''}
