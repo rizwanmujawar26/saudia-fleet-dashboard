@@ -101,7 +101,7 @@ import json,sys,collections
 try: d=json.load(sys.stdin) or {}
 except Exception: print('  units: unreadable'); raise SystemExit
 l=collections.Counter(v.get('lruId') for v in d.values())
-top=', '.join('%d %s'%(n,k) for k,n in l.most_common(4))
+top=', '.join('%d %s'%(n,k) for k,n in l.most_common())
 print('  units         %d  —  %s' % (len(d), top))
 " 2>/dev/null
 
