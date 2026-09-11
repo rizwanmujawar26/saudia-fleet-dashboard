@@ -6,7 +6,24 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.131.0 (2026-09-11).** Footer auth, Software completion cards, aligned feeds,
+**Latest — v2.132.0–v2.132.1 (2026-09-11).** AVR/reports + Software widget overhaul
+(additive + one rules change: `/avr` gains `locArea`, `locHangar`, `pins`; no new node).
+
+- **Location is now a hierarchy** — airport → Line (→ stand) or Hangar (→ Old/New → bay).
+  New `/avr` fields `locArea`/`locHangar` (+ reused `bay`); `avrPlaceDetail()`/
+  `avrLocationFull()` compose "Jeddah — New Hangar H5"; legacy `hangar` (inside/outside)
+  still reads as a fallback. Editor Location block toggled by `avrOnAreaChange`.
+- **Add-to-report on EVERY Activities row.** Derived rows pin by `repoEntryKey()` into
+  `/avr/{id}/pins` (unioned into `avrReportMembers`); `/activities` rows keep `visitId`.
+  One unified `openAddToReportMenu` (replaced `openAssignMenu`); `repoRowByKey` +
+  `visitsContaining()`. The green AVR ref chip is a `<button>` → `printAvr` (PDF in a new tab).
+- **Report template:** "Work Carried Out" Details on ONE line (` · `, never `<br>`); top
+  block one line (aircraft · dates · location); mod window only in the renamed
+  **Specifications** section (from Fleet retrofit fields); "Completion" row → **Activation**.
+- **Software OTA/Middleware cards stay one line** — `swCard` names the pending tails only
+  when < 10, else states the count ("39 aircraft pending").
+
+**Prior — v2.131.0 (2026-09-11).** Footer auth, Software completion cards, aligned feeds,
 menu fixes, AVR print fix (cosmetic / bugfix / additive; no rules change, no new node).
 
 - **Footer is one auth button.** The identity readout folded into the single Sign in /
@@ -616,7 +633,8 @@ work list is DERIVED (see *§4 Activity*). On all four node lists (rules + backu
 | `dateStart` / `dateEnd` | `DD-Mon-YYYY`; equal = single day. The report auto-includes the tail's derived Timeline events **within this window** |
 | `reportType` (v2.123) | what KIND of report — `visit` \| `remote_support` \| `flight_test` \| `test_flight` \| `other`; default `visit`. **The rule validates any lowercase slug** (`/^[a-z_]{2,30}$/`), so a new kind is one line in the `REPORT_TYPES` const and needs **no rules change**. Shown as a header badge + banner |
 | `mode` | `on_site` \| `remote` \| `ota` \| `monitoring` — how WE engaged (the coloured chip). Distinct from `reportType` and from each attendee's `mode` |
-| `location`, `bay`, `hangar` | station (free text), optional bay/stand, `inside`\|`outside`\|`na` |
+| `location`, `locArea`, `locHangar`, `bay` (v2.132) | The location HIERARCHY: `location` = airport (free text, e.g. Jeddah); `locArea` = `line`\|`hangar`; `locHangar` = `old`\|`new` (only when hangar); `bay` = the stand/bay text (reused). `avrPlaceDetail()`/`avrLocationFull()` compose the label ("Jeddah — New Hangar H5"). Legacy `hangar` (`inside`\|`outside`\|`na`) is still read as a fallback but no longer written; its rule is kept for old records |
+| `pins` (v2.132) | map `{ <repoEntryKey>: true }` — auto-generated (derived) Activities rows explicitly added to this report. Unioned into `avrReportMembers` even outside the date window. Rule: `pins/$k` must be boolean. A whole-record PUT carries `existing.pins` forward |
 | `summary` | free text; "✨ Generate from activities" builds a grouped bullet list. Shown **at the top** of an opened report (v2.123) |
 | `status` | `draft` \| `published` — viewers see published only; the tab is public |
 | `attendees` | keyed sub-object `{ name, company, role, mode }` per person, all optional. **`mode`** (v2.123) = `present` \| `remote` — physically on the aircraft vs supporting remotely; `present` is the default and is **NOT stored** (only a non-default `remote` is written). Rendered as an on-aircraft/remote badge |
@@ -2525,10 +2543,16 @@ PUBLISHED reports read-only, editing gated on `canEdit()`). See the memory note
   two feeds (`setAvrView`); `avrSyncBarFilters()` flips each filter's `hidden` per view
   (Kind for the repo, Mode/Status for visits).
 - **Activities view (default)** — `renderActivityRepo()` renders the whole
-  `timelineActivities()` set (via `timelineRepoEntries()`) grouped by date. `/activities`
-  rows (those carrying `actId`) get ✏️ `openEditActivity` and a 📋 assign menu
-  (`openAssignMenu` → `assignActivityToVisit`, sets `/activities/{id}/visitId`); derived
-  rows carry a source tag and are edited on their own tab.
+  `timelineActivities()` set (via `timelineRepoEntries()`) grouped by date. **Every row
+  (v2.132) gets a 📋 add-to-report button** via one unified `openAddToReportMenu(event, key)`
+  (replaced `openAssignMenu`): `/activities` rows (carrying `actId`) link by
+  `assignActivityToVisit` → `/activities/{id}/visitId`; derived rows PIN by
+  `repoEntryKey()` into `/avr/{id}/pins` (`pinDerivedToVisit`/`unpinDerived`).
+  `renderRepoRow` registers each row in `repoRowByKey` so the menu can resolve a derived
+  row. `visitsContaining(x)` decides the green **AVR ref chip** — which is now a
+  `<button>` that opens the report as a PDF in a new tab (`printAvr`) — and the menu's
+  "already in report" marking. `/activities` rows also get ✏️ `openEditActivity`; derived
+  rows still carry a source tag and are edited on their own tab.
 - **Visit Reports view** — `renderAvrFeed()` / `renderAvrCard()`. A report's members
   (`avrReportMembers`) = the tail's derived Timeline events in the visit window PLUS its
   assigned activities PLUS non-SIM/MODMAN `/units` fit-remove events in-window (so a
@@ -2536,7 +2560,14 @@ PUBLISHED reports read-only, editing gated on `canEdit()`). See the memory note
   (`avrDossierHTML`: specs, connectivity, installed serials with `removedUnits`, MODMAN)
   and a Print/PDF button (`printAvr` → `#avrPrint` + `body.printing-avr`). Add/Edit modal
   is `openAvrEditor`/`saveAvr`; "✨ Generate from activities" fills the summary
-  (`avrAutoSummaryText`).
+  (`avrAutoSummaryText`). The editor's Location block (v2.132) is airport → Area
+  (Line/Hangar) → Old/New → stand/bay, toggled by `avrOnAreaChange`.
+  - **The report template (`printAvr` + card, v2.132):** the "Work Carried Out" Details
+    cell is ONE line — bold title then descriptors joined by ` · `, never `<br>`. The top
+    block is one line only (aircraft · dates · location); the modification window lives in
+    the renamed **Specifications** section (was Hardware, `avrDossierRows` unchanged) and
+    reads `a.retrofitStart/End` (the Fleet retrofit fields, `node:'ac'`). The retrofit
+    "Completion" row is labelled **Activation**.
 **Add New Activity** writes one `/activities` record and nothing else — the
 aircraft history and the Timeline both derive from it.
 **Every activity card carries ✏️ Edit as well as 🗑 Delete.** Edit reuses the same

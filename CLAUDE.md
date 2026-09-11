@@ -123,6 +123,8 @@ A close-out, not a stopping point: finish what is in flight or name it unfinishe
 | Verify a save by **intercepting the PATCH body**, not by reading the table — both ops bugs were invisible on screen | Saves |
 | A tab/button's inline `onclick` fires from a **child** (the count badge `<span>`, the emoji text) — resolve the element to style with `tabButtonFor()` / `.closest('.tab-button')`, never bare `event.target`, or the click lands on the span and the highlight is lost | Menu / tabs |
 | A **polled record carries no `.id`** (the key is the map key). A helper that filters on `v.id` (e.g. `avrReportMembers` on `visitId === v.id`) needs `{ id, ...store[id] }` — `avrEntries()` adds it, a raw `store[id]` does not, and the mismatch drops silently | AVR / polled nodes |
+| `/avr` locks fields with `$other: {".validate": false}` — a **new field on a whole-record PUT needs its own `.validate` rule or the entire write is rejected**. `locArea`/`locHangar`/`pins` each got one; a whole-record PUT also drops any child you don't re-send (carry `existing.pins` forward) | Rules / AVR |
+| A **derived (auto-generated) Activities row has no `/activities` id** — to reference one (pin to a report) synthesize a stable `repoEntryKey()` and fold Firebase-forbidden chars (`. # $ / [ ] ' "` + space) to `_`, or the pin key is unusable | AVR / pins |
 
 ⚠️ **Verify in the browser, and verify the thing the USER sees.** Three bugs
 shipped or nearly shipped in one session that every diff and syntax check passed.

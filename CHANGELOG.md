@@ -13,6 +13,44 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.132.1 — Report: mod window only in Specifications, one-line top block, Completion→Activation
+User-directed (2026-09-11). Cosmetic; no rules change, no new node.
+
+- **Top block of the report is one line** — aircraft, dates, location. The duplicated
+  Mod start / Mod end were removed from the PDF's `metaGrid` and the on-screen card's
+  `metaCells` (the `isRetro` / `ac` locals went with them).
+- **Modification window lives only in the renamed "Specifications" section** (was
+  "Hardware", in both the PDF `<div class="sec">` and the on-screen dossier's
+  `🔧` label). It still reads `a.retrofitStart/End` — i.e. the Fleet page's retrofit
+  columns, which write `node:'ac'` (`/aircraft`), the single source for those dates.
+- **Retrofit "Completion" row → "Activation"** in `avrDossierRows` (affects both the
+  PDF and the on-screen dossier).
+
+### v2.132.0 — AVR: one-line PDF details, Line/Hangar location, add-to-report on all rows, clickable ref; OTA widget compaction
+User-directed (2026-09-11). Additive + one rules change (`/avr` gains `locArea`,
+`locHangar`, `pins`); no new node.
+
+- **PDF "Work Carried Out" is one line per entry** (universal template rule): the bold
+  title, then every descriptor joined by ` · `, never stacked on `<br>`. Applies to the
+  linked-activity path (task · tech · outcome) and the `x.sub` path alike; `.d-sub` styles
+  the trailing text.
+- **Location is a hierarchy** — airport → Line (→ stand) or Hangar (→ Old/New → bay).
+  New `/avr` fields `locArea` (`line|hangar`) + `locHangar` (`old|new`); `bay` reused for
+  the stand/bay text. `avrPlaceDetail()` / `avrLocationFull()` compose the label
+  ("Jeddah — New Hangar H5"); legacy `hangar` (inside/outside) records still read. Editor
+  form rebuilt: an Area select reveals the Old/New selector and steers the bay field
+  (`avrOnAreaChange`). The old inside/outside `AVR_HANGAR` select was removed.
+- **Add-to-report on EVERY Activities row, derived rows included.** Derived (auto-generated)
+  rows carry no `/activities` id, so they pin to a report by a stable `repoEntryKey()` into
+  a new `/avr/{id}/pins` map, unioned into `avrReportMembers`. Hand-logged activities keep
+  the `visitId` path. One unified `openAddToReportMenu` + `pinDerivedToVisit` / `unpinDerived`;
+  `repoRowByKey` maps a key back to its row for the menu; `visitsContaining()` drives the
+  chip and the "already in report" marking. `openAssignMenu` was replaced.
+- **The AVR reference chip in the Activities list is a link** — now a `<button>` that opens
+  the report as a PDF in a new tab (`printAvr`).
+- **Software OTA/Middleware cards stay one line** — `swCard` names the pending tails only
+  while they fit (< 10); beyond that it states the count ("39 aircraft pending").
+
 ### v2.131.0 — One-button footer auth, Software completion cards + OTA patches, aligned feeds, menu fixes
 User-directed (2026-09-11). Cosmetic / bugfix / additive; no rules change, no new node.
 
