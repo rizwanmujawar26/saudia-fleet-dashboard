@@ -4149,7 +4149,9 @@
         .repo-row .tl-title { font-weight: 600; color: #26333d; }
         .repo-row .tl-sub { color: #8a97a3; font-size: 12px; }
         .repo-visit-chip { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
-            background: #e7f4ec; color: #146c3a; border: 1px solid #bfe3cd; white-space: nowrap; }
+            background: #e7f4ec; color: #146c3a; border: 1px solid #bfe3cd; white-space: nowrap;
+            cursor: pointer; font-family: inherit; }
+        .repo-visit-chip:hover { background: #d5ecdf; border-color: #9fd3b4; }
         .repo-src { font-size: 9.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
             color: #9aa7b2; background: #f0f3f6; border-radius: 4px; padding: 2px 6px; }
         .repo-actions { display: inline-flex; gap: 2px; }
@@ -6596,12 +6598,6 @@
             { value: 'ota',        label: 'OTA',        css: 'ota' },
             { value: 'monitoring', label: 'Monitoring', css: 'monitoring' },
         ];
-        const AVR_HANGAR = [
-            { value: '',        label: '—' },
-            { value: 'inside',  label: 'Inside hangar' },
-            { value: 'outside', label: 'Outside / apron' },
-            { value: 'na',      label: 'N/A' },
-        ];
         function avrMode(v) { return AVR_MODES.find(m => m.value === v) || AVR_MODES[0]; }
 
         // What KIND of report this is. Kept deliberately open (the rules validate any
@@ -7125,8 +7121,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.131.0';
-        const APP_BUILD    = '2026.09.11.13';
+        const APP_VERSION  = '2.132.0';
+        const APP_BUILD    = '2026.09.11.14';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -10129,7 +10125,12 @@
                 </div>
                 <div class="sw-behind-list">${
                     pending
-                        ? statList(pendingList.map(a => a.id).sort())
+                        // Keep the card to one line: name the tails only while they fit
+                        // (< 10); beyond that just state the count, since the full list
+                        // would run several rows.
+                        ? (pending < 10
+                            ? statList(pendingList.map(a => a.id).sort())
+                            : `<div class="stat-list">${pending} aircraft pending</div>`)
                         : `<div class="stat-list">${escAttr(allDoneMsg)}</div>`
                 }</div>
             </div>`;
@@ -12276,9 +12277,15 @@
         }
 
         // ===== Activities repository — every Timeline entry, view + edit + assign =====
+        // Lookup from a repository row's stable key back to the row object, rebuilt on every
+        // repo render so the add-to-report menu can resolve a derived (auto-generated) row
+        // that carries no /activities id. See renderRepoRow / repoEntryKey.
+        let repoRowByKey = {};
+
         function renderActivityRepo() {
             const host = document.getElementById('avrFeed');
             if (!host) return;
+            repoRowByKey = {};
             const q = (fbQuery['maintenance'] || '').trim().toLowerCase();
             const rows = timelineRepoEntries().filter(x => {
                 if (!fbMatch('maintenance', 'type', x.type)) return false;
@@ -12334,12 +12341,19 @@
             const locColor = LOCATION_PILL_COLORS[x.location] || NEUTRAL_PILL;
             const editor = canEdit();
             const isAct = !!x.actId;
+            const key = repoEntryKey(x);
+            repoRowByKey[key] = x;   // register so the add-to-report menu can find this row
 
-            // A visit chip when this activity is assigned; the AVR's ref if we can find it.
+            // The reports this row already belongs to — by pin, by assigned activity, or by
+            // date window. The chip opens the first one straight to its PDF (task: the AVR
+            // reference is a link to the report).
+            const containing = visitsContaining(x);
             let visitChip = '';
-            if (isAct && x.visitId) {
-                const v = avrLive[x.visitId];
-                visitChip = `<span class="repo-visit-chip" title="In a visit report">📋 ${escAttr(v && v.ref ? v.ref : 'Visit')}</span>`;
+            if (containing.length) {
+                const v0 = containing[0];
+                const extra = containing.length > 1 ? ` +${containing.length - 1}` : '';
+                const titleList = containing.map(v => v.ref || 'Visit').join(', ');
+                visitChip = `<button class="repo-visit-chip" title="Open report ${escAttr(titleList)} (PDF)" onclick="event.stopPropagation();printAvr('${escAttr(v0.id)}')">📋 ${escAttr(v0.ref || 'Visit')}${escAttr(extra)}</button>`;
             }
 
             // Derived (non-activity) rows name their source so it is clear they are
@@ -12351,12 +12365,16 @@
             // removed) Operational-History panel used, keyed by opsKey. That is the
             // inline "edit button in the timeline" that replaced the standalone panel.
             const isOps = x.kind === 'operational' && !!x.opsKey;
+            // Which report (if any) this row can be REMOVED from inline: an assigned activity
+            // unlinks by visitId; a pinned derived row unpins by key. Window-only membership
+            // is automatic (driven by the report dates), so it carries no remove control.
+            const pinnedVisit = isAct ? null : containing.find(v => v.pins && v.pins[key]);
             const actions = editor ? `<span class="repo-actions">
                 ${isAct ? `<button class="avr-act-btn" title="Edit activity" onclick="openEditActivity('${escAttr(x.actId)}')">✏️</button>` : ''}
-                ${isAct ? (x.visitId
-                    ? `<button class="avr-act-btn" title="Remove from visit" onclick="assignActivityToVisit('${escAttr(x.actId)}','')">🔓</button>`
-                    : `<button class="avr-act-btn" title="Add to a visit report" onclick="openAssignMenu(event,'${escAttr(x.actId)}')">📋</button>`) : ''}
                 ${isOps ? `<button class="avr-act-btn" title="Edit out-of-service period" onclick="openOpsPeriod('${escAttr(x.tail)}','${escAttr(x.opsKey)}')">✏️</button>` : ''}
+                <button class="avr-act-btn" title="Add to a report" onclick="openAddToReportMenu(event,'${escAttr(key)}')">📋</button>
+                ${isAct && x.visitId ? `<button class="avr-act-btn" title="Remove from report" onclick="assignActivityToVisit('${escAttr(x.actId)}','')">🔓</button>` : ''}
+                ${pinnedVisit ? `<button class="avr-act-btn" title="Remove from report" onclick="unpinDerived('${escAttr(key)}','${escAttr(pinnedVisit.id)}')">🔓</button>` : ''}
             </span>` : '';
 
             const mark = x.kind === 'operational' ? `<span class="tl-ops-mark" aria-hidden="true">${x.opsReturn ? '✔' : '⚠'}</span>`
@@ -12392,13 +12410,21 @@
             document.querySelectorAll('.avr-assign-menu, .avr-assign-backdrop').forEach(el => el.remove());
         }
 
-        function openAssignMenu(event, actId) {
+        // Unified add-to-report menu for ANY repository row — a hand-logged activity (linked
+        // by visitId) or an auto-generated derived row (pinned by key). Both flows offer the
+        // existing reports for that aircraft plus a "new report" option.
+        function openAddToReportMenu(event, key) {
             event.stopPropagation();
             closeAssignMenu();
-            const act = activitiesLive[actId];
-            if (!act) return;
+            if (!canEdit()) { requireSignIn(); return; }
+            const x = repoRowByKey[key];
+            if (!x) return;
+            const tail = x.tail;
+            const isAct = !!x.actId;
+            const dateDMY = isAct ? (x.date || fmtDate(x.iso) || '') : (fmtDate(x.iso) || '');
+            const already = new Set(visitsContaining(x).map(v => v.id));
             const visits = avrEntries()
-                .filter(v => v.aircraft === act.aircraft)
+                .filter(v => v.aircraft === tail)
                 .sort((a, b) => dateSortKey(toISODate(b.dateStart)).localeCompare(dateSortKey(toISODate(a.dateStart))));
 
             const backdrop = document.createElement('div');
@@ -12406,21 +12432,65 @@
             backdrop.onclick = closeAssignMenu;
             document.body.appendChild(backdrop);
 
+            const onPick = isAct
+                ? v => `assignActivityToVisit('${escAttr(x.actId)}','${escAttr(v.id)}')`
+                : v => `pinDerivedToVisit('${escAttr(key)}','${escAttr(v.id)}')`;
+            const onNew = isAct
+                ? `closeAssignMenu(); openAvrEditor('__new', {aircraft:'${escAttr(tail)}', date:'${escAttr(dateDMY)}', actId:'${escAttr(x.actId)}'})`
+                : `closeAssignMenu(); openAvrEditor('__new', {aircraft:'${escAttr(tail)}', date:'${escAttr(dateDMY)}', pinKey:'${escAttr(key)}'})`;
+
             const menu = document.createElement('div');
             menu.className = 'avr-assign-menu';
             menu.innerHTML = `
-                <div class="avr-assign-title">Add ${escAttr(act.aircraft)} · ${escAttr(act.date || '')} to…</div>
-                ${visits.length ? visits.map(v => `<button class="avr-assign-item" onclick="assignActivityToVisit('${escAttr(actId)}','${escAttr(v.id)}')">
-                    <span class="avr-assign-ref">${escAttr(v.ref || 'Visit')}</span>
-                    <span class="avr-assign-sub">${escAttr(avrDateLabel(v))} · ${escAttr(avrMode(v.mode).label)}</span>
-                </button>`).join('') : '<div class="avr-assign-none">No visit reports for this aircraft yet.</div>'}
-                <button class="avr-assign-item avr-assign-new" onclick="closeAssignMenu(); openAvrEditor('__new', {aircraft:'${escAttr(act.aircraft)}', date:'${escAttr(act.date || '')}', actId:'${escAttr(actId)}'})">➕ New visit with this activity</button>`;
+                <div class="avr-assign-title">Add ${escAttr(tail)} · ${escAttr(x.title || '')} to…</div>
+                ${visits.length ? visits.map(v => `<button class="avr-assign-item" ${already.has(v.id) ? 'disabled' : `onclick="${onPick(v)}"`}>
+                    <span class="avr-assign-ref">${already.has(v.id) ? '✓ ' : ''}${escAttr(v.ref || 'Visit')}</span>
+                    <span class="avr-assign-sub">${escAttr(avrDateLabel(v))} · ${escAttr(avrMode(v.mode).label)}${already.has(v.id) ? ' · already in report' : ''}</span>
+                </button>`).join('') : '<div class="avr-assign-none">No reports for this aircraft yet.</div>'}
+                <button class="avr-assign-item avr-assign-new" onclick="${onNew}">➕ New report with this activity</button>`;
             document.body.appendChild(menu);
 
             const r = event.currentTarget.getBoundingClientRect();
             const w = 260;
             menu.style.top = (r.bottom + 6) + 'px';
             menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
+        }
+
+        async function pinDerivedToVisit(key, visitId) {
+            closeAssignMenu();
+            if (!canEdit()) { requireSignIn(); return; }
+            const token = await getIdToken();
+            if (!token) return;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/avr/${visitId}/pins/${key}.json?auth=${token}`, {
+                    method: 'PUT', body: JSON.stringify(true),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                if (avrLive[visitId]) { avrLive[visitId].pins = avrLive[visitId].pins || {}; avrLive[visitId].pins[key] = true; }
+                renderMaintenancePage();
+                setSyncStatus('🟢 Added to report', '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not add — ${e.message}`, '#dc3545');
+            }
+        }
+
+        async function unpinDerived(key, visitId) {
+            if (!canEdit()) { requireSignIn(); return; }
+            const token = await getIdToken();
+            if (!token) return;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/avr/${visitId}/pins/${key}.json?auth=${token}`, {
+                    method: 'DELETE',
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                if (avrLive[visitId] && avrLive[visitId].pins) delete avrLive[visitId].pins[key];
+                renderMaintenancePage();
+                setSyncStatus('🟢 Removed from report', '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not remove — ${e.message}`, '#dc3545');
+            }
         }
 
         async function assignActivityToVisit(actId, visitId) {
@@ -12540,6 +12610,57 @@
             host.innerHTML = list.map(renderAvrCard).join('');
         }
 
+        // ===== Location: airport → Line/Hangar → stand/bay =====
+        // A visit's place is a hierarchy: the airport (Jeddah…) in `location`, then whether
+        // it sat in Line maintenance or a Hangar (`locArea`), a Hangar being Old or New
+        // (`locHangar`), and the stand or bay itself in `bay`. avrPlaceDetail() renders the
+        // area-and-position part ("New Hangar H5", "Line Stand A5"); avrLocationFull()
+        // prefixes the airport ("Jeddah — New Hangar H5"). Legacy records that only carried
+        // the old inside/outside `hangar` flag still read correctly.
+        function avrPlaceDetail(v) {
+            if (!v) return '';
+            if (v.locArea === 'line')   return ('Line ' + (v.bay || '')).trim();
+            if (v.locArea === 'hangar') {
+                const age = v.locHangar === 'old' ? 'Old ' : v.locHangar === 'new' ? 'New ' : '';
+                return (age + 'Hangar ' + (v.bay || '')).trim();
+            }
+            // Legacy fallback for records saved before the Line/Hangar model.
+            if (v.hangar === 'inside')  return ('Inside hangar ' + (v.bay || '')).trim();
+            if (v.hangar === 'outside') return ('Outside / apron ' + (v.bay || '')).trim();
+            return v.bay || '';
+        }
+        function avrLocationFull(v) {
+            const detail = avrPlaceDetail(v);
+            return [v && v.location, detail].filter(Boolean).join(' — ') || '';
+        }
+
+        // A stable identity for a repository row, used to pin a derived (auto-generated)
+        // activity to a report — those rows carry no /activities id, so a report keeps a
+        // `pins` map keyed by this. Real activities key on their id; derived rows key on the
+        // fields that do not drift. Forbidden Firebase-key characters are folded to '_'.
+        function repoEntryKey(x) {
+            if (x.actId) return 'a_' + x.actId;
+            const disc = x.opsKey
+                || (x.kind === 'modification' ? 'mod_' + (x.modPhase || '') : '')
+                || x.milestone || x.title || '';
+            return ('d_' + [x.tail, x.kind, x.iso, disc].join('_'))
+                .replace(/[.#$/\[\]\s'"]+/g, '_').slice(0, 190);
+        }
+
+        // Every visit that already contains this repository row — by explicit pin, by an
+        // assigned activity (visitId), or by falling inside the visit's date window. Used to
+        // show the "in this report" chip on the row and to offer removal.
+        function visitsContaining(x) {
+            const key = repoEntryKey(x);
+            return avrEntries().filter(v => {
+                if (v.aircraft !== x.tail) return false;
+                if (x.actId) return x.visitId === v.id;
+                if (v.pins && v.pins[key]) return true;
+                const s = toISODate(v.dateStart), e = toISODate(v.dateEnd || v.dateStart) || s;
+                return s && x.iso && x.iso >= s && (!e || x.iso <= e);
+            });
+        }
+
         // The report's members: derived Timeline events for this tail within the visit
         // window (media, MODMAN/SIM, activation, OTA…) plus every hand-logged activity
         // explicitly assigned to the visit (by visitId, any date). Derived events join by
@@ -12550,6 +12671,18 @@
             const inWin = i => startIso && i && i >= startIso && (!endIso || i <= endIso);
             const base = timelineRepoEntries()
                 .filter(x => x.tail === v.aircraft && (x.actId ? x.visitId === v.id : inWin(x.iso)));
+
+            // Pinned derived rows — auto-generated activities a user explicitly added to this
+            // report from the Activities list, even when they fall outside the date window.
+            const pins = v.pins || {};
+            if (Object.keys(pins).some(k => pins[k])) {
+                const have = new Set(base.map(repoEntryKey));
+                timelineRepoEntries().forEach(x => {
+                    if (x.tail !== v.aircraft) return;
+                    const k = repoEntryKey(x);
+                    if (pins[k] && !have.has(k)) { base.push(x); have.add(k); }
+                });
+            }
 
             // LRU fit/remove events for this tail in the window, straight from /units — so
             // a component swap (e.g. the IFE server R&R: old S/N off, new S/N on) is on the
@@ -12814,8 +12947,7 @@
                 ['Report', rt.label],
                 ['Dates', avrDateLabel(v)],
                 ['Engagement', mode.label],
-                v.location ? ['Location', v.location + (v.bay ? ` · ${v.bay}` : '')] : null,
-                (v.hangar && v.hangar !== 'na') ? ['Hangar', v.hangar === 'inside' ? 'Inside hangar' : 'Outside / apron'] : null,
+                avrLocationFull(v) ? ['Location', avrLocationFull(v)] : null,
                 // A retrofit report carries the whole modification window up top, not just the visit dates.
                 isRetro ? ['Mod start', ac.retrofitStart || '—'] : null,
                 isRetro ? ['Mod end', ac.retrofitEnd || (ac.retrofitStart ? 'Ongoing' : '—')] : null,
@@ -12953,18 +13085,31 @@
                 </div>
 
                 <div class="ac-edit-section-title">Location</div>
+                <div class="fld-hint" style="font-size:11px;color:#8a97a3;margin-bottom:6px;">Airport, then Line maintenance (→ stand) or Hangar (→ Old / New → bay). e.g. Jeddah · New Hangar · H5.</div>
                 <div class="ac-edit-grid">
                     <div class="ac-edit-field">
-                        <label>Station / airport</label>
+                        <label>Airport / station</label>
                         <input id="avrLocation" class="edit-text" maxlength="60" placeholder="e.g. Jeddah" value="${escAttr(v.location || '')}">
                     </div>
                     <div class="ac-edit-field">
-                        <label>Bay / stand <span style="font-weight:400;color:#aaa;">(optional)</span></label>
-                        <input id="avrBay" class="edit-text" maxlength="40" placeholder="e.g. Bay 12 / Stand A3" value="${escAttr(v.bay || '')}">
+                        <label>Area</label>
+                        <select id="avrArea" onchange="avrOnAreaChange()">
+                            <option value="" ${!v.locArea ? 'selected' : ''}>—</option>
+                            <option value="line" ${v.locArea === 'line' ? 'selected' : ''}>Line maintenance</option>
+                            <option value="hangar" ${v.locArea === 'hangar' ? 'selected' : ''}>Hangar</option>
+                        </select>
+                    </div>
+                    <div class="ac-edit-field" id="avrHangarAgeField" ${v.locArea === 'hangar' ? '' : 'style="display:none;"'}>
+                        <label>Hangar</label>
+                        <select id="avrHangarAge">
+                            <option value="" ${!v.locHangar ? 'selected' : ''}>—</option>
+                            <option value="old" ${v.locHangar === 'old' ? 'selected' : ''}>Old Hangar</option>
+                            <option value="new" ${v.locHangar === 'new' ? 'selected' : ''}>New Hangar</option>
+                        </select>
                     </div>
                     <div class="ac-edit-field">
-                        <label>Hangar</label>
-                        <select id="avrHangar">${AVR_HANGAR.map(h => `<option value="${h.value}" ${h.value === (v.hangar || '') ? 'selected' : ''}>${h.label}</option>`).join('')}</select>
+                        <label id="avrBayLabel">Stand / bay <span style="font-weight:400;color:#aaa;">(optional)</span></label>
+                        <input id="avrBay" class="edit-text" maxlength="40" placeholder="e.g. Stand A5, Bay 1, H5" value="${escAttr(v.bay || '')}">
                     </div>
                     <div class="ac-edit-field">
                         <label>Status</label>
@@ -13005,12 +13150,15 @@
                     document.getElementById('avrDateEnd').value = toDMY(prefill.date) || '';
                 }
                 avrPrefillActId = prefill.actId || '';
+                avrPrefillPinKey = prefill.pinKey || '';
             } else {
                 avrPrefillActId = '';
+                avrPrefillPinKey = '';
             }
             avrRefreshLinkList();
         }
         let avrPrefillActId = '';
+        let avrPrefillPinKey = '';
 
         function closeAvrEditor() {
             document.getElementById('avrOverlay').style.display = 'none';
@@ -13026,6 +13174,17 @@
                 locEl.value = a.completionLocation || a.retrofitLocation || '';
             }
             avrRefreshLinkList();
+        }
+
+        // Show the Old/New selector only for a Hangar, and steer the stand/bay placeholder.
+        function avrOnAreaChange() {
+            const area = (document.getElementById('avrArea') || {}).value || '';
+            const ageField = document.getElementById('avrHangarAgeField');
+            const bay = document.getElementById('avrBay');
+            const bayLabel = document.getElementById('avrBayLabel');
+            if (ageField) ageField.style.display = area === 'hangar' ? '' : 'none';
+            if (bay) bay.placeholder = area === 'line' ? 'e.g. Stand A5' : area === 'hangar' ? 'e.g. Bay 1, H5' : 'e.g. Stand A5, Bay 1, H5';
+            if (bayLabel) bayLabel.firstChild.textContent = (area === 'line' ? 'Stand ' : area === 'hangar' ? 'Bay ' : 'Stand / bay ');
         }
 
         function avrRefreshLinkList() {
@@ -13132,13 +13291,21 @@
             };
             const location = document.getElementById('avrLocation').value.trim();
             const bay = document.getElementById('avrBay').value.trim();
-            const hangar = document.getElementById('avrHangar').value;
+            const locArea = (document.getElementById('avrArea') || {}).value || '';
+            const locHangar = (document.getElementById('avrHangarAge') || {}).value || '';
             const summary = document.getElementById('avrSummary').value.trim();
             if (location) entry.location = location;
             if (bay) entry.bay = bay;
-            if (hangar) entry.hangar = hangar;
+            if (locArea) entry.locArea = locArea;
+            if (locArea === 'hangar' && locHangar) entry.locHangar = locHangar;
             if (summary) entry.summary = summary;
             if (Object.keys(attendees).length) entry.attendees = attendees;
+
+            // Carry forward any pinned derived rows (a whole-record PUT would otherwise drop
+            // them), and add the one this report was created around, if any.
+            const pins = Object.assign({}, existing.pins || {});
+            if (avrPrefillPinKey) pins[avrPrefillPinKey] = true;
+            if (Object.keys(pins).length) entry.pins = pins;
 
             // Which activities the visit covers, and which to unlink.
             const desired = new Set();
@@ -13262,10 +13429,12 @@
             const people = avrAttendees(v);
             const type = avrTypeOf(v.aircraft);
             const rt = avrReportType(v);
-            const hangar = v.hangar === 'inside' ? 'Inside hangar' : v.hangar === 'outside' ? 'Outside / apron' : '—';
             const kindLabel = k => ({ software: 'Software', media: 'Media', hardware: 'Hardware', commission: 'Commissioning', maintenance: 'Maintenance', modification: 'Modification', operational: 'Operational', activation: 'Activation' }[k] || k);
             const actRows = members.length ? members.map(x => {
                 let details = `<b>${escAttr(x.title || '')}</b>`;
+                // TEMPLATE RULE (universal): the Details cell reads as ONE line — the bold
+                // title, then every descriptor after it joined by " · ", never stacked on
+                // <br>s. The cell wraps naturally if it must, but nothing forces a break.
                 if (x.actId && activitiesLive[x.actId]) {
                     const a = activitiesLive[x.actId], d = a.details || {};
                     const tech = [
@@ -13273,12 +13442,14 @@
                         d.partNumber && `P/N ${d.partNumber}`, d.oldPart && `Old S/N ${d.oldPart}`,
                         d.newPart && `New S/N ${d.newPart}`, d.modemType, d.commissioningResult,
                     ].filter(Boolean).map(escAttr).join(' · ');
-                    if (a.task) details += '<br>' + escAttr(a.task);
-                    if (a.outcome) details += '<br><i>Outcome: ' + escAttr(a.outcome) + '</i>';
-                    if (tech) details += '<br><span style="color:#555;">' + tech + '</span>';
+                    const bits = [];
+                    if (a.task) bits.push(escAttr(a.task));
+                    if (tech) bits.push('<span style="color:#555;">' + tech + '</span>');
+                    if (a.outcome) bits.push('<i>Outcome: ' + escAttr(a.outcome) + '</i>');
+                    if (bits.length) details += ' <span class="d-sub">· ' + bits.join(' · ') + '</span>';
                 } else if (x.sub) {
                     // Keep the S/N on the same line as the title, and never break the value itself.
-                    details += ' <span class="sub" style="color:#6b7883; white-space:nowrap;">· ' + escAttr(x.sub) + '</span>';
+                    details += ' <span class="d-sub" style="color:#6b7883; white-space:nowrap;">· ' + escAttr(x.sub) + '</span>';
                 }
                 return `<tr>
                     <td class="c-date">${escAttr(fmtDate(x.iso) || '')}</td>
@@ -13328,8 +13499,7 @@
             const metaGrid = `<div class="rpt-grid">
                 <div><span class="k">Aircraft</span> ${escAttr(v.aircraft)}${type ? ' <span class="muted">(' + escAttr(type) + ')</span>' : ''}</div>
                 <div><span class="k">Dates</span> ${escAttr(avrDateLabel(v))}</div>
-                <div><span class="k">Location</span> ${escAttr(v.location || '—')}${v.bay ? ' · ' + escAttr(v.bay) : ''}</div>
-                <div><span class="k">Hangar</span> ${hangar}</div>
+                <div><span class="k">Location</span> ${escAttr(avrLocationFull(v) || '—')}</div>
                 ${rt.value === 'retrofit' ? `<div><span class="k">Mod start</span> ${escAttr((aircraftData.find(a => a.id === v.aircraft) || {}).retrofitStart || '—')}</div>
                 <div><span class="k">Mod end</span> ${escAttr((aircraftData.find(a => a.id === v.aircraft) || {}).retrofitEnd || ((aircraftData.find(a => a.id === v.aircraft) || {}).retrofitStart ? 'Ongoing' : '—'))}</div>` : ''}
             </div>`;
@@ -13386,6 +13556,7 @@
     border-bottom:1.5px solid var(--line); padding:6px 8px; }
   table.tbl td { border-bottom:1px solid #eef2f6; padding:6px 8px; vertical-align:top; }
   table.tbl td.c-date, table.tbl td.c-cat { white-space:nowrap; }
+  table.tbl td .d-sub { color:#6b7883; }
   table.tbl tbody tr:nth-child(even) td { background:#fafbfc; }
   .people { display:grid; grid-template-columns:1fr 1fr; gap:12px 26px; margin-top:6px; font-size:12.5px; }
   .people .pcol { min-width:0; }
