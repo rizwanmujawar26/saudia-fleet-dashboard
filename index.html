@@ -7260,8 +7260,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.133.0';
-        const APP_BUILD    = '2026.09.11.17';
+        const APP_VERSION  = '2.133.1';
+        const APP_BUILD    = '2026.09.11.18';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -9435,7 +9435,7 @@
                         { v: 'hardware', l: 'Hardware' }, { v: 'commission', l: 'Commissioning' },
                         { v: 'maintenance', l: 'Maintenance' }, { v: 'modification', l: 'Modification' },
                         { v: 'operational', l: 'Operational' }, { v: 'service', l: 'Service' },
-                        { v: 'activation', l: 'Activation' },
+                        { v: 'visit', l: 'Report / Visit' }, { v: 'activation', l: 'Activation' },
                     ] },
                     { id: 'mode', label: 'Mode', hidden: true, options: AVR_MODES.map(m => ({ v: m.value, l: m.label })) },
                     { id: 'status', label: 'Status', hidden: true, options: [
@@ -12527,7 +12527,11 @@
             // The reports this row already belongs to — by pin, by assigned activity, or by
             // date window. The chip opens the first one straight to its PDF (task: the AVR
             // reference is a link to the report).
-            const containing = visitsContaining(x);
+            // A derived report (AVR) row — it IS a report, so it edits by opening the AVR
+            // editor and carries neither an add-to-report control nor a "belongs to report"
+            // chip (that chip would just point back at itself).
+            const isVisit = x.kind === 'visit' && !!x.avrId;
+            const containing = isVisit ? [] : visitsContaining(x);
             let visitChip = '';
             if (containing.length) {
                 const v0 = containing[0];
@@ -12556,13 +12560,15 @@
                 ${isAct ? `<button class="avr-act-btn" title="Edit activity" onclick="openEditActivity('${escAttr(x.actId)}')">✏️</button>` : ''}
                 ${isOps ? `<button class="avr-act-btn" title="Edit out-of-service period" onclick="openOpsPeriod('${escAttr(x.tail)}','${escAttr(x.opsKey)}')">✏️</button>` : ''}
                 ${isSvc ? `<button class="avr-act-btn" title="Edit maintenance issue" onclick="openIssueEditor('${escAttr(x.issueId)}')">✏️</button>` : ''}
-                <button class="avr-act-btn" title="Add to a report" onclick="openAddToReportMenu(event,'${escAttr(key)}')">📋</button>
+                ${isVisit ? `<button class="avr-act-btn" title="Edit report" onclick="openAvrEditor('${escAttr(x.avrId)}')">✏️</button>` : ''}
+                ${isVisit ? '' : `<button class="avr-act-btn" title="Add to a report" onclick="openAddToReportMenu(event,'${escAttr(key)}')">📋</button>`}
                 ${isAct && x.visitId ? `<button class="avr-act-btn" title="Remove from report" onclick="assignActivityToVisit('${escAttr(x.actId)}','')">🔓</button>` : ''}
                 ${pinnedVisit ? `<button class="avr-act-btn" title="Remove from report" onclick="unpinDerived('${escAttr(key)}','${escAttr(pinnedVisit.id)}')">🔓</button>` : ''}
             </span>` : '';
 
             const mark = x.kind === 'operational' ? `<span class="tl-ops-mark" aria-hidden="true">${x.opsReturn ? '✔' : '⚠'}</span>`
                        : x.kind === 'service' ? `<span class="tl-ops-mark" aria-hidden="true">${x.svcRestored ? '✔' : '🛜'}</span>`
+                       : x.kind === 'visit' ? '<span class="tl-mod-mark" aria-hidden="true">📋</span>'
                        : x.kind === 'activation' ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>'
                        : x.kind === 'modification' ? `<span class="tl-mod-mark" aria-hidden="true">${x.modPhase === 'start' ? '🔧' : '🏁'}</span>`
                        : '';
@@ -12583,6 +12589,7 @@
             if (x.kind === 'media') return x.milestone === 'cycle' ? 'Cycle' : 'Media';
             if (x.kind === 'operational') return 'Ops';
             if (x.kind === 'service') return 'Issue';
+            if (x.kind === 'visit') return 'Report';
             if (x.kind === 'modification') return 'Fleet';
             if (x.kind === 'activation') return 'Fleet';
             if (x.title && /MODMAN/.test(x.title)) return 'Satcom';
@@ -12856,7 +12863,9 @@
             const endIso = toISODate(v.dateEnd || v.dateStart) || startIso;
             const inWin = i => startIso && i && i >= startIso && (!endIso || i <= endIso);
             const base = timelineRepoEntries()
-                .filter(x => x.tail === v.aircraft && (x.actId ? x.visitId === v.id : inWin(x.iso)));
+                // kind:'visit' is the report's OWN derived Timeline entry — skip it, or a
+                // report would list itself as one of its members.
+                .filter(x => x.kind !== 'visit' && x.tail === v.aircraft && (x.actId ? x.visitId === v.id : inWin(x.iso)));
 
             // Pinned derived rows — auto-generated activities a user explicitly added to this
             // report from the Activities list, even when they fall outside the date window.
@@ -14491,21 +14500,53 @@
         let issueEditingId = null;
         const ISSUE_PRIO_RANK = { high: 0, medium: 1, low: 2 };
 
-        // Activities of one tail, newest first — the options for the origin / fix pickers.
-        function issueActivityOptions(tail, selected) {
+        // The origin / fix picker for an issue lists BOTH the tail's Reports (AVRs — a
+        // remote-support session or a visit IS the investigation) and its hand-logged
+        // Activities, newest first, as two optgroups. Values are prefixed `v:`/`a:` so the
+        // save knows which kind it is (a report → originVisitId, an activity →
+        // originActivityId). A bare value with no prefix is read as a legacy activity id.
+        function issueVisitOptions(tail) {
+            return avrEntries().filter(v => v.aircraft === tail)
+                .sort((a, b) => (toISODate(b.dateStart) || '').localeCompare(toISODate(a.dateStart) || ''));
+        }
+        function issueLinkOptions(tail, selVisit, selAct) {
+            const visits = issueVisitOptions(tail);
             const acts = Object.keys(activitiesLive || {})
                 .map(id => ({ id, ...activitiesLive[id] }))
                 .filter(a => a.aircraft === tail)
                 .sort((a, b) => (toISODate(b.date) || '').localeCompare(toISODate(a.date) || ''));
-            return `<option value="">— none —</option>` + acts.map(a =>
-                `<option value="${escAttr(a.id)}" ${a.id === selected ? 'selected' : ''}>${escAttr(a.date || '')} — ${escAttr(a.title || a.category || 'activity')}</option>`).join('');
+            let html = `<option value="" ${!selVisit && !selAct ? 'selected' : ''}>— none —</option>`;
+            if (visits.length) html += `<optgroup label="Reports">` + visits.map(v =>
+                `<option value="v:${escAttr(v.id)}" ${v.id === selVisit ? 'selected' : ''}>${escAttr(v.dateStart || '')} — ${escAttr(avrReportType(v).label)}${v.ref ? ` (${escAttr(v.ref)})` : ''}</option>`).join('') + `</optgroup>`;
+            if (acts.length) html += `<optgroup label="Activities">` + acts.map(a =>
+                `<option value="a:${escAttr(a.id)}" ${a.id === selAct ? 'selected' : ''}>${escAttr(a.date || '')} — ${escAttr(a.title || a.category || 'activity')}</option>`).join('') + `</optgroup>`;
+            return html;
+        }
+        // raw picker value → { visitId, actId }; a bare id (no prefix) is a legacy activity.
+        function issueParseLink(raw) {
+            if (!raw) return { visitId: '', actId: '' };
+            if (raw.slice(0, 2) === 'v:') return { visitId: raw.slice(2), actId: '' };
+            if (raw.slice(0, 2) === 'a:') return { visitId: '', actId: raw.slice(2) };
+            return { visitId: '', actId: raw };
+        }
+        // The card chip for one link — opens the Report as a PDF, or the Activity editor.
+        function issueLinkChip(label, actId, visitId) {
+            if (visitId && avrLive[visitId]) {
+                const v = { id: visitId, ...avrLive[visitId] };
+                return `<span class="issue-link">${label}: <button class="linklike" onclick="printAvr('${escAttr(visitId)}')">${escAttr(v.dateStart || '')} — ${escAttr(avrReportType(v).label)}${v.ref ? ` (${escAttr(v.ref)})` : ''}</button></span>`;
+            }
+            if (actId && activitiesLive[actId]) {
+                const a = activitiesLive[actId];
+                return `<span class="issue-link">${label}: <button class="linklike" onclick="openEditActivity('${escAttr(actId)}')">${escAttr(a.date || '')} — ${escAttr(a.title || a.category || 'activity')}</button></span>`;
+            }
+            return '';
         }
         // Aircraft changed mid-form: rebuild both pickers for the new tail (a stale
         // selection from the old tail simply falls away — it is not this aircraft's work).
         function issueSyncActPickers() {
             const tail = (document.getElementById('issAircraft') || {}).value || '';
-            const o = document.getElementById('issOrigin'); if (o) o.innerHTML = issueActivityOptions(tail, o.value);
-            const r = document.getElementById('issResActivity'); if (r) r.innerHTML = issueActivityOptions(tail, r.value);
+            const o = document.getElementById('issOrigin'); if (o) o.innerHTML = issueLinkOptions(tail, '', '');
+            const r = document.getElementById('issResActivity'); if (r) r.innerHTML = issueLinkOptions(tail, '', '');
         }
         // Open issues rank by priority, then by how long they have been down.
         function issueOpenSort(a, b) {
@@ -14549,11 +14590,8 @@
             const typeLabel = TYPE_SHORT_LABEL[a.type] || a.type || '';
             const svcTxt = `${issLabel(ISSUE_SERVICES, i.service)} ${issLabel(ISSUE_IMPACTS, i.impact)}`.trim();
             const days = issueDaysDownLabel(i);
-            const origin = i.originActivityId && activitiesLive[i.originActivityId];
-            const resAct = i.resolutionActivityId && activitiesLive[i.resolutionActivityId];
-            const actLink = (id, act, label) => act
-                ? `<span class="issue-link">${label}: <button class="linklike" onclick="openEditActivity('${escAttr(id)}')">${escAttr(act.date || '')} — ${escAttr(act.title || act.category || 'activity')}</button></span>`
-                : '';
+            const originChip = issueLinkChip('Investigation', i.originActivityId, i.originVisitId);
+            const resChip = issueLinkChip('Fix', i.resolutionActivityId, i.resolutionVisitId);
             return `<div class="issue-card ${open ? 'is-open' : 'is-resolved'} ${i.impact === 'degraded' ? 'is-degraded' : ''}">
                 <div class="issue-card-head">
                     <span class="issue-tail">${escAttr(i.tail || '—')}</span>
@@ -14574,7 +14612,7 @@
                     ${i.resolvedDate ? `<span class="issue-date"><b>Restored</b> ${escAttr(i.resolvedDate)}</span>` : ''}
                     ${days ? `<span class="issue-days">${open ? 'Down' : 'Was down'} ${escAttr(days)}</span>` : ''}
                 </div>
-                ${(origin || resAct) ? `<div class="issue-links">${actLink(i.originActivityId, origin, 'Investigation')} ${actLink(i.resolutionActivityId, resAct, 'Fix')}</div>` : ''}
+                ${(originChip || resChip) ? `<div class="issue-links">${originChip} ${resChip}</div>` : ''}
                 ${i.resolutionNote ? `<div class="issue-detail">Resolution: ${escAttr(i.resolutionNote)}</div>` : ''}
             </div>`;
         }
@@ -14628,17 +14666,17 @@
                     <div class="ac-edit-field"><label>Customer informed on</label>
                         <input id="issInformed" type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" value="${v.informedDate ? toDMY(v.informedDate) : ''}">
                         <span class="fld-hint">Official inoperative-from date — fed to Display.</span></div>
-                    <div class="ac-edit-field full"><label>Originating activity (optional)</label>
-                        <select id="issOrigin">${issueActivityOptions(tail0, v.originActivityId)}</select>
-                        <span class="fld-hint">The investigation that discovered this.</span></div>
+                    <div class="ac-edit-field full"><label>Originating report / activity (optional)</label>
+                        <select id="issOrigin">${issueLinkOptions(tail0, v.originVisitId, v.originActivityId)}</select>
+                        <span class="fld-hint">The investigation that discovered this — a Report (e.g. the remote-support visit) or a logged Activity.</span></div>
                 </div>
                 <div class="ac-edit-section-title">Resolution</div>
                 <div class="ac-edit-grid">
                     <div class="ac-edit-field"><label>Restored on</label>
                         <input id="issResolved" type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" value="${v.resolvedDate ? toDMY(v.resolvedDate) : ''}">
                         <span class="fld-hint">Set this to close the issue (service back).</span></div>
-                    <div class="ac-edit-field"><label>Fix activity (optional)</label>
-                        <select id="issResActivity">${issueActivityOptions(tail0, v.resolutionActivityId)}</select></div>
+                    <div class="ac-edit-field"><label>Fix report / activity (optional)</label>
+                        <select id="issResActivity">${issueLinkOptions(tail0, v.resolutionVisitId, v.resolutionActivityId)}</select></div>
                     <div class="ac-edit-field full"><label>Resolution note (optional)</label>
                         <textarea id="issResNote" maxlength="1000" placeholder="What fixed it (e.g. MODMAN replaced)">${escAttr(v.resolutionNote || '')}</textarea></div>
                 </div>`;
@@ -14665,6 +14703,10 @@
 
             const wasNew = issueEditingId === '__new';
             const prev = (!wasNew && issuesLive[issueEditingId]) || {};
+            // The origin / fix pickers carry a `v:`/`a:` prefix so one control can point at
+            // either a Report or an Activity; split it back into the two stored fields.
+            const originLink = issueParseLink(val('issOrigin'));
+            const resLink = issueParseLink(val('issResActivity'));
             const entry = {
                 tail, reason,
                 service: val('issService'), impact: val('issImpact'),
@@ -14674,8 +14716,10 @@
                 detail: val('issDetail'),
                 discoveredDate: disc || '',
                 resolvedDate: resolved || '',
-                originActivityId: val('issOrigin'),
-                resolutionActivityId: val('issResActivity'),
+                originActivityId: originLink.actId,
+                originVisitId: originLink.visitId,
+                resolutionActivityId: resLink.actId,
+                resolutionVisitId: resLink.visitId,
                 resolutionNote: val('issResNote'),
                 // On an edit, keep when the issue was first logged, not when it was corrected.
                 loggedAt: prev.loggedAt || new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
@@ -18241,6 +18285,32 @@
                 }
             });
 
+            // --- Reports (AVR): the visit/engagement itself, on its 'from' date ---
+            // An AVR is a real engagement (a site visit, a remote-support session, a flight
+            // test), so the visit ITSELF belongs on the Timeline — not only the activities it
+            // groups. Before v2.133.1 an AVR only PULLED existing in-window events into its
+            // report; a bare Remote Support report with no logged activity was invisible here.
+            // Derived from the AVR on its dateStart (all report types), so editing the report
+            // date moves the entry and nothing is stored twice. Carries avrId so the row edits
+            // in place and a Maintenance Issue can link to it. ⚠️ avrReportMembers must SKIP
+            // kind:'visit' or a report would list its own visit entry as a member of itself.
+            // Draft reports show only to editors (the Reports view already hides drafts from
+            // the public); a published report's visit is on the public Timeline.
+            const avrEditor = canEdit();
+            avrEntries().forEach(v => {
+                if (!v.aircraft) return;
+                if (v.status !== 'published' && !avrEditor) return;
+                const vIso = toISODate(v.dateStart);
+                if (!vIso) return;
+                const rt = avrReportType(v);
+                const md = avrMode(v.mode);
+                out.push({ iso: vIso, kind: 'visit', avrId: v.id, avrStatus: v.status || 'draft',
+                           tail: v.aircraft, type: (byTail[v.aircraft] || {}).type,
+                           location: v.location || '',
+                           title: rt.label,
+                           sub: [md.label, v.ref].filter(Boolean).join(' · ') });
+            });
+
             // --- Modification: the retrofit window, straight off the Fleet page ---
             // The mod dates are NOT a hand-typed activity — they are the retrofit grounding
             // dates already on the aircraft (retrofitStart = Mod Start, retrofitEnd = Mod
@@ -18775,7 +18845,8 @@
                               : x.kind === 'service' ? (x.svcRestored ? '✔' : '🛜')
                               : '';
                 const markHtml = milestone ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>'
-                               : opsMark ? `<span class="tl-ops-mark" aria-hidden="true">${opsMark}</span>` : '';
+                               : opsMark ? `<span class="tl-ops-mark" aria-hidden="true">${opsMark}</span>`
+                               : x.kind === 'visit' ? '<span class="tl-mod-mark" aria-hidden="true">📋</span>' : '';
                 return `<li${milestone ? ' class="tl-milestone"' : (opsCls ? ` class="${opsCls.trim()}"` : '')}>
                     <div class="tl-row tl-grid">${tlCells({
                         mark: markHtml,
