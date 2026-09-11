@@ -6,9 +6,13 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.133.0 (2026-09-11).** **Maintenance Issues — a THIRD availability axis**
-(new `/issues` node; the four-edit checklist done: rules + `backup.sh` / `restore.sh` /
-`verify-deployment.sh` node lists). This is the SERVICE-availability axis, deliberately
+**Latest — v2.133.0–v2.133.1 (2026-09-11).** **Maintenance Issues — a THIRD availability
+axis** (new `/issues` node; the four-edit checklist done: rules + `backup.sh` /
+`restore.sh` / `verify-deployment.sh` node lists). **v2.133.1** then made **AVRs derive
+their own Timeline entry** (`kind:'visit'`, on `dateStart`, all report types — a bare
+Remote Support report is no longer invisible; `avrReportMembers` skips it so a report
+isn't its own member) and let an issue **link to a Report** as its investigation/fix
+(`originVisitId`/`resolutionVisitId`; the editor picker lists Reports + Activities). This is the SERVICE-availability axis, deliberately
 independent of both the WiFi programme (`fleetStatus`) and airframe availability
 (`ops`/AOG): a tail's IFC/WiFi **service** can be inoperative or degraded while the
 airframe still flies (AS76 — failed MODMAN, WiFi dead, still on the schedule — must NOT
@@ -674,6 +678,15 @@ Polled with the other low-traffic nodes, so `saveAvr` **mirrors `avrLive` locall
 Adding a field needs a rules edit first (`$other: false`) — except a new `reportType`
 value, which the slug rule already allows.
 
+⚠️ **An AVR puts ITSELF on the Timeline (v2.133.1).** `timelineActivities()` has a
+`kind:'visit'` pass emitting one entry per AVR on its `dateStart` (all report types) — so
+a bare Remote Support report with no logged activity is still visible. It is **derived**
+(carries `avrId`; editing the report date moves it). Draft reports show only to editors;
+published ones are public. The row edits via `openAvrEditor` and — being a report — carries
+no add-to-report control. **`avrReportMembers` filters out `kind:'visit'`** so a report
+never lists its own visit entry as a member. A Maintenance Issue can link to it
+(`originVisitId`/`resolutionVisitId`).
+
 ⚠️ **IFE is derived by type, not stored.** The dossier's IFE row comes from `ifeSystemOf`
 → `IFE_BY_TYPE` (A321XLR = Panasonic Astrova as of v2.123); add a type there as confirmed.
 An unmapped type omits the row. Distinct from the stored **IFC** (`/fleet system` + the
@@ -700,7 +713,8 @@ initial fetch, and `saveIssue` **mirrors `issuesLive` locally** (the polled-node
 | `discoveredDate` | DD-Mon-YYYY — when we FOUND the fault (context; the remote-support day). **Not** the official date |
 | **`informedDate`** | DD-Mon-YYYY — when the customer was told. **THIS is the OFFICIAL inoperative-from date the Display team consumes.** By design it differs from discovery (AS76: found 06-Sep, informed 07-Sep → official = 07-Sep) |
 | `resolvedDate` | DD-Mon-YYYY, empty while OPEN. Setting it closes the issue. Days-down = `informedDate → resolvedDate\|today` (`issueDaysDown`) |
-| `originActivityId` / `resolutionActivityId` | `/activities` ids — the investigation that opened it and the fix (e.g. MODMAN R&R) that closed it; picked from that tail's activities in the editor |
+| `originActivityId` / `resolutionActivityId` | `/activities` ids — the investigation that opened it and the fix (e.g. MODMAN R&R) that closed it |
+| `originVisitId` / `resolutionVisitId` (v2.133.1) | `/avr` ids — the link can point at a **Report** instead of an activity (e.g. the remote-support AVR that found the fault). The editor's one picker lists both (Reports + Activities, `v:`/`a:`-prefixed values → `issueParseLink`); the card chip opens a report as a PDF or the activity editor (`issueLinkChip`) |
 | `resolutionNote`, `loggedAt`, `loggedBy` | free text + ISO stamp + editor email (kept across an edit) |
 
 **Surfaces (all DERIVED, nothing stored twice):** the Activity **🔧 Maintenance** view

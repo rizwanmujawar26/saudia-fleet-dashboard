@@ -13,6 +13,28 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.133.1 — AVRs derive a Timeline entry; Maintenance Issues can link to a report
+User-directed (2026-09-11). Additive + one rules change (`/issues` gains
+`originVisitId` / `resolutionVisitId`; no new node).
+
+- **An AVR now puts itself on the Timeline.** New `kind:'visit'` pass in
+  `timelineActivities()` — every AVR emits an entry on its `dateStart` (all report
+  types). Before this a report only *pulled* in-window events into its own member list,
+  so a bare Remote Support report with no logged activity was invisible on the Timeline.
+  Derived (carries `avrId`), so editing the report date moves the entry; nothing stored
+  twice. **Draft reports show only to editors** (`canEdit()` gate); published ones are on
+  the public Timeline.
+- **⚠️ `avrReportMembers` SKIPS `kind:'visit'`** — else a report would list its own visit
+  entry as one of its members.
+- **Repo/Overview:** 📋 mark, source tag **Report**, Kind filter gains **Report / Visit**.
+  The repo row edits via `openAvrEditor(avrId)` and carries **no** add-to-report control
+  (it *is* a report) and no self-referencing visit chip (`isVisit` in `renderRepoRow`).
+- **Issue origin/fix pickers now list the tail's Reports AND Activities** as two
+  optgroups with `v:`/`a:`-prefixed values (`issueLinkOptions`, `issueParseLink`), stored
+  as `originVisitId`/`originActivityId` (and the resolution pair). The issue-card chip
+  (`issueLinkChip`) opens a linked Report as a PDF (`printAvr`) or the Activity editor.
+  So the AS76 remote-support visit that discovered the MODMAN fault links to the issue.
+
 ### v2.133.0 — Maintenance Issues: the IFC/WiFi service-outage axis (new `/issues` node)
 User-directed (2026-09-11). New node — the four-edit checklist done (rules +
 `backup.sh`/`restore.sh`/`verify-deployment.sh`). Rules deployed before the page.
