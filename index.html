@@ -1441,14 +1441,14 @@
         /* When the Reset button has taken on its Back-to-top job (deep scroll) it fills
            in with the brand green so the swap is unmistakable — same pill, clearly a
            different action now. The ↑ icon lifts a hair on hover to hint the direction. */
-        .tl-reset.to-top {
+        .reset-btn.to-top {
             background: #0a5c34;
             border-color: #0a5c34;
             color: #fff;
         }
-        .tl-reset.to-top:hover { background: #0c6d3e; border-color: #0c6d3e; }
-        .tl-reset.to-top .ib-icon { font-size: 15px; transition: transform 0.15s; }
-        .tl-reset.to-top:hover .ib-icon { transform: translateY(-2px); }
+        .reset-btn.to-top:hover { background: #0c6d3e; border-color: #0c6d3e; }
+        .reset-btn.to-top .ib-icon { font-size: 15px; transition: transform 0.15s; }
+        .reset-btn.to-top:hover .ib-icon { transform: translateY(-2px); }
 
         /* One label per step. Only .tl-lab-lg shows by default; each query
            below swaps which single span is visible. */
@@ -1889,6 +1889,21 @@
         .ssid-fill-public { background: linear-gradient(90deg, #4a86b8, #2f5f8a); }
         .ssid-fill-hidden { background: linear-gradient(90deg, #e4606d, #dc3545); }
         .ssid-fill-public, .ssid-fill-hidden { transition: width 0.5s ease; }
+
+        /* IFC Fleet composition: one split widget, Active vs In Retrofit, sharing the
+           SSID split-bar shape. Green is the activated half; amber the retrofit half —
+           the same two colours the old separate tiles used. */
+        .fleet-total {
+            background: #eef7f1;
+            border-color: #c8e6d3;
+            border-left-color: #1e7e34;
+            min-width: 240px;
+        }
+        .fleet-active-side   { color: #1e7e34; }
+        .fleet-retrofit-side { color: #8a5a12; }
+        .fleet-fill-active   { background: linear-gradient(90deg, #34b364, #1e7e34); }
+        .fleet-fill-retrofit { background: linear-gradient(90deg, #f0ad4e, #d18b1f); }
+        .fleet-fill-active, .fleet-fill-retrofit { transition: width 0.5s ease; }
 
         .media-widget-strip {
             display: flex;
@@ -4497,8 +4512,18 @@
         .icon-btn { display: inline-flex; align-items: center; gap: 5px; }
         .icon-btn .ib-icon { font-size: 13px; line-height: 1; flex: 0 0 auto; }
 
+        /* The Add button's + reads as an action, so it is a touch larger and bolder than a
+           reset arrow. The button collapses to a bare + circle below 700px (shared rule). */
+        .add-btn .ib-icon { font-size: 15px; font-weight: 700; }
+        /* The Add menu (Activity tab) reuses the assign-menu popover but is a short action
+           list, so it is narrower and its width is set inline per open. */
+        .avr-assign-menu.add-menu { width: auto; min-width: 180px; }
+        .avr-assign-menu.add-menu .avr-assign-item { font-weight: 600; font-size: 13px; }
+
         @media (max-width: 700px) {
-            .reset-btn {
+            .reset-btn,
+            .edit-btn.icon-btn,
+            .add-btn.icon-btn {
                 width: 32px;
                 height: 32px;
                 padding: 0;
@@ -4506,7 +4531,9 @@
                 border-radius: 50%;
                 justify-content: center;
             }
-            .reset-btn .ib-label { display: none; }
+            .reset-btn .ib-label,
+            .edit-btn.icon-btn .ib-label,
+            .add-btn.icon-btn .ib-label { display: none; }
         }
 
         /* Room for the one-click values as well as the menus. Measured, not picked
@@ -5420,7 +5447,7 @@
                                  there is room, a bare ↺ circle below 700px. Clears the kind, the
                                  search and the sort, which drops the focused view and brings the
                                  widgets and pinned banner back. -->
-                            <button id="timelineResetBtn" class="qf-btn icon-btn reset-btn tl-reset" onclick="timelineResetOrTop()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
+                            <button id="timelineResetBtn" class="qf-btn icon-btn reset-btn tl-reset" onclick="resetOrTop(this, resetTimeline)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                         </div>
                         <div class="cal-strip" id="timelineCalendarStrip"></div>
                         <!-- What is out of service right now. Sits above the day list and
@@ -5447,8 +5474,8 @@
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="aircraft"></div>
                     <div class="fb-actions">
-                        <button id="editModeBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleEditMode()">🔒 Edit</button>
-                        <button id="aircraftResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetAircraftTable()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
+                        <button id="editModeBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleEditMode()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
+                        <button id="aircraftResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetOrTop(this, resetAircraftTable)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
@@ -5473,6 +5500,7 @@
                         </tbody>
                     </table>
                 </div>
+                <p class="bl-hint table-count" id="aircraftCount" style="padding: 0 4px 16px;"></p>
 
                 <!-- HBC+ table removed from the Software tab on 2026-09-01 (user): this
                      page now covers only the retrofit active fleet's software. The HBC+
@@ -5492,8 +5520,8 @@
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="media"></div>
                     <div class="fb-actions">
-                        <button id="mediaEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleMediaEdit()">🔒 Edit</button>
-                        <button id="mediaResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetMediaTable()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
+                        <button id="mediaEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleMediaEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
+                        <button id="mediaResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetOrTop(this, resetMediaTable)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
@@ -5517,6 +5545,7 @@
                         </tbody>
                     </table>
                 </div>
+                <p class="bl-hint table-count" id="mediaCount" style="padding: 0 4px 16px;"></p>
             </div>
 
             <!-- Maintenance Tab -->
@@ -5540,9 +5569,11 @@
                             <button id="avrTabActs" class="avr-vt-btn active" role="tab" onclick="setAvrView('activities')">🗂️ Activities</button>
                             <button id="avrTabVisits" class="avr-vt-btn" role="tab" onclick="setAvrView('visits')">📋 Reports</button>
                         </div>
-                        <button id="avrAddBtn" class="qf-btn" style="display:none;" onclick="openAvrEditor('__new')">➕ Add Visit</button>
-                        <button id="maintAddActivityBtn" class="qf-btn" style="display:none;" onclick="openAddActivity()">➕ Add Activity</button>
-                        <button id="maintResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetMaintenancePage()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
+                        <!-- One Add button for the two add actions (Add Activity / Add Visit
+                             Report): pressing it opens a small menu to choose. Collapses to a
+                             bare + circle on a narrow screen (the shared icon-btn pattern). -->
+                        <button id="maintAddBtn" class="qf-btn add-btn icon-btn" style="display:none;" onclick="openActivityAddMenu()" title="Add" aria-label="Add" aria-haspopup="true"><span class="ib-icon" aria-hidden="true">＋</span><span class="ib-label">Add</span></button>
+                        <button id="maintResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetOrTop(this, resetMaintenancePage)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
@@ -5562,8 +5593,8 @@
                 <div class="table-actions-row">
                     <button id="hwBaselineBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed Serials</button>
                     <button id="hwRemovalBtn" class="qf-btn" style="display:none;" onclick="openRemoval()">📤 Record Removed Serials</button>
-                    <button id="hwAddIssueBtn" class="qf-btn" style="display:none;" onclick="openAddIssue()">➕ Add Known Issue</button>
-                    <button id="hwEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleHwEdit()">🔒 Edit</button>
+                    <button id="hwAddIssueBtn" class="qf-btn add-btn icon-btn" style="display:none;" onclick="openAddIssue()" title="Add known issue" aria-label="Add known issue"><span class="ib-icon" aria-hidden="true">＋</span><span class="ib-label">Add</span></button>
+                    <button id="hwEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleHwEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
                 </div>
 
                 <div class="maint-split">
@@ -5587,7 +5618,7 @@
                  is what makes the history legible as a list. -->
             <div id="serials" class="tab-content">
                 <div class="table-actions-row">
-                    <button id="srEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleSerialsEdit()">🔒 Edit Dates</button>
+                    <button id="srEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleSerialsEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit Dates</span></button>
                     <button id="srInstalledBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed</button>
                     <button id="srRemovedBtn" class="qf-btn" style="display:none;" onclick="openRemoval()">📤 Record Removed</button>
                     <button class="qf-btn" onclick="exportSerialsCsv()">⬇️ Export CSV</button>
@@ -5642,9 +5673,9 @@
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="sim"></div>
                     <div class="fb-actions">
-                        <button id="simAddBtn" class="qf-btn" style="display:none;" onclick="openAddSim()">➕ Add SIM</button>
-                        <button id="simEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleSimEdit()">🔒 Edit</button>
-                        <button id="simResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetSimTable()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
+                        <button id="simAddBtn" class="qf-btn add-btn icon-btn" style="display:none;" onclick="openAddSim()" title="Add SIM" aria-label="Add SIM"><span class="ib-icon" aria-hidden="true">＋</span><span class="ib-label">Add</span></button>
+                        <button id="simEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleSimEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
+                        <button id="simResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetOrTop(this, resetSimTable)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
@@ -5689,9 +5720,9 @@
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="satcom"></div>
                     <div class="fb-actions">
-                        <button id="satcomAddBtn" class="qf-btn" style="display:none;" onclick="openAddModman()">➕ Add MODMAN</button>
-                        <button id="satcomEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleSatcomEdit()">🔒 Edit</button>
-                        <button id="satcomResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetSatcomTable()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
+                        <button id="satcomAddBtn" class="qf-btn add-btn icon-btn" style="display:none;" onclick="openAddModman()" title="Add MODMAN" aria-label="Add MODMAN"><span class="ib-icon" aria-hidden="true">＋</span><span class="ib-label">Add</span></button>
+                        <button id="satcomEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleSatcomEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
+                        <button id="satcomResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetOrTop(this, resetSatcomTable)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
@@ -5753,9 +5784,9 @@
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="fleet"></div>
                     <div class="fb-actions">
-                        <button id="fleetAddBtn" class="qf-btn" style="display:none;" onclick="openAddAircraft()">➕ Add Aircraft</button>
-                        <button id="fleetEditBtn" class="qf-btn edit-btn edit-locked" aria-disabled="true" onclick="toggleFleetEdit()">🔒 Edit</button>
-                        <button id="fleetResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetFleetTable()" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
+                        <button id="fleetAddBtn" class="qf-btn add-btn icon-btn" style="display:none;" onclick="openAddAircraft()" title="Add aircraft" aria-label="Add aircraft"><span class="ib-icon" aria-hidden="true">＋</span><span class="ib-label">Add</span></button>
+                        <button id="fleetEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleFleetEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
+                        <button id="fleetResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetOrTop(this, resetFleetTable)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
 
@@ -5791,6 +5822,7 @@
                         </tbody>
                     </table>
                 </div>
+                <p class="bl-hint table-count" id="fleetCount" style="padding: 0 4px 16px;"></p>
             </div>
 
 
@@ -7029,8 +7061,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.128.0';
-        const APP_BUILD    = '2026.09.11.09';
+        const APP_VERSION  = '2.129.0';
+        const APP_BUILD    = '2026.09.11.10';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -7951,19 +7983,26 @@
         // Signing in deliberately does NOT open Edit Mode anywhere: it only unlocks the
         // button. Nothing becomes editable until that page's own Edit is pressed, so a
         // signed-in user still reads the dashboard read-only by default.
+        // The Edit button is now HIDDEN when signed out (user, 2026-09-11) — the status-bar
+        // chip is the only sign-in prompt, so a locked page shows no Edit control at all.
+        // When signed in it is a pencil ✎ with its label, turning into 💾 Save while editing;
+        // like the Reset button it collapses to an icon-only circle on a narrow screen (the
+        // shared .icon-btn / .ib-label pattern). `activeLabel` is the editing-state word
+        // (e.g. "Save", "Done"); any leading emoji in it is stripped, the icon carries it.
         function applyEditButton(btnId, editing, idleLabel, activeLabel) {
             const btn = document.getElementById(btnId);
             if (!btn) return;
             const locked = !canEdit();
-            btn.textContent = locked
-                ? `🔒 ${idleLabel}`
-                : (editing ? activeLabel : `🔓 ${idleLabel}`);
-            btn.classList.toggle('edit-locked', locked);
-            btn.classList.toggle('save-active', !locked && editing);
-            // Kept clickable on purpose — the click is what explains how to unlock it.
-            // aria-disabled marks it unavailable without dropping it from the tab order.
-            btn.setAttribute('aria-disabled', locked ? 'true' : 'false');
-            btn.title = locked ? 'Sign in from the status bar to edit this page' : '';
+            btn.style.display = locked ? 'none' : '';
+            if (locked) return;                       // nothing else to paint while hidden
+            btn.classList.toggle('save-active', editing);
+            const activeText = String(activeLabel || 'Save').replace(/^[^\p{L}]+/u, '').trim() || 'Save';
+            const icon = btn.querySelector('.ib-icon');
+            const label = btn.querySelector('.ib-label');
+            if (icon) icon.textContent = editing ? '💾' : '✎';
+            if (label) label.textContent = editing ? activeText : idleLabel;
+            btn.setAttribute('aria-disabled', 'false');
+            btn.title = editing ? '' : idleLabel;
         }
 
         // The one thing a locked Edit button does: point at the only sign-in control.
@@ -8074,6 +8113,7 @@
             updateHwEditUI();
             updateFleetEditUI();
             updateSimEditUI();
+            updateSatcomEditUI();   // else its Edit button lingers visible after sign-out
             renderSerialsPage();
         }
 
@@ -8203,7 +8243,7 @@
             syncTimelineFocus();
             // Reset ⇄ Back-to-top belongs only to the Overview: leaving it must put the
             // button back to Reset; returning re-reads the scroll position.
-            if (typeof syncTimelineTopBtn === 'function') syncTimelineTopBtn();
+            if (typeof syncResetTopButtons === 'function') syncResetTopButtons();
         }
 
         let editMode = false;
@@ -8270,10 +8310,17 @@
             });
         }
 
+        // The badge on a "Filters" trigger counts the number of OPTIONS actually ticked,
+        // not the number of axes touched (user, 2026-09-11): three Fit boxes read as "3",
+        // matching what the open dropdown shows, rather than "1" for "the Fit axis is
+        // active". A live free-text query still counts as one. `hidden` axes (the pills-
+        // only shortcuts like media `age` / fleet `opsout`) are excluded — they have no
+        // checkboxes in the dropdown, so counting them would inflate the badge past what
+        // the user can see.
         function fbActiveCount(barId) {
             const bar = FILTER_BARS[barId];
             if (!bar) return 0;
-            return bar.filters.reduce((n, f) => n + (fbSel(barId, f.id).size ? 1 : 0), 0)
+            return bar.filters.reduce((n, f) => n + (f.hidden ? 0 : fbSel(barId, f.id).size), 0)
                 + ((fbQuery[barId] || '').trim() ? 1 : 0);
         }
 
@@ -8419,7 +8466,10 @@
         function fbGroupedCount(barId) {
             const bar = FILTER_BARS[barId];
             if (!bar) return 0;
-            return bar.filters.filter(f => f.grouped).reduce((n, f) => n + (fbSel(barId, f.id).size ? 1 : 0), 0);
+            // Options ticked across the grouped axes, not the number of axes — so the Fleet
+            // "Filters" badge reads "3" when three Fit boxes are checked (user, 2026-09-11).
+            return bar.filters.filter(f => f.grouped && !f.hidden)
+                .reduce((n, f) => n + fbSel(barId, f.id).size, 0);
         }
 
         // What the collapsed trigger says. A bar with several filters needs the
@@ -8812,9 +8862,16 @@
         // sheet is pinned to the bottom of the viewport and anchored to nothing,
         // so it stays put — dismissing it on a stray scroll would be a bug, not a
         // safeguard.
-        window.addEventListener('scroll', () => {
+        window.addEventListener('scroll', (e) => {
             if (!fbOpenKey) return;
             const pop = document.querySelector('.fb-pop');
+            // Scrolling the popover's OWN list must never dismiss it — that was the bug
+            // where a long dropdown (Fit + Status + Operational + SSID) could not be
+            // scrolled to reach the lower options: the wheel closed it instead. The scroll
+            // event is heard here in the capture phase with `e.target` being the element
+            // that actually scrolled, so a scroll originating inside .fb-pop is ignored.
+            if (pop && e.target && e.target.nodeType === 1 &&
+                (e.target === pop || pop.contains(e.target))) return;
             // The sheet is pinned to the visible area and anchored to nothing, so it
             // follows the page rather than being dismissed by it.
             if (fbIsSheet(pop, fbOpenCompact)) { fbReposition(); return; }
@@ -8934,9 +8991,10 @@
                 // bar and sets just its axis, so exactly one is ever lit, and "All" lights
                 // only when nothing narrows. Type and the Filters dropdown combine on top.
                 quick: [
-                    { label: 'All',    onclick: `fleetView('all')`,    isOn: () => fleetIsAllMode(),      count: () => fleetPillCount('all') },
-                    { label: 'Active', onclick: `fleetView('active')`, isOn: () => fleetPillOn('active'), count: () => fleetPillCount('active') },
-                    { label: 'AOG',    onclick: `fleetView('aog')`,    isOn: () => fleetPillOn('aog'),    count: () => fleetPillCount('aog') },
+                    { label: 'All',     onclick: `fleetView('all')`,     isOn: () => fleetIsAllMode(),             count: () => fleetPillCount('all') },
+                    { label: 'Eclipse', onclick: `fleetView('eclipse')`, isOn: () => fleetSystemPillOn('Eclipse'), count: () => fleetSystemCount('Eclipse') },
+                    { label: 'HBC+',    onclick: `fleetView('hbc')`,     isOn: () => fleetSystemPillOn('HBC+'),    count: () => fleetSystemCount('HBC+') },
+                    { label: 'AOG',     onclick: `fleetView('aog')`,     isOn: () => fleetPillOn('aog'),           count: () => fleetPillCount('aog') },
                 ],
                 filters: [
                     // Type is its own trigger and carries a per-type count (A330 (31)…);
@@ -8996,11 +9054,16 @@
                     // Future — matches opsOutFleet(), which the pill count uses.
                     { id: 'opsout', label: 'Out of Service', hidden: true,
                       rowValue: row => (row.dataset.ops !== 'in_service' && row.dataset.ops !== 'future') ? 'yes' : 'no' },
+                    // Drives the Eclipse / HBC+ quick pills — hidden, so no dropdown
+                    // trigger and out of the collapsed sheet (the opsout pattern). Matches
+                    // the Connectivity System column, which is the stored `system` or the
+                    // fit-derived default (Eclipse for retrofit, HBC+ for linefit).
+                    { id: 'system', label: 'System', hidden: true,
+                      rowValue: row => row.dataset.system || '' },
                 ],
-                // How many aircraft the table is showing right now — sits with the
-                // filters (see fbRender's `extra`). applyFleetFilters keeps its text
-                // current; this initial value covers a bare re-render.
-                extra: () => `<span class="fb-count" id="fleetCount">${fleetCountLabel()}</span>`,
+                // The visible/total count now lives at the FOOT of the table (like the
+                // Satcom "90 of 90 MODMANs" line), not beside the search box — the number
+                // was redundant with the pill/filter counts up top (user, 2026-09-11).
             },
 
             sim: {
@@ -9157,10 +9220,13 @@
         }
 
         function applyAircraftFilters() {
-            document.querySelectorAll('#aircraftTableBody tr').forEach(row => {
+            const rows = document.querySelectorAll('#aircraftTableBody tr');
+            rows.forEach(row => {
                 row.style.display = fbRowMatch('aircraft', row) ? '' : 'none';
             });
             renumberVisibleRows('aircraftTable');
+            const shown = Array.from(rows).filter(r => r.style.display !== 'none').length;
+            setTableCount('aircraftCount', shown, rows.length, 'aircraft');
         }
 
         function resetAircraftTable() {
@@ -10147,9 +10213,16 @@
         // Filters value must therefore un-light All ("when A330 is selected you don't have
         // all aircraft"), which the old fit-only test could not express.
         function fleetIsAllMode() {
-            return ['type', 'fitview', 'fstatus', 'ops', 'wifi', 'opsout'].every(id => fbSel('fleet', id).size === 0)
+            return ['type', 'fitview', 'fstatus', 'ops', 'wifi', 'opsout', 'system'].every(id => fbSel('fleet', id).size === 0)
                 && !(fbQuery['fleet'] || '').trim();
         }
+
+        // A row's connectivity system, mirroring the System column: the stored value, or
+        // the fit-derived default (Eclipse for retrofit, HBC+ for linefit). Drives the
+        // Eclipse / HBC+ quick pills and their live counts.
+        function fleetSystemOf(a) { return a.system || systemDefault(a.fit || ''); }
+        function fleetSystemCount(v) { return fleetRoster.filter(a => fleetSystemOf(a) === v).length; }
+        function fleetSystemPillOn(v) { return fbSel('fleet', 'system').has(v); }
         // Type options with a per-type roster count, so the dropdown reads "A330  31" and
         // the trigger reads "Type: A330 (31)" (fbTriggerText appends the count). Counts are
         // roster-wide totals — what EXISTS — independent of the current view.
@@ -10208,10 +10281,18 @@
         // but itself. Re-clicking the lit pill (or All) returns to the full 99. Type and
         // the Filters dropdown then combine ON TOP without un-lighting it.
         function fleetView(mode) {
-            const turnOn = mode !== 'all' && !fleetPillOn(mode);
+            // Whether THIS pill is already the lit one, so a second click clears back to
+            // All. Eclipse/HBC+ ride the system axis; Active/AOG their own; All is never on.
+            const isOn = mode === 'eclipse' ? fleetSystemPillOn('Eclipse')
+                       : mode === 'hbc'     ? fleetSystemPillOn('HBC+')
+                       : mode !== 'all'     ? fleetPillOn(mode)
+                       : false;
+            const turnOn = mode !== 'all' && !isOn;
             fbClear('fleet');
             if (turnOn && mode === 'active') fbSel('fleet', 'fstatus').add('Active');
             else if (turnOn && mode === 'aog') fbSel('fleet', 'opsout').add('yes');
+            else if (turnOn && mode === 'eclipse') fbSel('fleet', 'system').add('Eclipse');
+            else if (turnOn && mode === 'hbc') fbSel('fleet', 'system').add('HBC+');
             // Whole-roster views sort by Aircraft Age, newest first — the same order the
             // old All pill used; a narrowed pill keeps whatever sort is in effect.
             if (mode === 'all' || !turnOn) lastSort['fleetTable'] = { col: FLEET_AGE_COL, dir: -1 };
@@ -10514,6 +10595,9 @@
                 // or any explicitly-set provider. Read-only cell shows the stored value
                 // or the fit-derived default; the editor offers the explicit override.
                 const sysShown = system || systemDefault(fit);
+                // Feeds the Eclipse / HBC+ quick pills — the same value the System column
+                // shows, so a pill selects exactly the rows whose cell reads that system.
+                row.dataset.system = sysShown;
                 const systemCell = editing
                     ? `<select class="edit-select" data-id="${a.id}" data-field="system" onchange="handleFleetEdit(this)">${
                         (system ? '' : `<option value="" selected>${sysShown ? `— ${escAttr(sysShown)} (default) —` : '— Not set —'}</option>`) +
@@ -10714,6 +10798,26 @@
             // Active / In Retrofit shares are measured against.
             const total = programmeFleet().length || 1;
 
+            // Active + In Retrofit are two halves of one composition, so they read as one
+            // split widget (like SSID below) rather than two tiles: the programme total is
+            // the bullet, and the bar draws the two shares against each other.
+            const progTotal = activeCount + retrofitCount;
+            const actPct = progTotal ? (activeCount / progTotal) * 100 : 0;
+            const totalCard = `<div class="media-widget fleet-total">
+                <div class="media-widget-head">
+                    <span class="media-widget-label">IFC Fleet</span>
+                    <span class="media-size-pill">${progTotal} aircraft</span>
+                </div>
+                <div class="ssid-figures">
+                    <span class="ssid-side fleet-active-side"><b>${activeCount}</b> Active</span>
+                    <span class="ssid-side fleet-retrofit-side">In Retrofit <b>${retrofitCount}</b></span>
+                </div>
+                <div class="ssid-track" role="img" aria-label="${activeCount} active, ${retrofitCount} in retrofit">
+                    <div class="fleet-fill-active" style="width:${actPct}%"></div>
+                    <div class="fleet-fill-retrofit" style="width:${100 - actPct}%"></div>
+                </div>
+            </div>`;
+
             const card = (label, count, sub, type) => {
                 const pct = Math.round((count / total) * 1000) / 10;
                 return `<div class="media-widget media-widget-${type}">
@@ -10762,8 +10866,7 @@
                 : '';
 
             grid.innerHTML =
-                  card('Active Fleet', activeCount, 'activated', 'latest')
-                + card('In Retrofit', retrofitCount, 'not yet activated', 'older')
+                  totalCard
                 + outCard
                 + ssid;
         }
@@ -10789,10 +10892,18 @@
             });
             return n;
         }
-        function fleetCountLabel() { return `<strong>${fleetVisibleCount()}</strong> aircraft`; }
+        // Shared table-count footer, the Satcom "90 of 90 MODMANs" line generalised: the
+        // number of rows on screen and the total that exist, so the total stays visible no
+        // matter how the table is filtered (user, 2026-09-11). `shown` is bolded.
+        function setTableCount(id, shown, total, noun) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerHTML = `<strong>${shown}</strong> of ${total} ${noun}`;
+        }
         function syncFleetCount() {
-            const el = document.getElementById('fleetCount');
-            if (el) el.innerHTML = fleetCountLabel();
+            // Total is the whole roster (99) — the same universe the Type/pill counts are
+            // measured against — so "46 of 99 aircraft" reads honestly against them.
+            setTableCount('fleetCount', fleetVisibleCount(), fleetRoster.length, 'aircraft');
         }
 
         function resetFleetTable() {
@@ -11520,10 +11631,13 @@
             // toggled visibility on rows that were still showing current media.
             if (mediaCycleView() !== mediaViewRendered) { populateMediaTable(); return; }
 
-            document.querySelectorAll('#mediaTableBody tr').forEach(row => {
+            const rows = document.querySelectorAll('#mediaTableBody tr');
+            rows.forEach(row => {
                 row.style.display = fbRowMatch('media', row) ? '' : 'none';
             });
             renumberVisibleRows('mediaTable');
+            const shown = Array.from(rows).filter(r => r.style.display !== 'none').length;
+            setTableCount('mediaCount', shown, rows.length, 'aircraft');
         }
 
         function resetMediaTable() {
@@ -11994,10 +12108,8 @@
 
         function updateAvrEditUI() {
             const show = canEdit() ? '' : 'none';
-            const add = document.getElementById('avrAddBtn');
-            const addAct = document.getElementById('maintAddActivityBtn');
+            const add = document.getElementById('maintAddBtn');
             if (add) add.style.display = show;
-            if (addAct) addAct.style.display = show;
             const ta = document.getElementById('avrTabActs'), tv = document.getElementById('avrTabVisits');
             if (ta) ta.classList.toggle('active', avrView === 'activities');
             if (tv) {
@@ -13238,9 +13350,35 @@
         }
 
         function updateMaintEditUI() {
-            const addBtn = document.getElementById('maintAddActivityBtn');
+            const addBtn = document.getElementById('maintAddBtn');
             if (addBtn) addBtn.style.display = canEdit() ? '' : 'none';
             applyEditButton('maintEditBtn', maintEditMode && canEdit(), 'Edit', '💾 Save');
+        }
+
+        // One Add button, two actions. Pressing it opens a small menu to choose between
+        // recording a single Activity or opening a new Visit Report — reusing the
+        // assign-menu popover (and its one closer/backdrop) so there is a single menu
+        // implementation on this page.
+        function openActivityAddMenu() {
+            closeAssignMenu();
+            if (!canEdit()) { requireSignIn(); return; }
+            const btn = document.getElementById('maintAddBtn');
+            if (!btn) return;
+            const backdrop = document.createElement('div');
+            backdrop.className = 'avr-assign-backdrop';
+            backdrop.onclick = closeAssignMenu;
+            document.body.appendChild(backdrop);
+            const menu = document.createElement('div');
+            menu.className = 'avr-assign-menu add-menu';
+            menu.innerHTML =
+                `<button class="avr-assign-item" onclick="closeAssignMenu(); openAddActivity()">🗂️ Add Activity</button>` +
+                `<button class="avr-assign-item" onclick="closeAssignMenu(); openAvrEditor('__new')">📋 Add Visit Report</button>`;
+            document.body.appendChild(menu);
+            const r = btn.getBoundingClientRect();
+            const w = 200;
+            menu.style.width = w + 'px';
+            menu.style.top = (r.bottom + 6) + 'px';
+            menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
         }
 
         function handleMaintEdit(el) {
@@ -15040,7 +15178,7 @@
             const shown = Array.from(document.querySelectorAll('#satcomTableBody tr'))
                 .filter(r => r.style.display !== 'none').length;
             const total = satcomRows().length;
-            setText('satcomCount', `${shown} of ${total} MODMANs`);
+            setTableCount('satcomCount', shown, total, 'MODMANs');
         }
 
         function resetSatcomTable() {
@@ -17158,37 +17296,40 @@
             renderTimeline();
         }
 
-        // Expanding the oldest month can make the day list very long, and by the time you
-        // are at the bottom the Reset control (pinned though it is) is the only thing
-        // reachable that could get you back up. So it earns a second job: once you have
-        // scrolled deep, it MORPHS into Back to top — one press returns you up, and at the
-        // top it turns straight back into Reset. Same button, whichever you need where you
-        // are. The pinned .tl-controls keeps it on screen throughout.
-        const TIMELINE_TOPBTN_AT = 500;   // px scrolled before Reset becomes Back-to-top
+        // Every page's Reset button earns a second job (user, 2026-09-11 — first shipped on
+        // the Timeline, now everywhere): once you have scrolled deep, it MORPHS into Back to
+        // top — one press returns you up, and at the top it turns straight back into Reset.
+        // Same button, whichever you need where you are. Every filter bar is `position:
+        // sticky`, so the button stays on screen throughout the scroll.
+        const RESET_TOPBTN_AT = 500;      // px scrolled before Reset becomes Back-to-top
 
-        function timelineResetOrTop() {
-            const btn = document.getElementById('timelineResetBtn');
+        // The click: scroll up when the button is wearing its Back-to-top hat, otherwise run
+        // the page's own reset. `resetFn` is passed the actual reset function so this stays
+        // page-agnostic (the Timeline passes resetTimeline, the tables their resetXTable).
+        function resetOrTop(btn, resetFn) {
             if (btn && btn.classList.contains('to-top')) {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                resetTimeline();
+            } else if (typeof resetFn === 'function') {
+                resetFn();
             }
         }
 
-        function syncTimelineTopBtn() {
-            const btn = document.getElementById('timelineResetBtn');
-            if (!btn) return;
-            const overview = document.getElementById('overview');
-            const onOverview = overview && overview.classList.contains('active');
-            const toTop = !!onOverview && window.scrollY > TIMELINE_TOPBTN_AT;
-            if (toTop === btn.classList.contains('to-top')) return;   // no change, no DOM churn
-            btn.classList.toggle('to-top', toTop);
-            const icon = btn.querySelector('.ib-icon');
-            const label = btn.querySelector('.ib-label');
-            if (icon) icon.textContent = toTop ? '↑' : '↺';
-            if (label) label.textContent = toTop ? 'Top' : 'Reset';
-            btn.title = toTop ? 'Back to top' : 'Reset filters';
-            btn.setAttribute('aria-label', toTop ? 'Back to top' : 'Reset filters');
+        // Toggle Back-to-top on WHICHEVER page is open. Only the active tab's Reset button
+        // morphs; the rest keep their Reset face so a tab switched-to mid-scroll is correct.
+        function syncResetTopButtons() {
+            const active = document.querySelector('.tab-content.active');
+            const deep = window.scrollY > RESET_TOPBTN_AT;
+            document.querySelectorAll('.reset-btn').forEach(btn => {
+                const toTop = !!(active && active.contains(btn)) && deep;
+                if (toTop === btn.classList.contains('to-top')) return;   // no change, no DOM churn
+                btn.classList.toggle('to-top', toTop);
+                const icon = btn.querySelector('.ib-icon');
+                const label = btn.querySelector('.ib-label');
+                if (icon) icon.textContent = toTop ? '↑' : '↺';
+                if (label) label.textContent = toTop ? 'Top' : 'Reset';
+                btn.title = toTop ? 'Back to top' : 'Reset filters';
+                btn.setAttribute('aria-label', toTop ? 'Back to top' : 'Reset filters');
+            });
         }
 
         // Where an activity happened, best available. Software carries its own
@@ -18655,15 +18796,15 @@
             connectLiveSync();
             startVersionWatch();   // reload the tab when a newer build is deployed
 
-            // The Timeline Reset button doubles as Back-to-top once you have scrolled deep
-            // (see syncTimelineTopBtn). One rAF-throttled scroll listener drives the swap.
+            // Every page's Reset button doubles as Back-to-top once you have scrolled deep
+            // (see syncResetTopButtons). One rAF-throttled scroll listener drives the swap.
             let topBtnTick = false;
             window.addEventListener('scroll', () => {
                 if (topBtnTick) return;
                 topBtnTick = true;
-                requestAnimationFrame(() => { topBtnTick = false; syncTimelineTopBtn(); });
+                requestAnimationFrame(() => { topBtnTick = false; syncResetTopButtons(); });
             }, { passive: true });
-            syncTimelineTopBtn();
+            syncResetTopButtons();
         });
     </script>
 </body>
