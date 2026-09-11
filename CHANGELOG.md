@@ -13,6 +13,35 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.133.0 — Maintenance Issues: the IFC/WiFi service-outage axis (new `/issues` node)
+User-directed (2026-09-11). New node — the four-edit checklist done (rules +
+`backup.sh`/`restore.sh`/`verify-deployment.sh`). Rules deployed before the page.
+
+- **A THIRD availability axis.** `/issues/{id}` records the IFC/WiFi **service** being
+  inoperative or degraded on a still-flying aircraft — independent of `fleetStatus` (the
+  WiFi programme) and `ops`/AOG (the airframe). AS76 with a failed MODMAN has an OPEN
+  issue but no `ops` state, so it never reads as AOG. Fields: `tail`, `service`
+  (wifi/ifc/both), `impact` (inop/degraded), `severity` (major/minor), `priority`
+  (high/medium/low), `reason`/`detail`, `customer`, and three dates — `discoveredDate`
+  (context), **`informedDate` (the OFFICIAL inoperative-from date fed to Display — NOT the
+  discovery date)**, `resolvedDate` (empty = open) — plus `originActivityId` /
+  `resolutionActivityId` links and `resolutionNote`.
+- **Activity tab:** a third `＋ Add → 🔧 Add Maintenance Issue` item and a third **🔧
+  Maintenance** view (`setAvrView('issues')` → `renderIssueFeed`; Open/Resolved cards, red
+  open-count badge). Editor modal `openIssueEditor`/`saveIssue`/`deleteIssue`
+  (`#issueEditOverlay`, `.ac-edit-*` shell). Public read-only; edits gated on `canEdit()`.
+- **Fleet:** an `IFC INOP` (red) / `DEGRADED` (amber) sub-badge stacked UNDER the
+  Connectivity Status pill — `svcStateForTail` (worst open impact), `row.dataset.svc`, no
+  new column — plus a grouped **Service** filter.
+- **Timeline:** derived `kind:'service'` entries (opened on `informedDate`, restored on
+  `resolvedDate`) over the whole roster, on the Overview and the Activities repo, editable
+  in place (✏️ → `openIssueEditor`, keyed by `issueId`; 🛜/✔ marks).
+- **Left untouched:** the old manual `maintenance.open` flag on the Fleet ✎ modal (an open
+  issue is the real "under maintenance" signal now, but removing it needs a decision).
+- **Verified** by browser render (seeded data) + `check.sh` + live-hash. ⚠️ The signed-in
+  DB write was **not** exercised this session (no credentials available); the write path
+  mirrors the activity/ops save pattern against the deployed rules — confirm with one real add.
+
 ### v2.132.1 — Report: mod window only in Specifications, one-line top block, Completion→Activation
 User-directed (2026-09-11). Cosmetic; no rules change, no new node.
 

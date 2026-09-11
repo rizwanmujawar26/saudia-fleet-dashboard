@@ -6,7 +6,37 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.132.0–v2.132.1 (2026-09-11).** AVR/reports + Software widget overhaul
+**Latest — v2.133.0 (2026-09-11).** **Maintenance Issues — a THIRD availability axis**
+(new `/issues` node; the four-edit checklist done: rules + `backup.sh` / `restore.sh` /
+`verify-deployment.sh` node lists). This is the SERVICE-availability axis, deliberately
+independent of both the WiFi programme (`fleetStatus`) and airframe availability
+(`ops`/AOG): a tail's IFC/WiFi **service** can be inoperative or degraded while the
+airframe still flies (AS76 — failed MODMAN, WiFi dead, still on the schedule — must NOT
+read as AOG).
+
+- **`/issues/{id}`** (push-key, `issuesLive`, polled with the low-traffic nodes and in the
+  initial fetch): `tail`, `service` (wifi/ifc/both), `impact` (inop/degraded), `severity`
+  (major/minor), `priority` (high/medium/low), `reason`, `detail`, `customer`, and three
+  dates — `discoveredDate` (context), **`informedDate` (the OFFICIAL inoperative-from date
+  the Display team consumes — NOT the discovery date)**, `resolvedDate` (empty = open).
+  Plus `originActivityId` / `resolutionActivityId` links and `resolutionNote`. Open = no
+  `resolvedDate`; days-down = `informedDate → resolvedDate|today` (`issueDaysDown`).
+- **Activity tab** grew a third `＋ Add → 🔧 Add Maintenance Issue` item and a third
+  **🔧 Maintenance** view (`setAvrView('issues')` → `renderIssueFeed`, Open/Resolved cards,
+  red open-count badge). Editor modal `openIssueEditor`/`saveIssue`/`deleteIssue`
+  (`#issueEditOverlay`, reuses the `.ac-edit-*` shell). Public read-only; add/edit gated on
+  `canEdit()`.
+- **Fleet Connectivity Status cell** stacks an `IFC INOP` (red) / `DEGRADED` (amber)
+  sub-badge UNDER the programme pill — `svcStateForTail()` (worst open impact, inop >
+  degraded), `row.dataset.svc`, no new column. A grouped **Service** filter matches it.
+- **Timeline** derives `kind:'service'` entries — opened on the `informedDate`, restored on
+  `resolvedDate` — over the whole roster (Overview + Activities repo, editable in place via
+  the ✏️ → `openIssueEditor`, keyed by `issueId`, mirroring the ops-period edit).
+- ⚠️ **The old manual `maintenance.open` flag (Fleet ✎ modal) was left untouched** — an
+  open issue is the real "under maintenance" signal now, but removing the old flag needs a
+  decision (see the open item "what should drive the maintenance flag").
+
+**Prior — v2.132.0–v2.132.1 (2026-09-11).** AVR/reports + Software widget overhaul
 (additive + one rules change: `/avr` gains `locArea`, `locHangar`, `pins`; no new node).
 
 - **Location is now a hierarchy** — airport → Line (→ stand) or Hangar (→ Old/New → bay).
@@ -648,6 +678,39 @@ value, which the slug rule already allows.
 → `IFE_BY_TYPE` (A321XLR = Panasonic Astrova as of v2.123); add a type there as confirmed.
 An unmapped type omits the row. Distinct from the stored **IFC** (`/fleet system` + the
 `/fleetSpecs ifcPrevious`/`ifcNote`).
+
+### `/issues/{id}` — Maintenance Issues, the SERVICE-availability axis (v2.133)
+
+A push-keyed top-level node (`issuesLive`). The **third axis**: the IFC/WiFi **service**
+being inoperative or degraded on an aircraft that is *still flying* — independent of the
+programme (`fleetStatus`) and of the airframe (`ops`/AOG). So a failed-MODMAN AS76 with
+dead WiFi has an OPEN issue but **no** `ops` state — it must not read as AOG. On all four
+node lists (rules + backup/restore/verify); polled with the low-traffic nodes AND in the
+initial fetch, and `saveIssue` **mirrors `issuesLive` locally** (the polled-node lesson).
+
+| field | notes |
+|---|---|
+| `tail` | bare registration |
+| `service` | `wifi` \| `ifc` \| `both` — `ISSUE_SERVICES` |
+| `impact` | `inop` (full) \| `degraded` (partial). Drives the Fleet sub-badge (INOP red / DEGRADED amber) and `svcStateForTail` (worst open: inop > degraded) |
+| `severity` | `major` \| `minor` — how bad. `ISSUE_SEVERITIES` |
+| `priority` | `high` \| `medium` \| `low` — how urgent; ranks the Open list (`ISSUE_PRIO_RANK`) |
+| `reason` | short, e.g. "MODMAN failure"; + optional `detail` |
+| `customer` | who was informed; default "Saudia" |
+| `discoveredDate` | DD-Mon-YYYY — when we FOUND the fault (context; the remote-support day). **Not** the official date |
+| **`informedDate`** | DD-Mon-YYYY — when the customer was told. **THIS is the OFFICIAL inoperative-from date the Display team consumes.** By design it differs from discovery (AS76: found 06-Sep, informed 07-Sep → official = 07-Sep) |
+| `resolvedDate` | DD-Mon-YYYY, empty while OPEN. Setting it closes the issue. Days-down = `informedDate → resolvedDate\|today` (`issueDaysDown`) |
+| `originActivityId` / `resolutionActivityId` | `/activities` ids — the investigation that opened it and the fix (e.g. MODMAN R&R) that closed it; picked from that tail's activities in the editor |
+| `resolutionNote`, `loggedAt`, `loggedBy` | free text + ISO stamp + editor email (kept across an edit) |
+
+**Surfaces (all DERIVED, nothing stored twice):** the Activity **🔧 Maintenance** view
+(`renderIssueFeed`, Open/Resolved cards); the Fleet Connectivity Status sub-badge +
+**Service** filter (`row.dataset.svc`); the Timeline `kind:'service'` entries (opened on
+`informedDate`, restored on `resolvedDate`), on the Overview and the Activities repo,
+editable in place (✏️ → `openIssueEditor`, keyed by `issueId`). Editor:
+`openIssueEditor`/`saveIssue`/`deleteIssue` (`#issueEditOverlay`). ⚠️ `$other:false` — a
+new field needs its own `.validate` rule and a whole-record PUT drops blanks (they are
+deleted before the write) so an empty string is never stored.
 
 ### `/units/{unitId}` — the unit register: one physical box, and its life
 
