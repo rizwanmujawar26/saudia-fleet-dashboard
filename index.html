@@ -137,6 +137,10 @@
             border: 1px solid rgba(255, 255, 255, 0.55);
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
             text-align: center;
+            /* Every line in the tile is a single token or "HH:MM Z"; none may wrap.
+               Without this the time broke onto two lines at some zoom levels because
+               the space before the Z became a legal break point. */
+            white-space: nowrap;
         }
 
         .hc-weekday {
@@ -565,54 +569,109 @@
            as --header-h by initStickyHeader — the header changes height between
            breakpoints and again when the title wraps, so a hardcoded offset would be
            wrong on most screens. z-index sits under the header (500) and over content. */
-        /* Primary navigation, stitched into the green bar (Apple-style). It is a child
-           of .header now, so it pins with the bar rather than on its own — no sticky
-           here. A faint darker band and a hairline seam set it apart from the brand
-           row above. On a narrow screen the strip scrolls sideways (it is in
-           HSCROLL_SELECTOR); the scrollbar is hidden. The 8px foot keeps the active
-           tab's gold underline clear of the accent stripe along the bar's edge. */
+        /* Primary navigation bar — a frosted-glass strip beneath the green title bar,
+           the way Apple's site floats its nav over the page. It is its own sticky
+           element (not a child of .header), pinned just under the header at the
+           header's measured height; --tabs-h publishes its own height so the filter
+           bars still stack correctly below it. Translucent + backdrop blur so the
+           content scrolling underneath shows through. */
+        .navbar {
+            position: sticky;
+            top: var(--header-h, 176px);
+            z-index: 490;
+            background: rgba(247, 249, 248, 0.72);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid rgba(15, 32, 45, 0.09);
+            transition: box-shadow 0.2s ease;
+        }
+
+        /* A backdrop-filter needs something behind it to blur; where the browser can't
+           do it, the bar would be nearly see-through. Fall back to a near-opaque tint. */
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+            .navbar { background: rgba(247, 249, 248, 0.97); }
+        }
+
+        /* Only lift a shadow once the page has scrolled under it. */
+        .navbar.is-stuck {
+            box-shadow: 0 6px 18px rgba(15, 32, 45, 0.10);
+        }
+
+        /* The scrolling strip inside the frosted bar. On a narrow screen it scrolls
+           sideways (it is in HSCROLL_SELECTOR); the scrollbar is hidden. */
         .tabs {
             display: flex;
-            gap: 2px;
+            gap: 3px;
             flex-wrap: nowrap;
             overflow-x: auto;
             overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
-            padding: 0 clamp(10px, 3vw, 30px) 8px;
-            background: rgba(0, 0, 0, 0.13);
-            border-top: 1px solid rgba(255, 255, 255, 0.13);
+            padding: 7px clamp(10px, 3vw, 30px);
+            background: transparent;
         }
 
         .tabs::-webkit-scrollbar {
             display: none;
         }
 
+        /* Smaller than the old green tabs, dark ink on the frosted bar, and each item
+           is a self-contained pill so the active one can carry a "selection" behind the
+           whole word (Apple-style) rather than an underline. */
         .tab-button {
             flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             white-space: nowrap;
-            padding: 11px 17px;
+            padding: 7px 14px;
             background: none;
             border: none;
             cursor: pointer;
-            font-size: 13.5px;
+            font-size: 12.5px;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.80);
-            border-bottom: 3px solid transparent;
-            border-radius: 6px 6px 0 0;
-            transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            color: #46554d;
+            border-radius: 980px;
+            transition: color 0.18s ease, background 0.18s ease;
+            letter-spacing: 0.2px;
         }
 
         .tab-button:hover {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.09);
+            color: #0a5c34;
+            background: rgba(10, 92, 52, 0.07);
         }
 
         .tab-button.active {
+            color: #0a5c34;
+            background: rgba(10, 92, 52, 0.12);
+            font-weight: 700;
+        }
+
+        /* Live count badge next to Software / Media / Fleet / Activity. Empty until JS
+           fills it, so it takes no space on a tab that has no number. */
+        .tab-count {
+            font-size: 10.5px;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 0;
+            padding: 2px 6px;
+            border-radius: 980px;
+            background: rgba(15, 32, 45, 0.10);
+            color: #33424b;
+        }
+        .tab-count:empty { display: none; }
+        .tab-button.active .tab-count {
+            background: rgba(10, 92, 52, 0.20);
+            color: #0a5c34;
+        }
+        /* "New" items (new AVRs) read as a live nudge, not just a total. */
+        .tab-count-new {
+            background: #d64545;
             color: #fff;
-            border-bottom-color: #ffc107;
+        }
+        .tab-button.active .tab-count-new {
+            background: #c53030;
+            color: #fff;
         }
 
         /* Big screens: centre the menu across the bar, the way Apple's does. Only where
@@ -4772,14 +4831,17 @@
             .media-widget-count { font-size: 21px; }
 
             .tabs {
-                padding: 0 8px 7px;
+                padding: 6px 8px;
             }
 
             .tab-button {
-                padding: 10px 12px;
-                font-size: 12.5px;
-                letter-spacing: 0.3px;
+                padding: 6px 11px;
+                font-size: 12px;
+                letter-spacing: 0.1px;
+                gap: 5px;
             }
+
+            .tab-count { font-size: 10px; padding: 2px 5px; }
         }
 
         /* ===== System status bar =====
@@ -5247,22 +5309,26 @@
                 <div class="hc-time" id="hcTime">--:-- Z</div>
             </div>
             </div><!-- /.header-main -->
+        </div><!-- /.header -->
 
-            <!-- Primary navigation, stitched into the green bar (Apple-style). The strip
-                 scrolls horizontally on a narrow screen; sign-in has moved out of the
-                 menu to the status bar at the foot of the page. -->
+        <!-- Primary navigation, now a separate frosted-glass bar beneath the green
+             title bar (Apple-style): translucent over the content it pins above, a
+             smaller centred menu, and a pill "selection" behind the active item. Each
+             count badge is live (see updateTabCounts); the strip scrolls sideways on a
+             narrow screen. Sign-in lives in the status bar at the foot of the page. -->
+        <div class="navbar">
             <nav class="tabs" role="tablist" aria-label="Primary navigation">
                 <button class="tab-button active" onclick="switchTab('overview')">🏠 Home</button>
-                <button class="tab-button" onclick="switchTab('aircraft')">💿 Software</button>
-                <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
-                <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
+                <button class="tab-button" onclick="switchTab('aircraft')">💿 Software<span class="tab-count" id="tabCountSw"></span></button>
+                <button class="tab-button" onclick="switchTab('media')">🎬 Media<span class="tab-count" id="tabCountMedia"></span></button>
+                <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet<span class="tab-count" id="tabCountFleet"></span></button>
                 <button class="tab-button" onclick="switchTab('sim')">📶 4G SIM</button>
                 <button class="tab-button" onclick="switchTab('satcom')">📡 Satcom</button>
-                <button class="tab-button" onclick="switchTab('maintenance')">🛠️ Activity</button>
+                <button class="tab-button" onclick="switchTab('maintenance')">🛠️ Activity<span class="tab-count tab-count-new" id="tabCountAvr"></span></button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('hardware')">🔧 Hardware</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('serials')">🏷️ Serials</button>
             </nav>
-        </div><!-- /.header -->
+        </div><!-- /.navbar -->
 
         <div class="content">
             <!-- Key Metrics -->
@@ -6963,8 +7029,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.127.1';
-        const APP_BUILD    = '2026.09.11.08';
+        const APP_VERSION  = '2.128.0';
+        const APP_BUILD    = '2026.09.11.09';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12181,6 +12247,7 @@
         }
 
         function renderAvrFeed() {
+            if (typeof updateTabCounts === 'function') updateTabCounts();  // keep the Activity badge live
             const host = document.getElementById('avrFeed');
             if (!host) return;
             const list = avrVisibleList();
@@ -17957,6 +18024,47 @@
             renderStationCompletion(completedStrict);
             renderTimeline();
             renderSysBar();     // fleet count and the open panel follow the same data
+            updateTabCounts();  // the menu badges read the same figures
+        }
+
+        // ===== Menu badges =====
+        // Small live counts sitting next to the menu items, so the totals read from the
+        // nav itself: Software / Media = aircraft complete (the same figures the global
+        // widgets show), Fleet = the WiFi programme scope, Activity = new AVRs. Every
+        // number comes from the helper the rest of the dashboard already trusts — none
+        // is a second copy of a stored figure.
+        function setTabCount(id, n) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = (typeof n === 'number' && n > 0) ? String(n) : '';
+        }
+
+        // AVRs the viewer would treat as new: dated within the last 14 days, and only
+        // the ones this viewer can actually see (published, unless signed in to edit).
+        function newAvrCount() {
+            if (typeof avrEntries !== 'function') return 0;
+            const editor = typeof canEdit === 'function' && canEdit();
+            const cutoff = new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
+            return avrEntries().filter(v => {
+                const status = v.status || 'draft';
+                if (!editor && status !== 'published') return false;
+                const iso = toISODate(v.dateEnd || v.dateStart || '');
+                return iso && iso >= cutoff;
+            }).length;
+        }
+
+        function updateTabCounts() {
+            if (typeof swFleet === 'function') {
+                setTabCount('tabCountSw',
+                    swFleet().filter(a => swVersionOf(a) === latestSwVersion()).length);
+            }
+            if (typeof mediaFleet === 'function') {
+                const cyc = latestMediaCycle();
+                setTabCount('tabCountMedia',
+                    cyc ? mediaFleet().filter(a => a.media && a.media.mediaCycle === cyc).length : 0);
+            }
+            if (typeof projectScope === 'function') setTabCount('tabCountFleet', projectScope());
+            setTabCount('tabCountAvr', newAvrCount());
         }
 
         // ===== System status bar =====
@@ -18242,10 +18350,11 @@
             const root = document.documentElement.style;
             const header = document.querySelector('.header');
             if (header) root.setProperty('--header-h', Math.round(header.getBoundingClientRect().height) + 'px');
-            // The nav strip lives inside the header now, so its height is already part
-            // of --header-h. Held at 0 so filter bars (pinned at header-h + tabs-h)
-            // don't count it twice.
-            root.setProperty('--tabs-h', '0px');
+            // The nav is its own frosted bar again, pinned under the header. Publish its
+            // real height so the filter bars (pinned at header-h + tabs-h) stack under
+            // it rather than behind it.
+            const nav = document.querySelector('.navbar');
+            root.setProperty('--tabs-h', nav ? Math.round(nav.getBoundingClientRect().height) + 'px' : '0px');
             // Every filter bar is one row and the same height, so whichever one is
             // actually laid out answers for all of them. Overview has none at all, so
             // the last known value stands rather than collapsing the table pane to
@@ -18450,10 +18559,17 @@
                 document.fonts.ready.then(() => fitHeaderTitles(true));
             }
 
+            const navbar = document.querySelector('.navbar');
             let stuck = null;
             const onScroll = () => {
                 const now = window.scrollY > 12;
-                if (now !== stuck) { stuck = now; header.classList.toggle('is-stuck', now); }
+                if (now !== stuck) {
+                    stuck = now;
+                    header.classList.toggle('is-stuck', now);
+                    // The nav sits below the header, so its shadow is the one actually
+                    // seen once the page scrolls under the frosted bar.
+                    if (navbar) navbar.classList.toggle('is-stuck', now);
+                }
             };
             window.addEventListener('scroll', onScroll, { passive: true });
             onScroll();
