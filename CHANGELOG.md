@@ -13,6 +13,43 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.131.0 — One-button footer auth, Software completion cards + OTA patches, aligned feeds, menu fixes
+User-directed (2026-09-11). Cosmetic / bugfix / additive; no rules change, no new node.
+
+- **Footer is one auth button.** The identity readout was folded into the single
+  Sign in / Sign out chip — the email no longer takes its own capsule. `#sysUserChip` /
+  `#sysUser` are kept as `hidden` nodes so `updateSysUserChip()` and anything reading
+  `sysUser` stays null-safe; who is signed in rides the auth chip's label + title.
+- **Software tab → "Software Completion".** The Jeddah / Riyadh "completed by station"
+  cards (`renderStationCompletion`, `#stationCompletionGrid`) were removed (user).
+  `renderSwVersionWidgets()` now builds three cards via one `swCard({…})` shape:
+  Middleware, OTA Patch #2, OTA Patch #3.
+- **Middleware counts the In-Retrofit tails as pending.** New `inRetrofitSwFleet()`
+  (whole roster, non-linefit, `fleetStatus === 'In Retrofit'`) — AQH, ASP today. The card
+  reads 42 of 44 done, 2 pending, and names them; `swFleet()` (Active only) is unchanged,
+  so every other count is untouched. OTA cards count `active + in-retrofit`; "done" is
+  simply a stamped `otaPatchUTC` / `otaPatch3UTC`.
+- **Menu badges get completion colour.** `setTabCount(id, n, ratio)` adds
+  `.tab-count-done|warn|low` (green ≥100 %, amber ≥60 %, red below). Software 42/42 = green,
+  Media 39/42 = amber. Selectors are `.tab-count.tab-count-*` **and**
+  `.tab-button.active .tab-count.tab-count-*` so the colour holds on the open tab.
+- **⚠️ Menu highlight glitch — `switchTab` took `event.target`.** That is the actually-clicked
+  node — the count badge `<span>` or the emoji text, NOT the `.tab-button` — so clicking the
+  number put `.active` on the span and the tab lost its highlight. Now resolved
+  deterministically: `btn || tabButtonFor(tabName)`, then `.closest('.tab-button')`.
+- **Home Timeline + Activity feed align on a shared column grid.** New `.tl-grid` +
+  `tlCells({mark,reg,type,kind,main})`: a reserved icon slot (kept even when a row has no
+  mark), then registration, type pill and kind bullet each in a fixed track — tails, types
+  and bullets line up down the page. Applied to the three home `.tl-row` templates (normal,
+  mod, pinned) and the activities `renderRepoRow`. **`avrReportRowHTML` (the other
+  `.repo-row`, a date-first report row) is deliberately NOT `.tl-grid`.** Flex fallback under
+  720 px so nothing is crushed on a phone.
+- **⚠️ AVR print dropped every linked activity.** `printAvr(id)` read `avrLive[id]` raw, but
+  the stored record carries no `.id`, and `avrReportMembers()` matches linked activities on
+  `x.visitId === v.id` — so `=== undefined` dropped them all and the printed "Work carried
+  out" table came out empty though the on-screen card (fed by `avrEntries()`, which adds
+  `.id`) showed them. Fix: `const v = { id, ...avrLive[id] }`. (ASBA AVR: 0 → 3 entries.)
+
 ### v2.130.1 — Fix: Software Edit button gone after signing in
 User-reported (2026-09-11). No rules change, no new node.
 

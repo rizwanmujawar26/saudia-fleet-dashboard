@@ -121,6 +121,8 @@ A close-out, not a stopping point: finish what is in flight or name it unfinishe
 | A new **column** re-measures the table — Fleet fitted 1165px in 1165px at 1280, and one more column overflowed it | Fleet / Software |
 | A changed `ops.state` starts a NEW period — `reason` and `expectedReturn` must not fall through from the one being archived | Operational state |
 | Verify a save by **intercepting the PATCH body**, not by reading the table — both ops bugs were invisible on screen | Saves |
+| A tab/button's inline `onclick` fires from a **child** (the count badge `<span>`, the emoji text) — resolve the element to style with `tabButtonFor()` / `.closest('.tab-button')`, never bare `event.target`, or the click lands on the span and the highlight is lost | Menu / tabs |
+| A **polled record carries no `.id`** (the key is the map key). A helper that filters on `v.id` (e.g. `avrReportMembers` on `visitId === v.id`) needs `{ id, ...store[id] }` — `avrEntries()` adds it, a raw `store[id]` does not, and the mismatch drops silently | AVR / polled nodes |
 
 ⚠️ **Verify in the browser, and verify the thing the USER sees.** Three bugs
 shipped or nearly shipped in one session that every diff and syntax check passed.

@@ -6,7 +6,42 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.130.0–v2.130.1 (2026-09-11).** Small UI wins + one auth fix (cosmetic; no
+**Latest — v2.131.0 (2026-09-11).** Footer auth, Software completion cards, aligned feeds,
+menu fixes, AVR print fix (cosmetic / bugfix / additive; no rules change, no new node).
+
+- **Footer is one auth button.** The identity readout folded into the single Sign in /
+  Sign out chip (`#sysAuthChip`); the email no longer takes its own capsule. `#sysUserChip`
+  / `#sysUser` are kept as `hidden` null-safe nodes — `updateSysUserChip()` still writes to
+  them harmlessly; who is signed in rides the auth chip's label + `title`.
+- **Software tab → "Software Completion", three cards.** The Jeddah / Riyadh station cards
+  are gone (`renderStationCompletion` removed, `#stationCompletionGrid` deleted, user).
+  `renderSwVersionWidgets()` builds Middleware + OTA Patch #2 + OTA Patch #3 from one
+  `swCard({…})` shape. **Middleware counts the In-Retrofit tails as pending** — new
+  `inRetrofitSwFleet()` (whole roster, non-linefit, `fleetStatus === 'In Retrofit'`: AQH,
+  ASP) — so it reads 42 of 44 done, 2 pending, and names them. `swFleet()` (Active only) is
+  unchanged, so every other count is untouched. OTA "done" = a stamped `otaPatchUTC` /
+  `otaPatch3UTC`; scope = active + in-retrofit.
+- **Menu badges get completion colour** (`setTabCount(id, n, ratio)` → `.tab-count-done`
+  green ≥100 %, `-warn` amber ≥60 %, `-low` red). Software 42/42 green, Media 39/42 amber;
+  selectors lifted (`.tab-button.active .tab-count.tab-count-*`) so the colour holds on the
+  open tab.
+- **⚠️ Menu highlight glitch: `switchTab` had taken `event.target`** — the actually-clicked
+  node (the count `<span>` or the emoji text), not the `.tab-button` — so clicking the number
+  put `.active` on the span and the tab lost its highlight. Now `btn || tabButtonFor(name)`
+  then `.closest('.tab-button')`.
+- **Home Timeline + Activity feed align on a shared column grid** (`.tl-grid` +
+  `tlCells({mark,reg,type,kind,main})`): reserved icon slot (kept when empty), then
+  registration, type pill, kind bullet each in a fixed track. Applied to the three home
+  `.tl-row` templates + `renderRepoRow`. ⚠️ **`avrReportRowHTML` is a second `.repo-row`
+  with a different (date-first) column shape — deliberately NOT `.tl-grid`.** Flex fallback
+  under 720 px.
+- **⚠️ AVR print dropped linked activities: `printAvr` read `avrLive[id]` without its `.id`.**
+  `avrReportMembers()` matches linked activities on `x.visitId === v.id`, so `=== undefined`
+  dropped them all — the printed "Work carried out" table was empty though the on-screen card
+  (fed by `avrEntries()`, which adds `.id`) showed them. Fix: `const v = { id, ...avrLive[id] }`.
+  (ASBA AVR: 0 → 3.)
+
+**Prior — v2.130.0–v2.130.1 (2026-09-11).** Small UI wins + one auth fix (cosmetic; no
 rules change, no new node — config reads the existing `/fleet/{tail}/config`).
 
 **v2.130.0** — three user-directed changes. (1) The Activity **Reports toggle count is a
