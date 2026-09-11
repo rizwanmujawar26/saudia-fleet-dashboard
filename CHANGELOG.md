@@ -13,6 +13,61 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.126.0 — Configuration register: new `/configs` node, fleet references it, IFE derives from config
+User-directed (2026-09-11). The **two-database design**: a second reference DB so a whole
+class of aircraft is described once. Rules deployed before the page.
+
+- **New `/configs/{code}` node** keyed by cabin/IFE config code (`32U`, `32N`, `321`, `323`,
+  `324`, `33R`, `333`, `33D`), each `{ manufacturer, family, model, ifeSupplier, ifeSystem }`.
+  8 Airbus configs imported from a 97-aircraft source file; Boeing (`773`/`789`/`781`…) later.
+- **`/fleet/{tail}/config`** added to all 99 aircraft. The 2 tails missing from the source —
+  **ASAP, ASAQ** (A321-251NX) — set to `323` (Panasonic NeXT) per the user.
+- `ifeSystemOf()` now derives IFE from `configsLive[a.config]` → combined "Panasonic eX1" /
+  "Thales Avant"; legacy `IFE_BY_TYPE` (A321XLR only) stays as the no-config fallback.
+- Wiring: `/configs` in the initial `Promise.all`, the low-traffic poll + its seed;
+  `setFleetRoster` carries `config` into `aircraftData`. New-node four edits done (rules +
+  backup/restore/verify-deployment). Data written via admin, backed up first.
+- ⚠️ Live-load couldn't be verified in the hidden preview (throttled tab, fetches hang);
+  derivation validated by seeding state, `/configs` readability by `curl`. Load wiring mirrors
+  the proven `fleetSpecs` pattern.
+
+### v2.125.0–v2.125.2 — Printable report opens in a new tab; logos, People/Engagement, MODMAN, no-wrap
+User-directed (2026-09-11), across three deploys.
+
+- **v2.125.0** — **Print/PDF opens a standalone report in a new tab** (`window.open` +
+  `document.write`, all CSS inline, logos as data-URIs). The old approach filled a hidden
+  `#avrPrint` div and called `window.print()`, which silently no-ops in embedded/preview
+  contexts — it looked dead. Header carries the **Saudia + NSG logos**, a running header/footer
+  in the `@page` margins, and a **download date+time** stamp; removed the dead `#avrPrint`
+  element + its `@media print` CSS. Saved logo sources under `assets/logos/`.
+- **v2.125.1** — baked the **official Saudia + NSG PNGs** in as data-URIs; merged **Engagement
+  mode into the People section** and rebuilt People as two clean columns (On aircraft / Remote,
+  names bold, no run-together text); moved **Summary up**, above People; renamed report sections
+  **MODMAN → "MODMAN & Commissioning"**, **Software → "Software & Media"**.
+- **v2.125.2** — NSG logo sized to match Saudia; **MODMAN** regrouped to Kontron/Eclipse/ESN →
+  IPHO/Taurus MG ID/TID → Hughes Chassis ID/MAC Address ("Hughes ESN"→"ESN", "Hughes MAC"→"MAC
+  Address"); **Work Carried Out** no longer wraps (Date/Category one line, S/N inline with title).
+
+### v2.124.0–v2.124.2 — Reports (AVR) redesign: grouped People, head-row actions, tri-grouped dossier, retrofit type
+User-directed (2026-09-11), across three deploys.
+
+- **v2.124.0** — People in an opened report **cluster under two tags** (On aircraft / Remote)
+  instead of a badge per name; removed the ugly thick dashed border on remote chips (a
+  `border-style` with no width defaulted to `medium`). Collapsed feed row **drops the kind
+  helpers** ("· Modem · …"), keeping just the entry count with the AVR ref beside it. **Action
+  buttons moved onto the head row**, right-aligned, visible open *or* collapsed, gated by
+  sign-in (viewers get Print only). Aircraft **dossier regrouped into Aircraft / Hardware /
+  Software** (equipment + MODMAN under Hardware). **Multi-position LRUs number their slots**
+  ("CWAP 1 fitted"). New **retrofit report type** that surfaces Mod start/end (rules already
+  accept any `reportType` slug).
+- **v2.124.1** — renamed the type to **"Aircraft Retrofit Completion Report"**; ASO's
+  `reportType` set to `retrofit` in the DB.
+- **v2.124.2** — MODMAN block: plain **Taurus MG ID / TID** (no old→new arrow), grouped Taurus
+  (+IPHO) vs Hughes, dropped the Fitted date.
+- Also this session (not versioned): fixed **AQB's IFE server serial** (moved `69` from Kontron
+  `serial` to Eclipse `altSerial`), and **`resume.sh`** now lists every LRU type in the units
+  figures (was capped at the top 4, hiding the IFE servers).
+
 ### v2.123.0 — Activity/Reports overhaul: inline ops editing, report types, attendee mode, report redesign
 User-directed (2026-09-10), three items in one deploy. **Rules deployed before the page**
 — two new `/avr` fields (`reportType`, attendee `mode`). No new node.

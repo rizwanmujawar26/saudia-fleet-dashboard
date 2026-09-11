@@ -6,7 +6,23 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.122.0–v2.123.0 (2026-09-10).** Two follow-ons in the same day. **v2.122**:
+**Latest — v2.124.0–v2.126.0 (2026-09-11).** Reports + a second database.
+**v2.124–2.125** overhauled the **Reports (AVR)** feed and its **printable report**: People
+grouped On-aircraft/Remote (no more per-name badges), head-row action buttons (Print/Edit/
+Publish/Delete, right-aligned, open *or* collapsed), the aircraft dossier regrouped into
+**Aircraft / Hardware / Software**, a new **"Aircraft Retrofit Completion Report"** type
+(config `retrofit`, adds Mod start/end), and CWAP slot numbering. **Print/PDF now opens a
+standalone report in a new tab** (`window.open` + `document.write`; the old in-page
+`window.print()` hack silently no-opped in embedded contexts) with the **Saudia + NSG logos**
+(baked-in data-URIs, sources in `assets/logos/`), a running header/footer and a download
+timestamp. **v2.126** added the **`/configs` configuration register** (see its data-model
+entry): a second reference DB keyed by config code, holding the IFE supplier+system for a
+whole class; every `/fleet/{tail}` now carries a `config`, and `ifeSystemOf` derives IFE from
+it. Read CHANGELOG v2.124–v2.126 and the `/configs` + `/fleet` `config` data-model entries
+first. ⚠️ *Verifying live data in the Browser preview fails when the pane is hidden — the tab
+is throttled and fetches hang; verify with `curl` or by seeding state, not by waiting on it.*
+
+**Prior — v2.122.0–v2.123.0 (2026-09-10).** Two follow-ons in the same day. **v2.122**:
 the **IFE server** is now a dual-identity box (Kontron S/N = `/units serial`, Eclipse S/N =
 `altSerial`), shown paired on the Serials tab — no new node, `altSerial` was already in the
 rules. **v2.123**: the Activity tab's **"Visit Reports" view is renamed "Reports"** and made
@@ -328,6 +344,7 @@ adding it to the rules first.
 | `scope` | `in` \| `no`, **or absent** (v2.98.0). Whether the airframe *will* get connectivity. Surfaces in the **Fit column** for not-yet-fitted aircraft only — a fitted one reads Retrofit/Linefit and is self-evidently in scope. `fitview` precedence: `In Retrofit` (status) → `retrofit`/`linefit` (fit) → `no-scope`/`in-scope` (scope) → `none` (Not Started). Editable via the single Fit dropdown, which maps the pick back to fit/scope/fleetStatus in `handleFleetEdit`. |
 | `system` | `Eclipse` \| `HBC+` \| `GX` \| `Inmarsat` \| `Viasat` \| `Thales` \| `SITA`, **or absent** (v2.98.0; list widened + `Rave`→`HBC+` v2.101.0). Connectivity hardware / service line. Read-only cell **derives** the default from `fit` when unset (`systemDefault()`: retrofit→Eclipse, linefit→HBC+); an explicit value overrides. Badge class is `sys-${sysSlug(name)}` — `sysSlug` drops non-alphanumerics so `HBC+`→`sys-hbc` (a valid selector). Shown in the Connectivity column group. `FLEET_SYSTEMS` is the one list; the Edit modal's opts derive from it. |
 | `fleetStatus` | **WiFi installation status** — one of `Planned`, `In Retrofit`, `Installed`, `Commissioned`, `Active`, `Decommissioned`, **or absent**. Exact strings, defined once in `FLEET_STATUSES`. ⚠️ **Absent no longer defaults to `Active`** (v2.89.0) — `fleetStatusOf` returns `''`, so a not-started airframe stays out of `activeFleet()` and every derived count. `programmeFleet()` (a `fit` on record) is the WiFi-programme scope; `projectScope()` counts it |
+| `config` | cabin/IFE **configuration code** (`32U`, `32N`, `321`, `323`, `324`, `33R`, `333`, `33D`, …), **or absent** (v2.126.0). Points at a `/configs/{code}` record — the aircraft's IFE class. `setFleetRoster` carries it into `aircraftData`, and `ifeSystemOf(a)` reads `configsLive[a.config]`. |
 | `comments` | free text |
 
 ⚠️ The roster holds **every airframe** (~100+, the count moves as the user edits), but
@@ -350,6 +367,33 @@ which drop `regUnknown`/`station`/`pinHash` — to the new tail, delete the old)
 an UNKNOWN placeholder is promoted to its real tail. `pinHash` is never shown. Saves use
 **deep-path leaves** (`ops/state`, `modem/taurus/mgId`) — never a group path beside a
 leaf. `saveAircraftEditor` / `collectAcEdit` / `acReloadInto`.
+
+### `/configs/{code}` — the configuration register (v2.126.0)
+
+The **second reference database** (the first being `/fleet`). One record per cabin/IFE
+**configuration code**, each heading a whole class of aircraft that reference it by
+`/fleet/{tail}/config`. So an IFE fact is stored once per class, not per tail.
+
+| field | values |
+|---|---|
+| key | the config code — `32U`, `32N`, `321`, `323`, `324`, `33R`, `333`, `33D` (Airbus so far; Boeing `773`/`789`/`781`… join here later, no structural change) |
+| `manufacturer` | `Airbus` \| `Boeing` |
+| `family` | `A320`, `A321`, `A330`, … |
+| `model` | `A320-214`, `A321-251NX`, `A330-343`, … |
+| `ifeSupplier` | `Panasonic` \| `Thales` |
+| `ifeSystem` | `eX1`, `eX0`, `NeXT`, `Astrova`, `i5000`, `Avant`, … |
+
+- **8 Airbus configs**, imported v2.126.0 from a per-aircraft file (97 aircraft) — see the
+  reconciliation in that commit. The 2 tails missing from the source (**ASAP**, **ASAQ**,
+  A321-251NX) were set to config `323`.
+- Low-traffic node: fetched in the initial `Promise.all`, re-read by the low-traffic poll,
+  seeded in the poll snapshot. Public read, editor write; validated fields + `$other:false`.
+- `ifeSystemOf(a)` derives IFE as `"{ifeSupplier} {ifeSystem}"` from `configsLive[a.config]`,
+  falling back to the legacy `IFE_BY_TYPE` map (only `A321XLR`) when an aircraft has no config.
+- **Scope so far is data + derivation only** — no Configurations editing UI yet.
+
+⚠️ It is a **node**, so it needed the [four edits](#) — rules, `backup.sh`, `restore.sh`,
+`verify-deployment.sh` — plus the page wiring above.
 
 ### `/fleetSpecs/{tail}` — airframe reference data (captured, not yet shown)
 
