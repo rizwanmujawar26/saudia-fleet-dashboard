@@ -615,6 +615,13 @@
             border-bottom-color: #ffc107;
         }
 
+        /* Big screens: centre the menu across the bar, the way Apple's does. Only where
+           the tabs actually fit — below this they overflow and must stay left-aligned so
+           the strip can scroll sideways and no tab is stranded off the left edge. */
+        @media (min-width: 900px) {
+            .tabs { justify-content: center; }
+        }
+
         .tab-content {
             display: none;
         }
@@ -4598,8 +4605,8 @@
         /* Timeline */
         .timeline {
             position: relative;
-            padding: 20px 0;
-            margin: 30px 0;
+            padding: 0 0 20px;
+            margin: 0 0 30px;
         }
 
         .timeline-section {
@@ -5245,7 +5252,7 @@
                  scrolls horizontally on a narrow screen; sign-in has moved out of the
                  menu to the status bar at the foot of the page. -->
             <nav class="tabs" role="tablist" aria-label="Primary navigation">
-                <button class="tab-button active" onclick="switchTab('overview')">📊 Overview</button>
+                <button class="tab-button active" onclick="switchTab('overview')">🏠 Home</button>
                 <button class="tab-button" onclick="switchTab('aircraft')">💿 Software</button>
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media</button>
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet</button>
@@ -6956,8 +6963,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.127.0';
-        const APP_BUILD    = '2026.09.11.07';
+        const APP_VERSION  = '2.127.1';
+        const APP_BUILD    = '2026.09.11.08';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
