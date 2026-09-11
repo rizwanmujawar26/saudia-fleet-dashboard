@@ -6743,16 +6743,19 @@
         // lowercase slug) so a new kind is one line here and no rules change: a visit, a
         // remote-support write-up, a flight test, a test flight. Default is 'visit' — the
         // reports began life as Aircraft Visit Reports.
+        // Names dropped the repeated "…Report" (user, 2026-09-11). `test_flight` is kept as
+        // a HIDDEN legacy alias of Flight Test so old records still render, but it is no
+        // longer offered in the editor dropdown (the two flight kinds were near-duplicates).
         const REPORT_TYPES = [
-            { value: 'visit',          label: 'Visit Report',          short: 'VISIT',   css: 'visit' },
+            { value: 'visit',          label: 'Aircraft Visit',        short: 'VISIT',   css: 'visit' },
             // The end-to-end retrofit write-up — done once per aircraft. Covers the whole
             // install-and-activation campaign (hardware fitment, commissioning, first
             // activation), so it carries the Mod start/end window the plain visit report omits.
-            { value: 'retrofit',       label: 'Aircraft Retrofit Completion Report', short: 'RETROFIT', css: 'retrofit' },
-            { value: 'remote_support', label: 'Remote Support Report', short: 'REMOTE',  css: 'remote' },
-            { value: 'flight_test',    label: 'Flight Test Report',    short: 'FLT TEST',css: 'flight' },
-            { value: 'test_flight',    label: 'Test Flight Report',    short: 'TEST FLT',css: 'flight' },
-            { value: 'other',          label: 'Report',                short: 'REPORT',  css: 'other' },
+            { value: 'retrofit',       label: 'Retrofit Completion',   short: 'RETROFIT', css: 'retrofit' },
+            { value: 'remote_support', label: 'Remote Support',        short: 'REMOTE',  css: 'remote' },
+            { value: 'flight_test',    label: 'Flight Test',           short: 'FLT TEST',css: 'flight' },
+            { value: 'test_flight',    label: 'Flight Test',           short: 'FLT TEST',css: 'flight', hidden: true },
+            { value: 'other',          label: 'General Report',        short: 'REPORT',  css: 'other' },
         ];
         function reportType(v) { return REPORT_TYPES.find(t => t.value === v) || REPORT_TYPES[0]; }
         function avrReportType(v) { return reportType((v || {}).reportType); }
@@ -7260,8 +7263,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.133.1';
-        const APP_BUILD    = '2026.09.11.18';
+        const APP_VERSION  = '2.133.2';
+        const APP_BUILD    = '2026.09.11.19';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12527,22 +12530,25 @@
             // The reports this row already belongs to — by pin, by assigned activity, or by
             // date window. The chip opens the first one straight to its PDF (task: the AVR
             // reference is a link to the report).
-            // A derived report (AVR) row — it IS a report, so it edits by opening the AVR
-            // editor and carries neither an add-to-report control nor a "belongs to report"
-            // chip (that chip would just point back at itself).
+            // A derived report (AVR) row IS a report: it edits by opening the AVR editor
+            // and carries the green report chip itself (below). `containing` still drives
+            // the member-row unpin button (🔓) but NO LONGER paints a chip on member rows —
+            // the report reference is shown ONCE, on the report's own visit row, not
+            // duplicated on every activity it groups (user, 2026-09-11).
             const isVisit = x.kind === 'visit' && !!x.avrId;
             const containing = isVisit ? [] : visitsContaining(x);
+            // The green report chip: ONLY on the report's own visit row, at the right end,
+            // linking to its PDF (was previously rendered on every member row).
             let visitChip = '';
-            if (containing.length) {
-                const v0 = containing[0];
-                const extra = containing.length > 1 ? ` +${containing.length - 1}` : '';
-                const titleList = containing.map(v => v.ref || 'Visit').join(', ');
-                visitChip = `<button class="repo-visit-chip" title="Open report ${escAttr(titleList)} (PDF)" onclick="event.stopPropagation();printAvr('${escAttr(v0.id)}')">📋 ${escAttr(v0.ref || 'Visit')}${escAttr(extra)}</button>`;
+            if (isVisit && avrLive[x.avrId]) {
+                const ref = avrLive[x.avrId].ref || 'Report';
+                visitChip = `<button class="repo-visit-chip" title="Open report ${escAttr(ref)} (PDF)" onclick="event.stopPropagation();printAvr('${escAttr(x.avrId)}')">📋 ${escAttr(ref)}</button>`;
             }
 
             // Derived (non-activity) rows name their source so it is clear they are
-            // maintained on their own tab, not editable inline.
-            const srcTag = !isAct ? `<span class="repo-src" title="Maintained on its source tab">${escAttr(repoSourceLabel(x))}</span>` : '';
+            // maintained on their own tab. A visit row already carries its green chip, so it
+            // needs no extra "Report" tag.
+            const srcTag = (!isAct && !isVisit) ? `<span class="repo-src" title="Maintained on its source tab">${escAttr(repoSourceLabel(x))}</span>` : '';
 
             // An operational row is a derived out-of-service period, not a /activities
             // record — but it edits in place through the same opsEdit modal the (now
@@ -12580,7 +12586,7 @@
                 mark,
                 reg: escAttr(x.tail || '—'),
                 type: typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : '',
-                kind: `<span class="tl-kind tl-kind-${x.kind}">${x.kind === 'modification' ? (x.modPhase === 'start' ? 'MOD START' : 'MOD END') : x.kind}</span>`,
+                kind: `<span class="tl-kind tl-kind-${x.kind}">${x.kind === 'modification' ? (x.modPhase === 'start' ? 'MOD START' : 'MOD END') : x.kind === 'visit' ? 'REPORT' : x.kind}</span>`,
                 main,
             })}</li>`;
         }
@@ -12901,6 +12907,25 @@
                     if (fi && inWin(fi)) base.push({ iso: fi, kind: 'hardware', tail: v.aircraft, type, location: '', title: `${label}${pos} fitted`, sub });
                     if (ri && inWin(ri)) base.push({ iso: ri, kind: 'hardware', tail: v.aircraft, type, location: '', title: `${label}${pos} removed`, sub });
                 });
+            });
+
+            // Maintenance Issues LINKED to this report (v2.133.2) — the investigation that
+            // opened the issue, or the fix that closed it, IS the work this report covers.
+            // A remote-support report with no logged activity was coming out empty; this puts
+            // the discovered fault (e.g. "WiFi Inoperative — MODMAN failure") on the report.
+            // Matched by the link, not the date window, so it shows even when the issue's
+            // official date sits outside the visit day. Deduped against any date-derived copy.
+            const haveIssue = new Set(base.filter(b => b.issueId).map(b => b.issueId));
+            issueEntries().forEach(i => {
+                const isOrigin = i.originVisitId === v.id;
+                const isFix = i.resolutionVisitId === v.id;
+                if ((!isOrigin && !isFix) || haveIssue.has(i.id)) return;
+                const svcTxt = `${issLabel(ISSUE_SERVICES, i.service)} ${issLabel(ISSUE_IMPACTS, i.impact)}`.trim();
+                const iso = toISODate(isFix && !isOrigin ? (i.resolvedDate || v.dateStart) : (i.discoveredDate || i.informedDate || v.dateStart)) || startIso;
+                base.push({ iso, kind: 'service', issueId: i.id, tail: v.aircraft, type, location: '',
+                            title: isFix && !isOrigin ? `Service restored — ${i.reason || svcTxt}` : `${svcTxt || 'Service issue'} — ${i.reason || ''}`.replace(/ — $/, ''),
+                            sub: i.detail || '' });
+                haveIssue.add(i.id);
             });
 
             return base.sort((a, b) => a.iso.localeCompare(b.iso) || a.kind.localeCompare(b.kind) || String(a.title).localeCompare(String(b.title)));
@@ -13256,7 +13281,7 @@
                 <div class="ac-edit-grid">
                     <div class="ac-edit-field">
                         <label>Report type</label>
-                        <select id="avrReportType">${REPORT_TYPES.map(t => `<option value="${t.value}" ${t.value === (v.reportType || 'visit') ? 'selected' : ''}>${t.label}</option>`).join('')}</select>
+                        <select id="avrReportType">${REPORT_TYPES.filter(t => !t.hidden || t.value === v.reportType).map(t => `<option value="${t.value}" ${t.value === (v.reportType || 'visit') ? 'selected' : ''}>${t.label}</option>`).join('')}</select>
                     </div>
                     <div class="ac-edit-field">
                         <label>Aircraft *</label>
@@ -13623,7 +13648,7 @@
             const people = avrAttendees(v);
             const type = avrTypeOf(v.aircraft);
             const rt = avrReportType(v);
-            const kindLabel = k => ({ software: 'Software', media: 'Media', hardware: 'Hardware', commission: 'Commissioning', maintenance: 'Maintenance', modification: 'Modification', operational: 'Operational', activation: 'Activation' }[k] || k);
+            const kindLabel = k => ({ software: 'Software', media: 'Media', hardware: 'Hardware', commission: 'Commissioning', maintenance: 'Maintenance', modification: 'Modification', operational: 'Operational', service: 'Service', activation: 'Activation' }[k] || k);
             const actRows = members.length ? members.map(x => {
                 let details = `<b>${escAttr(x.title || '')}</b>`;
                 // TEMPLATE RULE (universal): the Details cell reads as ONE line — the bold
@@ -13693,10 +13718,12 @@
             // Top block is one line only — aircraft, dates, location. The modification
             // window lives in the Specifications section below (sourced from the Fleet
             // retrofit fields), not duplicated up here.
-            const metaGrid = `<div class="rpt-grid">
-                <div><span class="k">Aircraft</span> ${escAttr(v.aircraft)}${type ? ' <span class="muted">(' + escAttr(type) + ')</span>' : ''}</div>
-                <div><span class="k">Dates</span> ${escAttr(avrDateLabel(v))}</div>
-                <div><span class="k">Location</span> ${escAttr(avrLocationFull(v) || '—')}</div>
+            // The identity band — made prominent (v2.133.2): the full HZ- registration leads,
+            // with dates and location, each as a large value under a small caps label.
+            const metaGrid = `<div class="rpt-meta">
+                <div class="rpt-meta-cell"><span class="mk">Aircraft</span><span class="mv mv-lead">HZ-${escAttr(v.aircraft)}</span>${type ? `<span class="ms">${escAttr(type)}</span>` : ''}</div>
+                <div class="rpt-meta-cell"><span class="mk">Dates</span><span class="mv">${escAttr(avrDateLabel(v))}</span></div>
+                <div class="rpt-meta-cell"><span class="mk">Location</span><span class="mv">${escAttr(avrLocationFull(v) || '—')}</span></div>
             </div>`;
 
             // Engagement + People in one block. Names render in two clearly separate
@@ -13736,11 +13763,20 @@
   .rpt-titleband { margin:16px 0 8px; }
   .rpt-kicker { font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
   .rpt-title { font-size:22px; font-weight:800; color:var(--navy); margin:2px 0 4px; }
-  .rpt-ref { font-size:12px; font-weight:700; color:var(--green); letter-spacing:.4px; }
+  .rpt-ref { font-size:14px; font-weight:800; color:var(--green); letter-spacing:.5px; }
   .draft-flag { display:inline-block; margin-left:8px; background:#fff3cd; color:#8a6d00;
     font-size:10px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; padding:2px 7px; border-radius:5px; vertical-align:2px; }
   .rpt-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px 22px; margin:12px 0 4px; font-size:12.5px; }
   .rpt-grid .k, .k { display:block; font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); }
+  /* The prominent identity band (aircraft / dates / location) — v2.133.2. */
+  .rpt-meta { display:grid; grid-template-columns:repeat(3,1fr); gap:0; margin:14px 0 4px;
+    background:var(--soft); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .rpt-meta-cell { padding:11px 16px; border-left:1px solid var(--line); }
+  .rpt-meta-cell:first-child { border-left:none; }
+  .rpt-meta .mk { display:block; font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+  .rpt-meta .mv { display:block; font-size:15px; font-weight:700; color:var(--navy); }
+  .rpt-meta .mv-lead { font-size:18px; font-weight:800; letter-spacing:.3px; }
+  .rpt-meta .ms { display:block; font-size:11px; color:var(--muted); margin-top:1px; }
   .muted { color:var(--muted); }
   .sec { font-size:12px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--navy);
     margin:20px 0 8px; padding-bottom:4px; border-bottom:1px solid var(--line); }
@@ -13812,7 +13848,7 @@
     <div class="rpt-titleband">
       <div class="rpt-kicker">Saudia Connectivity / IFEC Programme</div>
       <div class="rpt-title">${escAttr(rt.label)}${isDraft ? '<span class="draft-flag">Draft</span>' : ''}</div>
-      <div class="rpt-ref">${escAttr(v.aircraft)}${type ? ' · ' + escAttr(type) : ''}${v.ref ? ' · ' + escAttr(v.ref) : ''}</div>
+      <div class="rpt-ref">${escAttr(v.ref || '')}</div>
     </div>
     ${metaGrid}
     ${v.summary ? `<div class="sec">Summary</div><div class="note">${escAttr(v.summary)}</div>` : ''}
@@ -18852,7 +18888,7 @@
                         mark: markHtml,
                         reg: escAttr(x.tail),
                         type: typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : '',
-                        kind: kind ? '' : `<span class="tl-kind tl-kind-${x.kind}">${x.kind}</span>`,
+                        kind: kind ? '' : `<span class="tl-kind tl-kind-${x.kind}">${x.kind === 'visit' ? 'REPORT' : x.kind}</span>`,
                         main: `${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}<span class="tl-title">${escAttr(x.title)}</span>${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}`,
                     })}</div>
                 </li>`;
