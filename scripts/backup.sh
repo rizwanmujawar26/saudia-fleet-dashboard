@@ -15,7 +15,7 @@ STAMP="$(date -u +%Y-%m-%d)"
 # FLEET_BACKUP_DIR lets a caller aim somewhere other than today's folder. restore.sh
 # uses it so a pre-restore safety copy cannot overwrite the snapshot being restored.
 OUT="${FLEET_BACKUP_DIR:-$ROOT/backups/$STAMP}"
-NODES="fleet fleetSpecs configs aircraft activities hardware units mediaLoads modmans avr visits"
+NODES="fleet fleetSpecs configs aircraft activities issues hardware units mediaLoads modmans avr visits"
 
 mkdir -p "$OUT"
 echo "Backing up $DB"

@@ -4041,7 +4041,65 @@
             border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
         }
         .ac-edit-btn-primary:disabled { opacity: .6; cursor: default; }
+        .ac-edit-btn-danger {
+            padding: 9px 16px; border: 1px solid #f0b7b7; background: #fff; color: #b1242f;
+            border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;
+        }
+        .ac-edit-btn-danger:hover { background: #fdecec; }
         @media (max-width: 560px) { .ac-edit-grid { grid-template-columns: 1fr; } }
+
+        /* ===== Maintenance Issues — service-availability axis ===== */
+        /* The Fleet Connectivity Status sub-badge (under ACTIVE): a service outage on a
+           still-flying aircraft. INOP is red, DEGRADED amber — the same vocabulary as the
+           issue cards and the Timeline marks, so one glance reads the same everywhere. */
+        .svc-badge { display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 999px;
+            font-size: 9.5px; font-weight: 800; letter-spacing: .04em; line-height: 1.5; }
+        .svc-inop { background: #fdecec; color: #b1242f; border: 1px solid #f0b7b7; }
+        .svc-degraded { background: #fff4e0; color: #9a6400; border: 1px solid #f0d59a; }
+        .fleet-status-stack { display: flex; flex-direction: column; align-items: center; gap: 0; }
+
+        /* The Maintenance view badge on the view toggle is red when issues are open. */
+        .issue-open-badge { background: #dc3545 !important; color: #fff !important; }
+
+        /* Issue feed: a section per Open / Resolved, cards inside. */
+        .issue-group-title { margin: 14px 2px 8px; font-size: 12.5px; font-weight: 700;
+            color: #5a6b7b; text-transform: uppercase; letter-spacing: .05em; }
+        .issue-group-title:first-child { margin-top: 4px; }
+        .issue-card { border: 1px solid #e3e8ee; border-radius: 12px; background: #fff;
+            padding: 13px 15px; display: flex; flex-direction: column; gap: 9px; }
+        .issue-card.is-open { border-left: 4px solid #dc3545; }
+        .issue-card.is-open.is-degraded { border-left-color: #d98a00; }
+        .issue-card.is-resolved { border-left: 4px solid #6c9c7a; opacity: .92; }
+        .issue-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .issue-tail { font-weight: 800; font-size: 15px; color: #17324b; letter-spacing: .02em; }
+        .issue-reason { font-weight: 600; color: #2a3b4a; }
+        .issue-pill { padding: 2px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700;
+            letter-spacing: .02em; border: 1px solid transparent; white-space: nowrap; }
+        .issue-pill-inop { background: #fdecec; color: #b1242f; border-color: #f0b7b7; }
+        .issue-pill-degraded { background: #fff4e0; color: #9a6400; border-color: #f0d59a; }
+        .issue-pill-major { background: #f3e6ff; color: #6a2fb0; border-color: #dcc2f2; }
+        .issue-pill-minor { background: #eef2f6; color: #5a6b7b; border-color: #d7dee5; }
+        .issue-pill-high { background: #ffe3e3; color: #b1242f; border-color: #f2b8b8; }
+        .issue-pill-medium { background: #fff1d6; color: #8a5a00; border-color: #efce93; }
+        .issue-pill-low { background: #e7f1ff; color: #245fb1; border-color: #b8d3f2; }
+        .issue-pill-svc { background: #e8f5ee; color: #1f7a45; border-color: #bfe2cd; }
+        .issue-spacer { flex: 1; }
+        .issue-actions { display: flex; gap: 6px; }
+        .issue-act-btn { border: 1px solid #d7dee5; background: #fff; border-radius: 6px;
+            padding: 4px 9px; font-size: 12px; cursor: pointer; color: #3a4b5a; }
+        .issue-act-btn:hover { background: #f2f6fa; border-color: #b9c6d2; }
+        .issue-act-btn.primary { background: #0a5c34; color: #fff; border-color: #0a5c34; font-weight: 600; }
+        .issue-act-btn.primary:hover { background: #0c6f3f; }
+        .issue-dates { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 12.5px; color: #47586a; }
+        .issue-date b { color: #2a3b4a; font-weight: 700; }
+        .issue-days { font-weight: 700; color: #b1242f; }
+        .issue-card.is-resolved .issue-days { color: #3a7a52; }
+        .issue-detail { font-size: 12.5px; color: #55606b; }
+        .issue-link { font-size: 12px; }
+        .issue-link a, .issue-link button.linklike { color: #245fb1; background: none; border: none;
+            padding: 0; cursor: pointer; text-decoration: underline; font: inherit; }
+        /* Timeline mark for a service issue: 🛜 out, ✔ restored (mirrors the ops ⚠/✔). */
+        .kind-service .tl-kind, .tl-kind-service { text-transform: uppercase; }
 
         /* ===== Aircraft Visit Reports (AVR) feed ===== */
         .avr-feed { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
@@ -5633,6 +5691,7 @@
                         <div class="avr-viewtoggle" role="tablist" aria-label="Activity view">
                             <button id="avrTabActs" class="avr-vt-btn active" role="tab" onclick="setAvrView('activities')">🗂️ Activities</button>
                             <button id="avrTabVisits" class="avr-vt-btn" role="tab" onclick="setAvrView('visits')">📋 Reports</button>
+                            <button id="avrTabIssues" class="avr-vt-btn" role="tab" onclick="setAvrView('issues')">🔧 Maintenance</button>
                         </div>
                         <!-- One Add button for the two add actions (Add Activity / Add Visit
                              Report): pressing it opens a small menu to choose. Collapses to a
@@ -6515,6 +6574,29 @@
         </div>
     </div>
 
+    <!-- Maintenance Issue editor. Body built in openIssueEditor(); the foot's Delete /
+         Resolve buttons are shown only when editing an existing issue. A Maintenance
+         Issue is the SERVICE-availability axis — see /issues in the script. -->
+    <div id="issueEditOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1001; align-items:center; justify-content:center;">
+        <div class="ac-edit-panel" style="max-width:560px;">
+            <div class="ac-edit-head">
+                <div>
+                    <h3 id="issueEditTitle" style="color:#0a5c34; margin:0;">Maintenance issue</h3>
+                    <p id="issueEditSub" class="ac-edit-sub"></p>
+                </div>
+                <button class="ac-edit-x" title="Close" aria-label="Close" onclick="closeIssueEditor()">✕</button>
+            </div>
+            <div id="issueEditBody" class="ac-edit-body"></div>
+            <div id="issueEditError" class="ac-edit-error" style="display:none;"></div>
+            <div class="ac-edit-foot">
+                <button id="issueDeleteBtn" class="ac-edit-btn-danger" style="display:none;" onclick="deleteIssue()">Delete</button>
+                <span style="flex:1;"></span>
+                <button class="ac-edit-btn-secondary" onclick="closeIssueEditor()">Cancel</button>
+                <button id="issueEditSave" class="ac-edit-btn-primary" onclick="saveIssue()">Save issue</button>
+            </div>
+        </div>
+    </div>
+
     <script>
 
         // Aircraft data with all fleet information
@@ -6580,6 +6662,63 @@
         // derives its Maintenance and Hardware entries from it — there is no separate
         // Timeline collection to keep in step.
         let activitiesLive = {};
+
+        // ===== Maintenance Issues — the SERVICE-availability axis =====
+        // /issues/{id} records a period during which a tail's IFC/WiFi SERVICE is
+        // inoperative or degraded while the airframe itself is still flying. This is a
+        // THIRD axis, independent of both the WiFi programme (fleetStatus) and the
+        // airframe availability (ops/AOG): AS76 can have a failed MODMAN — WiFi dead —
+        // and never leave the schedule, so it must NOT read as AOG. An issue carries
+        // severity (major/minor) and priority (high/medium/low), the affected service and
+        // whether it is fully inop or degraded, a reason, and three distinct dates:
+        //   discoveredDate — when we found the fault (context; the remote-support day)
+        //   informedDate   — when we told the customer (Saudia). THIS is the OFFICIAL
+        //                    "inoperative from" date the Display team consumes, not the
+        //                    discovery date — the two differ by design (AS76: found 06-Sep,
+        //                    informed 07-Sep, official inop = 07-Sep).
+        //   resolvedDate   — when service came back (empty while open). Days-down is
+        //                    informedDate → resolvedDate (or today while open).
+        // originActivityId links the investigation that opened it; resolutionActivityId
+        // the fix (e.g. the MODMAN R&R) that closed it. Open (no resolvedDate) issues flag
+        // the Fleet Connectivity Status cell (INOP/DEGRADED under the ACTIVE pill) and
+        // pin the tail onto the Timeline; all of it is DERIVED — nothing is written twice.
+        // Polled with the other low-traffic nodes, so every save is mirrored locally.
+        let issuesLive = {};
+
+        const ISSUE_SERVICES   = [{ value: 'wifi', label: 'WiFi' }, { value: 'ifc', label: 'IFC' }, { value: 'both', label: 'WiFi + IFC' }];
+        const ISSUE_IMPACTS    = [{ value: 'inop', label: 'Inoperative' }, { value: 'degraded', label: 'Degraded' }];
+        const ISSUE_SEVERITIES = [{ value: 'major', label: 'Major' }, { value: 'minor', label: 'Minor' }];
+        const ISSUE_PRIORITIES = [{ value: 'high', label: 'High' }, { value: 'medium', label: 'Medium' }, { value: 'low', label: 'Low' }];
+        const issLabel = (arr, v) => (arr.find(o => o.value === v) || {}).label || '';
+
+        // Every issue, id folded in (a polled record carries no .id — the key is the map
+        // key, so a raw store[id] would drop it and any filter on i.id would silently
+        // fail; see the AVR/polled-nodes lesson).
+        function issueEntries() {
+            return Object.keys(issuesLive || {}).map(id => ({ id, ...issuesLive[id] }));
+        }
+        function issueIsOpen(iss) { return !!iss && !iss.resolvedDate; }
+        function issuesForTail(tail) { return issueEntries().filter(i => i.tail === tail); }
+        function openIssuesForTail(tail) { return issuesForTail(tail).filter(issueIsOpen); }
+        // Worst OPEN service impact for a tail: 'inop' outranks 'degraded'; '' when the
+        // service is fine. Drives the Fleet Connectivity Status sub-badge and its filter.
+        function svcStateForTail(tail) {
+            const open = openIssuesForTail(tail);
+            if (open.some(i => i.impact === 'inop')) return 'inop';
+            if (open.some(i => i.impact === 'degraded')) return 'degraded';
+            return '';
+        }
+        // Days the service has been down: the OFFICIAL inop date (informedDate) →
+        // resolvedDate, or today while still open. null when no official date is set.
+        function issueDaysDown(iss) {
+            if (!iss || !iss.informedDate) return null;
+            return groundedDays(iss.informedDate, iss.resolvedDate || new Date().toISOString().slice(0, 10));
+        }
+        function issueDaysDownLabel(iss) {
+            const n = issueDaysDown(iss);
+            if (n == null) return '';
+            return n === 1 ? '1 day' : `${n} days`;
+        }
 
         // ===== Aircraft Visit Reports (AVR) =====
         // /avr/{id} groups the activities of one engagement (one aircraft, a date range)
@@ -7121,8 +7260,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.132.1';
-        const APP_BUILD    = '2026.09.11.15';
+        const APP_VERSION  = '2.133.0';
+        const APP_BUILD    = '2026.09.11.17';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -7345,12 +7484,13 @@
             // to LOW_TRAFFIC_POLL_MS late, and since the Media widgets are built from
             // it, every monthly card was missing for the first 25 seconds of each page
             // load — the strip looked broken.
-            Promise.all(['hardware', 'units', 'activities', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr', 'configs'].map(n =>
+            Promise.all(['hardware', 'units', 'activities', 'issues', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr', 'configs'].map(n =>
                 fetch(`${FIREBASE_DB_URL}/${n}.json`).then(r => r.json()).catch(() => null)
-            )).then(([hw, un, ac, ml, mm, fs, av, cf]) => {
+            )).then(([hw, un, ac, is, ml, mm, fs, av, cf]) => {
                 hardwareLive   = hw || {};
                 unitsLive      = un || {};
                 activitiesLive = ac || {};
+                issuesLive     = is || {};
                 mediaLoadsLive = ml || {};
                 modmansLive    = mm || {};
                 fleetSpecsLive = fs || {};
@@ -7401,6 +7541,7 @@
                 hardware:   d => { hardwareLive = d || {}; },
                 units:      d => { unitsLive = d || {}; },
                 activities: d => { activitiesLive = d || {}; },
+                issues:     d => { issuesLive = d || {}; },
                 mediaLoads: d => { mediaLoadsLive = d || {}; },
                 modmans:    d => { modmansLive = d || {}; },
                 fleetSpecs: d => { fleetSpecsLive = d || {}; },
@@ -7439,6 +7580,7 @@
                 hardware:   JSON.stringify(Object.keys(hardwareLive).length ? hardwareLive : null),
                 units:      JSON.stringify(Object.keys(unitsLive).length ? unitsLive : null),
                 activities: JSON.stringify(Object.keys(activitiesLive).length ? activitiesLive : null),
+                issues:     JSON.stringify(Object.keys(issuesLive).length ? issuesLive : null),
                 mediaLoads: JSON.stringify(Object.keys(mediaLoadsLive).length ? mediaLoadsLive : null),
                 modmans:    JSON.stringify(Object.keys(modmansLive).length ? modmansLive : null),
                 fleetSpecs: JSON.stringify(Object.keys(fleetSpecsLive).length ? fleetSpecsLive : null),
@@ -9128,6 +9270,17 @@
                         { v: 'public', l: 'Public' },
                         { v: 'hidden', l: 'Hidden' },
                     ] },
+                    // Service availability — the third axis (open Maintenance Issues).
+                    // Matches the Connectivity Status sub-badge (data-svc). Only the
+                    // states actually present are offered, so it stays empty until an
+                    // aircraft's IFC/WiFi service is actually down.
+                    { id: 'svc', label: 'Service', grouped: true,
+                      options: () => {
+                          const opts = [];
+                          if (fleetRoster.some(a => svcStateForTail(a.id) === 'inop')) opts.push({ v: 'inop', l: 'IFC Inoperative' });
+                          if (fleetRoster.some(a => svcStateForTail(a.id) === 'degraded')) opts.push({ v: 'degraded', l: 'Degraded' });
+                          return opts;
+                      } },
                     // Drives the AOG quick pill only — hidden, so no trigger and out of the
                     // collapsed sheet (the media `age` / satcom `todo` pattern). "AOG" on the
                     // bar means ANY out-of-service state (user, 2026-09-06), not just the aog
@@ -9281,7 +9434,8 @@
                         { v: 'software', l: 'Software' }, { v: 'media', l: 'Media' },
                         { v: 'hardware', l: 'Hardware' }, { v: 'commission', l: 'Commissioning' },
                         { v: 'maintenance', l: 'Maintenance' }, { v: 'modification', l: 'Modification' },
-                        { v: 'operational', l: 'Operational' }, { v: 'activation', l: 'Activation' },
+                        { v: 'operational', l: 'Operational' }, { v: 'service', l: 'Service' },
+                        { v: 'activation', l: 'Activation' },
                     ] },
                     { id: 'mode', label: 'Mode', hidden: true, options: AVR_MODES.map(m => ({ v: m.value, l: m.label })) },
                     { id: 'status', label: 'Status', hidden: true, options: [
@@ -10780,16 +10934,30 @@
                             : (rStart ? '<span class="mod-bar mod-ongoing" title="Retrofit under way — no post-mod first flight recorded yet">ONGOING</span>'
                                 : '<span class="mod-bar mod-empty">—</span>')));
 
+                // Service-outage sub-badge: an OPEN Maintenance Issue means the IFC/WiFi
+                // service is down (INOP) or degraded on this tail while the airframe still
+                // flies — the third axis, independent of programme status and AOG. It
+                // stacks UNDER the programme Status pill (never replaces it) and drives
+                // the Service filter via data-svc. Read-only (issues are edited on the
+                // Activity → Maintenance view), so it is not shown in the edit column.
+                const svc = svcStateForTail(a.id);
+                row.dataset.svc = svc || 'ok';
+                const svcOpen = openIssuesForTail(a.id);
+                const svcBadge = svc
+                    ? `<span class="svc-badge svc-${svc}" title="${escAttr(svcOpen.map(x => `${issLabel(ISSUE_SERVICES, x.service)} ${issLabel(ISSUE_IMPACTS, x.impact)} — ${x.reason || ''}${x.informedDate ? ` (since ${x.informedDate})` : ''}`).join('; '))}">${svc === 'inop' ? 'IFC INOP' : 'DEGRADED'}</span>`
+                    : '';
                 const statusCell = editing
                     ? `<select class="edit-select" data-id="${a.id}" data-field="fleetStatus" onchange="handleFleetEdit(this)">${
                         (st ? '' : '<option value="" selected>— Not set —</option>') +
                         FLEET_STATUSES.map(s => `<option value="${s.value}" ${s.value === st ? 'selected' : ''}>${s.label}</option>`).join('')
                       }</select>`
-                    : (!st
-                        ? '<span class="fleet-notset">—</span>'
-                        : st === 'Active'
-                            ? '<span class="status-badge fleet-active">ACTIVE</span>'
-                            : `<span class="status-badge fleet-inactive" title="${escAttr(st)}">INACTIVE</span>`);
+                    : `<span class="fleet-status-stack">${
+                        (!st
+                            ? '<span class="fleet-notset">—</span>'
+                            : st === 'Active'
+                                ? '<span class="status-badge fleet-active">ACTIVE</span>'
+                                : `<span class="status-badge fleet-inactive" title="${escAttr(st)}">INACTIVE</span>`)
+                        }${svcBadge}</span>`;
 
                 // Never inferred — blank until someone types it.
                 const age = activationAge(activated);
@@ -12233,9 +12401,13 @@
         function avrSyncBarFilters() {
             const bar = FILTER_BARS.maintenance;
             const acts = avrView === 'activities';
+            const visits = avrView === 'visits';
             bar.filters.forEach(f => {
+                // Kind is the Activities axis; Mode/Status the Reports axis. The
+                // Maintenance view groups by Open/Resolved in the feed itself and needs
+                // no bar axis, so every dropdown is hidden there — the search box stays.
                 if (f.id === 'kind') f.hidden = !acts;
-                if (f.id === 'mode' || f.id === 'status') f.hidden = acts;
+                if (f.id === 'mode' || f.id === 'status') f.hidden = !visits;
             });
         }
 
@@ -12260,12 +12432,19 @@
             const show = canEdit() ? '' : 'none';
             const add = document.getElementById('maintAddBtn');
             if (add) add.style.display = show;
-            const ta = document.getElementById('avrTabActs'), tv = document.getElementById('avrTabVisits');
+            const ta = document.getElementById('avrTabActs'), tv = document.getElementById('avrTabVisits'), ti = document.getElementById('avrTabIssues');
             if (ta) ta.classList.toggle('active', avrView === 'activities');
             if (tv) {
                 tv.classList.toggle('active', avrView === 'visits');
                 const n = avrEntries().filter(v => canEdit() || v.status === 'published').length;
                 tv.innerHTML = `📋 Reports${n ? ` <span class="avr-vt-badge">${n}</span>` : ''}`;
+            }
+            if (ti) {
+                ti.classList.toggle('active', avrView === 'issues');
+                // The badge counts OPEN issues — the ones that matter at a glance — and
+                // is red (an open service outage), unlike the neutral Reports count.
+                const open = issueEntries().filter(issueIsOpen).length;
+                ti.innerHTML = `🔧 Maintenance${open ? ` <span class="avr-vt-badge issue-open-badge">${open}</span>` : ''}`;
             }
         }
 
@@ -12273,6 +12452,7 @@
         // search box keeps focus while typing.
         function renderActivityFeedOnly() {
             if (avrView === 'visits') renderAvrFeed();
+            else if (avrView === 'issues') renderIssueFeed();
             else renderActivityRepo();
         }
 
@@ -12365,6 +12545,9 @@
             // removed) Operational-History panel used, keyed by opsKey. That is the
             // inline "edit button in the timeline" that replaced the standalone panel.
             const isOps = x.kind === 'operational' && !!x.opsKey;
+            // A service row is a derived Maintenance Issue; it edits in place through the
+            // issue editor, keyed by issueId (the derived analogue of the ops edit above).
+            const isSvc = x.kind === 'service' && !!x.issueId;
             // Which report (if any) this row can be REMOVED from inline: an assigned activity
             // unlinks by visitId; a pinned derived row unpins by key. Window-only membership
             // is automatic (driven by the report dates), so it carries no remove control.
@@ -12372,12 +12555,14 @@
             const actions = editor ? `<span class="repo-actions">
                 ${isAct ? `<button class="avr-act-btn" title="Edit activity" onclick="openEditActivity('${escAttr(x.actId)}')">✏️</button>` : ''}
                 ${isOps ? `<button class="avr-act-btn" title="Edit out-of-service period" onclick="openOpsPeriod('${escAttr(x.tail)}','${escAttr(x.opsKey)}')">✏️</button>` : ''}
+                ${isSvc ? `<button class="avr-act-btn" title="Edit maintenance issue" onclick="openIssueEditor('${escAttr(x.issueId)}')">✏️</button>` : ''}
                 <button class="avr-act-btn" title="Add to a report" onclick="openAddToReportMenu(event,'${escAttr(key)}')">📋</button>
                 ${isAct && x.visitId ? `<button class="avr-act-btn" title="Remove from report" onclick="assignActivityToVisit('${escAttr(x.actId)}','')">🔓</button>` : ''}
                 ${pinnedVisit ? `<button class="avr-act-btn" title="Remove from report" onclick="unpinDerived('${escAttr(key)}','${escAttr(pinnedVisit.id)}')">🔓</button>` : ''}
             </span>` : '';
 
             const mark = x.kind === 'operational' ? `<span class="tl-ops-mark" aria-hidden="true">${x.opsReturn ? '✔' : '⚠'}</span>`
+                       : x.kind === 'service' ? `<span class="tl-ops-mark" aria-hidden="true">${x.svcRestored ? '✔' : '🛜'}</span>`
                        : x.kind === 'activation' ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>'
                        : x.kind === 'modification' ? `<span class="tl-mod-mark" aria-hidden="true">${x.modPhase === 'start' ? '🔧' : '🏁'}</span>`
                        : '';
@@ -12397,6 +12582,7 @@
         function repoSourceLabel(x) {
             if (x.kind === 'media') return x.milestone === 'cycle' ? 'Cycle' : 'Media';
             if (x.kind === 'operational') return 'Ops';
+            if (x.kind === 'service') return 'Issue';
             if (x.kind === 'modification') return 'Fleet';
             if (x.kind === 'activation') return 'Fleet';
             if (x.title && /MODMAN/.test(x.title)) return 'Satcom';
@@ -12884,6 +13070,7 @@
             add('Maintenance', 'maintenance', x => x.title);
             add('Modification', 'modification', x => `${x.title} ${x.modPhase === 'start' ? 'started' : 'completed'}`);
             add('Operational', 'operational', x => x.sub ? `${x.title} (${x.sub})` : x.title);
+            add('Service', 'service', x => x.sub ? `${x.title} — ${x.sub}` : x.title);
             add('Milestone', 'activation', x => x.title);
             return lines.join('\n');
         }
@@ -13712,10 +13899,11 @@
             menu.className = 'avr-assign-menu add-menu';
             menu.innerHTML =
                 `<button class="avr-assign-item" onclick="closeAssignMenu(); openAddActivity()">🗂️ Add Activity</button>` +
-                `<button class="avr-assign-item" onclick="closeAssignMenu(); openAvrEditor('__new')">📋 Add Visit Report</button>`;
+                `<button class="avr-assign-item" onclick="closeAssignMenu(); openAvrEditor('__new')">📋 Add Visit Report</button>` +
+                `<button class="avr-assign-item" onclick="closeAssignMenu(); openIssueEditor('__new')">🔧 Add Maintenance Issue</button>`;
             document.body.appendChild(menu);
             const r = btn.getBoundingClientRect();
-            const w = 200;
+            const w = 224;
             menu.style.width = w + 'px';
             menu.style.top = (r.bottom + 6) + 'px';
             menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
@@ -14294,6 +14482,264 @@
             overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
             document.getElementById('opsEditSave').addEventListener('click', saveOpsPeriod);
             document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.style.display === 'flex') close(); });
+        }
+
+        // ===== Maintenance Issues — the service-availability feed + editor ===========
+        // A Maintenance Issue is a SERVICE outage on a still-flying aircraft (see the
+        // /issues store). The feed is the third Activity view; the Fleet Connectivity
+        // Status sub-badge and the Timeline are both DERIVED from the same records.
+        let issueEditingId = null;
+        const ISSUE_PRIO_RANK = { high: 0, medium: 1, low: 2 };
+
+        // Activities of one tail, newest first — the options for the origin / fix pickers.
+        function issueActivityOptions(tail, selected) {
+            const acts = Object.keys(activitiesLive || {})
+                .map(id => ({ id, ...activitiesLive[id] }))
+                .filter(a => a.aircraft === tail)
+                .sort((a, b) => (toISODate(b.date) || '').localeCompare(toISODate(a.date) || ''));
+            return `<option value="">— none —</option>` + acts.map(a =>
+                `<option value="${escAttr(a.id)}" ${a.id === selected ? 'selected' : ''}>${escAttr(a.date || '')} — ${escAttr(a.title || a.category || 'activity')}</option>`).join('');
+        }
+        // Aircraft changed mid-form: rebuild both pickers for the new tail (a stale
+        // selection from the old tail simply falls away — it is not this aircraft's work).
+        function issueSyncActPickers() {
+            const tail = (document.getElementById('issAircraft') || {}).value || '';
+            const o = document.getElementById('issOrigin'); if (o) o.innerHTML = issueActivityOptions(tail, o.value);
+            const r = document.getElementById('issResActivity'); if (r) r.innerHTML = issueActivityOptions(tail, r.value);
+        }
+        // Open issues rank by priority, then by how long they have been down.
+        function issueOpenSort(a, b) {
+            const pr = (ISSUE_PRIO_RANK[a.priority] ?? 3) - (ISSUE_PRIO_RANK[b.priority] ?? 3);
+            if (pr) return pr;
+            return (issueDaysDown(b) || 0) - (issueDaysDown(a) || 0);
+        }
+
+        function renderIssueFeed() {
+            const host = document.getElementById('avrFeed');
+            if (!host) return;
+            const editor = canEdit();
+            const q = (fbQuery['maintenance'] || '').trim().toLowerCase();
+            const match = i => {
+                if (!q) return true;
+                const hay = `${i.tail || ''} ${i.reason || ''} ${i.detail || ''} ${issLabel(ISSUE_SERVICES, i.service)} ${i.customer || ''}`.toLowerCase();
+                return q.split(/\s+/).every(w => hay.includes(w));
+            };
+            const all = issueEntries().filter(match);
+            const open = all.filter(issueIsOpen).sort(issueOpenSort);
+            const closed = all.filter(i => !issueIsOpen(i))
+                .sort((a, b) => (toISODate(b.resolvedDate) || '').localeCompare(toISODate(a.resolvedDate) || ''));
+
+            if (!all.length) {
+                const none = issueEntries().length === 0;
+                host.innerHTML = `<div class="avr-empty">${none ? 'No maintenance issues logged.' : 'No issues match your search.'}`
+                    + `${none && editor ? '<br>Use ＋ Add → 🔧 Add Maintenance Issue to declare an IFC/WiFi service outage.' : ''}</div>`;
+                return;
+            }
+            let html = '';
+            if (open.length) html += `<div class="issue-group-title">Open — service affected (${open.length})</div>`
+                + open.map(i => issueCardHTML(i, editor)).join('');
+            if (closed.length) html += `<div class="issue-group-title">Resolved (${closed.length})</div>`
+                + closed.map(i => issueCardHTML(i, editor)).join('');
+            host.innerHTML = html;
+        }
+
+        function issueCardHTML(i, editor) {
+            const open = issueIsOpen(i);
+            const a = aircraftData.find(x => x.id === i.tail) || {};
+            const typeLabel = TYPE_SHORT_LABEL[a.type] || a.type || '';
+            const svcTxt = `${issLabel(ISSUE_SERVICES, i.service)} ${issLabel(ISSUE_IMPACTS, i.impact)}`.trim();
+            const days = issueDaysDownLabel(i);
+            const origin = i.originActivityId && activitiesLive[i.originActivityId];
+            const resAct = i.resolutionActivityId && activitiesLive[i.resolutionActivityId];
+            const actLink = (id, act, label) => act
+                ? `<span class="issue-link">${label}: <button class="linklike" onclick="openEditActivity('${escAttr(id)}')">${escAttr(act.date || '')} — ${escAttr(act.title || act.category || 'activity')}</button></span>`
+                : '';
+            return `<div class="issue-card ${open ? 'is-open' : 'is-resolved'} ${i.impact === 'degraded' ? 'is-degraded' : ''}">
+                <div class="issue-card-head">
+                    <span class="issue-tail">${escAttr(i.tail || '—')}</span>
+                    ${typeLabel ? `<span class="issue-pill issue-pill-svc">${escAttr(typeLabel)}</span>` : ''}
+                    <span class="issue-pill issue-pill-${i.impact}">${escAttr(svcTxt)}</span>
+                    <span class="issue-pill issue-pill-${i.severity}">${escAttr(issLabel(ISSUE_SEVERITIES, i.severity))}</span>
+                    <span class="issue-pill issue-pill-${i.priority}">${escAttr(issLabel(ISSUE_PRIORITIES, i.priority))} priority</span>
+                    <span class="issue-spacer"></span>
+                    ${editor ? `<span class="issue-actions">
+                        <button class="issue-act-btn ${open ? 'primary' : ''}" onclick="openIssueEditor('${escAttr(i.id)}')">${open ? 'Resolve / Edit' : 'Edit'}</button>
+                    </span>` : ''}
+                </div>
+                <div class="issue-reason">${escAttr(i.reason || '')}</div>
+                ${i.detail ? `<div class="issue-detail">${escAttr(i.detail)}</div>` : ''}
+                <div class="issue-dates">
+                    ${i.informedDate ? `<span class="issue-date"><b>Inoperative from</b> ${escAttr(i.informedDate)}${i.customer ? ` · ${escAttr(i.customer)} informed` : ''}</span>` : ''}
+                    ${i.discoveredDate ? `<span class="issue-date">Discovered ${escAttr(i.discoveredDate)}</span>` : ''}
+                    ${i.resolvedDate ? `<span class="issue-date"><b>Restored</b> ${escAttr(i.resolvedDate)}</span>` : ''}
+                    ${days ? `<span class="issue-days">${open ? 'Down' : 'Was down'} ${escAttr(days)}</span>` : ''}
+                </div>
+                ${(origin || resAct) ? `<div class="issue-links">${actLink(i.originActivityId, origin, 'Investigation')} ${actLink(i.resolutionActivityId, resAct, 'Fix')}</div>` : ''}
+                ${i.resolutionNote ? `<div class="issue-detail">Resolution: ${escAttr(i.resolutionNote)}</div>` : ''}
+            </div>`;
+        }
+
+        function issueEditFail(m) {
+            const err = document.getElementById('issueEditError');
+            err.textContent = m; err.style.display = 'block';
+            return null;
+        }
+
+        function openIssueEditor(id) {
+            if (!canEdit()) { requireSignIn(); return; }
+            issueEditingId = id;
+            const isNew = id === '__new';
+            if (!isNew && !issuesLive[id]) { setSyncStatus('🔴 That issue is no longer there — reload', '#dc3545'); return; }
+            const v = isNew ? {} : { id, ...issuesLive[id] };
+
+            document.getElementById('issueEditTitle').textContent = isNew ? 'Add maintenance issue' : `Edit issue — ${v.tail || ''}`;
+            document.getElementById('issueEditSub').textContent = isNew
+                ? 'Declare an IFC/WiFi service outage on an aircraft that is still flying.'
+                : (issueIsOpen(v) ? 'Open — service currently affected. Set a Restored date to close it.' : 'Resolved — service restored.');
+            const err = document.getElementById('issueEditError'); err.textContent = ''; err.style.display = 'none';
+            document.getElementById('issueDeleteBtn').style.display = isNew ? 'none' : '';
+
+            const acOpts = maintenanceFleet()
+                .map(a => `<option value="${escAttr(a.id)}" ${a.id === v.tail ? 'selected' : ''}>${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</option>`).join('');
+            const selOpts = (arr, cur) => arr.map(o => `<option value="${o.value}" ${o.value === cur ? 'selected' : ''}>${escAttr(o.label)}</option>`).join('');
+            const tail0 = v.tail || (maintenanceFleet()[0] || {}).id || '';
+
+            document.getElementById('issueEditBody').innerHTML = `
+                <div class="ac-edit-grid">
+                    <div class="ac-edit-field"><label>Aircraft</label>
+                        <select id="issAircraft" onchange="issueSyncActPickers()">${acOpts}</select></div>
+                    <div class="ac-edit-field"><label>Customer</label>
+                        <input id="issCustomer" type="text" maxlength="60" value="${escAttr(v.customer || 'Saudia')}"></div>
+                    <div class="ac-edit-field"><label>Affected service</label>
+                        <select id="issService">${selOpts(ISSUE_SERVICES, v.service || 'wifi')}</select></div>
+                    <div class="ac-edit-field"><label>Impact</label>
+                        <select id="issImpact">${selOpts(ISSUE_IMPACTS, v.impact || 'inop')}</select></div>
+                    <div class="ac-edit-field"><label>Severity</label>
+                        <select id="issSeverity">${selOpts(ISSUE_SEVERITIES, v.severity || 'major')}</select></div>
+                    <div class="ac-edit-field"><label>Priority</label>
+                        <select id="issPriority">${selOpts(ISSUE_PRIORITIES, v.priority || 'high')}</select></div>
+                    <div class="ac-edit-field full"><label>Reason</label>
+                        <input id="issReason" type="text" maxlength="200" placeholder="e.g. MODMAN failure" value="${escAttr(v.reason || '')}"></div>
+                    <div class="ac-edit-field full"><label>Detail (optional)</label>
+                        <textarea id="issDetail" maxlength="1000" placeholder="What was found, context…">${escAttr(v.detail || '')}</textarea></div>
+                    <div class="ac-edit-field"><label>Discovered on</label>
+                        <input id="issDiscovered" type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" value="${v.discoveredDate ? toDMY(v.discoveredDate) : ''}">
+                        <span class="fld-hint">When we found the fault (e.g. remote support).</span></div>
+                    <div class="ac-edit-field"><label>Customer informed on</label>
+                        <input id="issInformed" type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" value="${v.informedDate ? toDMY(v.informedDate) : ''}">
+                        <span class="fld-hint">Official inoperative-from date — fed to Display.</span></div>
+                    <div class="ac-edit-field full"><label>Originating activity (optional)</label>
+                        <select id="issOrigin">${issueActivityOptions(tail0, v.originActivityId)}</select>
+                        <span class="fld-hint">The investigation that discovered this.</span></div>
+                </div>
+                <div class="ac-edit-section-title">Resolution</div>
+                <div class="ac-edit-grid">
+                    <div class="ac-edit-field"><label>Restored on</label>
+                        <input id="issResolved" type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" value="${v.resolvedDate ? toDMY(v.resolvedDate) : ''}">
+                        <span class="fld-hint">Set this to close the issue (service back).</span></div>
+                    <div class="ac-edit-field"><label>Fix activity (optional)</label>
+                        <select id="issResActivity">${issueActivityOptions(tail0, v.resolutionActivityId)}</select></div>
+                    <div class="ac-edit-field full"><label>Resolution note (optional)</label>
+                        <textarea id="issResNote" maxlength="1000" placeholder="What fixed it (e.g. MODMAN replaced)">${escAttr(v.resolutionNote || '')}</textarea></div>
+                </div>`;
+            document.getElementById('issueEditOverlay').style.display = 'flex';
+        }
+
+        async function saveIssue() {
+            if (!canEdit()) { requireSignIn(); return; }
+            const val = id => (document.getElementById(id).value || '').trim();
+            const tail = val('issAircraft');
+            const reason = val('issReason');
+            const informed = readDateField(document.getElementById('issInformed'));
+            const discEl = document.getElementById('issDiscovered');
+            const disc = discEl.value.trim() ? readDateField(discEl) : '';
+            const resEl = document.getElementById('issResolved');
+            const resolved = resEl.value.trim() ? readDateField(resEl) : '';
+
+            if (!tail) return issueEditFail('Choose an aircraft.');
+            if (!reason) return issueEditFail('Give a reason (e.g. MODMAN failure).');
+            if (informed === false || !informed) return issueEditFail('Customer-informed date is the official inoperative date — use dd-mm-yyyy.');
+            if (disc === false) return issueEditFail('Discovered on: use dd-mm-yyyy.');
+            if (resolved === false) return issueEditFail('Restored on: use dd-mm-yyyy.');
+            if (resolved && toISODate(resolved) < toISODate(informed)) return issueEditFail('Restored date cannot be before the inoperative date.');
+
+            const wasNew = issueEditingId === '__new';
+            const prev = (!wasNew && issuesLive[issueEditingId]) || {};
+            const entry = {
+                tail, reason,
+                service: val('issService'), impact: val('issImpact'),
+                severity: val('issSeverity'), priority: val('issPriority'),
+                informedDate: informed,
+                customer: val('issCustomer'),
+                detail: val('issDetail'),
+                discoveredDate: disc || '',
+                resolvedDate: resolved || '',
+                originActivityId: val('issOrigin'),
+                resolutionActivityId: val('issResActivity'),
+                resolutionNote: val('issResNote'),
+                // On an edit, keep when the issue was first logged, not when it was corrected.
+                loggedAt: prev.loggedAt || new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+                loggedBy: prev.loggedBy || (authUser && authUser.email) || '',
+            };
+            // $other is false in the rules, and an empty string would be stored as data —
+            // drop every blank so a whole-record PUT never carries an empty field.
+            Object.keys(entry).forEach(k => { if (entry[k] === '') delete entry[k]; });
+
+            const token = await getIdToken();
+            if (!token) return;
+            const btn = document.getElementById('issueEditSave');
+            btn.disabled = true; btn.textContent = 'Saving...';
+            const id = wasNew ? ('i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)) : issueEditingId;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/issues/${id}.json?auth=${token}`, {
+                    method: 'PUT', body: JSON.stringify(entry),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                // Mirror the polled node locally so the save is visible before the next
+                // poll — otherwise a redraw from the stale store looks like it vanished.
+                issuesLive[id] = entry;
+                closeIssueEditor();
+                renderAll();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (e) {
+                issueEditFail(`Could not save — ${e.message}`);
+            } finally {
+                btn.disabled = false; btn.textContent = 'Save issue';
+            }
+        }
+
+        async function deleteIssue() {
+            if (!canEdit() || issueEditingId === '__new' || !issueEditingId) return;
+            const i = issuesLive[issueEditingId];
+            if (!i) return;
+            if (!confirm(`Delete this maintenance issue?\n\n${i.tail}: ${i.reason || ''}\n\nIt also disappears from the Fleet status and the Timeline.`)) return;
+            const token = await getIdToken();
+            if (!token) return;
+            const id = issueEditingId;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/issues/${id}.json?auth=${token}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('delete failed');
+                delete issuesLive[id];
+                closeIssueEditor();
+                renderAll();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (e) {
+                setSyncStatus(`🔴 Could not delete issue — ${e.message}`, '#dc3545');
+            }
+        }
+
+        function closeIssueEditor() {
+            const o = document.getElementById('issueEditOverlay');
+            if (o) o.style.display = 'none';
+            issueEditingId = null;
+        }
+
+        function initIssueEditModal() {
+            const overlay = document.getElementById('issueEditOverlay');
+            if (!overlay) return;
+            overlay.addEventListener('click', e => { if (e.target === overlay) closeIssueEditor(); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.style.display === 'flex') closeIssueEditor(); });
         }
 
         // ===== 4G SIM register =============================================
@@ -17770,6 +18216,31 @@
                 });
             });
 
+            // --- Service: Maintenance Issues (IFC/WiFi outages), open and closed ---
+            // The SERVICE-availability axis, derived from /issues over the WHOLE roster
+            // (like the ops periods, an In-Retrofit tail can still have a live outage).
+            // The OFFICIAL inop date is informedDate — the day the customer was told —
+            // NOT the discovery date; that is the date the Display team consumes, so it
+            // is the one the Timeline pins. A resolvedDate emits its own "restored" event.
+            issueEntries().forEach(i => {
+                const byT = byTail[i.tail] || {};
+                const sIso = toISODate(i.informedDate);
+                const svcTxt = `${issLabel(ISSUE_SERVICES, i.service)} ${issLabel(ISSUE_IMPACTS, i.impact)}`.trim();
+                if (sIso) {
+                    out.push({ iso: sIso, kind: 'service', issueId: i.id, svcRestored: false,
+                               tail: i.tail, type: byT.type, location: '',
+                               title: `${svcTxt || 'Service issue'}`, sub: i.reason || '' });
+                }
+                const rIso = toISODate(i.resolvedDate);
+                if (rIso) {
+                    const span = dateSpan(i.informedDate, i.resolvedDate);
+                    out.push({ iso: rIso, kind: 'service', issueId: i.id, svcRestored: true,
+                               tail: i.tail, type: byT.type, location: '',
+                               title: 'Service restored',
+                               sub: span ? `${i.reason || svcTxt} · ${span}` : (i.reason || svcTxt) });
+                }
+            });
+
             // --- Modification: the retrofit window, straight off the Fleet page ---
             // The mod dates are NOT a hand-typed activity — they are the retrofit grounding
             // dates already on the aircraft (retrofitStart = Mod Start, retrofitEnd = Mod
@@ -18297,9 +18768,12 @@
                 // Out of service and back again are marked on the row for the same
                 // reason a milestone is: under a kind filter the pill is hidden, and
                 // "went AOG" must not read the same as "returned" at a glance.
-                const opsCls = x.kind !== 'operational' ? ''
-                             : (x.opsReturn ? ' tl-ops-back' : ' tl-ops-out');
-                const opsMark = x.kind !== 'operational' ? '' : (x.opsReturn ? '✔' : '⚠');
+                const opsCls = x.kind === 'operational' ? (x.opsReturn ? ' tl-ops-back' : ' tl-ops-out')
+                             : x.kind === 'service' ? (x.svcRestored ? ' tl-ops-back' : ' tl-ops-out')
+                             : '';
+                const opsMark = x.kind === 'operational' ? (x.opsReturn ? '✔' : '⚠')
+                              : x.kind === 'service' ? (x.svcRestored ? '✔' : '🛜')
+                              : '';
                 const markHtml = milestone ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>'
                                : opsMark ? `<span class="tl-ops-mark" aria-hidden="true">${opsMark}</span>` : '';
                 return `<li${milestone ? ' class="tl-milestone"' : (opsCls ? ` class="${opsCls.trim()}"` : '')}>
@@ -19121,6 +19595,7 @@
             initAddAircraftModal();
             initAcEditModal();
             initOpsEditModal();
+            initIssueEditModal();
             updateAuthUI();
             applyGlobalWidgets();   // global KPI cards start hidden unless remembered on
             connectLiveSync();

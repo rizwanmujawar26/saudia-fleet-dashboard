@@ -195,6 +195,33 @@
       }
     },
 
+    "issues": {
+      ".read": true,
+
+      "$id": {
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
+
+        "tail":                 { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "service":              { ".validate": "newData.isString() && newData.val().matches(/^(wifi|ifc|both)$/)" },
+        "impact":               { ".validate": "newData.isString() && newData.val().matches(/^(inop|degraded)$/)" },
+        "severity":             { ".validate": "newData.isString() && newData.val().matches(/^(major|minor)$/)" },
+        "priority":             { ".validate": "newData.isString() && newData.val().matches(/^(high|medium|low)$/)" },
+        "reason":               { ".validate": "newData.isString() && newData.val().length <= 200" },
+        "detail":               { ".validate": "newData.isString() && newData.val().length <= 1000" },
+        "customer":             { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "discoveredDate":       { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
+        "informedDate":         { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
+        "resolvedDate":         { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
+        "originActivityId":     { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "resolutionActivityId": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "resolutionNote":       { ".validate": "newData.isString() && newData.val().length <= 1000" },
+        "loggedAt":             { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/)" },
+        "loggedBy":             { ".validate": "newData.isString() && newData.val().length <= 80" },
+
+        "$other":               { ".validate": false }
+      }
+    },
+
     "hardware": {
       ".read": true,
 
