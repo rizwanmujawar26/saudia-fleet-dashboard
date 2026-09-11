@@ -674,6 +674,20 @@
             color: #fff;
         }
 
+        /* Completion colour on the count badge (Software / Media): green once the whole
+           active fleet is done, amber while a few are short, red when well behind. The
+           second selector lifts specificity above .tab-button.active .tab-count so the
+           colour holds on the open tab too. */
+        .tab-count.tab-count-done, .tab-button.active .tab-count.tab-count-done {
+            background: #1a9d4e; color: #fff;
+        }
+        .tab-count.tab-count-warn, .tab-button.active .tab-count.tab-count-warn {
+            background: #e6a417; color: #3f2f00;
+        }
+        .tab-count.tab-count-low, .tab-button.active .tab-count.tab-count-low {
+            background: #d64545; color: #fff;
+        }
+
         /* Big screens: centre the menu across the bar, the way Apple's does. Only where
            the tabs actually fit — below this they overflow and must stay left-aligned so
            the strip can scroll sideways and no tab is stranded off the left edge. */
@@ -4141,6 +4155,32 @@
         .repo-actions { display: inline-flex; gap: 2px; }
         .avr-report-list .repo-row:hover { background: transparent; }
 
+        /* ===== Aligned feed rows (Home Timeline + Activity repository) =====
+           A shared column grid so every row lines up down the page: a reserved icon
+           slot (kept even when the row has no mark), then the registration, the type
+           pill and the kind bullet each in a fixed track — so tails, types and bullets
+           sit on the same vertical lines. Everything from the location/title rightward
+           flows in the final flexible cell. Declared after .tl-row / .repo-row so its
+           display:grid wins over their display:flex. */
+        .tl-grid {
+            display: grid;
+            grid-template-columns: 16px 56px 78px 100px minmax(0, 1fr);
+            align-items: center;
+            column-gap: 8px;
+        }
+        .tl-grid > .tl-c { min-width: 0; }
+        .tl-c-mark { display: flex; align-items: center; justify-content: center; }
+        .tl-c-type, .tl-c-kind { display: flex; align-items: center; }
+        /* The registration keeps its own type scale (.tl-reg); the cell just holds it. */
+        .tl-c-reg { display: flex; align-items: center; }
+        .tl-c-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+        /* Below the column grid's comfortable width, fall back to a simple wrapping row
+           so nothing is crushed on a phone. Empty leading slots collapse away. */
+        @media (max-width: 720px) {
+            .tl-grid { display: flex; flex-wrap: wrap; column-gap: 8px; }
+            .tl-c-mark:empty, .tl-c-type:empty, .tl-c-kind:empty { display: none; }
+        }
+
         /* Assign-to-visit popover */
         .avr-assign-backdrop { position: fixed; inset: 0; z-index: 1200; }
         .avr-assign-menu { position: fixed; z-index: 1201; width: 260px; max-height: 320px; overflow-y: auto;
@@ -5488,10 +5528,9 @@
             <!-- Aircraft Status Tab -->
             <div id="aircraft" class="tab-content">
                 <div class="media-widget-section">
-                    <span class="filter-group-label">Middleware &amp; Completion by Station</span>
+                    <span class="filter-group-label">Software Completion</span>
                     <div class="media-widget-strip sw-strip">
                         <span id="swVersionWidgets" class="sw-strip-part"></span>
-                        <span id="stationCompletionGrid" class="sw-strip-part"></span>
                     </div>
                 </div>
 
@@ -5894,14 +5933,15 @@
 
                 <span class="sys-sep"></span>
 
-                <!-- Who is signed in, in the one place that is on every tab. The tab
-                     bar's button is the control; this is the readout. -->
-                <button type="button" class="sys-chip sys-chip-user" id="sysUserChip" style="display:none;" onclick="openSysInfo()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <!-- The identity readout was folded into the single Sign in / Sign out
+                     chip below (2026-09-11, user): who is signed in is carried on that
+                     button's label and title, so the long email no longer takes a whole
+                     capsule of its own. #sysUserChip / #sysUser are kept as hidden nodes
+                     so updateSysUserChip() and any code that reads them stays null-safe. -->
+                <button type="button" class="sys-chip sys-chip-user" id="sysUserChip" style="display:none;" onclick="openSysInfo()" hidden aria-hidden="true">
                     <span class="sys-val" id="sysUser">—</span>
                 </button>
-
-                <span class="sys-sep" id="sysUserSep" style="display:none;"></span>
+                <span class="sys-sep" id="sysUserSep" style="display:none;" hidden></span>
 
                 <!-- The fleet KPI cards are hidden in normal operation. This is the way
                      to bring them back for a major update; the choice is remembered. -->
@@ -7085,8 +7125,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.130.1';
-        const APP_BUILD    = '2026.09.11.12';
+        const APP_VERSION  = '2.131.0';
+        const APP_BUILD    = '2026.09.11.13';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -8215,9 +8255,17 @@
                 tabName = 'overview';
                 btn = null;
             }
-            const el = btn
-                || (typeof event !== 'undefined' && event && event.target)
-                || tabButtonFor(tabName);
+            // Resolve the button to highlight deterministically. The old code took
+            // event.target, which is whatever node was actually clicked — the count
+            // badge (<span class="tab-count">) or the emoji text, NOT the .tab-button —
+            // so clicking the number left the active class on the span and the tab lost
+            // its highlight. tabButtonFor(tabName) maps the name straight to its button;
+            // .closest keeps a passed-in child working too.
+            let el = btn || tabButtonFor(tabName);
+            if (!el && typeof event !== 'undefined' && event && event.target && event.target.closest) {
+                el = event.target.closest('.tab-button');
+            }
+            if (el && el.closest) el = el.closest('.tab-button') || el;
 
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -10030,6 +10078,15 @@
             return activeFleet().filter(a => !isLinefit(a));
         }
 
+        // Retrofit aircraft still on the ground being fitted. They are NOT Active, so
+        // swFleet() (and every count built on it) leaves them out — but the Software
+        // completion cards count them as PENDING work so the picture reads "42 of 44
+        // done, 2 still in retrofit" rather than a misleading 42 of 42. Whole-roster
+        // scope, non-linefit only, exactly the In-Retrofit programme status.
+        function inRetrofitSwFleet() {
+            return aircraftData.filter(a => fleetStatusOf(a) === 'In Retrofit' && !isLinefit(a));
+        }
+
         // Active linefit aircraft — the HBC+ / SBC population (2), deliberately apart.
         function hbcFleet() {
             return activeFleet().filter(isLinefit);
@@ -10043,46 +10100,85 @@
         // The extra room over a plain figure goes to the registrations still on an older
         // build — the only actionable part, and it also matches the station cards'
         // height so the three sit on one line.
+        // One card for each software stream — Middleware, OTA Patch #2, OTA Patch #3 —
+        // all built to the same shape so they read as one strip. Every card counts the
+        // Active retrofit fleet PLUS the In-Retrofit aircraft (still being fitted): the
+        // latter are always pending, so the total reads e.g. 42 of 44 done, 2 pending,
+        // and the two in-retrofit tails are named in the pending list.
+        function swCard(opts) {
+            const { label, doneList, pendingList, doneWord = 'Completed',
+                    doneLabel, pendLabel, allDoneMsg } = opts;
+            const done = doneList.length, pending = pendingList.length;
+            const scope = (done + pending) || 1;
+            return `<div class="media-widget sw-split">
+                <div class="media-widget-head">
+                    <span class="media-widget-label">${escAttr(label)}</span>
+                    <span class="media-size-pill">${done + pending} aircraft</span>
+                </div>
+                <div class="ssid-figures">
+                    <span class="ssid-side sw-on-latest"><b>${done}</b> ${escAttr(doneWord)}</span>
+                    <span class="ssid-side sw-behind">Pending <b>${pending}</b></span>
+                </div>
+                <div class="ssid-track" role="img" aria-label="${done} completed, ${pending} pending">
+                    <div class="sw-fill-latest" style="width:${(done / scope) * 100}%"></div>
+                    <div class="sw-fill-behind" style="width:${(pending / scope) * 100}%"></div>
+                </div>
+                <div class="sw-versions">
+                    <span class="sw-ver-latest">${escAttr(doneLabel)}</span>
+                    <span class="sw-ver-behind">${escAttr(pendLabel)}</span>
+                </div>
+                <div class="sw-behind-list">${
+                    pending
+                        ? statList(pendingList.map(a => a.id).sort())
+                        : `<div class="stat-list">${escAttr(allDoneMsg)}</div>`
+                }</div>
+            </div>`;
+        }
+
         function renderSwVersionWidgets() {
             const grid = document.getElementById('swVersionWidgets');
             if (!grid) return;
-            const fleet = swFleet();
-            const scope = fleet.length || 1;
+            const active = swFleet();
+            const inRetro = inRetrofitSwFleet();
             const latest = latestSwVersion();
 
-            const onLatest = fleet.filter(a => swVersionOf(a) === latest);
-            const behind   = fleet.filter(a => swVersionOf(a) !== latest);
-
-            // Named only when there is exactly one older build in the fleet; with more
-            // than one, "older" is the honest label.
-            const behindVersions = [...new Set(behind.map(swVersionOf))]
+            // --- Middleware ---
+            const onLatest = active.filter(a => swVersionOf(a) === latest);
+            const behindActive = active.filter(a => swVersionOf(a) !== latest);
+            const mwPending = behindActive.concat(inRetro);
+            const behindVersions = [...new Set(behindActive.map(swVersionOf))]
                 .sort((a, b) => SW_VERSIONS.indexOf(b) - SW_VERSIONS.indexOf(a));
-            const behindLabel = behindVersions.length === 1 ? behindVersions[0]
-                              : behindVersions.length ? 'older' : '—';
+            const pendLabel = behindVersions.length === 1 ? behindVersions[0]
+                            : behindVersions.length ? 'older'
+                            : inRetro.length ? 'in retrofit' : '—';
 
-            grid.innerHTML = `<div class="media-widget sw-split">
-                <div class="media-widget-head">
-                    <span class="media-widget-label">Middleware</span>
-                    <span class="media-size-pill">${fleet.length} aircraft</span>
-                </div>
-                <div class="ssid-figures">
-                    <span class="ssid-side sw-on-latest"><b>${onLatest.length}</b> Completed</span>
-                    <span class="ssid-side sw-behind">Pending <b>${behind.length}</b></span>
-                </div>
-                <div class="ssid-track" role="img" aria-label="${onLatest.length} on ${escAttr(latest)}, ${behind.length} on ${escAttr(behindLabel)}">
-                    <div class="sw-fill-latest" style="width:${(onLatest.length / scope) * 100}%"></div>
-                    <div class="sw-fill-behind" style="width:${(behind.length / scope) * 100}%"></div>
-                </div>
-                <div class="sw-versions">
-                    <span class="sw-ver-latest">${escAttr(latest)}</span>
-                    <span class="sw-ver-behind">${escAttr(behindLabel)}</span>
-                </div>
-                <div class="sw-behind-list">${
-                    behind.length
-                        ? statList(behind.map(a => a.id).sort())
-                        : '<div class="stat-list">Whole fleet on the latest build</div>'
-                }</div>
-            </div>`;
+            // --- OTA patches: "done" is simply having a patch date stamped. In-retrofit
+            //     aircraft are pending like every other un-patched airframe. ---
+            const otaSplit = field => {
+                const pool = active.concat(inRetro);
+                const done = pool.filter(a => !!a[field]);
+                const pending = pool.filter(a => !a[field]);
+                return { done, pending };
+            };
+            const ota2 = otaSplit('otaPatchUTC');
+            const ota3 = otaSplit('otaPatch3UTC');
+
+            grid.innerHTML =
+                swCard({
+                    label: 'Middleware', doneList: onLatest, pendingList: mwPending,
+                    doneLabel: latest, pendLabel,
+                    allDoneMsg: 'Whole fleet on the latest build',
+                }) +
+                swCard({
+                    label: 'OTA Patch #2', doneList: ota2.done, pendingList: ota2.pending,
+                    doneWord: 'Applied', doneLabel: 'Applied', pendLabel: 'Not yet',
+                    allDoneMsg: 'Applied across the fleet',
+                }) +
+                swCard({
+                    label: 'OTA Patch #3', doneList: ota3.done, pendingList: ota3.pending,
+                    doneWord: 'Applied', doneLabel: 'Applied', pendLabel: 'Not yet',
+                    allDoneMsg: 'Applied across the fleet',
+                });
         }
 
         // ===== Fleet page =====
@@ -12218,6 +12314,19 @@
                 </div>`).join('');
         }
 
+        // Assemble the fixed leading cells shared by every aligned feed row (.tl-grid):
+        // a reserved icon slot, the registration, the type pill and the kind bullet, each
+        // in its own column, then one flexible cell for location + title + everything
+        // trailing. Each leading slot keeps its column even when empty, so an unmarked or
+        // type-less row still lines up with the rest. See the .tl-grid CSS.
+        function tlCells({ mark = '', reg = '', type = '', kind = '', main = '' }) {
+            return `<span class="tl-c tl-c-mark">${mark}</span>`
+                 + `<span class="tl-c tl-c-reg tl-reg">${reg}</span>`
+                 + `<span class="tl-c tl-c-type">${type}</span>`
+                 + `<span class="tl-c tl-c-kind">${kind}</span>`
+                 + `<span class="tl-c tl-c-main">${main}</span>`;
+        }
+
         function renderRepoRow(x) {
             const pillStyle = c => `background:${c.bg}; color:${c.fg}; border-color:${c.bd}`;
             const typeColor = TYPE_PILL_COLORS[x.type] || NEUTRAL_PILL;
@@ -12250,19 +12359,21 @@
                 ${isOps ? `<button class="avr-act-btn" title="Edit out-of-service period" onclick="openOpsPeriod('${escAttr(x.tail)}','${escAttr(x.opsKey)}')">✏️</button>` : ''}
             </span>` : '';
 
-            return `<li class="repo-row kind-${x.kind}">
-                ${x.kind === 'operational' ? `<span class="tl-ops-mark" aria-hidden="true">${x.opsReturn ? '✔' : '⚠'}</span>` : ''}
-                ${x.kind === 'activation' ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>' : ''}
-                ${x.kind === 'modification' ? `<span class="tl-mod-mark" aria-hidden="true">${x.modPhase === 'start' ? '🔧' : '🏁'}</span>` : ''}
-                <span class="tl-reg">${escAttr(x.tail || '—')}</span>
-                ${typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : ''}
-                ${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}
-                <span class="tl-kind tl-kind-${x.kind}">${x.kind === 'modification' ? (x.modPhase === 'start' ? 'MOD START' : 'MOD END') : x.kind}</span>
-                <span class="tl-title">${escAttr(x.title)}</span>
-                ${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}
-                <span class="avr-spacer"></span>
-                ${visitChip}${srcTag}${actions}
-            </li>`;
+            const mark = x.kind === 'operational' ? `<span class="tl-ops-mark" aria-hidden="true">${x.opsReturn ? '✔' : '⚠'}</span>`
+                       : x.kind === 'activation' ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>'
+                       : x.kind === 'modification' ? `<span class="tl-mod-mark" aria-hidden="true">${x.modPhase === 'start' ? '🔧' : '🏁'}</span>`
+                       : '';
+            const main = `${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}`
+                + `<span class="tl-title">${escAttr(x.title)}</span>`
+                + `${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}`
+                + `<span class="avr-spacer"></span>${visitChip}${srcTag}${actions}`;
+            return `<li class="repo-row kind-${x.kind} tl-grid">${tlCells({
+                mark,
+                reg: escAttr(x.tail || '—'),
+                type: typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : '',
+                kind: `<span class="tl-kind tl-kind-${x.kind}">${x.kind === 'modification' ? (x.modPhase === 'start' ? 'MOD START' : 'MOD END') : x.kind}</span>`,
+                main,
+            })}</li>`;
         }
 
         function repoSourceLabel(x) {
@@ -13139,8 +13250,14 @@
         // repeating header (logos + title) and footer (download stamp + ref) sit in the
         // @page margins so they recur on every printed page.
         function printAvr(id) {
-            const v = avrLive[id];
-            if (!v) return;
+            if (!avrLive[id]) return;
+            // The stored record does NOT carry its own id, but avrReportMembers() matches
+            // linked activities on x.visitId === v.id — so the object handed to it MUST
+            // have .id set, exactly as avrEntries() does for the on-screen card. Reading
+            // avrLive[id] raw left v.id undefined here, and every linked activity was
+            // dropped: the printed "Work carried out" table came out empty though the
+            // card on screen showed the entries. (2026-09-11, user: ASBA AVR.)
+            const v = { id, ...avrLive[id] };
             const members = avrReportMembers(v);
             const people = avrAttendees(v);
             const type = avrTypeOf(v.aircraft);
@@ -17174,23 +17291,9 @@
 
 
 
-        function renderStationCompletion(completedStrict) {
-            const grid = document.getElementById('stationCompletionGrid');
-            if (!grid) return;
-            const jed = completedStrict.filter(a => a.completionLocation === 'Jeddah');
-            const ruh = completedStrict.filter(a => a.completionLocation === 'Riyadh');
-            // The section heading already says these are completed aircraft by station,
-            // so the cards only need to name the station.
-            const stCard = (name, code, list, c) => `
-                <div class="media-widget station-widget" style="background:${c.bg}; border-color:${c.bd}; border-left-color:${c.fg}">
-                    <div class="media-widget-head"><span class="media-widget-label" style="color:${c.fg}">${name}</span><span class="station-code">${code}</span></div>
-                    <div class="media-widget-figures"><span class="media-widget-count">${list.length}</span><span class="media-widget-of">/${completedStrict.length || 0} completed</span></div>
-                    ${statList(list.map(a => a.id))}
-                </div>`;
-            grid.innerHTML =
-                stCard('Jeddah', 'OEJN / JED', jed, LOCATION_PILL_COLORS['Jeddah']) +
-                stCard('Riyadh', 'OERK / RUH', ruh, LOCATION_PILL_COLORS['Riyadh']);
-        }
+        // The per-station "completed by station" cards (Jeddah / Riyadh) were removed
+        // from the Software tab on 2026-09-11 (user): that tab now shows only software
+        // completion — the Middleware and OTA-patch cards in renderSwVersionWidgets().
 
         // ===== Timeline =====
         // Fleet-wide connectivity activity, derived from data that already exists:
@@ -18007,16 +18110,13 @@
                             : (x.modEndDate ? `<span class="tl-etr" title="Modification ends">→ ends ${escAttr(x.modEndDate)}</span>` : ''))
                         : `${daysPill}<span class="tl-sub">${escAttr(x.modStartDate)} → ${escAttr(x.modEndDate)}</span>`;
                     return `<li class="tl-mod">
-                        <div class="tl-row">
-                            <span class="tl-mod-mark" aria-hidden="true">${mark}</span>
-                            <span class="tl-reg">${escAttr(x.tail)}</span>
-                            ${regPill}
-                            ${locPill}
-                            <span class="tl-kind tl-kind-modification">${start ? 'MOD START' : 'MOD END'}</span>
-                            <span class="tl-title">${escAttr(x.title)}</span>
-                            ${start && x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}
-                            ${tail}
-                        </div>
+                        <div class="tl-row tl-grid">${tlCells({
+                            mark: `<span class="tl-mod-mark" aria-hidden="true">${mark}</span>`,
+                            reg: escAttr(x.tail),
+                            type: regPill,
+                            kind: `<span class="tl-kind tl-kind-modification">${start ? 'MOD START' : 'MOD END'}</span>`,
+                            main: `${locPill}<span class="tl-title">${escAttr(x.title)}</span>${start && x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}${tail}`,
+                        })}</div>
                     </li>`;
                 }
 
@@ -18030,17 +18130,16 @@
                 const opsCls = x.kind !== 'operational' ? ''
                              : (x.opsReturn ? ' tl-ops-back' : ' tl-ops-out');
                 const opsMark = x.kind !== 'operational' ? '' : (x.opsReturn ? '✔' : '⚠');
+                const markHtml = milestone ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>'
+                               : opsMark ? `<span class="tl-ops-mark" aria-hidden="true">${opsMark}</span>` : '';
                 return `<li${milestone ? ' class="tl-milestone"' : (opsCls ? ` class="${opsCls.trim()}"` : '')}>
-                    <div class="tl-row">
-                        ${milestone ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>' : ''}
-                        ${opsMark ? `<span class="tl-ops-mark" aria-hidden="true">${opsMark}</span>` : ''}
-                        <span class="tl-reg">${escAttr(x.tail)}</span>
-                        ${typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : ''}
-                        ${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}
-                        ${kind ? '' : `<span class="tl-kind tl-kind-${x.kind}">${x.kind}</span>`}
-                        <span class="tl-title">${escAttr(x.title)}</span>
-                        ${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}
-                    </div>
+                    <div class="tl-row tl-grid">${tlCells({
+                        mark: markHtml,
+                        reg: escAttr(x.tail),
+                        type: typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : '',
+                        kind: kind ? '' : `<span class="tl-kind tl-kind-${x.kind}">${x.kind}</span>`,
+                        main: `${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}<span class="tl-title">${escAttr(x.title)}</span>${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}`,
+                    })}</div>
                 </li>`;
             };
 
@@ -18091,17 +18190,17 @@
                             // period, falling back to the aircraft's own location.
                             const loc = o.location || aircraftLocationOf(a);
                             return `<li class="tl-pin tl-pin-${d.css}">
-                                <div class="tl-row">
-                                    <span class="tl-pin-mark" aria-hidden="true">📌</span>
-                                    <span class="tl-reg">${escAttr(a.id)}</span>
-                                    ${typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : ''}
-                                    ${loc ? `<span class="tl-loc-pill" style="${pillStyle(LOCATION_PILL_COLORS[loc] || NEUTRAL_PILL)}" title="${escAttr(loc)}">📍 ${escAttr(locationCode(loc))}</span>` : ''}
-                                    <span class="tl-kind tl-kind-ops tl-kind-ops-${d.css}"${d.full ? ` title="${escAttr(d.full)}"` : ''}>${escAttr(d.short)}</span>
-                                    <span class="tl-title">${o.since ? `since ${escAttr(o.since)}` : 'date not set'}</span>
-                                    ${age ? `<span class="age-pill" title="Out of service for this long">${escAttr(age)}</span>` : ''}
-                                    ${o.reason ? `<span class="tl-sub">${escAttr(o.reason)}</span>` : ''}
-                                    ${o.expectedReturn ? `<span class="tl-etr" title="Expected back in service">↩ ${escAttr(o.expectedReturn)}</span>` : ''}
-                                </div>
+                                <div class="tl-row tl-grid">${tlCells({
+                                    mark: '<span class="tl-pin-mark" aria-hidden="true">📌</span>',
+                                    reg: escAttr(a.id),
+                                    type: typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : '',
+                                    kind: `<span class="tl-kind tl-kind-ops tl-kind-ops-${d.css}"${d.full ? ` title="${escAttr(d.full)}"` : ''}>${escAttr(d.short)}</span>`,
+                                    main: `${loc ? `<span class="tl-loc-pill" style="${pillStyle(LOCATION_PILL_COLORS[loc] || NEUTRAL_PILL)}" title="${escAttr(loc)}">📍 ${escAttr(locationCode(loc))}</span>` : ''}`
+                                        + `<span class="tl-title">${o.since ? `since ${escAttr(o.since)}` : 'date not set'}</span>`
+                                        + `${age ? `<span class="age-pill" title="Out of service for this long">${escAttr(age)}</span>` : ''}`
+                                        + `${o.reason ? `<span class="tl-sub">${escAttr(o.reason)}</span>` : ''}`
+                                        + `${o.expectedReturn ? `<span class="tl-etr" title="Expected back in service">↩ ${escAttr(o.expectedReturn)}</span>` : ''}`,
+                                })}</div>
                             </li>`;
                         }).join('')}</ul>`;
                 }
@@ -18169,7 +18268,6 @@
         function updateMetrics() {
             // The Software/Media population: Active retrofit only.
             const active = swFleet();
-            const completedStrict = active.filter(isCompletedStrict);
 
             // --- Global widget 1: software loading ---
             const swCount = active.filter(a => swVersionOf(a) === latestSwVersion()).length;
@@ -18215,7 +18313,6 @@
             const maintCard = document.getElementById('metricMaintValue');
             if (maintCard) maintCard.closest('.metric-card').classList.toggle('alert-clear', maintCount === 0);
 
-            renderStationCompletion(completedStrict);
             renderTimeline();
             renderSysBar();     // fleet count and the open panel follow the same data
             updateTabCounts();  // the menu badges read the same figures
@@ -18227,10 +18324,18 @@
         // widgets show), Fleet = the WiFi programme scope, Activity = new AVRs. Every
         // number comes from the helper the rest of the dashboard already trusts — none
         // is a second copy of a stored figure.
-        function setTabCount(id, n) {
+        function setTabCount(id, n, ratio) {
             const el = document.getElementById(id);
             if (!el) return;
             el.textContent = (typeof n === 'number' && n > 0) ? String(n) : '';
+            // Optional completion colour: green at 100%, amber while short, red when
+            // well behind. Passing no ratio leaves the badge in its neutral state.
+            el.classList.remove('tab-count-done', 'tab-count-warn', 'tab-count-low');
+            if (typeof ratio === 'number' && el.textContent) {
+                el.classList.add(ratio >= 1 ? 'tab-count-done'
+                               : ratio >= 0.6 ? 'tab-count-warn'
+                               : 'tab-count-low');
+            }
         }
 
         // AVRs the viewer would treat as new: dated within the last 14 days, and only
@@ -18249,13 +18354,15 @@
 
         function updateTabCounts() {
             if (typeof swFleet === 'function') {
-                setTabCount('tabCountSw',
-                    swFleet().filter(a => swVersionOf(a) === latestSwVersion()).length);
+                const swTotal = swFleet().length;
+                const swDone = swFleet().filter(a => swVersionOf(a) === latestSwVersion()).length;
+                setTabCount('tabCountSw', swDone, swTotal ? swDone / swTotal : 0);
             }
             if (typeof mediaFleet === 'function') {
                 const cyc = latestMediaCycle();
-                setTabCount('tabCountMedia',
-                    cyc ? mediaFleet().filter(a => a.media && a.media.mediaCycle === cyc).length : 0);
+                const medTotal = mediaFleet().length;
+                const medDone = cyc ? mediaFleet().filter(a => a.media && a.media.mediaCycle === cyc).length : 0;
+                setTabCount('tabCountMedia', medDone, medTotal ? medDone / medTotal : 0);
             }
             if (typeof projectScope === 'function') setTabCount('tabCountFleet', projectScope());
             setTabCount('tabCountAvr', newAvrCount());
