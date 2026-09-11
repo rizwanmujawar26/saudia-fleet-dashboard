@@ -6,19 +6,39 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.127.0–v2.127.1 (2026-09-11).** Home-page overhaul (cosmetic/structural,
-no rules change). The **menu is now stitched into the green header bar** (Apple-style):
-`.header` is `flex-direction:column` — a slimmer `.header-main` brand row (logo left, title
-centred, clock right) with `.tabs` as a green nav strip directly beneath it, **centred at
-≥900px** and horizontally scrollable below that. The nav is **no longer its own sticky
-element**, so `--header-h` spans the whole bar and `publishStickyHeights()` holds `--tabs-h`
-at `0px` (⚠️ don't reintroduce a per-nav `--tabs-h`). **Sign-in moved out of the tab bar to
-the status bar** (`#sysAuthChip` → `footerAuthClick()` / `updateFooterAuthChip()`). The
-**global KPI widgets are hidden by default** and toggled from the status bar's **Widgets**
-chip (`toggleGlobalWidgets()`, remembered in `localStorage.globalWidgetsOn`; `syncTimelineFocus`
-is still their single display owner). **Overview → 🏠 Home** (label only; id unchanged), and
-the **Project Objectives section was removed** (Overview is Timeline-only now). Memory:
-`home-redesign-v2127`. Read CHANGELOG v2.127 before touching the header/nav or sticky offsets.
+**Latest — v2.128.0–v2.129.0 (2026-09-11).** UI polish (cosmetic; no rules change, no new node).
+
+**v2.128** — the **menu moved back OUT of the green header** into its own Apple-style
+**frosted-glass `.navbar`** (`position:sticky; top:var(--header-h)`, translucent +
+`backdrop-filter` blur, opaque `@supports` fallback) sitting OVER the content below the
+title bar. The multicolour `.header::after` stripe is therefore back **under the title**,
+not under the menu; the active tab is a **pill** (`.tab-button.active` bg), not the old gold
+underline. ⚠️ **Sticky chain REVERSED from v2.127:** `publishStickyHeights()` publishes the
+navbar's real height as `--tabs-h` again (v2.127 held it at 0), and the `is-stuck` shadow is
+on `.navbar`. **Live menu badges** (`updateTabCounts()`): Software/Media/Fleet counts +
+a red new-AVR badge (`newAvrCount()`, last 14 days). `.header-clock` is `white-space:nowrap`.
+
+**v2.129** — Fleet + shared button patterns. Fleet composition is **one split widget**
+("IFC Fleet", `N aircraft` bullet, `44 Active`/`In Retrofit 2` on a green/amber bar —
+`.fleet-total`, reuses `.ssid-*`). Quick pills are **All / Eclipse / HBC+ / AOG** (Eclipse/
+HBC+ on a hidden `system` axis; row `data-system`); the "N aircraft" chip beside the search
+box is gone. **Filter dropdown scroll fix** — the capture-phase `window` scroll handler
+ignores scrolls inside `.fb-pop`, so a long grouped dropdown scrolls instead of dismissing.
+**Filter badge counts OPTIONS not axes** (`fbGroupedCount`/`fbActiveCount` sum sizes).
+**Table "X of Y" footers** everywhere (`setTableCount()`; the Satcom MODMAN line
+generalised). **Reset ⇄ Back-to-top on all pages** (`resetOrTop`/`syncResetTopButtons`,
+`.reset-btn.to-top`; every `.filterbar` is sticky). **Edit** is hidden signed-out, a pencil
+`✎`/`💾` `.icon-btn` signed-in. **Add** buttons are `＋ Add` collapsing to a `+` circle;
+the Activity tab's two adds fold into one `#maintAddBtn` → `openActivityAddMenu()`. Memory:
+`frosted-nav-and-menu-badges-v2128`.
+
+**Prior — v2.127.0–v2.127.1 (2026-09-11).** Home-page overhaul: **sign-in moved to the
+status bar** (`#sysAuthChip` → `footerAuthClick()` / `updateFooterAuthChip()`); **global KPI
+widgets hidden by default**, toggled from the status bar's **Widgets** chip
+(`toggleGlobalWidgets()`, `localStorage.globalWidgetsOn`; `syncTimelineFocus` is their single
+display owner); **Overview → 🏠 Home** (label only; id unchanged); **Project Objectives
+removed** (Overview is Timeline-only). ⚠️ v2.127 also stitched the nav INTO `.header` and held
+`--tabs-h` at 0 — **both reversed by v2.128 above.**
 
 **Prior — v2.124.0–v2.126.0 (2026-09-11).** Reports + a second database.
 **v2.124–2.125** overhauled the **Reports (AVR)** feed and its **printable report**: People
@@ -2870,20 +2890,20 @@ undo by accident:
 - **`z-index: 500`**, deliberately below the modal overlays (1000, and 1100 for the
   system information panel) so an overlay still covers the header.
 
-**The nav strip lives INSIDE the header now (v2.127).** It used to be its own
-`position: sticky` element pinned at `top: var(--header-h)`; now `.tabs` is a child of
-`.header` (which is `flex-direction: column`), so the whole bar — brand row plus nav —
-pins as one. `--header-h` therefore already includes the nav, and `publishStickyHeights()`
-holds `--tabs-h` at `0px` so the filter-bar offset does not count the nav twice.
-⚠️ **Do not restore a per-nav `--tabs-h` or make `.tabs` sticky again.**
-`initStickyHeader()` publishes `--header-h` from the bar's measured height and keeps it
-current with a `ResizeObserver` — the bar is a different height per breakpoint and
-different again when the title wraps, so a hardcoded offset is wrong on most screens.
+**The nav is its OWN frosted sticky bar again (v2.128 — reversed v2.127).** `.navbar`
+is `position: sticky; top: var(--header-h)`, pinned directly under the header, translucent
+with a `backdrop-filter` blur. `publishStickyHeights()` publishes its measured height as
+`--tabs-h` (NOT 0 — that was the v2.127 arrangement when the nav lived inside `.header`), so
+`--sticky-top = --header-h + --tabs-h` places the filter bars under BOTH. The `is-stuck`
+shadow is toggled on `.navbar` (the bar actually over the content) as well as `.header`.
+`initStickyHeader()` publishes `--header-h` from the header's measured height and keeps it
+current with a `ResizeObserver` — the header is a different height per breakpoint and
+different again when the title wraps, so a hardcoded offset is wrong on most screens; the
+navbar's `top` follows `--header-h`, and its own height is published as `--tabs-h`.
 
-`.tabs` is now a green strip stitched into the bar (white labels, gold active underline),
-not the old white strip — so it no longer carries the opaque `background-color: #ffffff`
-base, and the four white scroll-fade gradient layers were dropped with it. It stays
-horizontally scrollable, and is centred (`justify-content: center`) at ≥900px.
+`.tabs` lives inside the frosted `.navbar` (dark ink on the translucent bar; the active tab
+is a pill — `.tab-button.active` background, not an underline). It carries no opaque white
+base. It stays horizontally scrollable, and is centred (`justify-content: center`) at ≥900px.
 
 `initStickyHeader()` otherwise only toggles `.is-stuck` for the shadow, and only
 when the state changes — the pinning itself is pure CSS.
@@ -2894,8 +2914,8 @@ There are two stacks, sharing the first two layers:
 
 | page | stack |
 |---|---|
-| tables | header (brand + nav) → **filter bar** → table head |
-| Overview | header (brand + nav) → **`.tl-controls`** → **`.cal-strip`** |
+| tables | header (brand) → **`.navbar`** (nav) → **filter bar** → table head |
+| Overview | header (brand) → **`.navbar`** (nav) → **`.tl-controls`** → **`.cal-strip`** |
 
 On the Overview the kind filter, the sort and the calendar all stay put and the
 timeline runs behind them, so the date navigation is reachable from anywhere in the

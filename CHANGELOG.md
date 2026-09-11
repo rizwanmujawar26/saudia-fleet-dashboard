@@ -13,6 +13,67 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.129.0 — Fleet combo widget, quick-filter + count fixes, table footers, shared reset/edit/add buttons
+User-directed (2026-09-11). Cosmetic/structural; no rules change, no new node (the Fleet
+`system` filter axis reads existing data — `data-system` is derived from the System column).
+
+- **Fleet composition combo widget.** The separate Active Fleet + In Retrofit tiles are
+  replaced by ONE split widget in `renderFleetWidgets()` — label **IFC Fleet**, an
+  `N aircraft` bullet (active + retrofit = the programme, 46), `44 Active` / `In Retrofit 2`
+  drawn against each other on a green/amber split bar. Reuses the SSID widget's
+  `.ssid-figures`/`.ssid-track`; new `.fleet-total` / `.fleet-fill-active|retrofit` CSS.
+- **Fleet quick pills → All / Eclipse / HBC+ / AOG** (Active dropped). Eclipse and HBC+ carry
+  live counts (`fleetSystemCount`) and select on a new **hidden `system` axis**; each row
+  carries `data-system = system || systemDefault(fit)` (the System column value). `fleetView()`
+  gained `eclipse`/`hbc` modes; `fleetIsAllMode()` now includes `system`.
+- **Removed the "N aircraft" chip beside the Fleet search box** (the fleet bar's `extra`) — it
+  duplicated the pill/Filters counts. The count moved to the table foot (below).
+- **Filter dropdown scroll bug FIXED.** The capture-phase `window` scroll handler that closes an
+  anchored popover now **ignores scrolls that originate inside `.fb-pop`** (`e.target === pop ||
+  pop.contains(e.target)`). Before, scrolling a long grouped dropdown (Fit+Status+Operational+
+  SSID) dismissed it, so only the options visible without scrolling could be ticked.
+- **Filter badge counts OPTIONS, not axes.** `fbGroupedCount()` and `fbActiveCount()` now sum
+  the selected-option counts across (non-hidden) filters instead of counting touched axes — so
+  three ticked Fit boxes read **3**, matching the open dropdown, not **1**.
+- **Table count footers everywhere.** New shared `setTableCount(id, shown, total, noun)` writes
+  `<shown> of <total> <noun>` (the Satcom "90 of 90 MODMANs" line generalised). Added
+  `#aircraftCount`, `#mediaCount`, `#fleetCount` (`.table-count` foot `<p>`); Satcom switched to
+  the shared helper. `applyAircraftFilters`/`applyMediaFilters`/`syncFleetCount` set them.
+- **Reset ⇄ Back-to-top on ALL pages** (was Timeline-only). `timelineResetOrTop`/
+  `syncTimelineTopBtn` replaced by generic `resetOrTop(btn, resetFn)` + `syncResetTopButtons()`;
+  every reset button's `onclick` is now `resetOrTop(this, resetXTable)`. CSS `.tl-reset.to-top`
+  → `.reset-btn.to-top`. ⚠️ Every `.filterbar` is `position: sticky`, which is what keeps the
+  button on screen through the scroll — do not un-stick them.
+- **Edit button: hidden signed-out, pencil signed-in.** `applyEditButton()` now sets
+  `display:none` when `!canEdit()`; when unlocked it drives an `.icon-btn` (`.ib-icon` ✎ →
+  💾 while editing, `.ib-label` = idle/active word). All seven markups became
+  `edit-btn icon-btn` with a `✎`/label; the `🔒`/`🔓`/`edit-locked` states are gone.
+  `updateAuthUI()` now also calls `updateSatcomEditUI()` so sign-out hides that one too.
+- **Add button: `＋ Add`, responsive, one per page.** Every add button is `add-btn icon-btn`
+  (`＋`/`Add`), collapsing to a bare `+` circle < 700px (shared rule now covers `.edit-btn`/
+  `.add-btn`). The Activity tab's two adds (Add Visit + Add Activity) fold into ONE `#maintAddBtn`
+  that opens `openActivityAddMenu()` — a small popover (reusing `.avr-assign-menu`) offering
+  *Add Activity* / *Add Visit Report*. `avrAddBtn` / `maintAddActivityBtn` removed.
+
+### v2.128.0 — Frosted nav bar below the title, live menu badges, clock never wraps
+User-directed (2026-09-11), reversing part of v2.127.0. Cosmetic; no rules change.
+
+- **Nav moved back OUT of the green header** into its own Apple-style frosted-glass bar
+  (`.navbar`, `position: sticky; top: var(--header-h)`, translucent + `backdrop-filter` blur,
+  `@supports` opaque fallback). The multicolour `.header::after` stripe is therefore back under
+  the **title** (the "upper portion") rather than under the menu.
+- **Menu restyled:** smaller, centred, dark ink on the frosted bar; the active item carries a
+  **pill selection** (`.tab-button.active` background) instead of the gold underline.
+- **Sticky chain restored:** `publishStickyHeights()` publishes the navbar's real height as
+  `--tabs-h` again (v2.127 had held it at 0). ⚠️ This REVERSES that v2.127 note — the nav is a
+  separate sticky element once more, so `--tabs-h` must carry its height. The `is-stuck` shadow
+  moved to `.navbar` (the bar actually over the content).
+- **Live menu badges:** `updateTabCounts()` fills `#tabCountSw` / `#tabCountMedia` /
+  `#tabCountFleet` (same figures as the widgets) and a red `#tabCountAvr` = new AVRs (last 14
+  days, viewer-visible), via `newAvrCount()`. Called from `updateMetrics()` and `renderAvrFeed()`.
+- **Clock never wraps:** `.header-clock` is `white-space: nowrap`, so `HH:MM Z` can no longer
+  break onto two lines at some zoom levels.
+
 ### v2.127.1 — Centre the menu on big screens, rename Overview → Home, tighten the timeline gap
 User-directed (2026-09-11), a follow-up to v2.127.0.
 
