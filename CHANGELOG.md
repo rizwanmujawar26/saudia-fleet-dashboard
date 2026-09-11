@@ -13,6 +13,17 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.130.1 — Fix: Software Edit button gone after signing in
+User-reported (2026-09-11). No rules change, no new node.
+
+- **`signInForTabs()` now runs the full `updateAuthUI()`, not just `applyTabVisibility()`.**
+  The page Edit buttons are painted only by `updateAuthUI()`; a table render repaints its
+  own (`populateFleetTable → updateFleetEditUI`, etc.), but `populateAircraftTable()` has no
+  such call, so the Software `editModeBtn` was revealed only by `updateAuthUI`. Since the
+  status-bar sign-in (v2.127) called only `applyTabVisibility()`, the Software Edit button
+  stayed hidden after signing in (other pages' buttons reappeared on navigating to them).
+  `updateAuthUI()` calls `applyTabVisibility()` itself, so the restricted tabs still reveal.
+
 ### v2.130.0 — Reports count badge, Fleet config bullet + Type/search by config, Out-of-Service tile removed
 User-directed (2026-09-11). Cosmetic/structural; no rules change, no new node (config reads
 the existing `/fleet/{tail}/config`).

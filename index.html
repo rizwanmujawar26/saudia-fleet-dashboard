@@ -7085,8 +7085,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.130.0';
-        const APP_BUILD    = '2026.09.11.11';
+        const APP_VERSION  = '2.130.1';
+        const APP_BUILD    = '2026.09.11.12';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -8117,7 +8117,13 @@
 
         async function signInForTabs() {
             await promptSignIn();
-            applyTabVisibility();
+            // Full repaint, the same one signOut() runs — NOT just applyTabVisibility().
+            // The page Edit buttons are painted only by updateAuthUI(); a render repaints
+            // its own (populateFleetTable → updateFleetEditUI, etc.), but the Software page
+            // has no such call, so after a status-bar sign-in its editModeBtn stayed hidden
+            // until some other event fired updateAuthUI. updateAuthUI() calls
+            // applyTabVisibility() itself, so this still reveals the restricted tabs.
+            updateAuthUI();
         }
 
         function canEdit() {
