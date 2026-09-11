@@ -6,7 +6,21 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.124.0–v2.126.0 (2026-09-11).** Reports + a second database.
+**Latest — v2.127.0–v2.127.1 (2026-09-11).** Home-page overhaul (cosmetic/structural,
+no rules change). The **menu is now stitched into the green header bar** (Apple-style):
+`.header` is `flex-direction:column` — a slimmer `.header-main` brand row (logo left, title
+centred, clock right) with `.tabs` as a green nav strip directly beneath it, **centred at
+≥900px** and horizontally scrollable below that. The nav is **no longer its own sticky
+element**, so `--header-h` spans the whole bar and `publishStickyHeights()` holds `--tabs-h`
+at `0px` (⚠️ don't reintroduce a per-nav `--tabs-h`). **Sign-in moved out of the tab bar to
+the status bar** (`#sysAuthChip` → `footerAuthClick()` / `updateFooterAuthChip()`). The
+**global KPI widgets are hidden by default** and toggled from the status bar's **Widgets**
+chip (`toggleGlobalWidgets()`, remembered in `localStorage.globalWidgetsOn`; `syncTimelineFocus`
+is still their single display owner). **Overview → 🏠 Home** (label only; id unchanged), and
+the **Project Objectives section was removed** (Overview is Timeline-only now). Memory:
+`home-redesign-v2127`. Read CHANGELOG v2.127 before touching the header/nav or sticky offsets.
+
+**Prior — v2.124.0–v2.126.0 (2026-09-11).** Reports + a second database.
 **v2.124–2.125** overhauled the **Reports (AVR)** feed and its **printable report**: People
 grouped On-aircraft/Remote (no more per-name badges), head-row action buttons (Print/Edit/
 Publish/Delete, right-aligned, open *or* collapsed), the aircraft dossier regrouped into
@@ -1679,10 +1693,14 @@ re-applies a column sort *only if the user clicked one*; the date header clears
   the split bar, its figure, and the `wifi-hidden` badge on both the Fleet table and
   the Activity profile — because it is an exception state, not a category of its own. It counts the **Active** fleet only — an aircraft still in retrofit
   has no SSID on air to be public or hidden.
-- **Global widgets** — four KPI cards above the tab bar (`.global-widgets`),
-  fleet-wide, on every tab: Software Loading ×2 — `Retrofit` (Middleware) and
-  `Linefit` (SBC Configuration A.13, the HBC+ pair) — then Media Loading and
-  Maintenance.
+- **Global widgets** — four fleet-wide KPI cards (`#globalWidgets` / `.global-widgets`):
+  Software Loading ×2 — `Retrofit` (Middleware) and `Linefit` (SBC Configuration A.13, the
+  HBC+ pair) — then Media Loading and Maintenance. **Since v2.127 they are hidden by
+  default** (real estate is precious, especially on a phone) and brought back from the
+  status bar's **Widgets** chip (`toggleGlobalWidgets()`, remembered in
+  `localStorage.globalWidgetsOn`). `syncTimelineFocus()` is their single display owner:
+  shown only when `globalWidgetsOn && !timelineFocused`. When on, they sit at the top of the
+  content area, above whichever tab is active.
 
   **Three levels, in this order:** programme chip (`.metric-fit`) → category
   (`.metric-label`) → specific item (`.metric-sublabel`) → figures → bar.
@@ -2730,9 +2748,10 @@ sections (Build / Data / Usage).
 
 The HBC+ exclusion note that the old footer carried was moved to the Overview's
 `.footnote` block, and then removed altogether at the user's request in v2.7.0.
-The same fact is still stated in the Project Objectives list, so nothing was lost.
-(The Software tab's HBC+ table, which also carried it, was removed on 2026-09-01 for
-a future dedicated HBC+ page.)
+It was also stated in the Project Objectives list — itself removed in v2.127 when the
+Overview became Timeline-only — but the HBC+ pair is still distinguished everywhere it
+matters (the `Linefit` global-widget card, the Fleet `system` field). (The Software tab's
+HBC+ table, which also carried it, was removed on 2026-09-01 for a future dedicated HBC+ page.)
 
 ---
 
@@ -2851,15 +2870,20 @@ undo by accident:
 - **`z-index: 500`**, deliberately below the modal overlays (1000, and 1100 for the
   system information panel) so an overlay still covers the header.
 
-**The tab strip pins under it**, at `top: var(--header-h)`, so the global widgets
-scroll away but the tabs stay reachable. `initStickyHeader()` publishes
-`--header-h` from the header's measured height and keeps it current with a
-`ResizeObserver` — the header is a different height per breakpoint and different
-again when the title wraps, so a hardcoded offset is wrong on most screens.
+**The nav strip lives INSIDE the header now (v2.127).** It used to be its own
+`position: sticky` element pinned at `top: var(--header-h)`; now `.tabs` is a child of
+`.header` (which is `flex-direction: column`), so the whole bar — brand row plus nav —
+pins as one. `--header-h` therefore already includes the nav, and `publishStickyHeights()`
+holds `--tabs-h` at `0px` so the filter-bar offset does not count the nav twice.
+⚠️ **Do not restore a per-nav `--tabs-h` or make `.tabs` sticky again.**
+`initStickyHeader()` publishes `--header-h` from the bar's measured height and keeps it
+current with a `ResizeObserver` — the bar is a different height per breakpoint and
+different again when the title wraps, so a hardcoded offset is wrong on most screens.
 
-`.tabs` also needed `background-color: #ffffff`. Its four gradient layers are edge
-fades for the scroll-shadow effect and are clear through the middle, so without an
-opaque base the page showed through the strip once it was pinned.
+`.tabs` is now a green strip stitched into the bar (white labels, gold active underline),
+not the old white strip — so it no longer carries the opaque `background-color: #ffffff`
+base, and the four white scroll-fade gradient layers were dropped with it. It stays
+horizontally scrollable, and is centred (`justify-content: center`) at ≥900px.
 
 `initStickyHeader()` otherwise only toggles `.is-stuck` for the shadow, and only
 when the state changes — the pinning itself is pure CSS.
@@ -2870,8 +2894,8 @@ There are two stacks, sharing the first two layers:
 
 | page | stack |
 |---|---|
-| tables | header → tab strip → **filter bar** → table head |
-| Overview | header → tab strip → **`.tl-controls`** → **`.cal-strip`** |
+| tables | header (brand + nav) → **filter bar** → table head |
+| Overview | header (brand + nav) → **`.tl-controls`** → **`.cal-strip`** |
 
 On the Overview the kind filter, the sort and the calendar all stay put and the
 timeline runs behind them, so the date navigation is reachable from anywhere in the
@@ -2889,12 +2913,12 @@ list. `--tlctrl-h` is published for the offset the strip pins at, the same way
   leaving ~507px of list). That is the deliberate trade — the calendar is the
   navigation, so it earns the room.
 
-The table stack is **header → tab strip → filter bar → table head**, each pinned under
+The table stack is **header (brand + nav) → filter bar → table head**, each pinned under
 the one above. Every offset below the first is a SUM, so `publishStickyHeights()` measures
-and publishes `--header-h`, `--tabs-h` and `--filterbar-h`, and `--sticky-top` adds the
-first two. **It runs on every tab switch as well as on resize**: at load the Overview
-tab is active and every `.filterbar` is `display:none`, so a measurement then finds
-nothing to measure.
+and publishes `--header-h` and `--filterbar-h`; `--tabs-h` is now held at `0px` (the nav is
+inside the header) and `--sticky-top` adds `--header-h + --tabs-h`. **It runs on every tab
+switch as well as on resize**: at load the Overview tab is active and every `.filterbar` is
+`display:none`, so a measurement then finds nothing to measure.
 
 ⚠️ **The table head cannot simply be `position: sticky`.** `.table-scroll-wrapper`
 carries `overflow-x: auto` for wide tables, and CSS turns the *other* axis `auto` with
@@ -3282,18 +3306,19 @@ point:
 read-only until its own Edit is pressed. Six pages use this — Software, Media,
 Activity, Hardware, Serials, Fleet.
 
-**Authentication lives in exactly two places, neither of them a page:**
+**Authentication lives in the status bar, neither part on a page (moved there from the
+tab bar in v2.127):**
 
 | | |
 |---|---|
-| tab bar button | the **control** — `🔒 Sign in` / `🔓 Signed in`, the sole caller of `promptSignIn()` and the only way to sign out |
-| status bar chip | the **readout** — `updateSysUserChip()` shows the signed-in address on every tab |
+| `#sysAuthChip` | the **control** — `Sign in` / `Sign out` via `footerAuthClick()`, label set by `updateFooterAuthChip()`; the sole caller of `promptSignIn()` and the only way to sign out. `requireSignIn()` pulses this chip when a locked Edit button is pressed. |
+| `#sysUserChip` | the **readout** — `updateSysUserChip()` shows the signed-in address on every tab |
 
 **No page has an authentication control or an identity label.** The per-page
 `Sign out` button and all seven `signed-in-as` spans were removed in v2.16.0; a page
 knows only whether its Edit button is unlocked. A locked page button calls
-`requireSignIn()`, which messages the status bar and pulses the tab-bar button rather
-than opening a second door.
+`requireSignIn()`, which messages the status bar and pulses the status-bar Sign-in chip
+rather than opening a second door.
 
 `signOut()` clears **every** page's Edit Mode, so a tab left mid-edit cannot come back
 showing inputs nobody can save.

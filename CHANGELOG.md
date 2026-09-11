@@ -13,6 +13,42 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.127.1 — Centre the menu on big screens, rename Overview → Home, tighten the timeline gap
+User-directed (2026-09-11), a follow-up to v2.127.0.
+
+- **Menu centred at ≥900px** — `.tabs { justify-content: center }` in a `min-width: 900px`
+  query, Apple-style. Below 900px it stays left-aligned so the strip can still scroll
+  sideways and no tab is stranded off the left edge.
+- **Tab renamed** `📊 Overview` → `🏠 Home`. The tab id and `switchTab('overview')` are
+  unchanged — only the label moved, so every internal reference still resolves.
+- **Timeline gap** — `.timeline` top margin+padding (was `margin:30px 0; padding:20px 0`)
+  zeroed to `margin:0 0 30px; padding:0 0 20px`. That spacing was sized for when the KPI
+  widgets sat above it; with the widgets hidden by default (v2.127.0) it left a large blank
+  band under the bar.
+
+### v2.127.0 — Home overhaul: menu stitched into a thinner green bar, widgets & sign-in relocated
+User-directed (2026-09-11). "Major update to the home page." Cosmetic/structural; no rules change.
+
+- **Nav moved into the header.** `.header` is now `flex-direction: column`: a slimmer
+  `.header-main` brand row (logo left, title centred, clock right) with the menu `.tabs`
+  stitched directly beneath as one green bar (Apple-style). `.tabs` is green (white tab
+  labels, gold active underline, 8px foot so the underline clears the accent stripe) and is
+  **no longer its own sticky element** — it pins with the header.
+- **Sticky chain:** because the nav lives inside `.header`, `--header-h` now spans the whole
+  bar and `publishStickyHeights()` holds `--tabs-h` at `0px` so the filter-bar offset
+  (`--sticky-top = header-h + tabs-h`) is not double-counted. ⚠️ Do not reintroduce a
+  per-nav `--tabs-h`.
+- **Sign-in left the tab bar for the status bar.** Control is `#sysAuthChip` →
+  `footerAuthClick()`; label set by `updateFooterAuthChip()` (replaced `updateTabAuthButton`);
+  `requireSignIn()` points at the sysbar chip. `#tabSignInBtn` and `.tab-signin*` CSS removed.
+- **Global KPI widgets hidden by default.** `#globalWidgets` starts `display:none`;
+  `#sysWidgetsChip` → `toggleGlobalWidgets()`, state in `localStorage.globalWidgetsOn`,
+  applied at init by `applyGlobalWidgets()`. `syncTimelineFocus()` is the single owner of
+  their display: shown only when `globalWidgetsOn && !timelineFocused`. This is the
+  "bring the widgets back for a major update" path the user asked for.
+- **Project Objectives removed** (HTML block + `renderObjectives()`); the `.objective-*` CSS
+  is left as inert dead style. The Overview tab is now Timeline-only.
+
 ### v2.126.0 — Configuration register: new `/configs` node, fleet references it, IFE derives from config
 User-directed (2026-09-11). The **two-database design**: a second reference DB so a whole
 class of aircraft is described once. Rules deployed before the page.
