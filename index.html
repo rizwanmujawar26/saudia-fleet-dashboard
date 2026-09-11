@@ -7121,8 +7121,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.132.0';
-        const APP_BUILD    = '2026.09.11.14';
+        const APP_VERSION  = '2.132.1';
+        const APP_BUILD    = '2026.09.11.15';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12778,9 +12778,10 @@
                 ['Engines', engines],
                 ['Fleet status', fleetStatusOf(a) || ''],
             ];
-            // Hardware — the box-and-airframe facts: which IFC/IFE system, how it is fitted,
-            // where and when the retrofit happened. Serials and MODMAN live in their own
-            // tables under this same Hardware heading in the dossier.
+            // Specifications — the box-and-airframe facts: which IFC/IFE system, how it is
+            // fitted, and the modification window (Mod start/end/window come straight from
+            // the Fleet retrofit fields). Serials and MODMAN live in their own tables under
+            // this same heading in the dossier.
             const hardwareRows = [
                 ['IFC system', system],
                 ['Previous IFC', spec.ifcPrevious || ''],
@@ -12790,7 +12791,7 @@
                 ['Mod start', a.retrofitStart || ''],
                 ['Mod end', a.retrofitEnd || (a.retrofitStart ? 'Ongoing' : '')],
                 ['Mod window', retro && retroSpan ? retroSpan : ''],
-                [linefit ? 'SBC config' : 'Completion', linefit
+                [linefit ? 'SBC config' : 'Activation', linefit
                     ? (a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
                     : (a.completionLocation ? `${a.completionLocation}${a.completionDate ? ' · ' + a.completionDate : ''}` : '')],
             ];
@@ -12859,7 +12860,7 @@
                 <summary class="avr-dossier-summary">🛩️ Aircraft dossier — ${escAttr(tail)}<a class="fr24-link" href="${escAttr(fr24Url(tail))}" target="_blank" rel="noopener" title="Open ${escAttr(tail)} on Flightradar24" onclick="event.stopPropagation();">${FR24_ICON}</a></summary>
                 <div class="avr-section-label">✈️ Aircraft</div>
                 <div class="avr-meta">${aircraftRows.map(cell).join('')}</div>
-                <div class="avr-section-label">🔧 Hardware</div>
+                <div class="avr-section-label">🔧 Specifications</div>
                 <div class="avr-meta">${hardwareRows.map(cell).join('')}</div>
                 ${ifcNote}
                 ${equipTable}
@@ -12941,16 +12942,13 @@
             if (!open) return `<div class="avr-card ${status === 'draft' ? 'is-draft' : ''}">${head}</div>`;
 
             const cell = ([k, val]) => `<div class="avr-meta-cell"><div class="avr-meta-key">${escAttr(k)}</div><div class="avr-meta-val">${escAttr(val) || '—'}</div></div>`;
-            const ac = aircraftData.find(x => x.id === v.aircraft) || {};
-            const isRetro = rt.value === 'retrofit';
+            // The modification window (Mod start/end) is not duplicated here — it lives in the
+            // Specifications section of the dossier, sourced from the Fleet retrofit fields.
             const metaCells = [
                 ['Report', rt.label],
                 ['Dates', avrDateLabel(v)],
                 ['Engagement', mode.label],
                 avrLocationFull(v) ? ['Location', avrLocationFull(v)] : null,
-                // A retrofit report carries the whole modification window up top, not just the visit dates.
-                isRetro ? ['Mod start', ac.retrofitStart || '—'] : null,
-                isRetro ? ['Mod end', ac.retrofitEnd || (ac.retrofitStart ? 'Ongoing' : '—')] : null,
             ].filter(Boolean);
 
             // People, grouped into On aircraft / Remote — the names club under one tag per
@@ -13496,12 +13494,13 @@
             const isDraft = v.status === 'draft';
             const title = `${rt.label} — ${v.aircraft}${v.ref ? ' · ' + v.ref : ''}`;
 
+            // Top block is one line only — aircraft, dates, location. The modification
+            // window lives in the Specifications section below (sourced from the Fleet
+            // retrofit fields), not duplicated up here.
             const metaGrid = `<div class="rpt-grid">
                 <div><span class="k">Aircraft</span> ${escAttr(v.aircraft)}${type ? ' <span class="muted">(' + escAttr(type) + ')</span>' : ''}</div>
                 <div><span class="k">Dates</span> ${escAttr(avrDateLabel(v))}</div>
                 <div><span class="k">Location</span> ${escAttr(avrLocationFull(v) || '—')}</div>
-                ${rt.value === 'retrofit' ? `<div><span class="k">Mod start</span> ${escAttr((aircraftData.find(a => a.id === v.aircraft) || {}).retrofitStart || '—')}</div>
-                <div><span class="k">Mod end</span> ${escAttr((aircraftData.find(a => a.id === v.aircraft) || {}).retrofitEnd || ((aircraftData.find(a => a.id === v.aircraft) || {}).retrofitStart ? 'Ongoing' : '—'))}</div>` : ''}
             </div>`;
 
             // Engagement + People in one block. Names render in two clearly separate
@@ -13624,7 +13623,7 @@
     ${engagementPeople}
     <div class="sec">Aircraft</div>
     <div class="rpt-grid">${dossierGrid(aircraftRows)}</div>
-    <div class="sec">Hardware</div>
+    <div class="sec">Specifications</div>
     <div class="rpt-grid">${dossierGrid(hardwareRows)}</div>
     ${ifcNotePrint}
     ${equipPrint}
