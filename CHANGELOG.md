@@ -13,6 +13,26 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.130.0 — Reports count badge, Fleet config bullet + Type/search by config, Out-of-Service tile removed
+User-directed (2026-09-11). Cosmetic/structural; no rules change, no new node (config reads
+the existing `/fleet/{tail}/config`).
+
+- **Reports toggle count is a red bullet, not "(2)".** `updateAvrEditUI()` now sets the
+  toggle's innerHTML with an `.avr-vt-badge` span (the same red `#d64545` pill the nav's
+  "new" totals use), so the Activity → Reports count reads the same way as the nav badge.
+  Stays red on the green active toggle (`.avr-vt-btn.active .avr-vt-badge`).
+- **Fleet: cabin/IFE config shown as a bullet beside Type.** The read-only Type cell now
+  renders the type pill and a compact `.cfg-pill` (e.g. `32U`) tucked tight in a
+  `.type-config` inline-flex — one pairing, no extra column. `row.dataset.config` set for
+  filtering; config joins `row.dataset.search`.
+- **Fleet Type filter lists configs too.** New `fleetConfigOptions()` (distinct config
+  codes + counts) appended after the aircraft types in the one Type dropdown; the axis gets
+  a bespoke `rowMatch` testing type OR config (no type value collides with a config code).
+  Typing a config in the search box (e.g. `32U` → 7) lists every aircraft in it.
+- **Fleet: Out-of-Service mini widget removed** (redundant with the AOG count pill above the
+  table). `renderFleetWidgets()` now emits only IFC Fleet + SSID; `opsOutFleet()` still
+  drives the AOG pill.
+
 ### v2.129.0 — Fleet combo widget, quick-filter + count fixes, table footers, shared reset/edit/add buttons
 User-directed (2026-09-11). Cosmetic/structural; no rules change, no new node (the Fleet
 `system` filter axis reads existing data — `data-system` is derived from the System column).

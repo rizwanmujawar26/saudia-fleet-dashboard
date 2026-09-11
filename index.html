@@ -2326,6 +2326,24 @@
             white-space: nowrap;
         }
 
+        /* Type and cabin/IFE config read as two bullets tucked tightly together in the
+           one Type cell (user, 2026-09-11) — a compact pairing that costs almost no
+           width rather than a whole extra column. */
+        .type-config { display: inline-flex; align-items: center; gap: 3px; }
+        .cfg-pill {
+            display: inline-block;
+            padding: 1px 6px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .2px;
+            border-radius: 9px;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+            background: #eef1f3;
+            color: #55606a;
+            border: 1px solid #dfe4e8;
+        }
+
         /* Delivery — date on top, age below, both centred. */
         .deliv-stack { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.15; }
         .deliv-stack .fleet-date { font-size: 11px; }
@@ -4097,6 +4115,12 @@
         .avr-vt-btn { border: none; background: transparent; padding: 6px 12px; font-size: 12.5px; font-weight: 700;
             color: #5a6b78; cursor: pointer; white-space: nowrap; }
         .avr-vt-btn.active { background: #0a5c34; color: #fff; }
+        /* Live report count on the Reports toggle — the same red bullet the nav tabs use
+           for "new" totals, so a number reads the same way wherever it appears. */
+        .avr-vt-badge { display: inline-block; min-width: 15px; padding: 1px 5px; margin-left: 5px;
+            font-size: 10px; font-weight: 800; line-height: 1.3; text-align: center; border-radius: 980px;
+            background: #d64545; color: #fff; }
+        .avr-vt-btn.active .avr-vt-badge { background: #ff5a5a; color: #fff; }
 
         /* Activities repository — day groups + rows */
         .repo-day { margin-bottom: 14px; }
@@ -7061,8 +7085,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.129.0';
-        const APP_BUILD    = '2026.09.11.10';
+        const APP_VERSION  = '2.130.0';
+        const APP_BUILD    = '2026.09.11.11';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -8999,8 +9023,15 @@
                 filters: [
                     // Type is its own trigger and carries a per-type count (A330 (31)…);
                     // picking one reveals every aircraft of that type (fbPick drops the Fit
-                    // narrowing for the fleet bar) so the count is honest.
-                    { id: 'type', label: 'Type', options: () => fleetTypeOptions() },
+                    // narrowing for the fleet bar) so the count is honest. The cabin/IFE
+                    // configs (32U, 333…) are listed under the same dropdown (user,
+                    // 2026-09-11): a value can be a type OR a config, so this axis needs a
+                    // bespoke rowMatch that tests both dataset keys rather than the single
+                    // like-named key. No type value equals any config code, so one shared
+                    // Set never confuses the two.
+                    { id: 'type', label: 'Type',
+                      options: () => fleetTypeOptions().concat(fleetConfigOptions()),
+                      rowMatch: (row, sel) => sel.has(row.dataset.type) || (!!row.dataset.config && sel.has(row.dataset.config)) },
                     // The least-used axes fold into ONE "Filters" dropdown (user,
                     // 2026-09-06): Fit, Programme Status, Operational state and SSID, each a
                     // group of checkboxes in a single grouped popover. `grouped: true` keeps
@@ -10231,6 +10262,16 @@
             fleetRoster.forEach(a => { if (a && a.type && seen.indexOf(a.type) === -1) seen.push(a.type); });
             return seen.map(t => ({ v: t, l: TYPE_SHORT_LABEL[t] || t, n: fleetRoster.filter(a => a.type === t).length }));
         }
+
+        // Cabin/IFE configuration codes present on the roster (32U, 333…), each with its
+        // count — appended after the aircraft types in the one Type dropdown so a config
+        // can be picked there. Sorted so the codes read in a stable order.
+        function fleetConfigOptions() {
+            const seen = [];
+            fleetRoster.forEach(a => { if (a && a.config && seen.indexOf(a.config) === -1) seen.push(a.config); });
+            seen.sort();
+            return seen.map(c => ({ v: c, l: c, n: fleetRoster.filter(a => a.config === c).length }));
+        }
         // Live count each pill would yield, shown as its bullet: All = whole roster,
         // Active = programme status Active, AOG = every out-of-service airframe
         // (opsOutFleet — any out state, delivered airframes only).
@@ -10566,12 +10607,19 @@
                 row.dataset.ops = isFuture ? 'future' : (opsState || 'in_service');
 
                 const tc = TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL;
+                // Cabin/IFE configuration code (/fleet/{tail}/config → /configs key, e.g.
+                // 32U). Shown as a second bullet snug against the type pill so the two read
+                // as one tight pair rather than a whole extra column.
+                const cfg = a.config || '';
+                const cfgPill = cfg
+                    ? `<span class="cfg-pill" title="Cabin / IFE configuration ${escAttr(cfg)}">${escAttr(cfg)}</span>`
+                    : '';
                 const typeCell = editing
-                    ? `<select class="edit-select" data-id="${a.id}" data-field="type" onchange="handleFleetEdit(this)">${
+                    ? `<span class="type-config"><select class="edit-select" data-id="${a.id}" data-field="type" onchange="handleFleetEdit(this)">${
                         [...new Set(fleetRoster.map(x => x.type))].sort().map(t =>
                           `<option value="${escAttr(t)}" ${t === (staged.type || a.type) ? 'selected' : ''}>${TYPE_SHORT_LABEL[t] || t}</option>`).join('')
-                      }</select>`
-                    : `<span class="type-pill" style="background:${tc.bg};color:${tc.fg};border-color:${tc.bd}">${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</span>`;
+                      }</select>${cfgPill}</span>`
+                    : `<span class="type-config"><span class="type-pill" style="background:${tc.bg};color:${tc.fg};border-color:${tc.bd}">${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</span>${cfgPill}</span>`;
 
                 // One dropdown over the six view values; handleFleetEdit maps the pick
                 // back to fit / scope / fleetStatus. The read-only cell reads the badge
@@ -10740,9 +10788,14 @@
                     ? `<strong class="reg-unknown" title="Placeholder ${escAttr(a.id)} — set the real registration from the Edit box">UNKNOWN</strong>`
                     : `<strong>${a.id}</strong><a class="fr24-link" href="${escAttr(fr24Url(a.id))}" target="_blank" rel="noopener noreferrer" title="Track ${escAttr(a.id)} on Flightradar24" aria-label="Track ${escAttr(a.id)} on Flightradar24">${FR24_ICON}</a>`;
 
-                // Free-text search haystack: tail, both type forms, comments, location,
-                // plus UNKNOWN / FUTURE so the search box can find placeholder airframes.
-                row.dataset.search = [a.id, a.type, TYPE_SHORT_LABEL[a.type] || '', comments, loc, delivLong, a.regUnknown ? 'unknown' : '', isFuture ? 'future' : ''].join(' ').toLowerCase();
+                // The config filter matches this — the Type dropdown lists configs too, and
+                // a plain value-membership test reads it via row.dataset.config.
+                row.dataset.config = cfg;
+
+                // Free-text search haystack: tail, both type forms, config code, comments,
+                // location, plus UNKNOWN / FUTURE so the search box can find placeholder
+                // airframes. Typing a config (e.g. 32U) lists every aircraft in it.
+                row.dataset.search = [a.id, a.type, TYPE_SHORT_LABEL[a.type] || '', cfg, comments, loc, delivLong, a.regUnknown ? 'unknown' : '', isFuture ? 'future' : ''].join(' ').toLowerCase();
 
                 row.innerHTML = `
                     <td>${idx + 1}</td>
@@ -10856,18 +10909,12 @@
                 </div>
             </div>`;
 
-            // Only when something IS out. A tile permanently reading 0 is noise, and the
-            // whole value of this one is that its appearance means something.
-            const outNow = opsOutFleet();
-            const outCard = outNow.length
-                ? card('Out of Service', outNow.length,
-                       [...new Set(outNow.map(a => opsDef(opsOf(a.id).state).short))].join(' · '),
-                       'aog')
-                : '';
+            // The Out-of-Service widget was removed (user, 2026-09-11): the AOG count pill
+            // at the top of the table already carries the same figure, so the tile was
+            // redundant. `card` is still used above; opsOutFleet() still drives the pill.
 
             grid.innerHTML =
                   totalCard
-                + outCard
                 + ssid;
         }
 
@@ -12115,7 +12162,7 @@
             if (tv) {
                 tv.classList.toggle('active', avrView === 'visits');
                 const n = avrEntries().filter(v => canEdit() || v.status === 'published').length;
-                tv.textContent = `📋 Reports${n ? ' (' + n + ')' : ''}`;
+                tv.innerHTML = `📋 Reports${n ? ` <span class="avr-vt-badge">${n}</span>` : ''}`;
             }
         }
 
