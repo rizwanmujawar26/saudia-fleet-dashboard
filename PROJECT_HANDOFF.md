@@ -6,7 +6,33 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.128.0–v2.129.0 (2026-09-11).** UI polish (cosmetic; no rules change, no new node).
+**Latest — v2.130.0–v2.130.1 (2026-09-11).** Small UI wins + one auth fix (cosmetic; no
+rules change, no new node — config reads the existing `/fleet/{tail}/config`).
+
+**v2.130.0** — three user-directed changes. (1) The Activity **Reports toggle count is a
+red bullet** (`.avr-vt-badge`, the same red the nav "new" badges use), set by
+`updateAvrEditUI()` via innerHTML, not the old `(2)` text; stays red on the green active
+toggle. (2) **Fleet Type cell shows the cabin/IFE config as a second compact bullet**
+(`.cfg-pill`, e.g. `32U`) tucked tight beside the type pill in one `.type-config` cell —
+one pairing, **no extra column** (deliberate: a new column re-measures the table). (3) The
+**Fleet Type dropdown lists configs too** — new `fleetConfigOptions()` appended after the
+aircraft types, and the `type` axis gets a **bespoke `rowMatch` testing type OR config**
+(no type value collides with a config code, so one shared Set is safe); the search box also
+finds by config (`row.dataset.config` in the haystack — `32U` → 7, `333` → 8). (4) The Fleet
+**Out-of-Service mini widget was removed** (redundant with the AOG count pill);
+`renderFleetWidgets()` emits only IFC Fleet + SSID.
+
+**v2.130.1** — bug fix (user-reported): the **Software Edit button was gone after signing
+in**. ⚠️ **Page Edit buttons are painted ONLY by `updateAuthUI()`.** Most pages' render
+functions repaint their own as a side effect (`populateFleetTable → updateFleetEditUI`, …),
+but `populateAircraftTable()` has no such call, so the Software `editModeBtn` depends on
+`updateAuthUI`. The status-bar sign-in (`signInForTabs()`, v2.127) called only
+`applyTabVisibility()` — never `updateAuthUI()` — so after sign-in the Software button stayed
+hidden (other pages' buttons reappeared on navigating to them, masking the bug). Fix:
+`signInForTabs()` now calls `updateAuthUI()` (the full repaint `signOut()` already uses; it
+runs `applyTabVisibility()` itself). Memory: `edit-button-updateauthui-signin-v2130`.
+
+**Prior — v2.128.0–v2.129.0 (2026-09-11).** UI polish (cosmetic; no rules change, no new node).
 
 **v2.128** — the **menu moved back OUT of the green header** into its own Apple-style
 **frosted-glass `.navbar`** (`position:sticky; top:var(--header-h)`, translucent +
@@ -1551,6 +1577,15 @@ The Fleet bar is the exception to "one trigger per axis" (user, 2026-09-06). It 
   each option; `fbPopHTML` already renders `o.n`, and `fbTriggerText` now appends `(n)`
   for a single pick → `Type: A330 (31)`. ⚠️ Picking a fleet Type **clears the `fitview`
   narrowing** (fbPick, fleet-only) so all N of that type show and the count is honest.
+- **Configs live in the same Type dropdown** (v2.130.0). `fleetConfigOptions()` (distinct
+  `/fleet/{tail}/config` codes + counts) is appended after the aircraft types, so the one
+  dropdown lists both `A330 (31)…` and `32U (7)`, `333 (8)…`. Because a value can now be a
+  type OR a config, the `type` axis carries a **bespoke `rowMatch`**: `sel.has(dataset.type)
+  || sel.has(dataset.config)`. Safe because no type value equals any config code, so one
+  shared Set never confuses the two; `fbPick`'s fleet-Type `fitview` clear already covers
+  it (same `filterId === 'type'`). `row.dataset.config` is set in `populateFleetTable` and
+  joins `dataset.search`, so the search box finds by config too. The read-only Type cell
+  shows the config as a second `.cfg-pill` bullet beside the type pill (`.type-config`).
 - **One "Filters" dropdown** stands in for every `grouped: true` filter (Fit / Status /
   Operational / SSID). `fbRender` renders non-grouped triggers, then appends the group
   trigger (`fbRenderGroupTrigger`, key `barId:__more`, badge = `fbGroupedCount`).
