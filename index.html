@@ -4184,6 +4184,8 @@
         .avr-linkempty { padding: 10px; color: #9aa7b2; font-size: 12px; text-align: center; }
 
         /* View toggle (Activities ⇄ Visit Reports) */
+        /* Centered row of its own, between the nav and the filter bar. */
+        .avr-viewtoggle-row { display: flex; justify-content: center; margin-bottom: 12px; }
         .avr-viewtoggle { display: inline-flex; border: 1px solid #d7dee5; border-radius: 8px; overflow: hidden; background: #f4f7fa; }
         .avr-vt-btn { border: none; background: transparent; padding: 6px 12px; font-size: 12.5px; font-weight: 700;
             color: #5a6b78; cursor: pointer; white-space: nowrap; }
@@ -5686,14 +5688,18 @@
                  The AVR contents are DERIVED from /activities by matching visitId — no
                  duplicate records, so an edit here and the Timeline never disagree. -->
             <div id="maintenance" class="tab-content">
+                <!-- The Activities / Reports / Maintenance view toggle sits on its own
+                     centered row, below the nav and above the filter bar (user, 2026-09-12). -->
+                <div class="avr-viewtoggle-row">
+                    <div class="avr-viewtoggle" role="tablist" aria-label="Activity view">
+                        <button id="avrTabActs" class="avr-vt-btn active" role="tab" onclick="setAvrView('activities')">🗂️ Activities</button>
+                        <button id="avrTabVisits" class="avr-vt-btn" role="tab" onclick="setAvrView('visits')">📋 Reports</button>
+                        <button id="avrTabIssues" class="avr-vt-btn" role="tab" onclick="setAvrView('issues')">🔧 Maintenance</button>
+                    </div>
+                </div>
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="maintenance"></div>
                     <div class="fb-actions">
-                        <div class="avr-viewtoggle" role="tablist" aria-label="Activity view">
-                            <button id="avrTabActs" class="avr-vt-btn active" role="tab" onclick="setAvrView('activities')">🗂️ Activities</button>
-                            <button id="avrTabVisits" class="avr-vt-btn" role="tab" onclick="setAvrView('visits')">📋 Reports</button>
-                            <button id="avrTabIssues" class="avr-vt-btn" role="tab" onclick="setAvrView('issues')">🔧 Maintenance</button>
-                        </div>
                         <!-- One Add button for the two add actions (Add Activity / Add Visit
                              Report): pressing it opens a small menu to choose. Collapses to a
                              bare + circle on a narrow screen (the shared icon-btn pattern). -->
@@ -7275,8 +7281,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.134.0';
-        const APP_BUILD    = '2026.09.12.01';
+        const APP_VERSION  = '2.134.1';
+        const APP_BUILD    = '2026.09.12.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
