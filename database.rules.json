@@ -203,7 +203,7 @@
 
         "tail":                 { ".validate": "newData.isString() && newData.val().length <= 12" },
         "service":              { ".validate": "newData.isString() && newData.val().matches(/^(wifi|ifc|both)$/)" },
-        "impact":               { ".validate": "newData.isString() && newData.val().matches(/^(inop|degraded)$/)" },
+        "impact":               { ".validate": "newData.isString() && newData.val().matches(/^(inop|partial|degraded)$/)" },
         "severity":             { ".validate": "newData.isString() && newData.val().matches(/^(major|minor)$/)" },
         "priority":             { ".validate": "newData.isString() && newData.val().matches(/^(high|medium|low)$/)" },
         "reason":               { ".validate": "newData.isString() && newData.val().length <= 200" },

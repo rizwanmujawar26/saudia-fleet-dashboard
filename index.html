@@ -4055,6 +4055,7 @@
         .svc-badge { display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 999px;
             font-size: 9.5px; font-weight: 800; letter-spacing: .04em; line-height: 1.5; }
         .svc-inop { background: #fdecec; color: #b1242f; border: 1px solid #f0b7b7; }
+        .svc-partial { background: #fdeee0; color: #a2560a; border: 1px solid #f2c79c; }
         .svc-degraded { background: #fff4e0; color: #9a6400; border: 1px solid #f0d59a; }
         .fleet-status-stack { display: flex; flex-direction: column; align-items: center; gap: 0; }
 
@@ -6685,11 +6686,21 @@
         // Polled with the other low-traffic nodes, so every save is mirrored locally.
         let issuesLive = {};
 
-        const ISSUE_SERVICES   = [{ value: 'wifi', label: 'WiFi' }, { value: 'ifc', label: 'IFC' }, { value: 'both', label: 'WiFi + IFC' }];
-        const ISSUE_IMPACTS    = [{ value: 'inop', label: 'Inoperative' }, { value: 'degraded', label: 'Degraded' }];
+        // Two distinct service-outage axes: IFC (Inflight Connectivity) and W-IFE
+        // (Wireless Inflight Entertainment), or both. `label` is the abbreviation shown
+        // on-screen / in the form; `full` is spelled out for the printed report (PDF).
+        // Legacy value 'wifi' == W-IFE (kept so existing /issues records need no migration).
+        const ISSUE_SERVICES   = [{ value: 'ifc', label: 'IFC', full: 'Inflight Connectivity' },
+                                  { value: 'wifi', label: 'W-IFE', full: 'Wireless Inflight Entertainment' },
+                                  { value: 'both', label: 'IFC + W-IFE', full: 'Inflight Connectivity + Wireless Inflight Entertainment' }];
+        // Inoperative = fully down · Partial = one axis down, the other still working
+        // (e.g. IFC ok but W-IFE inop) · Degraded = intermittent / reduced, not fully down.
+        const ISSUE_IMPACTS    = [{ value: 'inop', label: 'Inoperative' }, { value: 'partial', label: 'Partial' }, { value: 'degraded', label: 'Degraded' }];
         const ISSUE_SEVERITIES = [{ value: 'major', label: 'Major' }, { value: 'minor', label: 'Minor' }];
         const ISSUE_PRIORITIES = [{ value: 'high', label: 'High' }, { value: 'medium', label: 'Medium' }, { value: 'low', label: 'Low' }];
         const issLabel = (arr, v) => (arr.find(o => o.value === v) || {}).label || '';
+        // Full spelled-out form for the printed report; falls back to the abbreviation.
+        const issFull  = (arr, v) => { const o = arr.find(o => o.value === v) || {}; return o.full || o.label || ''; };
 
         // Every issue, id folded in (a polled record carries no .id — the key is the map
         // key, so a raw store[id] would drop it and any filter on i.id would silently
@@ -6705,6 +6716,7 @@
         function svcStateForTail(tail) {
             const open = openIssuesForTail(tail);
             if (open.some(i => i.impact === 'inop')) return 'inop';
+            if (open.some(i => i.impact === 'partial')) return 'partial';
             if (open.some(i => i.impact === 'degraded')) return 'degraded';
             return '';
         }
@@ -7263,8 +7275,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.133.2';
-        const APP_BUILD    = '2026.09.11.19';
+        const APP_VERSION  = '2.134.0';
+        const APP_BUILD    = '2026.09.12.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -9280,7 +9292,8 @@
                     { id: 'svc', label: 'Service', grouped: true,
                       options: () => {
                           const opts = [];
-                          if (fleetRoster.some(a => svcStateForTail(a.id) === 'inop')) opts.push({ v: 'inop', l: 'IFC Inoperative' });
+                          if (fleetRoster.some(a => svcStateForTail(a.id) === 'inop')) opts.push({ v: 'inop', l: 'Inoperative' });
+                          if (fleetRoster.some(a => svcStateForTail(a.id) === 'partial')) opts.push({ v: 'partial', l: 'Partial' });
                           if (fleetRoster.some(a => svcStateForTail(a.id) === 'degraded')) opts.push({ v: 'degraded', l: 'Degraded' });
                           return opts;
                       } },
@@ -10947,7 +10960,7 @@
                 row.dataset.svc = svc || 'ok';
                 const svcOpen = openIssuesForTail(a.id);
                 const svcBadge = svc
-                    ? `<span class="svc-badge svc-${svc}" title="${escAttr(svcOpen.map(x => `${issLabel(ISSUE_SERVICES, x.service)} ${issLabel(ISSUE_IMPACTS, x.impact)} — ${x.reason || ''}${x.informedDate ? ` (since ${x.informedDate})` : ''}`).join('; '))}">${svc === 'inop' ? 'IFC INOP' : 'DEGRADED'}</span>`
+                    ? `<span class="svc-badge svc-${svc}" title="${escAttr(svcOpen.map(x => `${issLabel(ISSUE_SERVICES, x.service)} ${issLabel(ISSUE_IMPACTS, x.impact)} — ${x.reason || ''}${x.informedDate ? ` (since ${x.informedDate})` : ''}`).join('; '))}">${ { inop: 'INOP', partial: 'PARTIAL', degraded: 'DEGRADED' }[svc] || 'DEGRADED' }</span>`
                     : '';
                 const statusCell = editing
                     ? `<select class="edit-select" data-id="${a.id}" data-field="fleetStatus" onchange="handleFleetEdit(this)">${
@@ -12920,7 +12933,8 @@
                 const isOrigin = i.originVisitId === v.id;
                 const isFix = i.resolutionVisitId === v.id;
                 if ((!isOrigin && !isFix) || haveIssue.has(i.id)) return;
-                const svcTxt = `${issLabel(ISSUE_SERVICES, i.service)} ${issLabel(ISSUE_IMPACTS, i.impact)}`.trim();
+                // Report/PDF uses the spelled-out service name (issFull), not the abbreviation.
+                const svcTxt = `${issFull(ISSUE_SERVICES, i.service)} ${issLabel(ISSUE_IMPACTS, i.impact)}`.trim();
                 const iso = toISODate(isFix && !isOrigin ? (i.resolvedDate || v.dateStart) : (i.discoveredDate || i.informedDate || v.dateStart)) || startIso;
                 base.push({ iso, kind: 'service', issueId: i.id, tail: v.aircraft, type, location: '',
                             title: isFix && !isOrigin ? `Service restored — ${i.reason || svcTxt}` : `${svcTxt || 'Service issue'} — ${i.reason || ''}`.replace(/ — $/, ''),
@@ -14609,7 +14623,7 @@
             if (!all.length) {
                 const none = issueEntries().length === 0;
                 host.innerHTML = `<div class="avr-empty">${none ? 'No maintenance issues logged.' : 'No issues match your search.'}`
-                    + `${none && editor ? '<br>Use ＋ Add → 🔧 Add Maintenance Issue to declare an IFC/WiFi service outage.' : ''}</div>`;
+                    + `${none && editor ? '<br>Use ＋ Add → 🔧 Add Maintenance Issue to declare an IFC/W-IFE service outage.' : ''}</div>`;
                 return;
             }
             let html = '';
@@ -14668,7 +14682,7 @@
 
             document.getElementById('issueEditTitle').textContent = isNew ? 'Add maintenance issue' : `Edit issue — ${v.tail || ''}`;
             document.getElementById('issueEditSub').textContent = isNew
-                ? 'Declare an IFC/WiFi service outage on an aircraft that is still flying.'
+                ? 'Declare an IFC/W-IFE service outage on an aircraft that is still flying.'
                 : (issueIsOpen(v) ? 'Open — service currently affected. Set a Restored date to close it.' : 'Resolved — service restored.');
             const err = document.getElementById('issueEditError'); err.textContent = ''; err.style.display = 'none';
             document.getElementById('issueDeleteBtn').style.display = isNew ? 'none' : '';
@@ -14685,7 +14699,7 @@
                     <div class="ac-edit-field"><label>Customer</label>
                         <input id="issCustomer" type="text" maxlength="60" value="${escAttr(v.customer || 'Saudia')}"></div>
                     <div class="ac-edit-field"><label>Affected service</label>
-                        <select id="issService">${selOpts(ISSUE_SERVICES, v.service || 'wifi')}</select></div>
+                        <select id="issService">${selOpts(ISSUE_SERVICES, v.service || 'ifc')}</select></div>
                     <div class="ac-edit-field"><label>Impact</label>
                         <select id="issImpact">${selOpts(ISSUE_IMPACTS, v.impact || 'inop')}</select></div>
                     <div class="ac-edit-field"><label>Severity</label>
