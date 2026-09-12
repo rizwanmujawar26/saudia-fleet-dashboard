@@ -3609,6 +3609,71 @@
             font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px;
         }
 
+        /* ===== Hardware register (merged Hardware + Serials, v2.136.0) ===== */
+        /* Equipment sub-tab row — a centred, wrapping set of pills (up to ~10 tabs), so
+           it scales past the 3-pill Maintenance toggle without a sideways scroller. */
+        .hw-viewtoggle { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+        .hw-vt-btn {
+            border: 1px solid #d7dee5; background: #f4f7fa; border-radius: 999px;
+            padding: 5px 12px; font-size: 12px; font-weight: 700; color: #5a6b78;
+            cursor: pointer; white-space: nowrap;
+        }
+        .hw-vt-btn:hover { background: #e9eef3; }
+        .hw-vt-btn.active { background: #0a5c34; color: #fff; border-color: #0a5c34; }
+        .hw-vt-n { font-size: 10px; font-weight: 800; opacity: 0.8; margin-left: 3px; font-variant-numeric: tabular-nums; }
+
+        .hw-group-head { display: flex; align-items: center; gap: 10px; padding: 2px 2px 10px; }
+        .hw-group-name { font-size: 16px; font-weight: 800; color: #17324b; letter-spacing: 0.02em; }
+
+        /* Compact metadata strip (part number / vendor / sw / notes). */
+        .hw-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+        .hw-meta-cell {
+            flex: 1 1 150px; min-width: 130px; background: #f7f9fb; border: 1px solid #e6ecf1;
+            border-radius: 8px; padding: 7px 11px;
+        }
+        .hw-meta-key { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #93a0aa; margin-bottom: 3px; }
+        .hw-meta-val { font-size: 13px; font-weight: 600; color: #24313b; }
+        .hw-meta-val .edit-text { width: 100%; }
+
+        /* The register table. */
+        .hw-reg-table { width: 100%; border-collapse: collapse; }
+        .hw-reg-table th {
+            text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+            color: #8a97a1; padding: 7px 10px; border-bottom: 2px solid #e6ecf1; white-space: nowrap;
+        }
+        .hw-reg-table td { padding: 7px 10px; border-bottom: 1px solid #eef2f5; font-size: 12.5px; vertical-align: middle; }
+        .hw-reg-table tbody tr:hover { background: #f8fbfd; }
+        .hw-sn-input {
+            width: 130px; max-width: 100%; padding: 4px 7px; border: 1px solid #cdd6dd; border-radius: 5px;
+            font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px;
+        }
+        .hw-sn-input:focus { outline: none; border-color: #0a5c34; box-shadow: 0 0 0 2px rgba(10,92,52,0.12); }
+        .hw-sn-alt { width: 110px; }
+        .hw-date-input {
+            width: 104px; padding: 4px 7px; border: 1px solid #cdd6dd; border-radius: 5px; font-size: 12px;
+            font-variant-numeric: tabular-nums;
+        }
+        .hw-date-input:focus { outline: none; border-color: #0a5c34; box-shadow: 0 0 0 2px rgba(10,92,52,0.12); }
+        .hw-alt-inline { display: inline-block; margin-left: 6px; }
+        .hw-alt-inline .hw-none, .hw-alt-inline .hw-serial { font-size: 11px; color: #6b7780; }
+
+        /* Stacked slot cells for pair (RX/TX) and multi (CWAP) layouts. */
+        .hw-slot-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .hw-slot {
+            display: flex; flex-direction: column; gap: 3px; min-width: 128px;
+            background: #f7f9fb; border: 1px solid #e6ecf1; border-radius: 8px; padding: 6px 8px;
+        }
+        .hw-slot-off { background: #fdeff0; border-color: #f3d3d7; }
+        .hw-slot-empty { background: transparent; border-style: dashed; }
+        .hw-slot-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #93a0aa; }
+        .hw-slot-date { font-size: 11px; color: #6b7780; display: flex; align-items: center; gap: 5px; }
+
+        /* By-Aircraft blocks. */
+        .hw-ac-block { margin-bottom: 16px; border: 1px solid #e6ecf1; border-radius: 10px; overflow: hidden; }
+        .hw-ac-head { display: flex; align-items: center; gap: 9px; padding: 9px 12px; background: #f4f7fa; border-bottom: 1px solid #e6ecf1; }
+        .hw-ac-reg { font-size: 15px; font-weight: 800; color: #17324b; letter-spacing: 0.03em; }
+        .hw-ac-table td { font-size: 12px; }
+
         .sr-date-input {
             padding: 3px 6px;
             border: 1px solid #d7dde1;
@@ -5502,7 +5567,6 @@
                 <button class="tab-button" onclick="switchTab('sim')">📶 4G SIM</button>
                 <button class="tab-button" onclick="switchTab('satcom')">📡 Satcom</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('hardware')">🔧 Hardware</button>
-                <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('serials')">🏷️ Serials</button>
             </nav>
         </div><!-- /.navbar -->
 
@@ -5734,82 +5798,30 @@
                 <div id="avrExtras"></div>
             </div>
 
-            <!-- Hardware Tab -->
-            <!-- LRUs on the left in two fit groups, the selected unit on the right.
-                 Serial numbers are NOT stored here: they are derived from the on/off
-                 details of hardware activities recorded on the Maintenance page. Only
-                 what belongs to the unit itself — software version, part number, known
-                 issues — lives at /hardware/{id}.
-                 The two-pane shell reuses the .maint-* classes; they style a generic
-                 list/detail layout and the prefix is historical. -->
+            <!-- Hardware Tab — the unit register, one page (v2.136.0, was Hardware +
+                 Serials). A centered equipment sub-tab row (By Aircraft + one tab per
+                 unit type) sits below the main menu, like Maintenance. Each tab is an
+                 editable table over /units: serial, the second serial on dual-identity
+                 boxes (Kontron + Eclipse), position and fitted/removed dates are all
+                 corrected in place. Per-unit metadata (part number, known issues) and
+                 the removed/shop queue are tucked into each tab. /units is the single
+                 source — nothing about serials is stored twice. -->
             <div id="hardware" class="tab-content">
-                <div class="table-actions-row">
-                    <button id="hwBaselineBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed Serials</button>
-                    <button id="hwRemovalBtn" class="qf-btn" style="display:none;" onclick="openRemoval()">📤 Record Removed Serials</button>
-                    <button id="hwAddIssueBtn" class="qf-btn add-btn icon-btn" style="display:none;" onclick="openAddIssue()" title="Add known issue" aria-label="Add known issue"><span class="ib-icon" aria-hidden="true">＋</span><span class="ib-label">Add</span></button>
-                    <button id="hwEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleHwEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
+                <div class="avr-viewtoggle-row">
+                    <div class="hw-viewtoggle" role="tablist" aria-label="Hardware view" id="hwViewToggle"></div>
                 </div>
-
-                <div class="maint-split">
-                    <div class="maint-list-panel">
-                        <div class="maint-list-head">
-                            <span>Equipment</span>
-                            <span id="hwListCount"></span>
-                        </div>
-                        <ul class="maint-list" id="hwList"></ul>
+                <div class="filterbar">
+                    <div class="fb-filters">
+                        <input id="hwSearch" class="edit-text" placeholder="Search serial or aircraft" autocomplete="off" oninput="setHwSearch(this.value)">
                     </div>
-                    <div class="maint-detail-panel" id="hwDetailPanel"></div>
-                </div>
-            </div>
-
-            <!-- Serials Tab -->
-            <!-- The data-gathering surface for the unit register. Deliberately one flat
-                 table rather than the two-pane shells the Hardware and Maintenance tabs
-                 use: the job right now is getting serials in and filling dates later,
-                 not navigating a hierarchy. Every row is one FITMENT — one box, on one
-                 aircraft, for one period — so a unit fitted twice appears twice, which
-                 is what makes the history legible as a list. -->
-            <div id="serials" class="tab-content">
-                <div class="table-actions-row">
-                    <button id="srEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleSerialsEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit Dates</span></button>
-                    <button id="srInstalledBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed</button>
-                    <button id="srRemovedBtn" class="qf-btn" style="display:none;" onclick="openRemoval()">📤 Record Removed</button>
-                    <button class="qf-btn" onclick="exportSerialsCsv()">⬇️ Export CSV</button>
-                </div>
-
-                <div class="media-widget-strip" id="srWidgets"></div>
-
-                <div class="filter-section">
-                    <div class="filter-group">
-                        <label class="filter-label">Equipment:</label>
-                        <select id="srLruFilter" onchange="setSerialFilter('lru', this.value)"></select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Aircraft:</label>
-                        <select id="srTailFilter" onchange="setSerialFilter('tail', this.value)"></select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Status:</label>
-                        <div class="quick-filters" id="srStatePills"></div>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Search serial:</label>
-                        <input id="srSearch" class="edit-text" placeholder="Serial number" autocomplete="off"
-                               oninput="setSerialFilter('q', this.value)">
+                    <div class="fb-actions">
+                        <button id="hwBaselineBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed</button>
+                        <button id="hwRemovalBtn" class="qf-btn" style="display:none;" onclick="openRemoval()">📤 Record Removed</button>
+                        <button class="qf-btn" onclick="exportSerialsCsv()">⬇️ Export CSV</button>
+                        <button id="hwEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleHwEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
                     </div>
                 </div>
-
-                <div class="table-scroll-wrapper table-freeze">
-                    <table id="srTable">
-                        <thead><tr>
-                            <th>Equipment</th><th>Serial</th><th>Aircraft</th><th>Pos</th>
-                            <th>Status</th><th>Fitted</th><th>Removed</th>
-                            <th>Days on Wing</th><th>Slot Changes</th><th>Reason / Shop</th>
-                        </tr></thead>
-                        <tbody id="srBody"></tbody>
-                    </table>
-                </div>
-                <p class="bl-hint" id="srCount" style="padding: 0 4px 16px;"></p>
+                <div id="hwContent"></div>
             </div>
 
             <!-- 4G SIM Tab — the SIM card register.
@@ -6860,7 +6872,12 @@
             // paired display/entry on the Serials tab.
             { id: 'ife_server', label: 'IFE Server', fit: 'retrofit', aliases: ['ife server', 'ifeserver', 'ife'],
               serialLabel: 'Kontron S/N', altSerialLabel: 'Eclipse S/N' },
-            { id: 'modman',     label: 'MODMAN',     fit: 'retrofit', aliases: ['modman', 'mod man'] },
+            // Dual-identity like the IFE server: the legacy Eclipse+Kontron build carries
+            // a Kontron S/N (primary) AND an Eclipse S/N (altSerial). (An A321XLR's MODMAN
+            // is a single-serial Astronics box — its Eclipse slot just stays empty here;
+            // the supplier split itself is handled on the Satcom tab.)
+            { id: 'modman',     label: 'MODMAN',     fit: 'retrofit', aliases: ['modman', 'mod man'],
+              serialLabel: 'Kontron S/N', altSerialLabel: 'Eclipse S/N' },
             { id: 'kandu',      label: 'KANDU',      fit: 'retrofit', aliases: ['kandu'] },
             { id: 'krfu',       label: 'KRFU',       fit: 'retrofit', aliases: ['krfu'] },
             { id: 'rx_antenna', label: 'RX Antenna', fit: 'retrofit', aliases: ['rx antenna', 'rx ant', 'rx'] },
@@ -6888,7 +6905,8 @@
             { id: 'lf_sim',        label: 'SIM Card',   fit: 'linefit', aliases: ['sim', 'sim card', 'simcard'] },
             { id: 'lf_ife_server', label: 'IFE Server', fit: 'linefit', aliases: ['ife server', 'ifeserver', 'ife'],
               serialLabel: 'Kontron S/N', altSerialLabel: 'Eclipse S/N' },
-            { id: 'lf_modman',     label: 'MODMAN',     fit: 'linefit', aliases: ['modman', 'mod man'] },
+            { id: 'lf_modman',     label: 'MODMAN',     fit: 'linefit', aliases: ['modman', 'mod man'],
+              serialLabel: 'Kontron S/N', altSerialLabel: 'Eclipse S/N' },
             { id: 'lf_kandu',      label: 'KANDU',      fit: 'linefit', aliases: ['kandu'] },
             { id: 'lf_krfu',       label: 'KRFU',       fit: 'linefit', aliases: ['krfu'] },
             { id: 'lf_rx_antenna', label: 'RX Antenna', fit: 'linefit', aliases: ['rx antenna', 'rx ant', 'rx'] },
@@ -6911,6 +6929,44 @@
 
         function fitOf(aircraft) {
             return isLinefit(aircraft) ? 'linefit' : 'retrofit';
+        }
+
+        // ===== Hardware equipment groups — the sub-tab row =====
+        // Each group is one tab and maps to the retrofit + linefit LRU(s) of one unit
+        // type. `shape` drives the table layout:
+        //   single — one serial per aircraft (KANDU, KRFU, SIM, Waveguide, Coax)
+        //   dual   — two serials on ONE box (Kontron + Eclipse): serialLabel/altSerialLabel
+        //   pair   — two sibling units fitted together (RX + TX antenna), one row per tail
+        //   multi  — several per aircraft, position-tracked (CWAP 1..N)
+        const HW_GROUPS = [
+            { id: 'modman',     label: 'MODMAN',     shape: 'dual',   base: 'modman' },
+            { id: 'ife_server', label: 'IFE Server', shape: 'dual',   base: 'ife_server' },
+            { id: 'kandu',      label: 'KANDU',      shape: 'single', base: 'kandu' },
+            { id: 'krfu',       label: 'KRFU',       shape: 'single', base: 'krfu' },
+            { id: 'antenna',    label: 'Antennas',   shape: 'pair',   bases: ['rx_antenna', 'tx_antenna'] },
+            { id: 'cwap',       label: 'CWAP',       shape: 'multi',  base: 'cwap' },
+            { id: 'sim',        label: 'SIM Card',   shape: 'single', base: 'sim' },
+            { id: 'waveguide',  label: 'Waveguide',  shape: 'single', base: 'waveguide_adapter' },
+            { id: 'coax',       label: 'Coax J12',   shape: 'single', base: 'coax_cable_j12' },
+        ];
+        function hwGroupById(id) { return HW_GROUPS.find(g => g.id === id) || null; }
+        // The base unit(s) a group covers — one for most, two for the antenna pair.
+        function groupBases(group) { return group.bases || [group.base]; }
+        // The LRU id for a base on a given fit: linefit airframes carry the lf_* twin,
+        // retrofit the plain one. A base with no linefit twin (waveguide, coax) has no
+        // id for a linefit aircraft — that airframe simply does not carry it.
+        function lruIdForFit(base, fit) {
+            const id = fit === 'linefit' ? 'lf_' + base : base;
+            return lruById(id) ? id : null;
+        }
+        // Every LRU id (retrofit + linefit) a group touches — for aggregating its known
+        // issues and removals across both fits.
+        function groupLruIds(group) {
+            const ids = [];
+            groupBases(group).forEach(b => {
+                ['retrofit', 'linefit'].forEach(fit => { const id = lruIdForFit(b, fit); if (id) ids.push(id); });
+            });
+            return ids;
         }
 
         // Airframe family from a type string. Fitment counts follow the family rather
@@ -7303,8 +7359,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.135.0';
-        const APP_BUILD    = '2026.09.12.05';
+        const APP_VERSION  = '2.136.0';
+        const APP_BUILD    = '2026.09.12.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -8276,8 +8332,9 @@
         // every other page.
         // Activity (maintenance) is public so Saudia Engineering / the airline can read
         // PUBLISHED visit reports; viewers see published AVRs read-only, editing is gated
-        // on canEdit(). Hardware and Serials stay editor-only working surfaces.
-        const RESTRICTED_TABS = ['hardware', 'serials'];
+        // on canEdit(). Hardware (the unit register, formerly Hardware + Serials) stays
+        // an editor-only working surface.
+        const RESTRICTED_TABS = ['hardware'];
 
         // The trust boundary is the editor allowlist, the same one canEdit() uses — an
         // account that is not on it can sign in but is not recognised, and revealing the
@@ -8321,7 +8378,7 @@
                 chip.classList.add('sys-chip-auth-on');
             } else {
                 label.textContent = 'Sign in';
-                chip.title = 'Sign in to edit — Activity, Hardware and Serials appear once you do';
+                chip.title = 'Sign in to edit — Activity and Hardware appear once you do';
                 chip.classList.remove('sys-chip-auth-on');
             }
         }
@@ -8491,8 +8548,6 @@
                 renderMaintenancePage();
             } else if (tabName === 'hardware') {
                 renderHardwarePage();
-            } else if (tabName === 'serials') {
-                renderSerialsPage();
             }
 
             // The global widgets sit above every tab, so a timeline filter left set must
@@ -16389,17 +16444,126 @@
         let hwEditMode = false;
         let pendingHw = {};             // { lruId: { swVersion, partNumber, vendor, notes } }
         let hwSelectedId = HARDWARE_LRUS.length ? HARDWARE_LRUS[0].id : '';
+        let hwView = 'aircraft';        // 'aircraft' (By Aircraft) or a HW_GROUPS id
+        let hwSearchQ = '';
 
-        function selectHwLru(id) {
-            hwSelectedId = id;
-            renderHwList();
-            renderHwDetail();
+        function setHwView(id) {
+            hwView = id;
+            hwSearchQ = '';
+            const s = document.getElementById('hwSearch'); if (s) s.value = '';
+            // Point the known-issues modal's context at the visible group.
+            const g = hwGroupById(id);
+            if (g) hwSelectedId = lruIdForFit(groupBases(g)[0], 'retrofit') || hwSelectedId;
+            renderHardwarePage();
         }
+        function setHwSearch(q) {
+            hwSearchQ = q;
+            renderHwContent();          // table only — keep the search box focused
+        }
+        function selectHwLru(id) { hwSelectedId = id; }   // retained for the issue modal
 
         // How many aircraft of this fit have a serial on record.
         function hwFittedCount(lru) {
             const rows = hardwareFitment(lru);
             return { fitted: rows.filter(r => r.serial).length, total: rows.length };
+        }
+
+        // ===== Hardware register — one page, equipment sub-tabs =====
+        function hwEditable() { return hwEditMode && canEdit(); }
+
+        // The active fleet that carries a group — any airframe whose fit has one of the
+        // group's LRUs (linefit-only gaps like Waveguide/Coax drop out on their own).
+        function hwGroupFleet(group) {
+            return activeFleet()
+                .filter(a => groupBases(group).some(b => lruIdForFit(b, fitOf(a))))
+                .sort((a, b) => a.id.localeCompare(b.id));
+        }
+
+        // Every physical slot a group occupies across the fleet: one per aircraft for a
+        // single/dual/pair unit, N per aircraft for a position-tracked one (CWAP).
+        function groupSlots(group) {
+            const slots = [];
+            hwGroupFleet(group).forEach(a => {
+                groupBases(group).forEach(b => {
+                    const id = lruIdForFit(b, fitOf(a)); if (!id) return;
+                    const lru = lruById(id);
+                    const q = lruQtyFor(lru, a.type) || 1;
+                    if (lruIsMulti(lru) && q > 1) {
+                        for (let p = 1; p <= q; p++) slots.push({ aircraft: a, lruId: id, lru, position: String(p), base: b });
+                    } else {
+                        slots.push({ aircraft: a, lruId: id, lru, position: undefined, base: b });
+                    }
+                });
+            });
+            return slots;
+        }
+
+        // fitted / total serials across a group, for the sub-tab count badge.
+        function groupFittedCount(group) {
+            const slots = groupSlots(group);
+            let fitted = 0;
+            slots.forEach(s => { const h = fittedUnitAt(s.lruId, s.aircraft.id, s.position); if (h && h.unit.serial) fitted++; });
+            return { fitted, total: slots.length };
+        }
+
+        // --- editable cells (all save straight to /units on change) ---
+        function hwSerialSpan(serial) {
+            return serial ? `<span class="hw-serial">${escAttr(serial)}</span>` : '<span class="hw-none">no record</span>';
+        }
+        function hwSerialField(unit) {
+            if (!hwEditable()) return hwSerialSpan(unit && unit.serial);
+            return `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input" value="${escAttr(unit ? (unit.serial || '') : '')}"
+                placeholder="Serial" data-unit="${escAttr(unit.id)}" onchange="saveUnitSerial(this)">`;
+        }
+        function hwAltField(unit, lru) {
+            const label = (lru && lru.altSerialLabel) || 'Alt S/N';
+            const alt = unit ? (unit.altSerial || '') : '';
+            if (!hwEditable()) return alt ? `<span class="hw-serial">${escAttr(alt)}</span>` : '<span class="hw-none">not recorded</span>';
+            return `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-alt" value="${escAttr(alt)}"
+                placeholder="${escAttr(label)}" data-unit="${escAttr(unit.id)}" onchange="saveUnitAltSerial(this)">`;
+        }
+        function hwDateField(unit, fitment, field) {
+            if (!fitment) return '<span class="hw-none">—</span>';
+            if (field === 'removedDate' && fitmentIsOn(fitment)) return '<span class="hw-none">—</span>';
+            const val = fitment[field] || '';
+            if (!hwEditable()) return val ? escAttr(val) : '<span class="hw-none">not set</span>';
+            return `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="hw-date-input"
+                value="${escAttr(toDMY(val))}" data-unit="${escAttr(unit.id)}" data-fitment="${escAttr(fitment.id)}" data-field="${field}" onchange="saveFitmentDate(this)">`;
+        }
+        function hwStatusBadge(hit) {
+            if (!hit) return '<span class="hw-none">—</span>';
+            const on = fitmentIsOn(hit.fitment);
+            return `<span class="sr-state ${on ? 'on' : 'off'}">${on ? 'ON WING' : 'REMOVED'}</span>`;
+        }
+        // A stacked slot cell for the pair (RX/TX) and multi (CWAP) layouts: a small
+        // label, the serial on top, its fitted date beneath, a REMOVED tag when off.
+        function hwSlotCell(lruId, tail, position, label) {
+            const hit = fittedUnitAt(lruId, tail, position);
+            const lab = label ? `<span class="hw-slot-label">${escAttr(label)}</span>` : '';
+            if (!hit) return `<div class="hw-slot hw-slot-empty">${lab}<span class="hw-none">—</span></div>`;
+            const off = !fitmentIsOn(hit.fitment);
+            return `<div class="hw-slot${off ? ' hw-slot-off' : ''}">${lab}${hwSerialField(hit.unit)}`
+                + `<div class="hw-slot-date">${hwDateField(hit.unit, hit.fitment, 'fittedDate')}${off ? ' <span class="sr-state off">REMOVED</span>' : ''}</div></div>`;
+        }
+        // Does a slot match the current search (tail or serial/alt)?
+        function hwSlotMatches(s, q) {
+            if (!q) return true;
+            const t = q.toLowerCase();
+            if (s.aircraft.id.toLowerCase().includes(t)) return true;
+            const hit = fittedUnitAt(s.lruId, s.aircraft.id, s.position);
+            if (!hit) return false;
+            return String(hit.unit.serial || '').toLowerCase().includes(t)
+                || String(hit.unit.altSerial || '').toLowerCase().includes(t);
+        }
+
+        // Known issues + removed units for a whole group (both fits aggregated).
+        function groupIssues(group) {
+            return groupLruIds(group).flatMap(id => hardwareIssues(id).map(i => ({ ...i, lruId: id })))
+                .sort((a, b) => String(b.loggedAt || '').localeCompare(String(a.loggedAt || '')));
+        }
+        function groupRemovals(group) {
+            return groupLruIds(group).flatMap(id => hardwareRemovals(lruById(id)))
+                .sort((a, b) => (dateSortKey(toISODate(b.date)) || '0').localeCompare(dateSortKey(toISODate(a.date)) || '0'));
         }
 
         function renderHwList() {
@@ -16589,9 +16753,229 @@
         }
 
         function renderHardwarePage() {
-            renderHwList();
-            renderHwDetail();
+            renderHwToggle();
+            renderHwContent();
             updateHwEditUI();
+        }
+
+        // The equipment sub-tab row: By Aircraft, then one tab per unit type with a
+        // fitted/total badge. (Same centred pattern as the Maintenance view toggle.)
+        function renderHwToggle() {
+            const el = document.getElementById('hwViewToggle');
+            if (!el) return;
+            const btn = (id, label, extra) =>
+                `<button class="hw-vt-btn ${hwView === id ? 'active' : ''}" role="tab" onclick="setHwView('${id}')">${label}${extra || ''}</button>`;
+            let html = btn('aircraft', '✈ By Aircraft');
+            HW_GROUPS.forEach(g => {
+                const { fitted, total } = groupFittedCount(g);
+                html += btn(g.id, escAttr(g.label), ` <span class="hw-vt-n">${fitted}/${total}</span>`);
+            });
+            el.innerHTML = html;
+        }
+
+        function renderHwContent() {
+            const host = document.getElementById('hwContent');
+            if (!host) return;
+            if (hwView === 'aircraft') { host.innerHTML = renderHwByAircraft(); return; }
+            const g = hwGroupById(hwView);
+            host.innerHTML = g ? renderHwGroup(g) : '<div class="maint-empty">Unknown equipment.</div>';
+        }
+
+        // One equipment tab: metadata header, the editable serial/date table (shape by
+        // unit), then Known Issues and the Removed / shop queue.
+        function renderHwGroup(group) {
+            const editable = hwEditable();
+            const q = hwSearchQ.trim();
+            const baseId = lruIdForFit(groupBases(group)[0], 'retrofit') || groupBases(group)[0];
+            const rec = hardwareRecordOf(baseId);
+            const { fitted, total } = groupFittedCount(group);
+
+            const field = (name, value, placeholder) => editable
+                ? `<input class="edit-text" value="${escAttr(value)}" placeholder="${escAttr(placeholder)}" data-lru="${escAttr(baseId)}" data-field="${name}" onchange="handleHwEdit(this)">`
+                : (value ? escAttr(value) : '<span class="hw-none">—</span>');
+            const metaCell = (k, v) => `<div class="hw-meta-cell"><div class="hw-meta-key">${k}</div><div class="hw-meta-val">${v}</div></div>`;
+
+            const meta = `<div class="hw-meta">
+                ${metaCell('Part Number', field('partNumber', rec.partNumber, 'e.g. KRFU-1200'))}
+                ${metaCell('Vendor', field('vendor', rec.vendor, 'e.g. Hughes'))}
+                ${metaCell('SW Version', field('swVersion', rec.swVersion, 'e.g. 4.2.1'))}
+                ${metaCell('Serials on record', `${fitted} of ${total}`)}
+                ${metaCell('Notes', field('notes', rec.notes, 'Anything worth knowing'))}
+            </div>`;
+
+            // --- the serial table, shaped by the unit ---
+            const fleet = hwGroupFleet(group);
+            let table = '';
+
+            if (group.shape === 'single' || group.shape === 'dual') {
+                const dual = group.shape === 'dual';
+                const rows = fleet.map(a => {
+                    const lruId = lruIdForFit(group.base, fitOf(a)); if (!lruId) return '';
+                    const lru = lruById(lruId);
+                    const hit = fittedUnitAt(lruId, a.id);
+                    if (q) {
+                        const t = q.toLowerCase();
+                        const hay = `${a.id} ${hit ? (hit.unit.serial || '') : ''} ${hit ? (hit.unit.altSerial || '') : ''}`.toLowerCase();
+                        if (!hay.includes(t)) return '';
+                    }
+                    const history = unitsAtSlot(lruId, a.id);
+                    const removals = history.filter(x => !fitmentIsOn(x.fitment)).length;
+                    const days = hit ? fitmentDaysOnWing(hit.fitment) : null;
+                    const serialCell = hit ? hwSerialField(hit.unit)
+                        : (editable ? '<span class="hw-none">— Record Installed</span>' : hwSerialSpan(''));
+                    const altCell = hit ? hwAltField(hit.unit, lru) : '<span class="hw-none">—</span>';
+                    return `<tr>
+                        <td><strong>${escAttr(a.id)}</strong></td>
+                        <td>${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</td>
+                        <td>${serialCell}</td>
+                        ${dual ? `<td>${altCell}</td>` : ''}
+                        <td>${hit ? hwDateField(hit.unit, hit.fitment, 'fittedDate') : '<span class="hw-none">—</span>'}</td>
+                        <td>${hwStatusBadge(hit)}</td>
+                        <td class="sr-days">${days == null ? '<span class="hw-none">—</span>' : days + 'd'}</td>
+                        <td>${removals ? `<span class="hw-removals">${removals}</span>` : '<span class="hw-none">0</span>'}</td>
+                    </tr>`;
+                }).filter(Boolean).join('');
+                const dualHead = dual
+                    ? `<th>${escAttr((lruById(baseId) || {}).serialLabel || 'Serial')}</th><th>${escAttr((lruById(baseId) || {}).altSerialLabel || 'Alt S/N')}</th>`
+                    : '<th>Serial</th>';
+                table = `<table class="hw-reg-table"><thead><tr>
+                        <th>Aircraft</th><th>Type</th>${dualHead}<th>Fitted</th><th>Status</th><th>Days</th><th>Off</th>
+                    </tr></thead><tbody>${rows || `<tr><td colspan="${dual ? 8 : 7}" class="maint-empty">No aircraft match.</td></tr>`}</tbody></table>`;
+            } else if (group.shape === 'pair') {
+                const rows = fleet.map(a => {
+                    const rxId = lruIdForFit('rx_antenna', fitOf(a));
+                    const txId = lruIdForFit('tx_antenna', fitOf(a));
+                    if (q) {
+                        const matchAny = [{ lruId: rxId }, { lruId: txId }].some(s => s.lruId && hwSlotMatches({ aircraft: a, lruId: s.lruId, position: undefined }, q));
+                        if (!matchAny) return '';
+                    }
+                    return `<tr>
+                        <td><strong>${escAttr(a.id)}</strong></td>
+                        <td>${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</td>
+                        <td>${rxId ? hwSlotCell(rxId, a.id, undefined) : '<span class="hw-none">—</span>'}</td>
+                        <td>${txId ? hwSlotCell(txId, a.id, undefined) : '<span class="hw-none">—</span>'}</td>
+                    </tr>`;
+                }).filter(Boolean).join('');
+                table = `<table class="hw-reg-table"><thead><tr>
+                        <th>Aircraft</th><th>Type</th><th>RX Antenna</th><th>TX Antenna</th>
+                    </tr></thead><tbody>${rows || '<tr><td colspan="4" class="maint-empty">No aircraft match.</td></tr>'}</tbody></table>`;
+            } else { // multi (CWAP)
+                const rows = fleet.map(a => {
+                    const lruId = lruIdForFit(group.base, fitOf(a)); if (!lruId) return '';
+                    const n = lruQtyFor(lruById(lruId), a.type) || 1;
+                    if (q && ![...Array(n)].some((_, i) => hwSlotMatches({ aircraft: a, lruId, position: String(i + 1) }, q))) return '';
+                    const cells = [...Array(n)].map((_, i) => hwSlotCell(lruId, a.id, String(i + 1), `CWAP ${i + 1}`)).join('');
+                    return `<tr>
+                        <td><strong>${escAttr(a.id)}</strong></td>
+                        <td>${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</td>
+                        <td><div class="hw-slot-row">${cells}</div></td>
+                    </tr>`;
+                }).filter(Boolean).join('');
+                table = `<table class="hw-reg-table"><thead><tr>
+                        <th>Aircraft</th><th>Type</th><th>CWAP units (3 on A32x · 5 on A330)</th>
+                    </tr></thead><tbody>${rows || '<tr><td colspan="3" class="maint-empty">No aircraft match.</td></tr>'}</tbody></table>`;
+            }
+
+            // --- Known Issues + Removed queue (both fits of the group) ---
+            const issues = groupIssues(group);
+            const issueCard = i => `<li class="hw-issue ${i.status === 'resolved' ? 'resolved' : ''}">
+                <div class="hw-issue-top">
+                    <span class="hw-issue-title">${escAttr(i.title || 'Untitled issue')}</span>
+                    <span class="status-badge issue-${i.status === 'resolved' ? 'resolved' : 'open'}">${i.status === 'resolved' ? 'RESOLVED' : 'OPEN'}</span>
+                    ${i.loggedAt ? `<span class="maint-act-cat">${escAttr(fmtSysStamp(i.loggedAt))}</span>` : ''}
+                    ${canEdit() ? `<button class="hw-issue-edit" title="Edit" onclick="openEditIssue('${escAttr(i.lruId)}','${escAttr(i.id)}')">✏️</button>
+                    <button class="hw-issue-del" title="Delete" onclick="deleteHwIssue('${escAttr(i.lruId)}','${escAttr(i.id)}')">🗑</button>` : ''}
+                </div>
+                ${i.detail ? `<div class="hw-issue-field"><b>Detail</b>${escAttr(i.detail)}</div>` : ''}
+                ${i.rootCause ? `<div class="hw-issue-field"><b>Root Cause</b>${escAttr(i.rootCause)}</div>` : ''}
+                ${i.resolution ? `<div class="hw-issue-field"><b>Resolution</b>${escAttr(i.resolution)}</div>` : ''}
+            </li>`;
+
+            const removals = groupRemovals(group);
+            const openShop = removals.filter(x => x.shopStatus === 'pending' || x.shopStatus === 'in_shop').length;
+            const removalCard = x => `<li class="hw-removal shop-${escAttr(x.shopStatus)}">
+                <div class="hw-issue-top">
+                    <span class="hw-serial hw-removal-sn">${escAttr(x.serial)}</span>
+                    <span class="status-badge shop-badge shop-${escAttr(x.shopStatus)}">${escAttr(shopStatusLabel(x.shopStatus))}</span>
+                    <span class="maint-act-cat">${escAttr(x.tail)}${x.position ? ` · pos ${escAttr(x.position)}` : ''}${x.type ? ' · ' + escAttr(TYPE_SHORT_LABEL[x.type] || x.type) : ''}${x.date ? ' · ' + escAttr(x.date) : ''}${x.daysOnWing !== null ? ` · ${x.daysOnWing}d on wing` : ''}</span>
+                    ${canEdit() ? `<button class="hw-shop-btn" onclick="openShopReport('${escAttr(x.unitId)}','${escAttr(x.fitmentId)}')">Shop report</button>` : ''}
+                </div>
+                <div class="hw-removal-body">
+                    <div class="hw-issue-field"><b>Reason for removal</b>${x.reason ? escAttr(x.reason) : '<span class="hw-none">not recorded</span>'}</div>
+                    ${x.replacedBy ? `<div class="hw-issue-field"><b>Replaced by</b>${escAttr(x.replacedBy)}</div>` : ''}
+                    ${x.shopFinding ? `<div class="hw-issue-field"><b>Shop finding</b>${escAttr(x.shopFinding)}</div>` : ''}
+                </div>
+            </li>`;
+
+            return `
+                <div class="hw-group-head">
+                    <span class="hw-group-name">${escAttr(group.label)}</span>
+                    <span class="hw-fitted ${fitted ? '' : 'none'}">${fitted}/${total} on record</span>
+                </div>
+                ${meta}
+                <div class="table-scroll-wrapper">${table}</div>
+
+                <div class="hw-section">
+                    <span class="hw-section-title">Known Issues</span>
+                    <span class="timeline-day-count">${issues.length} logged</span>
+                    ${canEdit() ? `<button class="qf-btn add-btn" style="margin-left:auto;" onclick="openAddIssue()">＋ Add issue</button>` : ''}
+                </div>
+                <ul class="hw-issues">${issues.length ? issues.map(issueCard).join('') : '<li class="maint-empty">No issues logged for this unit.</li>'}</ul>
+
+                <div class="hw-section">
+                    <span class="hw-section-title">Removed / Shop Queue${openShop ? ` · ${openShop} awaiting shop` : ''}</span>
+                    <span class="timeline-day-count">${removals.length} removed</span>
+                </div>
+                <ul class="hw-issues">${removals.length ? removals.map(removalCard).join('') : '<li class="maint-empty">No units removed for this equipment yet.</li>'}</ul>`;
+        }
+
+        // The By-Aircraft view: each tail, then every unit it carries — the whole
+        // hardware fit of one airframe, serials and dates editable in place.
+        function renderHwByAircraft() {
+            const editable = hwEditable();
+            const pill = c => `background:${c.bg}; color:${c.fg}; border-color:${c.bd}`;
+            const q = hwSearchQ.trim().toLowerCase();
+            const fleet = activeFleet()
+                .filter(a => !q || a.id.toLowerCase().includes(q))
+                .sort((a, b) => a.id.localeCompare(b.id));
+            if (!fleet.length) return '<div class="maint-empty">No aircraft match.</div>';
+
+            return fleet.map(a => {
+                const fit = fitOf(a);
+                const rows = [];
+                HW_GROUPS.forEach(group => {
+                    groupBases(group).forEach(base => {
+                        const lruId = lruIdForFit(base, fit); if (!lruId) return;
+                        const lru = lruById(lruId);
+                        const n = lruQtyFor(lru, a.type) || 1;
+                        const multi = lruIsMulti(lru) && n > 1;
+                        const positions = multi ? [...Array(n)].map((_, i) => String(i + 1)) : [undefined];
+                        positions.forEach(pos => {
+                            const hit = fittedUnitAt(lruId, a.id, pos);
+                            const label = lru.label + (group.shape === 'pair' ? '' : '') + (pos ? ` ${pos}/${n}` : '');
+                            const serialCell = hit ? hwSerialField(hit.unit)
+                                : (editable ? '<span class="hw-none">— Record Installed</span>' : hwSerialSpan(''));
+                            const altCell = (lru.altSerialLabel && hit) ? ` <span class="hw-alt-inline">${hwAltField(hit.unit, lru)}</span>` : '';
+                            rows.push(`<tr>
+                                <td>${escAttr(label)}</td>
+                                <td>${serialCell}${altCell}</td>
+                                <td>${hit ? hwDateField(hit.unit, hit.fitment, 'fittedDate') : '<span class="hw-none">—</span>'}</td>
+                                <td>${hwStatusBadge(hit)}</td>
+                            </tr>`);
+                        });
+                    });
+                });
+                return `<div class="hw-ac-block">
+                    <div class="hw-ac-head">
+                        <span class="hw-ac-reg">${escAttr(a.id)}</span>
+                        <span class="tl-pill" style="${pill(TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL)}">${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</span>
+                        <span class="status-badge fit-${fit}">${fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>
+                    </div>
+                    <div class="table-scroll-wrapper"><table class="hw-reg-table hw-ac-table"><thead><tr>
+                        <th>Equipment</th><th>Serial</th><th>Fitted</th><th>Status</th>
+                    </tr></thead><tbody>${rows.join('')}</tbody></table></div>
+                </div>`;
+            }).join('');
         }
 
         // ===== Record Installed Serials =====
@@ -17308,9 +17692,13 @@
             { value: 'spare',   label: 'Spare' },
         ];
 
+        // The Serials tab was merged into Hardware (v2.136.0). Its #srBody is gone, so
+        // every save path that still calls renderSerialsPage() now refreshes the unified
+        // Hardware register instead. (The old body below is unreachable and kept only to
+        // avoid a large delete; serialRows / serialRowsFiltered are still used by CSV.)
         function renderSerialsPage() {
             const body = document.getElementById('srBody');
-            if (!body) return;
+            if (!body) { renderHardwarePage(); return; }
 
             // --- filters, built from the data actually present ---
             const lruSel = document.getElementById('srLruFilter');
@@ -17463,8 +17851,45 @@
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 if (!value) delete u.altSerial; else u.altSerial = value;
-                renderSerialsPage();
                 renderHardwarePage();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not save serial — ${ex.message}`, '#dc3545');
+            } finally {
+                el.disabled = false;
+            }
+        }
+
+        // Correcting a unit's PRIMARY serial in place (new in v2.136.0 — the old Serials
+        // tab could edit dates and the alt serial but not this). A serial is one physical
+        // box within its equipment type, so a value already on another unit of the same
+        // LRU is blocked — that would be two boxes claiming one number.
+        async function saveUnitSerial(el) {
+            const unitId = el.dataset.unit;
+            const u = unitsLive[unitId];
+            if (!u) return;
+            const value = el.value.trim();
+            if (value) {
+                const clash = unitEntries().find(x => x.id !== unitId && x.lruId === u.lruId
+                    && String(x.serial || '').trim().toLowerCase() === value.toLowerCase());
+                if (clash) {
+                    setSyncStatus(`🔴 ${value} is already on another ${(lruById(u.lruId) || {}).label || 'unit'} — serials are unique`, '#dc3545');
+                    el.value = u.serial || '';
+                    return;
+                }
+            }
+            const token = await getIdToken();
+            if (!token) return;
+            el.disabled = true;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units/${unitId}.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify({ serial: value || null }),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                if (!value) delete u.serial; else u.serial = value;
+                renderHardwarePage();
+                renderMaintenancePage();
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (ex) {
                 setSyncStatus(`🔴 Could not save serial — ${ex.message}`, '#dc3545');
@@ -17524,7 +17949,7 @@
         }
 
         function updateHwEditUI() {
-            ['hwAddIssueBtn', 'hwBaselineBtn', 'hwRemovalBtn'].forEach(id => {
+            ['hwBaselineBtn', 'hwRemovalBtn'].forEach(id => {
                 const b = document.getElementById(id);
                 if (b) b.style.display = canEdit() ? '' : 'none';
             });
