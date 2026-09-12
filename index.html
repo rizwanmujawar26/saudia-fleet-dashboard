@@ -3610,17 +3610,13 @@
         }
 
         /* ===== Hardware register (merged Hardware + Serials, v2.136.0) ===== */
-        /* Equipment sub-tab row — a centred, wrapping set of pills (up to ~10 tabs), so
-           it scales past the 3-pill Maintenance toggle without a sideways scroller. */
-        .hw-viewtoggle { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
-        .hw-vt-btn {
-            border: 1px solid #d7dee5; background: #f4f7fa; border-radius: 999px;
-            padding: 5px 12px; font-size: 12px; font-weight: 700; color: #5a6b78;
-            cursor: pointer; white-space: nowrap;
-        }
-        .hw-vt-btn:hover { background: #e9eef3; }
-        .hw-vt-btn.active { background: #0a5c34; color: #fff; border-color: #0a5c34; }
-        .hw-vt-n { font-size: 10px; font-weight: 800; opacity: 0.8; margin-left: 3px; font-variant-numeric: tabular-nums; }
+        /* Equipment sub-tab row — the SAME segmented control as the Maintenance view
+           toggle (.avr-viewtoggle / .avr-vt-btn / .avr-vt-badge), for one house style
+           across the sub-menus. It carries more segments than Maintenance, so it may
+           wrap to a second line rather than overflow. */
+        .hw-viewtoggle { flex-wrap: wrap; max-width: 100%; }
+        /* By Aircraft is a separate toggle on the filter bar, not a segment. */
+        .hw-byac-btn.active { background: #0a5c34; color: #fff; border-color: #0a5c34; }
 
         .hw-group-head { display: flex; align-items: center; gap: 10px; padding: 2px 2px 10px; }
         .hw-group-name { font-size: 16px; font-weight: 800; color: #17324b; letter-spacing: 0.02em; }
@@ -3656,6 +3652,12 @@
         .hw-date-input:focus { outline: none; border-color: #0a5c34; box-shadow: 0 0 0 2px rgba(10,92,52,0.12); }
         .hw-alt-inline { display: inline-block; margin-left: 6px; }
         .hw-alt-inline .hw-none, .hw-alt-inline .hw-serial { font-size: 11px; color: #6b7780; }
+        /* A removed unit's row reads as history: muted, faint red wash. */
+        .hw-reg-table tr.hw-row-off td { background: #fdf6f6; color: #8a5a5e; }
+        .hw-reg-table tr.hw-row-off:hover td { background: #fbeeef; }
+        .hw-reg-table tr.hw-row-empty td { color: #97a1a9; }
+        .hw-sn-new { border-style: dashed; border-color: #cbd5db; }
+        .hw-sn-new::placeholder { color: #a9b3ba; font-style: italic; }
 
         /* Stacked slot cells for pair (RX/TX) and multi (CWAP) layouts. */
         .hw-slot-row { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -5808,10 +5810,11 @@
                  source — nothing about serials is stored twice. -->
             <div id="hardware" class="tab-content">
                 <div class="avr-viewtoggle-row">
-                    <div class="hw-viewtoggle" role="tablist" aria-label="Hardware view" id="hwViewToggle"></div>
+                    <div class="avr-viewtoggle hw-viewtoggle" role="tablist" aria-label="Hardware equipment" id="hwViewToggle"></div>
                 </div>
                 <div class="filterbar">
                     <div class="fb-filters">
+                        <button id="hwByAircraftBtn" class="qf-btn hw-byac-btn" onclick="toggleHwByAircraft()" title="Group the whole register by aircraft">✈ By Aircraft</button>
                         <input id="hwSearch" class="edit-text" placeholder="Search serial or aircraft" autocomplete="off" oninput="setHwSearch(this.value)">
                     </div>
                     <div class="fb-actions">
@@ -6946,8 +6949,8 @@
             { id: 'antenna',    label: 'Antennas',   shape: 'pair',   bases: ['rx_antenna', 'tx_antenna'] },
             { id: 'cwap',       label: 'CWAP',       shape: 'multi',  base: 'cwap' },
             { id: 'sim',        label: 'SIM Card',   shape: 'single', base: 'sim' },
-            { id: 'waveguide',  label: 'Waveguide',  shape: 'single', base: 'waveguide_adapter' },
-            { id: 'coax',       label: 'Coax J12',   shape: 'single', base: 'coax_cable_j12' },
+            // Waveguide Adapter and Coax Cable J12 are intentionally NOT tabs here — they
+            // are passive RF parts with no trackable serial number (user, 2026-09-12).
         ];
         function hwGroupById(id) { return HW_GROUPS.find(g => g.id === id) || null; }
         // The base unit(s) a group covers — one for most, two for the antenna pair.
@@ -7359,8 +7362,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.136.0';
-        const APP_BUILD    = '2026.09.12.06';
+        const APP_VERSION  = '2.136.1';
+        const APP_BUILD    = '2026.09.12.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -16444,7 +16447,8 @@
         let hwEditMode = false;
         let pendingHw = {};             // { lruId: { swVersion, partNumber, vendor, notes } }
         let hwSelectedId = HARDWARE_LRUS.length ? HARDWARE_LRUS[0].id : '';
-        let hwView = 'aircraft';        // 'aircraft' (By Aircraft) or a HW_GROUPS id
+        let hwView = HW_GROUPS.length ? HW_GROUPS[0].id : 'aircraft';   // a HW_GROUPS id, or 'aircraft'
+        let hwLastGroup = hwView;       // the equipment tab to return to from By Aircraft
         let hwSearchQ = '';
 
         function setHwView(id) {
@@ -16453,8 +16457,19 @@
             const s = document.getElementById('hwSearch'); if (s) s.value = '';
             // Point the known-issues modal's context at the visible group.
             const g = hwGroupById(id);
-            if (g) hwSelectedId = lruIdForFit(groupBases(g)[0], 'retrofit') || hwSelectedId;
+            if (g) { hwLastGroup = id; hwSelectedId = lruIdForFit(groupBases(g)[0], 'retrofit') || hwSelectedId; }
             renderHardwarePage();
+        }
+        // By Aircraft is a toggle set apart from the equipment tabs (user, 2026-09-12):
+        // on turns the whole-fleet-by-tail view on; off returns to the last equipment tab.
+        function toggleHwByAircraft() {
+            setHwView(hwView === 'aircraft' ? hwLastGroup : 'aircraft');
+        }
+        // How many unit records the register holds for a group (on-wing + removed + spare)
+        // — the count shown in the sub-tab badge.
+        function groupRecordCount(group) {
+            const ids = groupLruIds(group);
+            return unitEntries().filter(u => ids.includes(u.lruId)).length;
         }
         function setHwSearch(q) {
             hwSearchQ = q;
@@ -16524,9 +16539,15 @@
         }
         function hwDateField(unit, fitment, field) {
             if (!fitment) return '<span class="hw-none">—</span>';
-            if (field === 'removedDate' && fitmentIsOn(fitment)) return '<span class="hw-none">—</span>';
             const val = fitment[field] || '';
-            if (!hwEditable()) return val ? escAttr(val) : '<span class="hw-none">not set</span>';
+            // Read mode: a removed date that is genuinely absent on an on-wing unit is a
+            // non-event, not a gap to chase — show a plain dash, not "not set".
+            if (!hwEditable()) {
+                if (val) return escAttr(val);
+                return field === 'removedDate' ? '<span class="hw-none">—</span>' : '<span class="hw-none">not set</span>';
+            }
+            // Edit mode: the Removed date is always editable — typing one is how a unit is
+            // marked off wing (saveFitmentDate then flips its state), clearing it refits.
             return `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="hw-date-input"
                 value="${escAttr(toDMY(val))}" data-unit="${escAttr(unit.id)}" data-fitment="${escAttr(fitment.id)}" data-field="${field}" onchange="saveFitmentDate(this)">`;
         }
@@ -16758,19 +16779,19 @@
             updateHwEditUI();
         }
 
-        // The equipment sub-tab row: By Aircraft, then one tab per unit type with a
-        // fitted/total badge. (Same centred pattern as the Maintenance view toggle.)
+        // The equipment sub-tab row — same segmented style as the Maintenance view
+        // toggle (avr-viewtoggle), one segment per unit type, each with a red badge
+        // showing how many unit records we hold. By Aircraft is a separate toggle
+        // button on the filter bar, not a segment here.
         function renderHwToggle() {
             const el = document.getElementById('hwViewToggle');
             if (!el) return;
-            const btn = (id, label, extra) =>
-                `<button class="hw-vt-btn ${hwView === id ? 'active' : ''}" role="tab" onclick="setHwView('${id}')">${label}${extra || ''}</button>`;
-            let html = btn('aircraft', '✈ By Aircraft');
-            HW_GROUPS.forEach(g => {
-                const { fitted, total } = groupFittedCount(g);
-                html += btn(g.id, escAttr(g.label), ` <span class="hw-vt-n">${fitted}/${total}</span>`);
-            });
-            el.innerHTML = html;
+            el.innerHTML = HW_GROUPS.map(g => {
+                const n = groupRecordCount(g);
+                return `<button class="avr-vt-btn ${hwView === g.id ? 'active' : ''}" role="tab" onclick="setHwView('${g.id}')">${escAttr(g.label)}${n ? ` <span class="avr-vt-badge">${n}</span>` : ''}</button>`;
+            }).join('');
+            const b = document.getElementById('hwByAircraftBtn');
+            if (b) b.classList.toggle('active', hwView === 'aircraft');
         }
 
         function renderHwContent() {
@@ -16803,78 +16824,77 @@
                 ${metaCell('Notes', field('notes', rec.notes, 'Anything worth knowing'))}
             </div>`;
 
-            // --- the serial table, shaped by the unit ---
-            const fleet = hwGroupFleet(group);
-            let table = '';
+            // --- the serial table ---
+            // One UNIFORM table for every shape, one ROW PER UNIT (so a swapped-out box
+            // stays visible as its own REMOVED row), plus a blank create-row for any slot
+            // with no record yet. A Position column appears for pair (RX/TX) and multi
+            // (CWAP 1/5…). Serial, second serial, Fitted and Removed are all editable;
+            // entering a Removed date flips the row to REMOVED, clearing it puts it back
+            // ON WING; Days is time on wing (fitted → removed, or fitted → today).
+            const dual = group.shape === 'dual';
+            const hasPos = group.shape === 'pair' || group.shape === 'multi';
+            const baseLru = lruById(baseId) || {};
+            const qLow = q.toLowerCase();
 
-            if (group.shape === 'single' || group.shape === 'dual') {
-                const dual = group.shape === 'dual';
-                const rows = fleet.map(a => {
-                    const lruId = lruIdForFit(group.base, fitOf(a)); if (!lruId) return '';
-                    const lru = lruById(lruId);
-                    const hit = fittedUnitAt(lruId, a.id);
-                    if (q) {
-                        const t = q.toLowerCase();
-                        const hay = `${a.id} ${hit ? (hit.unit.serial || '') : ''} ${hit ? (hit.unit.altSerial || '') : ''}`.toLowerCase();
-                        if (!hay.includes(t)) return '';
-                    }
-                    const history = unitsAtSlot(lruId, a.id);
-                    const removals = history.filter(x => !fitmentIsOn(x.fitment)).length;
-                    const days = hit ? fitmentDaysOnWing(hit.fitment) : null;
-                    const serialCell = hit ? hwSerialField(hit.unit)
-                        : (editable ? '<span class="hw-none">— Record Installed</span>' : hwSerialSpan(''));
-                    const altCell = hit ? hwAltField(hit.unit, lru) : '<span class="hw-none">—</span>';
-                    return `<tr>
-                        <td><strong>${escAttr(a.id)}</strong></td>
-                        <td>${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</td>
-                        <td>${serialCell}</td>
-                        ${dual ? `<td>${altCell}</td>` : ''}
-                        <td>${hit ? hwDateField(hit.unit, hit.fitment, 'fittedDate') : '<span class="hw-none">—</span>'}</td>
-                        <td>${hwStatusBadge(hit)}</td>
-                        <td class="sr-days">${days == null ? '<span class="hw-none">—</span>' : days + 'd'}</td>
-                        <td>${removals ? `<span class="hw-removals">${removals}</span>` : '<span class="hw-none">0</span>'}</td>
-                    </tr>`;
-                }).filter(Boolean).join('');
-                const dualHead = dual
-                    ? `<th>${escAttr((lruById(baseId) || {}).serialLabel || 'Serial')}</th><th>${escAttr((lruById(baseId) || {}).altSerialLabel || 'Alt S/N')}</th>`
-                    : '<th>Serial</th>';
-                table = `<table class="hw-reg-table"><thead><tr>
-                        <th>Aircraft</th><th>Type</th>${dualHead}<th>Fitted</th><th>Status</th><th>Days</th><th>Off</th>
-                    </tr></thead><tbody>${rows || `<tr><td colspan="${dual ? 8 : 7}" class="maint-empty">No aircraft match.</td></tr>`}</tbody></table>`;
-            } else if (group.shape === 'pair') {
-                const rows = fleet.map(a => {
-                    const rxId = lruIdForFit('rx_antenna', fitOf(a));
-                    const txId = lruIdForFit('tx_antenna', fitOf(a));
-                    if (q) {
-                        const matchAny = [{ lruId: rxId }, { lruId: txId }].some(s => s.lruId && hwSlotMatches({ aircraft: a, lruId: s.lruId, position: undefined }, q));
-                        if (!matchAny) return '';
-                    }
-                    return `<tr>
-                        <td><strong>${escAttr(a.id)}</strong></td>
-                        <td>${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</td>
-                        <td>${rxId ? hwSlotCell(rxId, a.id, undefined) : '<span class="hw-none">—</span>'}</td>
-                        <td>${txId ? hwSlotCell(txId, a.id, undefined) : '<span class="hw-none">—</span>'}</td>
-                    </tr>`;
-                }).filter(Boolean).join('');
-                table = `<table class="hw-reg-table"><thead><tr>
-                        <th>Aircraft</th><th>Type</th><th>RX Antenna</th><th>TX Antenna</th>
-                    </tr></thead><tbody>${rows || '<tr><td colspan="4" class="maint-empty">No aircraft match.</td></tr>'}</tbody></table>`;
-            } else { // multi (CWAP)
-                const rows = fleet.map(a => {
-                    const lruId = lruIdForFit(group.base, fitOf(a)); if (!lruId) return '';
-                    const n = lruQtyFor(lruById(lruId), a.type) || 1;
-                    if (q && ![...Array(n)].some((_, i) => hwSlotMatches({ aircraft: a, lruId, position: String(i + 1) }, q))) return '';
-                    const cells = [...Array(n)].map((_, i) => hwSlotCell(lruId, a.id, String(i + 1), `CWAP ${i + 1}`)).join('');
-                    return `<tr>
-                        <td><strong>${escAttr(a.id)}</strong></td>
-                        <td>${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</td>
-                        <td><div class="hw-slot-row">${cells}</div></td>
-                    </tr>`;
-                }).filter(Boolean).join('');
-                table = `<table class="hw-reg-table"><thead><tr>
-                        <th>Aircraft</th><th>Type</th><th>CWAP units (3 on A32x · 5 on A330)</th>
-                    </tr></thead><tbody>${rows || '<tr><td colspan="3" class="maint-empty">No aircraft match.</td></tr>'}</tbody></table>`;
-            }
+            const posLabel = slot => {
+                if (group.shape === 'pair') return (slot.base.indexOf('rx') >= 0) ? 'RX' : 'TX';
+                if (group.shape === 'multi') return `${slot.position}/${lruQtyFor(slot.lru, slot.aircraft.type) || 1}`;
+                return '';
+            };
+
+            const unitRow = (slot, hit) => {
+                const a = slot.aircraft, off = !fitmentIsOn(hit.fitment);
+                const days = fitmentDaysOnWing(hit.fitment);
+                return `<tr class="${off ? 'hw-row-off' : ''}">
+                    <td><strong>${escAttr(a.id)}</strong></td>
+                    <td>${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</td>
+                    ${hasPos ? `<td><span class="hw-pos">${escAttr(posLabel(slot))}</span></td>` : ''}
+                    <td>${hwSerialField(hit.unit)}</td>
+                    ${dual ? `<td>${hwAltField(hit.unit, slot.lru)}</td>` : ''}
+                    <td>${hwDateField(hit.unit, hit.fitment, 'fittedDate')}</td>
+                    <td>${hwDateField(hit.unit, hit.fitment, 'removedDate')}</td>
+                    <td>${hwStatusBadge(hit)}</td>
+                    <td class="sr-days">${days == null ? '<span class="hw-none">—</span>' : days + 'd'}</td>
+                </tr>`;
+            };
+
+            const blankRow = slot => {
+                const a = slot.aircraft;
+                const serialCell = editable
+                    ? `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-new" placeholder="Serial — type to add"
+                        data-lru="${escAttr(slot.lruId)}" data-tail="${escAttr(a.id)}" data-position="${escAttr(slot.position || '')}" onchange="hwCreateUnitFromField(this)">`
+                    : '<span class="hw-none">no record</span>';
+                const dash = '<span class="hw-none">—</span>';
+                return `<tr class="hw-row-empty">
+                    <td><strong>${escAttr(a.id)}</strong></td>
+                    <td>${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</td>
+                    ${hasPos ? `<td><span class="hw-pos">${escAttr(posLabel(slot))}</span></td>` : ''}
+                    <td>${serialCell}</td>
+                    ${dual ? `<td>${dash}</td>` : ''}
+                    <td>${dash}</td><td>${dash}</td><td>${dash}</td><td>${dash}</td>
+                </tr>`;
+            };
+
+            const rowsHtml = groupSlots(group).map(slot => {
+                const history = unitsAtSlot(slot.lruId, slot.aircraft.id, slot.position).slice().reverse();
+                if (!history.length) {
+                    if (q && !slot.aircraft.id.toLowerCase().includes(qLow)) return '';
+                    return blankRow(slot);
+                }
+                return history.filter(h => !q
+                        || slot.aircraft.id.toLowerCase().includes(qLow)
+                        || String(h.unit.serial || '').toLowerCase().includes(qLow)
+                        || String(h.unit.altSerial || '').toLowerCase().includes(qLow))
+                    .map(h => unitRow(slot, h)).join('');
+            }).filter(Boolean).join('');
+
+            const serialHead = dual
+                ? `<th>${escAttr(baseLru.serialLabel || 'Serial')}</th><th>${escAttr(baseLru.altSerialLabel || 'Alt S/N')}</th>`
+                : `<th>${escAttr(baseLru.serialLabel || 'Serial')}</th>`;
+            const colspan = 7 + (hasPos ? 1 : 0) + (dual ? 1 : 0);
+            const table = `<table class="hw-reg-table"><thead><tr>
+                    <th>Aircraft</th><th>Type</th>${hasPos ? '<th>Position</th>' : ''}${serialHead}<th>Fitted</th><th>Removed</th><th>Status</th><th>Days</th>
+                </tr></thead><tbody>${rowsHtml || `<tr><td colspan="${colspan}" class="maint-empty">No records match.</td></tr>`}</tbody></table>`;
 
             // --- Known Issues + Removed queue (both fits of the group) ---
             const issues = groupIssues(group);
@@ -17812,15 +17832,20 @@
             if (value === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
             const token = await getIdToken();
             if (!token) return;
+            // The Removed date IS the on-wing/off-wing switch: setting one takes the unit
+            // off wing (state 'removed'), clearing it puts it back on. So the state flips
+            // in the same PATCH — status and Days on the register stay derived from it.
+            const body = { [field]: value || null };
+            if (field === 'removedDate') body.state = value ? 'removed' : 'on_wing';
             el.disabled = true;
             try {
                 const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units/${unitId}/fitments/${fitmentId}.json?auth=${token}`, {
-                    method: 'PATCH', body: JSON.stringify({ [field]: value || null }),
+                    method: 'PATCH', body: JSON.stringify(body),
                 });
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 if (!value) delete f[field]; else f[field] = value;
-                renderSerialsPage();
+                if (field === 'removedDate') f.state = value ? 'removed' : 'on_wing';
                 renderHardwarePage();
                 renderMaintenancePage();
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
@@ -17894,6 +17919,46 @@
             } catch (ex) {
                 setSyncStatus(`🔴 Could not save serial — ${ex.message}`, '#dc3545');
             } finally {
+                el.disabled = false;
+            }
+        }
+
+        // Inline CREATE from a blank register row (v2.136.1): typing a serial into an
+        // empty slot writes a new /units record with one on-wing fitment at that
+        // aircraft/position — the same shape Record Installed writes, one at a time. A
+        // serial already on another unit of the same LRU is blocked (one box, one number).
+        async function hwCreateUnitFromField(el) {
+            const value = el.value.trim();
+            if (!value) return;                     // empty blur — nothing to create
+            const lruId = el.dataset.lru, tail = el.dataset.tail, position = el.dataset.position || '';
+            const clash = unitEntries().find(x => x.lruId === lruId
+                && String(x.serial || '').trim().toLowerCase() === value.toLowerCase());
+            if (clash) {
+                setSyncStatus(`🔴 ${value} is already on another ${(lruById(lruId) || {}).label || 'unit'} — serials are unique`, '#dc3545');
+                el.value = '';
+                return;
+            }
+            const token = await getIdToken();
+            if (!token) return;
+            el.disabled = true;
+            const stamp = new Date().toISOString();
+            const fitId = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            const unitId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            const fitment = { aircraft: tail, state: 'on_wing', loggedAt: stamp };
+            if (position) fitment.position = String(position);
+            const unit = { lruId, serial: value, addedAt: stamp, fitments: { [fitId]: fitment } };
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify({ [unitId]: unit }),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                unitsLive[unitId] = unit;
+                renderHardwarePage();
+                renderMaintenancePage();
+                setSyncStatus(`🟢 ${value} added on ${tail} — synced with your team`, '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not add serial — ${ex.message}`, '#dc3545');
                 el.disabled = false;
             }
         }
