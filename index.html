@@ -7434,8 +7434,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.138.2';
-        const APP_BUILD    = '2026.09.13.02';
+        const APP_VERSION  = '2.138.3';
+        const APP_BUILD    = '2026.09.13.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -10370,7 +10370,7 @@
             const close = () => { overlay.style.display = 'none'; acEditId = null; };
             document.getElementById('acEditCancel').addEventListener('click', close);
             document.getElementById('acEditClose').addEventListener('click', close);
-            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            // No backdrop-click-to-close — closes only via Cancel/Save (never discard typed input).
             document.getElementById('acEditSave').addEventListener('click', saveAircraftEditor);
             document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.style.display === 'flex') close(); });
         }
@@ -14697,7 +14697,7 @@
             const close = () => { overlay.style.display = 'none'; opsEditId = null; };
             document.getElementById('opsEditCancel').addEventListener('click', close);
             document.getElementById('opsEditClose').addEventListener('click', close);
-            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            // No backdrop-click-to-close — closes only via Cancel/Save (never discard typed input).
             document.getElementById('opsEditSave').addEventListener('click', saveOpsPeriod);
             document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.style.display === 'flex') close(); });
         }
@@ -14991,7 +14991,7 @@
         function initIssueEditModal() {
             const overlay = document.getElementById('issueEditOverlay');
             if (!overlay) return;
-            overlay.addEventListener('click', e => { if (e.target === overlay) closeIssueEditor(); });
+            // No backdrop-click-to-close — closes only via Cancel/Save (never discard typed input).
             document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.style.display === 'flex') closeIssueEditor(); });
         }
 
@@ -15741,7 +15741,7 @@
             const err = document.getElementById('addSimError');
             const close = () => { overlay.style.display = 'none'; };
             document.getElementById('addSimCancel').addEventListener('click', close);
-            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            // No backdrop-click-to-close — closes only via Cancel/Save (never discard typed input).
 
             document.getElementById('addSimSave').addEventListener('click', async () => {
                 const serial = (document.getElementById('addSimSerial').value || '').trim();
@@ -16445,7 +16445,7 @@
             const err = document.getElementById('addModmanError');
             const close = () => { overlay.style.display = 'none'; };
             document.getElementById('addModmanCancel').addEventListener('click', close);
-            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            // No backdrop-click-to-close — closes only via Cancel/Save (never discard typed input).
 
             document.getElementById('addModmanSave').addEventListener('click', async () => {
                 const val = x => (document.getElementById(x).value || '').trim();
@@ -18546,7 +18546,7 @@
             const err = document.getElementById('addIssueError');
             const close = () => { overlay.style.display = 'none'; hwIssueEditingId = ''; };
             document.getElementById('addIssueCancel').addEventListener('click', close);
-            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            // No backdrop-click-to-close — closes only via Cancel/Save (never discard typed input).
 
             document.getElementById('addIssueSave').addEventListener('click', async () => {
                 const lru = lruById(hwSelectedId);
@@ -20622,7 +20622,7 @@
             const overlay = document.getElementById('sysInfoOverlay');
             const close = document.getElementById('sysInfoClose');
             if (close) close.onclick = closeSysInfo;
-            if (overlay) overlay.onclick = e => { if (e.target === overlay) closeSysInfo(); };
+            // No backdrop-click-to-close — the System Info panel closes only via its Close button.
             document.addEventListener('keydown', e => { if (e.key === 'Escape' && sysInfoIsOpen()) closeSysInfo(); });
 
             renderSysBar();
