@@ -3682,6 +3682,9 @@
             border: 1px solid #cdd6dd; border-radius: 5px; font-size: 12px; color: #2a333b;
         }
         .hw-reason-input:focus { outline: none; border-color: #0a5c34; box-shadow: 0 0 0 2px rgba(10,92,52,0.12); }
+        /* By-Aircraft slot history: a removed box hanging beneath its current one. */
+        .hw-hist-row td { background: #fafbfc; }
+        .hw-hist-cont { color: #97a1aa; font-size: 11.5px; }
         .hw-date-input {
             width: 104px; padding: 4px 7px; border: 1px solid #cdd6dd; border-radius: 5px; font-size: 12px;
             font-variant-numeric: tabular-nums;
@@ -7440,8 +7443,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.139.0';
-        const APP_BUILD    = '2026.09.13.04';
+        const APP_VERSION  = '2.140.0';
+        const APP_BUILD    = '2026.09.13.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -17153,24 +17156,46 @@
                         const multi = lruIsMulti(lru) && n > 1;
                         const positions = multi ? [...Array(n)].map((_, i) => String(i + 1)) : [undefined];
                         positions.forEach(pos => {
-                            const hit = fittedUnitAt(lruId, a.id, pos);
-                            if (hit) { recorded++; hay += ' ' + String(hit.unit.serial || '').toLowerCase() + ' ' + String(hit.unit.altSerial || '').toLowerCase(); }
                             const label = lru.label + (pos ? ` ${pos}/${n}` : '');
-                            const off = hit && !fitmentIsOn(hit.fitment);
-                            const serialCell = hit ? hwSerialField(hit.unit)
-                                : (editable
+                            // The WHOLE history at this slot, not just what is on wing now: the
+                            // current box first, then every box that came off it (newest first),
+                            // so a swap shows both the fitted unit AND the removed one it replaced.
+                            const history = unitsAtSlot(lruId, a.id, pos).slice().sort((x, y) => {
+                                const ox = fitmentIsOn(x.fitment) ? 0 : 1, oy = fitmentIsOn(y.fitment) ? 0 : 1;
+                                return ox !== oy ? ox - oy : String(y.fitment.loggedAt || '').localeCompare(String(x.fitment.loggedAt || ''));
+                            });
+                            if (!history.length) {
+                                const serialCell = editable
                                     ? `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-new" placeholder="Serial — type to add" data-lru="${escAttr(lruId)}" data-tail="${escAttr(a.id)}" data-position="${escAttr(pos || '')}" onchange="hwCreateUnitFromField(this)">`
-                                    : hwSerialSpan(''));
-                            const altCell = (lru.altSerialLabel && hit) ? ` <span class="hw-alt-inline">${hwAltField(hit.unit, lru)}</span>` : '';
-                            const days = hit ? fitmentDaysOnWing(hit.fitment) : null;
-                            rows.push(`<tr class="${off ? 'hw-row-off' : ''}">
-                                <td>${escAttr(label)}</td>
-                                <td>${serialCell}${altCell}</td>
-                                <td>${hit ? hwDateField(hit.unit, hit.fitment, 'fittedDate') : '<span class="hw-none">—</span>'}</td>
-                                <td>${hit ? hwDateField(hit.unit, hit.fitment, 'removedDate') : '<span class="hw-none">—</span>'}</td>
-                                <td>${hwStatusBadge(hit)}</td>
-                                <td class="sr-days">${days == null ? '<span class="hw-none">—</span>' : days + 'd'}</td>
-                            </tr>`);
+                                    : hwSerialSpan('');
+                                rows.push(`<tr>
+                                    <td>${escAttr(label)}</td>
+                                    <td>${serialCell}</td>
+                                    <td><span class="hw-none">—</span></td>
+                                    <td><span class="hw-none">—</span></td>
+                                    <td>${hwStatusBadge(null)}</td>
+                                    <td class="sr-days"><span class="hw-none">—</span></td>
+                                </tr>`);
+                                return;
+                            }
+                            history.forEach((hit, idx) => {
+                                if (fitmentIsOn(hit.fitment)) recorded++;
+                                hay += ' ' + String(hit.unit.serial || '').toLowerCase() + ' ' + String(hit.unit.altSerial || '').toLowerCase();
+                                const off = !fitmentIsOn(hit.fitment);
+                                const altCell = lru.altSerialLabel ? ` <span class="hw-alt-inline">${hwAltField(hit.unit, lru)}</span>` : '';
+                                const days = fitmentDaysOnWing(hit.fitment);
+                                // Equipment name on the first (current) row; a removed box beneath
+                                // it hangs off a muted "↳ <label>" so the slot reads as one group.
+                                const labelCell = idx === 0 ? escAttr(label) : `<span class="hw-hist-cont">↳ ${escAttr(label)}</span>`;
+                                rows.push(`<tr class="${off ? 'hw-row-off' : ''}${idx ? ' hw-hist-row' : ''}">
+                                    <td>${labelCell}</td>
+                                    <td>${hwSerialField(hit.unit)}${altCell}</td>
+                                    <td>${hwDateField(hit.unit, hit.fitment, 'fittedDate')}</td>
+                                    <td>${hwDateField(hit.unit, hit.fitment, 'removedDate')}</td>
+                                    <td>${hwStatusBadge(hit)}</td>
+                                    <td class="sr-days">${days == null ? '<span class="hw-none">—</span>' : days + 'd'}</td>
+                                </tr>`);
+                            });
                         });
                     });
                 });
