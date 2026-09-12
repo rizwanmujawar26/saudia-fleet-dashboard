@@ -3645,6 +3645,9 @@
         .hw-ac-chev { flex: 0 0 auto; font-size: 11px; color: #7a8791; transition: transform 0.18s ease; }
         .hw-ac-block.open .hw-ac-chev { transform: rotate(180deg); }
         .hw-ac-count { margin-left: auto; font-size: 11px; font-weight: 700; color: #5a6b78; background: #eef2f5; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+        /* Add-Equipment modal: the previous-fitment context panel. */
+        .hw-add-prev { background: #f4f7fa; border: 1px solid #e6ecf1; border-radius: 8px; padding: 8px 11px; font-size: 12.5px; color: #3a4750; margin: 12px 0; line-height: 1.5; }
+        .hw-add-prev b { color: #17324b; }
 
         .hw-group-head { display: flex; align-items: center; gap: 10px; padding: 2px 2px 10px; }
         .hw-group-name { font-size: 16px; font-weight: 800; color: #17324b; letter-spacing: 0.02em; }
@@ -5850,7 +5853,9 @@
                     </div>
                     <div class="fb-actions">
                         <button class="qf-btn" onclick="exportSerialsCsv()">⬇️ Export CSV</button>
+                        <button id="hwAddBtn" class="qf-btn add-btn icon-btn" style="display:none;" onclick="hwAddClick()" title="Add equipment" aria-label="Add equipment"><span class="ib-icon" aria-hidden="true">＋</span><span class="ib-label">Add</span></button>
                         <button id="hwEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleHwEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
+                        <button id="hwResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetOrTop(this, resetHardwarePage)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
                 </div>
                 <div id="hwContent"></div>
@@ -6368,6 +6373,44 @@
             <div style="display:flex; gap:10px; margin-top:18px;">
                 <button id="addModmanCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="addModmanSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Add MODMAN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Equipment (a /units unit — SERVER, KANDU, KRFU, ANTENNA, CWAP, SIM). Picks
+         the aircraft (and position), shows the slot's history so a replacement can follow
+         the previous removal, pre-fills the install date from that removal, and marks the
+         current on-wing box removed when it is a swap. MODMAN adds go to the Satcom modal. -->
+    <div id="hwAddOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:10px; padding:24px; width:92%; max-width:470px; box-shadow:0 10px 40px rgba(0,0,0,0.3); max-height:90vh; overflow-y:auto;">
+            <h3 id="hwAddTitle" style="color:#0a5c34; margin-bottom:4px;">Add Equipment</h3>
+            <p id="hwAddSub" style="font-size:13px; color:#666; margin-bottom:14px;"></p>
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label class="add-sched-label">Aircraft</label>
+                    <select id="hwAddAircraft" class="add-sched-input" onchange="hwAddSyncSlot(true)"></select>
+                </div>
+                <div style="flex:1; display:none;" id="hwAddPosWrap">
+                    <label class="add-sched-label" id="hwAddPosLabel">Position</label>
+                    <select id="hwAddPosition" class="add-sched-input" onchange="hwAddSyncSlot()"></select>
+                </div>
+            </div>
+            <div id="hwAddPrev" class="hw-add-prev" style="display:none;"></div>
+            <label class="add-sched-label" id="hwAddSerialLabel">Serial</label>
+            <input id="hwAddSerial" class="add-sched-input" maxlength="60" placeholder="New serial number" autocomplete="off">
+            <div id="hwAddAltWrap" style="display:none;">
+                <label class="add-sched-label" id="hwAddAltLabel">Alt S/N</label>
+                <input id="hwAddAlt" class="add-sched-input" maxlength="60" autocomplete="off">
+            </div>
+            <label class="add-sched-label">Installed date</label>
+            <input id="hwAddFitted" class="add-sched-input" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off">
+            <label class="add-ac-check" id="hwAddReplaceWrap" style="display:none; align-items:center; gap:8px; font-size:13px; color:#444; margin-top:12px; cursor:pointer;">
+                <input type="checkbox" id="hwAddReplace" checked> <span id="hwAddReplaceText"></span>
+            </label>
+            <p id="hwAddError" style="display:none; color:#dc3545; font-size:13px; margin-top:10px;"></p>
+            <div style="display:flex; gap:10px; margin-top:18px;">
+                <button onclick="closeHwAdd()" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
+                <button id="hwAddSaveBtn" onclick="saveHwAdd()" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Add</button>
             </div>
         </div>
     </div>
@@ -7391,8 +7434,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.137.0';
-        const APP_BUILD    = '2026.09.12.08';
+        const APP_VERSION  = '2.138.0';
+        const APP_BUILD    = '2026.09.12.09';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -17095,12 +17138,14 @@
                                     ? `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-new" placeholder="Serial — type to add" data-lru="${escAttr(lruId)}" data-tail="${escAttr(a.id)}" data-position="${escAttr(pos || '')}" onchange="hwCreateUnitFromField(this)">`
                                     : hwSerialSpan(''));
                             const altCell = (lru.altSerialLabel && hit) ? ` <span class="hw-alt-inline">${hwAltField(hit.unit, lru)}</span>` : '';
+                            const days = hit ? fitmentDaysOnWing(hit.fitment) : null;
                             rows.push(`<tr class="${off ? 'hw-row-off' : ''}">
                                 <td>${escAttr(label)}</td>
                                 <td>${serialCell}${altCell}</td>
                                 <td>${hit ? hwDateField(hit.unit, hit.fitment, 'fittedDate') : '<span class="hw-none">—</span>'}</td>
                                 <td>${hit ? hwDateField(hit.unit, hit.fitment, 'removedDate') : '<span class="hw-none">—</span>'}</td>
                                 <td>${hwStatusBadge(hit)}</td>
+                                <td class="sr-days">${days == null ? '<span class="hw-none">—</span>' : days + 'd'}</td>
                             </tr>`);
                         });
                     });
@@ -17121,7 +17166,7 @@
                         <span class="hw-ac-count">${recorded} recorded</span>
                     </div>
                     ${open ? `<div class="table-scroll-wrapper"><table class="hw-reg-table hw-ac-table"><thead><tr>
-                        <th>Equipment</th><th>Serial</th><th>Fitted</th><th>Removed</th><th>Status</th>
+                        <th>Equipment</th><th>Serial</th><th>Fitted</th><th>Removed</th><th>Status</th><th>Days</th>
                     </tr></thead><tbody>${rows.join('')}</tbody></table></div>` : ''}
                 </div>`;
             }).join('');
@@ -18127,6 +18172,161 @@
             }
         }
 
+        // ===== Add Equipment modal (a /units unit) =====
+        // Picks the aircraft (and position/antenna), shows the slot's fitment history so a
+        // new box can be added as a replacement following the previous removal, pre-fills
+        // the install date from that removal, and — when a box is still on wing there —
+        // records it as removed on the same date (a swap).
+        let hwAddGroupId = '';
+
+        function openHwAddModal(groupId) {
+            if (!canEdit()) { requireSignIn(); return; }
+            const group = hwGroupById(groupId);
+            const ov = document.getElementById('hwAddOverlay');
+            if (!group || !ov) return;
+            hwAddGroupId = groupId;
+            document.getElementById('hwAddTitle').textContent = 'Add ' + group.label;
+            document.getElementById('hwAddSub').textContent =
+                `Records a new ${group.label} on wing. Its history at the chosen slot is shown so it can follow a previous removal; a box still fitted there can be recorded as removed (a swap).`;
+            const baseLru = lruById(lruIdForFit(groupBases(group)[0], 'retrofit')) || {};
+            document.getElementById('hwAddSerialLabel').textContent = baseLru.serialLabel || 'Serial';
+            document.getElementById('hwAddAltLabel').textContent = baseLru.altSerialLabel || 'Alt S/N';
+            document.getElementById('hwAddAltWrap').style.display = group.shape === 'dual' ? '' : 'none';
+            document.getElementById('hwAddSerial').value = '';
+            document.getElementById('hwAddAlt').value = '';
+            document.getElementById('hwAddFitted').value = '';
+            const err = document.getElementById('hwAddError'); err.textContent = ''; err.style.display = 'none';
+            const acSel = document.getElementById('hwAddAircraft');
+            acSel.innerHTML = hwGroupFleet(group)
+                .map(a => `<option value="${escAttr(a.id)}">${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</option>`).join('');
+            hwAddSyncSlot(true);
+            ov.style.display = 'flex';
+            acSel.focus();
+        }
+
+        function hwAddSyncPositions() {
+            const group = hwGroupById(hwAddGroupId);
+            const wrap = document.getElementById('hwAddPosWrap');
+            const sel = document.getElementById('hwAddPosition');
+            const lbl = document.getElementById('hwAddPosLabel');
+            const a = aircraftData.find(x => x.id === document.getElementById('hwAddAircraft').value);
+            if (!group) return;
+            if (group.shape === 'pair') {
+                wrap.style.display = ''; lbl.textContent = 'Antenna';
+                sel.innerHTML = '<option value="RX">RX Antenna</option><option value="TX">TX Antenna</option>';
+            } else if (group.shape === 'multi') {
+                wrap.style.display = ''; lbl.textContent = 'Position';
+                const lruId = a ? lruIdForFit(group.base, fitOf(a)) : null;
+                const n = lruId ? (lruQtyFor(lruById(lruId), a.type) || 1) : 1;
+                sel.innerHTML = [...Array(n)].map((_, i) => `<option value="${i + 1}">${i + 1} / ${n}</option>`).join('');
+            } else {
+                wrap.style.display = 'none'; sel.innerHTML = '';
+            }
+        }
+
+        // Resolve the currently-selected {group, aircraft, lruId, position}.
+        function hwAddResolve() {
+            const group = hwGroupById(hwAddGroupId);
+            const a = aircraftData.find(x => x.id === document.getElementById('hwAddAircraft').value);
+            if (!group || !a) return null;
+            let base = groupBases(group)[0], position;
+            if (group.shape === 'pair') base = document.getElementById('hwAddPosition').value === 'TX' ? 'tx_antenna' : 'rx_antenna';
+            else if (group.shape === 'multi') position = document.getElementById('hwAddPosition').value || '1';
+            const lruId = lruIdForFit(base, fitOf(a));
+            return { group, aircraft: a, lruId, lru: lruById(lruId), position };
+        }
+
+        function hwAddSyncSlot(rebuildPos) {
+            if (rebuildPos) hwAddSyncPositions();
+            const prev = document.getElementById('hwAddPrev');
+            const repWrap = document.getElementById('hwAddReplaceWrap');
+            const repText = document.getElementById('hwAddReplaceText');
+            const fitted = document.getElementById('hwAddFitted');
+            const r = hwAddResolve();
+            if (!r || !r.lruId) { prev.style.display = 'none'; repWrap.style.display = 'none'; return; }
+            const history = unitsAtSlot(r.lruId, r.aircraft.id, r.position).slice().reverse();  // newest first
+            const current = history.find(h => fitmentIsOn(h.fitment));
+            const lastOff = history.find(h => !fitmentIsOn(h.fitment));
+            let html = '';
+            if (current) html += `<div><b>Currently on wing:</b> ${escAttr(current.unit.serial || '—')}${current.fitment.fittedDate ? ` · fitted ${escAttr(current.fitment.fittedDate)}` : ''}</div>`;
+            if (lastOff) html += `<div><b>Previous:</b> ${escAttr(lastOff.unit.serial || '—')}${lastOff.fitment.fittedDate ? ` · fitted ${escAttr(lastOff.fitment.fittedDate)}` : ''}${lastOff.fitment.removedDate ? ` → removed ${escAttr(lastOff.fitment.removedDate)}` : ''}</div>`;
+            if (!history.length) html = '<div class="hw-none">No previous record at this position — this is a first fit.</div>';
+            prev.innerHTML = html; prev.style.display = '';
+            if (current) {
+                repWrap.style.display = 'flex';
+                repText.textContent = `Record the current ${current.unit.serial || 'box'} as removed on the installed date (swap).`;
+            } else {
+                repWrap.style.display = 'none';
+            }
+            // Pre-fill the install date from the previous removal so a replacement follows
+            // it — but never stomp a date the user has already typed.
+            if (rebuildPos || !fitted.value) {
+                fitted.value = (!current && lastOff && lastOff.fitment.removedDate) ? toDMY(toISODate(lastOff.fitment.removedDate)) : '';
+            }
+        }
+
+        function closeHwAdd() {
+            const ov = document.getElementById('hwAddOverlay');
+            if (ov) ov.style.display = 'none';
+        }
+
+        async function saveHwAdd() {
+            const err = document.getElementById('hwAddError');
+            const fail = m => { err.textContent = m; err.style.display = ''; };
+            const r = hwAddResolve();
+            if (!r || !r.lruId) { fail('Pick an aircraft.'); return; }
+            const serial = document.getElementById('hwAddSerial').value.trim();
+            if (!serial) { fail('Enter the new serial number.'); return; }
+            const clash = unitEntries().find(u => u.lruId === r.lruId && String(u.serial || '').trim().toLowerCase() === serial.toLowerCase());
+            if (clash) { fail(`${serial} is already on another ${r.lru.label}. Serials are unique.`); return; }
+            const fittedDate = readDateField(document.getElementById('hwAddFitted'));
+            if (fittedDate === false) { fail('Installed date must be dd-mm-yyyy.'); return; }
+            const alt = r.group.shape === 'dual' ? document.getElementById('hwAddAlt').value.trim() : '';
+
+            const history = unitsAtSlot(r.lruId, r.aircraft.id, r.position);
+            const current = history.find(h => fitmentIsOn(h.fitment));
+            const replace = !!current && document.getElementById('hwAddReplace').checked;
+            if (replace && !fittedDate) { fail('Enter the installed date — it becomes the removal date of the box being swapped out.'); return; }
+
+            const token = await getIdToken();
+            if (!token) return;
+            const stamp = new Date().toISOString();
+            const fitId = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            const unitId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            const fitment = { aircraft: r.aircraft.id, state: 'on_wing', loggedAt: stamp };
+            if (r.position) fitment.position = String(r.position);
+            if (fittedDate) fitment.fittedDate = fittedDate;
+            const unit = { lruId: r.lruId, serial, addedAt: stamp, fitments: { [fitId]: fitment } };
+            if (alt) unit.altSerial = alt;
+            const payload = { [unitId]: unit };
+            if (replace) {
+                payload[`${current.unit.id}/fitments/${current.fitment.id}/removedDate`] = fittedDate;
+                payload[`${current.unit.id}/fitments/${current.fitment.id}/state`] = 'removed';
+            }
+            const btn = document.getElementById('hwAddSaveBtn');
+            btn.disabled = true; btn.textContent = 'Saving...';
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                unitsLive[unitId] = unit;
+                if (replace) {
+                    const cf = unitsLive[current.unit.id].fitments[current.fitment.id];
+                    cf.removedDate = fittedDate; cf.state = 'removed';
+                }
+                closeHwAdd();
+                renderHardwarePage();
+                renderMaintenancePage();
+                setSyncStatus(`🟢 ${serial} added on ${r.aircraft.id}${replace ? ' (swap recorded)' : ''} — synced with your team`, '#28a745');
+            } catch (ex) {
+                fail(`Could not save — ${ex.message}`);
+            } finally {
+                btn.disabled = false; btn.textContent = 'Add';
+            }
+        }
+
         // The register as a spreadsheet. Data gathering happens in more places than this
         // page, and a CSV is the honest handover format for the ones it does not cover.
         function exportSerialsCsv() {
@@ -18178,7 +18378,51 @@
         }
 
         function updateHwEditUI() {
+            const add = document.getElementById('hwAddBtn');
+            if (add) add.style.display = canEdit() ? '' : 'none';
             applyEditButton('hwEditBtn', hwEditMode && canEdit(), 'Edit', '💾 Save');
+        }
+
+        // Reset the Hardware page: clear the search, the type filter and any expanded
+        // aircraft, and repaint. (The button also morphs into Back-to-top when scrolled,
+        // via resetOrTop / syncResetTopButtons, like every other page.)
+        function resetHardwarePage() {
+            hwSearchQ = '';
+            hwTypeFilter = '';
+            hwExpandedAc = {};
+            const s = document.getElementById('hwSearch'); if (s) s.value = '';
+            renderHardwarePage();
+        }
+
+        // The Add button. On an equipment tab it opens that unit's Add form directly;
+        // in By-Aircraft view it first offers a menu to pick which equipment to add.
+        function hwAddClick() {
+            if (!canEdit()) { requireSignIn(); return; }
+            if (hwView === 'aircraft') { openHwAddMenu(); return; }
+            hwAddDispatch(hwView);
+        }
+        function hwAddDispatch(groupId) {
+            if (groupId === 'modman') { openAddModman(); return; }   // MODMAN lives in /modmans
+            openHwAddModal(groupId);
+        }
+        function openHwAddMenu() {
+            closeAssignMenu();
+            const btn = document.getElementById('hwAddBtn');
+            if (!btn) return;
+            const backdrop = document.createElement('div');
+            backdrop.className = 'avr-assign-backdrop';
+            backdrop.onclick = closeAssignMenu;
+            document.body.appendChild(backdrop);
+            const menu = document.createElement('div');
+            menu.className = 'avr-assign-menu add-menu';
+            menu.innerHTML = HW_GROUPS.map(g =>
+                `<button class="avr-assign-item" onclick="closeAssignMenu(); hwAddDispatch('${g.id}')">＋ ${escAttr(g.label)}</button>`).join('');
+            document.body.appendChild(menu);
+            const r = btn.getBoundingClientRect();
+            const w = 200;
+            menu.style.width = w + 'px';
+            menu.style.top = (r.bottom + 6) + 'px';
+            menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
         }
 
         // Roaming lives on the aircraft, so it is staged apart from the LRU's own
