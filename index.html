@@ -3676,6 +3676,12 @@
         }
         .hw-sn-input:focus { outline: none; border-color: #0a5c34; box-shadow: 0 0 0 2px rgba(10,92,52,0.12); }
         .hw-sn-alt { width: 110px; }
+        /* Inline reason-for-removal editor on the Removed / Shop Queue cards. */
+        .hw-reason-input {
+            margin-top: 3px; width: 100%; max-width: 340px; padding: 4px 7px;
+            border: 1px solid #cdd6dd; border-radius: 5px; font-size: 12px; color: #2a333b;
+        }
+        .hw-reason-input:focus { outline: none; border-color: #0a5c34; box-shadow: 0 0 0 2px rgba(10,92,52,0.12); }
         .hw-date-input {
             width: 104px; padding: 4px 7px; border: 1px solid #cdd6dd; border-radius: 5px; font-size: 12px;
             font-variant-numeric: tabular-nums;
@@ -7434,8 +7440,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.138.3';
-        const APP_BUILD    = '2026.09.13.03';
+        const APP_VERSION  = '2.139.0';
+        const APP_BUILD    = '2026.09.13.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -16618,6 +16624,14 @@
             return `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-alt" value="${escAttr(alt)}"
                 placeholder="${escAttr(label)}" data-unit="${escAttr(unit.id)}" onchange="saveUnitAltSerial(this)">`;
         }
+        // Reason-for-removal on a Removed / Shop Queue card: static text when signed out,
+        // an inline editor in Hardware edit mode. Writes to the removed unit's fitment, so
+        // it works for a box removed long ago (e.g. correcting "not recorded" after the fact).
+        function hwReasonField(x) {
+            if (!hwEditable()) return x.reason ? escAttr(x.reason) : '<span class="hw-none">not recorded</span>';
+            return `<input type="text" maxlength="200" autocomplete="off" class="hw-reason-input" value="${escAttr(x.reason || '')}"
+                placeholder="e.g. Missing RSSD" data-unit="${escAttr(x.unitId)}" data-fitment="${escAttr(x.fitmentId)}" onchange="saveRemovalReason(this)">`;
+        }
         function hwDateField(unit, fitment, field) {
             if (!fitment) return '<span class="hw-none">—</span>';
             const val = fitment[field] || '';
@@ -16806,7 +16820,7 @@
                     ${canEdit() ? `<button class="hw-shop-btn" onclick="openShopReport('${escAttr(x.unitId)}','${escAttr(x.fitmentId)}')">Shop report</button>` : ''}
                 </div>
                 <div class="hw-removal-body">
-                    ${x.reason ? `<div class="hw-issue-field"><b>Reason for removal</b>${escAttr(x.reason)}</div>` : '<div class="hw-issue-field"><b>Reason for removal</b><span class="hw-none">not recorded</span></div>'}
+                    <div class="hw-issue-field"><b>Reason for removal</b>${hwReasonField(x)}</div>
                     ${x.replacedBy ? `<div class="hw-issue-field"><b>Replaced by</b>${escAttr(x.replacedBy)}</div>` : ''}
                     ${x.shopRef ? `<div class="hw-issue-field"><b>Shop reference</b>${escAttr(x.shopRef)}</div>` : ''}
                     ${x.shopFinding ? `<div class="hw-issue-field"><b>Shop finding</b>${escAttr(x.shopFinding)}</div>` : ''}
@@ -16967,16 +16981,25 @@
 
             const blankRow = slot => {
                 const a = slot.aircraft;
-                const serialCell = editable
-                    ? `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-new" placeholder="Serial — type to add"
-                        data-lru="${escAttr(slot.lruId)}" data-tail="${escAttr(a.id)}" data-position="${escAttr(slot.position || '')}" onchange="hwCreateUnitFromField(this)">`
-                    : '<span class="hw-none">no record</span>';
                 const dash = '<span class="hw-none">—</span>';
+                // A fresh "type to add" input. For a dual box (Kontron + Eclipse) both cells
+                // are editable and share hwCreateDualFromField, so either serial — or both —
+                // creates the one unit; for single boxes the classic single-serial creator.
+                const newInput = (cls, placeholder, handler) =>
+                    `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-new${cls}" placeholder="${escAttr(placeholder)}"
+                        data-lru="${escAttr(slot.lruId)}" data-tail="${escAttr(a.id)}" data-position="${escAttr(slot.position || '')}" onchange="${handler}(this)">`;
+                const serialCell = editable
+                    ? newInput('', dual ? 'Kontron S/N — type to add' : 'Serial — type to add',
+                        dual ? 'hwCreateDualFromField' : 'hwCreateUnitFromField')
+                    : '<span class="hw-none">no record</span>';
+                const altCell = editable
+                    ? newInput(' hw-sn-alt', 'Eclipse S/N — type to add', 'hwCreateDualFromField')
+                    : dash;
                 return `<tr class="hw-row-empty">
                     <td><strong>${escAttr(a.id)}</strong></td>
                     ${hasPos ? `<td><span class="hw-pos">${escAttr(posLabel(slot))}</span></td>` : ''}
                     <td>${serialCell}</td>
-                    ${dual ? `<td>${dash}</td>` : ''}
+                    ${dual ? `<td>${altCell}</td>` : ''}
                     <td>${dash}</td><td>${dash}</td><td>${dash}</td><td>${dash}</td>
                 </tr>`;
             };
@@ -17024,7 +17047,7 @@
                     ${canEdit() ? `<button class="hw-shop-btn" onclick="openShopReport('${escAttr(x.unitId)}','${escAttr(x.fitmentId)}')">Shop report</button>` : ''}
                 </div>
                 <div class="hw-removal-body">
-                    <div class="hw-issue-field"><b>Reason for removal</b>${x.reason ? escAttr(x.reason) : '<span class="hw-none">not recorded</span>'}</div>
+                    <div class="hw-issue-field"><b>Reason for removal</b>${hwReasonField(x)}</div>
                     ${x.replacedBy ? `<div class="hw-issue-field"><b>Replaced by</b>${escAttr(x.replacedBy)}</div>` : ''}
                     ${x.shopFinding ? `<div class="hw-issue-field"><b>Shop finding</b>${escAttr(x.shopFinding)}</div>` : ''}
                 </div>
@@ -18060,6 +18083,35 @@
             }
         }
 
+        // Reason for removal saves to the removed unit's fitment (/units/{id}/fitments/{fid}).
+        // Same mirror-then-rerender shape as saveFitmentDate; /units is polled, so the local
+        // store is patched in place or the edit would appear to vanish on the next poll.
+        async function saveRemovalReason(el) {
+            const unitId = el.dataset.unit, fitmentId = el.dataset.fitment;
+            const u = unitsLive[unitId];
+            const f = u && (u.fitments || {})[fitmentId];
+            if (!f) return;
+            const value = el.value.trim();
+            const token = await getIdToken();
+            if (!token) return;
+            el.disabled = true;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units/${unitId}/fitments/${fitmentId}.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify({ removalReason: value || null }),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                if (!value) delete f.removalReason; else f.removalReason = value;
+                renderHardwarePage();
+                renderMaintenancePage();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not save reason — ${ex.message}`, '#dc3545');
+            } finally {
+                el.disabled = false;
+            }
+        }
+
         // Correcting a unit's PRIMARY serial in place (new in v2.136.0 — the old Serials
         // tab could edit dates and the alt serial but not this). A serial is one physical
         // box within its equipment type, so a value already on another unit of the same
@@ -18173,6 +18225,57 @@
             }
         }
 
+        // Create a dual-serial box (Kontron + Eclipse) from the blank-row inputs. Fired on
+        // blur of either field, it reads BOTH sibling inputs in the same row, so filling one
+        // or both then tabbing away records the single unit with whatever was typed — a
+        // server whose Eclipse S/N is known but Kontron is not is still recordable.
+        async function hwCreateDualFromField(el) {
+            const row = el.closest('tr');
+            if (!row) return;
+            const kEl = row.querySelector('.hw-sn-new:not(.hw-sn-alt)');
+            const eEl = row.querySelector('.hw-sn-new.hw-sn-alt');
+            const serial = kEl ? kEl.value.trim() : '';
+            const alt = eEl ? eEl.value.trim() : '';
+            if (!serial && !alt) return;               // both empty — nothing to create
+            const lruId = el.dataset.lru, tail = el.dataset.tail, position = el.dataset.position || '';
+            if (serial) {
+                const clash = unitEntries().find(x => x.lruId === lruId
+                    && String(x.serial || '').trim().toLowerCase() === serial.toLowerCase());
+                if (clash) {
+                    setSyncStatus(`🔴 ${serial} is already on another ${(lruById(lruId) || {}).label || 'unit'} — serials are unique`, '#dc3545');
+                    if (kEl) kEl.value = '';
+                    return;
+                }
+            }
+            const token = await getIdToken();
+            if (!token) return;
+            if (kEl) kEl.disabled = true;
+            if (eEl) eEl.disabled = true;
+            const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+            const fitId = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            const unitId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            const fitment = { aircraft: tail, state: 'on_wing', loggedAt: stamp };
+            if (position) fitment.position = String(position);
+            const unit = { lruId, addedAt: stamp, fitments: { [fitId]: fitment } };
+            if (serial) unit.serial = serial;
+            if (alt) unit.altSerial = alt;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify({ [unitId]: unit }),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                unitsLive[unitId] = unit;
+                renderHardwarePage();
+                renderMaintenancePage();
+                setSyncStatus(`🟢 ${serial || alt} added on ${tail} — synced with your team`, '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not add serial — ${ex.message}`, '#dc3545');
+                if (kEl) kEl.disabled = false;
+                if (eEl) eEl.disabled = false;
+            }
+        }
+
         // ===== Add Equipment modal (a /units unit) =====
         // Picks the aircraft (and position/antenna), shows the slot's fitment history so a
         // new box can be added as a replacement following the previous removal, pre-fills
@@ -18277,12 +18380,16 @@
             const r = hwAddResolve();
             if (!r || !r.lruId) { fail('Pick an aircraft.'); return; }
             const serial = document.getElementById('hwAddSerial').value.trim();
-            if (!serial) { fail('Enter the new serial number.'); return; }
-            const clash = unitEntries().find(u => u.lruId === r.lruId && String(u.serial || '').trim().toLowerCase() === serial.toLowerCase());
-            if (clash) { fail(`${serial} is already on another ${r.lru.label}. Serials are unique.`); return; }
+            const alt = r.group.shape === 'dual' ? document.getElementById('hwAddAlt').value.trim() : '';
+            // A dual box (Kontron + Eclipse) records with either serial or both — one may be
+            // known before the other. A single box still needs its one serial.
+            if (!serial && !alt) { fail(r.group.shape === 'dual' ? 'Enter the Kontron and/or Eclipse serial.' : 'Enter the new serial number.'); return; }
+            if (serial) {
+                const clash = unitEntries().find(u => u.lruId === r.lruId && String(u.serial || '').trim().toLowerCase() === serial.toLowerCase());
+                if (clash) { fail(`${serial} is already on another ${r.lru.label}. Serials are unique.`); return; }
+            }
             const fittedDate = readDateField(document.getElementById('hwAddFitted'));
             if (fittedDate === false) { fail('Installed date must be dd-mm-yyyy.'); return; }
-            const alt = r.group.shape === 'dual' ? document.getElementById('hwAddAlt').value.trim() : '';
 
             const history = unitsAtSlot(r.lruId, r.aircraft.id, r.position);
             const current = history.find(h => fitmentIsOn(h.fitment));
@@ -18297,7 +18404,8 @@
             const fitment = { aircraft: r.aircraft.id, state: 'on_wing', loggedAt: stamp };
             if (r.position) fitment.position = String(r.position);
             if (fittedDate) fitment.fittedDate = fittedDate;
-            const unit = { lruId: r.lruId, serial, addedAt: stamp, fitments: { [fitId]: fitment } };
+            const unit = { lruId: r.lruId, addedAt: stamp, fitments: { [fitId]: fitment } };
+            if (serial) unit.serial = serial;
             if (alt) unit.altSerial = alt;
             const payload = { [unitId]: unit };
             if (replace) {
@@ -18320,7 +18428,7 @@
                 closeHwAdd();
                 renderHardwarePage();
                 renderMaintenancePage();
-                setSyncStatus(`🟢 ${serial} added on ${r.aircraft.id}${replace ? ' (swap recorded)' : ''} — synced with your team`, '#28a745');
+                setSyncStatus(`🟢 ${serial || alt} added on ${r.aircraft.id}${replace ? ' (swap recorded)' : ''} — synced with your team`, '#28a745');
             } catch (ex) {
                 fail(`Could not save — ${ex.message}`);
             } finally {
