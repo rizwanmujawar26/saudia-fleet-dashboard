@@ -2721,6 +2721,12 @@
         }
         .tl-pinned-items .tl-pin .tl-row:hover { background: rgba(165, 40, 52, 0.03); }
         .tl-pin-mark { flex: 0 0 auto; font-size: 12px; line-height: 1; }
+        /* The Watchlist rows size their status column (ops state / impact pill) to its
+           content instead of the feed's fixed 100px, so there is no dead gap between the
+           type pill and the status — Grounded and Maintenance rows read the same way. The
+           per-row emoji mark cell is gone, so it is dropped from the grid too. */
+        .tl-pinned-items .tl-c-mark { display: none; }
+        .tl-pinned-items .tl-grid { grid-template-columns: 56px 78px auto minmax(0, 1fr); column-gap: 10px; }
         .tl-pin-click { cursor: pointer; }
 
         /* Watchlist group headers (Grounded / Maintenance) — a labelled band that
@@ -3614,9 +3620,31 @@
            toggle (.avr-viewtoggle / .avr-vt-btn / .avr-vt-badge), for one house style
            across the sub-menus. It carries more segments than Maintenance, so it may
            wrap to a second line rather than overflow. */
-        .hw-viewtoggle { flex-wrap: wrap; max-width: 100%; }
+        /* Tight and small so all seven segments fit on one line at desktop width; if the
+           viewport is too narrow to fit them, the row stays ONE line and scrolls sideways
+           (registered in HSCROLL_SELECTOR + the any-pointer scrollbar rule) rather than
+           wrapping into an awkward stack. */
+        .hw-viewtoggle { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .hw-viewtoggle .avr-vt-btn { padding: 6px 10px; font-size: 11.5px; white-space: nowrap; flex: 0 0 auto; }
+        .hw-viewtoggle .avr-vt-badge { min-width: 14px; padding: 1px 5px; font-size: 9.5px; }
         /* By Aircraft is a separate toggle on the filter bar, not a segment. */
+        .hw-byac-btn { white-space: nowrap; flex: 0 0 auto; }
         .hw-byac-btn.active { background: #0a5c34; color: #fff; border-color: #0a5c34; }
+        /* Rounded, pill-shaped search + type filter, matching the page's other controls. */
+        .hw-search {
+            flex: 1 1 220px; min-width: 160px; padding: 7px 14px; border: 1px solid #d7dee5;
+            border-radius: 999px; font-size: 13px; background: #fff;
+        }
+        .hw-search:focus { outline: none; border-color: #0a5c34; box-shadow: 0 0 0 2px rgba(10,92,52,0.12); }
+        .hw-type-filter {
+            flex: 0 0 auto; padding: 6px 12px; border: 1px solid #d7dee5; border-radius: 999px;
+            font-size: 12.5px; font-weight: 600; background: #fff; color: #3a4750; cursor: pointer;
+        }
+        /* By-Aircraft collapsible blocks. */
+        .hw-ac-head { cursor: pointer; }
+        .hw-ac-chev { flex: 0 0 auto; font-size: 11px; color: #7a8791; transition: transform 0.18s ease; }
+        .hw-ac-block.open .hw-ac-chev { transform: rotate(180deg); }
+        .hw-ac-count { margin-left: auto; font-size: 11px; font-weight: 700; color: #5a6b78; background: #eef2f5; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
 
         .hw-group-head { display: flex; align-items: center; gap: 10px; padding: 2px 2px 10px; }
         .hw-group-name { font-size: 16px; font-weight: 800; color: #17324b; letter-spacing: 0.02em; }
@@ -5484,7 +5512,8 @@
             .table-scroll-wrapper,
             .media-widget-strip,
             .fb-filters,
-            .quick-filters {
+            .quick-filters,
+            .hw-viewtoggle {
                 scrollbar-width: thin;
                 scrollbar-color: rgba(15, 32, 45, 0.28) transparent;
             }
@@ -5497,7 +5526,8 @@
             .table-scroll-wrapper::-webkit-scrollbar,
             .media-widget-strip::-webkit-scrollbar,
             .fb-filters::-webkit-scrollbar,
-            .quick-filters::-webkit-scrollbar {
+            .quick-filters::-webkit-scrollbar,
+            .hw-viewtoggle::-webkit-scrollbar {
                 display: block;
                 height: 8px;
             }
@@ -5815,11 +5845,10 @@
                 <div class="filterbar">
                     <div class="fb-filters">
                         <button id="hwByAircraftBtn" class="qf-btn hw-byac-btn" onclick="toggleHwByAircraft()" title="Group the whole register by aircraft">✈ By Aircraft</button>
-                        <input id="hwSearch" class="edit-text" placeholder="Search serial or aircraft" autocomplete="off" oninput="setHwSearch(this.value)">
+                        <select id="hwTypeFilter" class="hw-type-filter" onchange="setHwTypeFilter(this.value)" style="display:none;"></select>
+                        <input id="hwSearch" class="hw-search" placeholder="Search tail, serial or part no." autocomplete="off" oninput="setHwSearch(this.value)">
                     </div>
                     <div class="fb-actions">
-                        <button id="hwBaselineBtn" class="qf-btn" style="display:none;" onclick="openBaseline()">🗂️ Record Installed</button>
-                        <button id="hwRemovalBtn" class="qf-btn" style="display:none;" onclick="openRemoval()">📤 Record Removed</button>
                         <button class="qf-btn" onclick="exportSerialsCsv()">⬇️ Export CSV</button>
                         <button id="hwEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleHwEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
                     </div>
@@ -6942,13 +6971,13 @@
         //   pair   — two sibling units fitted together (RX + TX antenna), one row per tail
         //   multi  — several per aircraft, position-tracked (CWAP 1..N)
         const HW_GROUPS = [
-            { id: 'modman',     label: 'MODMAN',     shape: 'dual',   base: 'modman' },
-            { id: 'ife_server', label: 'IFE Server', shape: 'dual',   base: 'ife_server' },
-            { id: 'kandu',      label: 'KANDU',      shape: 'single', base: 'kandu' },
-            { id: 'krfu',       label: 'KRFU',       shape: 'single', base: 'krfu' },
-            { id: 'antenna',    label: 'Antennas',   shape: 'pair',   bases: ['rx_antenna', 'tx_antenna'] },
-            { id: 'cwap',       label: 'CWAP',       shape: 'multi',  base: 'cwap' },
-            { id: 'sim',        label: 'SIM Card',   shape: 'single', base: 'sim' },
+            { id: 'modman',     label: 'MODMAN',  shape: 'dual',   base: 'modman' },
+            { id: 'ife_server', label: 'SERVER',  shape: 'dual',   base: 'ife_server' },
+            { id: 'kandu',      label: 'KANDU',   shape: 'single', base: 'kandu' },
+            { id: 'krfu',       label: 'KRFU',    shape: 'single', base: 'krfu' },
+            { id: 'antenna',    label: 'ANTENNA', shape: 'pair',   bases: ['rx_antenna', 'tx_antenna'] },
+            { id: 'cwap',       label: 'CWAP',    shape: 'multi',  base: 'cwap' },
+            { id: 'sim',        label: 'SIM',     shape: 'single', base: 'sim' },
             // Waveguide Adapter and Coax Cable J12 are intentionally NOT tabs here — they
             // are passive RF parts with no trackable serial number (user, 2026-09-12).
         ];
@@ -7362,8 +7391,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.136.1';
-        const APP_BUILD    = '2026.09.12.07';
+        const APP_VERSION  = '2.137.0';
+        const APP_BUILD    = '2026.09.12.08';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -16450,6 +16479,8 @@
         let hwView = HW_GROUPS.length ? HW_GROUPS[0].id : 'aircraft';   // a HW_GROUPS id, or 'aircraft'
         let hwLastGroup = hwView;       // the equipment tab to return to from By Aircraft
         let hwSearchQ = '';
+        let hwTypeFilter = '';          // By-Aircraft view: restrict to one aircraft type
+        let hwExpandedAc = {};          // By-Aircraft view: which tail accordions are open
 
         function setHwView(id) {
             hwView = id;
@@ -16460,6 +16491,11 @@
             if (g) { hwLastGroup = id; hwSelectedId = lruIdForFit(groupBases(g)[0], 'retrofit') || hwSelectedId; }
             renderHardwarePage();
         }
+        function setHwTypeFilter(v) { hwTypeFilter = v; renderHwContent(); }
+        function toggleHwAc(tail) {
+            hwExpandedAc[tail] = !hwExpandedAc[tail];
+            renderHwContent();
+        }
         // By Aircraft is a toggle set apart from the equipment tabs (user, 2026-09-12):
         // on turns the whole-fleet-by-tail view on; off returns to the last equipment tab.
         function toggleHwByAircraft() {
@@ -16468,6 +16504,7 @@
         // How many unit records the register holds for a group (on-wing + removed + spare)
         // — the count shown in the sub-tab badge.
         function groupRecordCount(group) {
+            if (group.id === 'modman') return Object.keys(modmansLive || {}).length;   // MODMAN reads /modmans
             const ids = groupLruIds(group);
             return unitEntries().filter(u => ids.includes(u.lruId)).length;
         }
@@ -16797,19 +16834,40 @@
         function renderHwContent() {
             const host = document.getElementById('hwContent');
             if (!host) return;
-            if (hwView === 'aircraft') { host.innerHTML = renderHwByAircraft(); return; }
+            const byAc = hwView === 'aircraft';
+            // The Type filter belongs to the By-Aircraft view only — same filter-bar
+            // dropdown look as the rest of the page.
+            const tf = document.getElementById('hwTypeFilter');
+            if (tf) {
+                tf.style.display = byAc ? '' : 'none';
+                if (byAc) {
+                    const types = [...new Set(activeFleet().map(a => a.type))].sort();
+                    tf.innerHTML = `<option value="">All types</option>` + types.map(t =>
+                        `<option value="${escAttr(t)}" ${hwTypeFilter === t ? 'selected' : ''}>${escAttr(TYPE_SHORT_LABEL[t] || t)}</option>`).join('');
+                }
+            }
+            if (byAc) { host.innerHTML = renderHwByAircraft(); return; }
             const g = hwGroupById(hwView);
             host.innerHTML = g ? renderHwGroup(g) : '<div class="maint-empty">Unknown equipment.</div>';
         }
 
         // One equipment tab: metadata header, the editable serial/date table (shape by
-        // unit), then Known Issues and the Removed / shop queue.
+        // unit), then Known Issues and the Removed / shop queue. The MODMAN tab is
+        // sourced from /modmans (the Satcom register) instead of /units — see below.
         function renderHwGroup(group) {
             const editable = hwEditable();
             const q = hwSearchQ.trim();
+            const qLow = q.toLowerCase();
+            const isMm = group.id === 'modman';
             const baseId = lruIdForFit(groupBases(group)[0], 'retrofit') || groupBases(group)[0];
             const rec = hardwareRecordOf(baseId);
-            const { fitted, total } = groupFittedCount(group);
+            const baseLru = lruById(baseId) || {};
+            const pnMatch = !!rec.partNumber && rec.partNumber.toLowerCase().includes(qLow);
+
+            const counts = isMm
+                ? { fitted: satcomRows().filter(r => r.status === 'active').length, total: Object.keys(modmansLive || {}).length }
+                : groupFittedCount(group);
+            const { fitted, total } = counts;
 
             const field = (name, value, placeholder) => editable
                 ? `<input class="edit-text" value="${escAttr(value)}" placeholder="${escAttr(placeholder)}" data-lru="${escAttr(baseId)}" data-field="${name}" onchange="handleHwEdit(this)">`
@@ -16820,34 +16878,39 @@
                 ${metaCell('Part Number', field('partNumber', rec.partNumber, 'e.g. KRFU-1200'))}
                 ${metaCell('Vendor', field('vendor', rec.vendor, 'e.g. Hughes'))}
                 ${metaCell('SW Version', field('swVersion', rec.swVersion, 'e.g. 4.2.1'))}
-                ${metaCell('Serials on record', `${fitted} of ${total}`)}
+                ${metaCell(isMm ? 'On wing / total' : 'Serials on record', `${fitted} of ${total}`)}
                 ${metaCell('Notes', field('notes', rec.notes, 'Anything worth knowing'))}
             </div>`;
 
             // --- the serial table ---
-            // One UNIFORM table for every shape, one ROW PER UNIT (so a swapped-out box
-            // stays visible as its own REMOVED row), plus a blank create-row for any slot
-            // with no record yet. A Position column appears for pair (RX/TX) and multi
-            // (CWAP 1/5…). Serial, second serial, Fitted and Removed are all editable;
-            // entering a Removed date flips the row to REMOVED, clearing it puts it back
-            // ON WING; Days is time on wing (fitted → removed, or fitted → today).
+            // MODMAN reads /modmans (richer: every box incl. never-installed spares, with
+            // install/removal dates and on-wing status). Every other unit is one UNIFORM
+            // /units table, one ROW PER UNIT (a swapped-out box stays visible as its own
+            // REMOVED row) plus a blank create-row for any empty slot. A Position column
+            // appears for pair (RX/TX) and multi (CWAP 1/5…). Serial, second serial, Fitted
+            // and Removed are all editable; a Removed date flips the row to REMOVED.
+            let table;
+            if (isMm) {
+                table = renderHwModmanTable(qLow, pnMatch, editable);
+            } else {
             const dual = group.shape === 'dual';
             const hasPos = group.shape === 'pair' || group.shape === 'multi';
-            const baseLru = lruById(baseId) || {};
-            const qLow = q.toLowerCase();
 
             const posLabel = slot => {
                 if (group.shape === 'pair') return (slot.base.indexOf('rx') >= 0) ? 'RX' : 'TX';
                 if (group.shape === 'multi') return `${slot.position}/${lruQtyFor(slot.lru, slot.aircraft.type) || 1}`;
                 return '';
             };
+            const rowMatch = (a, unit) => !q || pnMatch
+                || a.id.toLowerCase().includes(qLow)
+                || (unit && (String(unit.serial || '').toLowerCase().includes(qLow)
+                          || String(unit.altSerial || '').toLowerCase().includes(qLow)));
 
             const unitRow = (slot, hit) => {
                 const a = slot.aircraft, off = !fitmentIsOn(hit.fitment);
                 const days = fitmentDaysOnWing(hit.fitment);
                 return `<tr class="${off ? 'hw-row-off' : ''}">
                     <td><strong>${escAttr(a.id)}</strong></td>
-                    <td>${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</td>
                     ${hasPos ? `<td><span class="hw-pos">${escAttr(posLabel(slot))}</span></td>` : ''}
                     <td>${hwSerialField(hit.unit)}</td>
                     ${dual ? `<td>${hwAltField(hit.unit, slot.lru)}</td>` : ''}
@@ -16867,7 +16930,6 @@
                 const dash = '<span class="hw-none">—</span>';
                 return `<tr class="hw-row-empty">
                     <td><strong>${escAttr(a.id)}</strong></td>
-                    <td>${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</td>
                     ${hasPos ? `<td><span class="hw-pos">${escAttr(posLabel(slot))}</span></td>` : ''}
                     <td>${serialCell}</td>
                     ${dual ? `<td>${dash}</td>` : ''}
@@ -16878,23 +16940,20 @@
             const rowsHtml = groupSlots(group).map(slot => {
                 const history = unitsAtSlot(slot.lruId, slot.aircraft.id, slot.position).slice().reverse();
                 if (!history.length) {
-                    if (q && !slot.aircraft.id.toLowerCase().includes(qLow)) return '';
+                    if (q && !pnMatch && !slot.aircraft.id.toLowerCase().includes(qLow)) return '';
                     return blankRow(slot);
                 }
-                return history.filter(h => !q
-                        || slot.aircraft.id.toLowerCase().includes(qLow)
-                        || String(h.unit.serial || '').toLowerCase().includes(qLow)
-                        || String(h.unit.altSerial || '').toLowerCase().includes(qLow))
-                    .map(h => unitRow(slot, h)).join('');
+                return history.filter(h => rowMatch(slot.aircraft, h.unit)).map(h => unitRow(slot, h)).join('');
             }).filter(Boolean).join('');
 
             const serialHead = dual
                 ? `<th>${escAttr(baseLru.serialLabel || 'Serial')}</th><th>${escAttr(baseLru.altSerialLabel || 'Alt S/N')}</th>`
                 : `<th>${escAttr(baseLru.serialLabel || 'Serial')}</th>`;
-            const colspan = 7 + (hasPos ? 1 : 0) + (dual ? 1 : 0);
-            const table = `<table class="hw-reg-table"><thead><tr>
-                    <th>Aircraft</th><th>Type</th>${hasPos ? '<th>Position</th>' : ''}${serialHead}<th>Fitted</th><th>Removed</th><th>Status</th><th>Days</th>
+            const colspan = 6 + (hasPos ? 1 : 0) + (dual ? 1 : 0);
+            table = `<table class="hw-reg-table"><thead><tr>
+                    <th>TAIL</th>${hasPos ? '<th>Position</th>' : ''}${serialHead}<th>Fitted</th><th>Removed</th><th>Status</th><th>Days</th>
                 </tr></thead><tbody>${rowsHtml || `<tr><td colspan="${colspan}" class="maint-empty">No records match.</td></tr>`}</tbody></table>`;
+            }
 
             // --- Known Issues + Removed queue (both fits of the group) ---
             const issues = groupIssues(group);
@@ -16941,59 +17000,129 @@
                     ${canEdit() ? `<button class="qf-btn add-btn" style="margin-left:auto;" onclick="openAddIssue()">＋ Add issue</button>` : ''}
                 </div>
                 <ul class="hw-issues">${issues.length ? issues.map(issueCard).join('') : '<li class="maint-empty">No issues logged for this unit.</li>'}</ul>
-
+                ${isMm ? '' : `
                 <div class="hw-section">
                     <span class="hw-section-title">Removed / Shop Queue${openShop ? ` · ${openShop} awaiting shop` : ''}</span>
                     <span class="timeline-day-count">${removals.length} removed</span>
                 </div>
-                <ul class="hw-issues">${removals.length ? removals.map(removalCard).join('') : '<li class="maint-empty">No units removed for this equipment yet.</li>'}</ul>`;
+                <ul class="hw-issues">${removals.length ? removals.map(removalCard).join('') : '<li class="maint-empty">No units removed for this equipment yet.</li>'}</ul>`}`;
         }
 
-        // The By-Aircraft view: each tail, then every unit it carries — the whole
-        // hardware fit of one airframe, serials and dates editable in place.
+        // The MODMAN register table — sourced from /modmans (Satcom), not /units. One row
+        // per box incl. never-installed spares; TAIL, Kontron/Eclipse (or Astronics on an
+        // XLR), install & removal dates, on-wing status and days. Edits write to /modmans.
+        function renderHwModmanTable(qLow, pnMatch, editable) {
+            const rank = { active: 0, fault: 1, spare: 2, removed: 3 };
+            const rows = satcomRows()
+                .filter(r => !qLow || pnMatch
+                    || String(r.aircraft || '').toLowerCase().includes(qLow)
+                    || String(r.kontronSn || '').toLowerCase().includes(qLow)
+                    || String(r.eclipseSn || '').toLowerCase().includes(qLow)
+                    || String(r.astronicsSn || '').toLowerCase().includes(qLow))
+                .sort((a, b) => (rank[a.status] - rank[b.status]) || String(a.aircraft || 'zzz').localeCompare(b.aircraft || 'zzz'));
+
+            const snCell = (r, which) => {
+                if (which === 'eclipse') {
+                    if (r.isAstronics) return '<span class="sn-na">N/A</span>';
+                    if (!editable) return r.eclipseSn ? `<span class="hw-serial">${escAttr(eclipseSnDisplay(r.eclipseSn))}</span>` : '<span class="hw-none">—</span>';
+                    return `<input class="hw-sn-input" maxlength="60" autocomplete="off" value="${escAttr(r.eclipseSn)}" placeholder="Eclipse S/N" data-mm="${escAttr(r.id)}" data-field="eclipseSn" onchange="saveModmanField(this)">`;
+                }
+                const fld = r.isAstronics ? 'astronicsSn' : 'kontronSn';
+                const val = r.isAstronics ? r.astronicsSn : r.kontronSn;
+                const note = r.isAstronics ? ' <span class="hw-slot-label">Astronics</span>' : '';
+                if (!editable) return val ? `<span class="hw-serial">${escAttr(val)}</span>${note}` : '<span class="hw-none">—</span>';
+                return `<input class="hw-sn-input" maxlength="60" autocomplete="off" value="${escAttr(val)}" placeholder="${r.isAstronics ? 'Astronics S/N' : 'Kontron S/N'}" data-mm="${escAttr(r.id)}" data-field="${fld}" onchange="saveModmanField(this)">${note}`;
+            };
+            const dateCell = (r, fld) => {
+                const val = r[fld] || '';
+                if (!editable) return val ? escAttr(val) : '<span class="hw-none">—</span>';
+                return `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="hw-date-input" value="${escAttr(toDMY(val))}" data-mm="${escAttr(r.id)}" data-field="${fld}" onchange="saveModmanField(this)">`;
+            };
+            const statusCell = r => {
+                const map = { active: ['ON WING', 'on'], removed: ['REMOVED', 'off'], fault: ['FAULT', 'off'], spare: ['SPARE', ''] };
+                const m = map[r.status] || ['—', ''];
+                return m[0] === '—' ? '<span class="hw-none">—</span>' : `<span class="sr-state ${m[1]}">${m[0]}</span>`;
+            };
+            const body = rows.map(r => {
+                const off = r.status === 'removed';
+                const days = dateSpan(r.installDate, r.removalDate || '');
+                const tail = r.aircraft ? `<strong>${escAttr(r.tailLabel)}</strong>` : '<span class="hw-none">spare</span>';
+                return `<tr class="${off ? 'hw-row-off' : ''}">
+                    <td>${tail}</td>
+                    <td>${snCell(r, 'primary')}</td>
+                    <td>${snCell(r, 'eclipse')}</td>
+                    <td>${dateCell(r, 'installDate')}</td>
+                    <td>${dateCell(r, 'removalDate')}</td>
+                    <td>${statusCell(r)}</td>
+                    <td class="sr-days">${days ? escAttr(days) : '<span class="hw-none">—</span>'}</td>
+                </tr>`;
+            }).join('');
+            return `<table class="hw-reg-table"><thead><tr>
+                    <th>TAIL</th><th>Kontron S/N</th><th>Eclipse S/N</th><th>Install</th><th>Removed</th><th>Status</th><th>Days</th>
+                </tr></thead><tbody>${body || '<tr><td colspan="7" class="maint-empty">No MODMANs match.</td></tr>'}</tbody></table>`;
+        }
+
+        // The By-Aircraft view: a COLLAPSIBLE block per tail — the header shows the tail,
+        // type and how many units are on record; click it to expand the full editable fit.
+        // A Type filter + universal search (tail · serial · part number) narrow the list.
         function renderHwByAircraft() {
             const editable = hwEditable();
             const pill = c => `background:${c.bg}; color:${c.fg}; border-color:${c.bd}`;
             const q = hwSearchQ.trim().toLowerCase();
-            const fleet = activeFleet()
-                .filter(a => !q || a.id.toLowerCase().includes(q))
-                .sort((a, b) => a.id.localeCompare(b.id));
-            if (!fleet.length) return '<div class="maint-empty">No aircraft match.</div>';
+            let fleet = activeFleet().sort((a, b) => a.id.localeCompare(b.id));
+            if (hwTypeFilter) fleet = fleet.filter(a => a.type === hwTypeFilter);
 
-            return fleet.map(a => {
+            const blocks = fleet.map(a => {
                 const fit = fitOf(a);
                 const rows = [];
+                let recorded = 0, hay = a.id.toLowerCase();
                 HW_GROUPS.forEach(group => {
                     groupBases(group).forEach(base => {
                         const lruId = lruIdForFit(base, fit); if (!lruId) return;
                         const lru = lruById(lruId);
+                        const pn = hardwareRecordOf(lruId).partNumber || '';
+                        if (pn) hay += ' ' + pn.toLowerCase();
                         const n = lruQtyFor(lru, a.type) || 1;
                         const multi = lruIsMulti(lru) && n > 1;
                         const positions = multi ? [...Array(n)].map((_, i) => String(i + 1)) : [undefined];
                         positions.forEach(pos => {
                             const hit = fittedUnitAt(lruId, a.id, pos);
-                            const label = lru.label + (group.shape === 'pair' ? '' : '') + (pos ? ` ${pos}/${n}` : '');
+                            if (hit) { recorded++; hay += ' ' + String(hit.unit.serial || '').toLowerCase() + ' ' + String(hit.unit.altSerial || '').toLowerCase(); }
+                            const label = lru.label + (pos ? ` ${pos}/${n}` : '');
+                            const off = hit && !fitmentIsOn(hit.fitment);
                             const serialCell = hit ? hwSerialField(hit.unit)
-                                : (editable ? '<span class="hw-none">— Record Installed</span>' : hwSerialSpan(''));
+                                : (editable
+                                    ? `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-new" placeholder="Serial — type to add" data-lru="${escAttr(lruId)}" data-tail="${escAttr(a.id)}" data-position="${escAttr(pos || '')}" onchange="hwCreateUnitFromField(this)">`
+                                    : hwSerialSpan(''));
                             const altCell = (lru.altSerialLabel && hit) ? ` <span class="hw-alt-inline">${hwAltField(hit.unit, lru)}</span>` : '';
-                            rows.push(`<tr>
+                            rows.push(`<tr class="${off ? 'hw-row-off' : ''}">
                                 <td>${escAttr(label)}</td>
                                 <td>${serialCell}${altCell}</td>
                                 <td>${hit ? hwDateField(hit.unit, hit.fitment, 'fittedDate') : '<span class="hw-none">—</span>'}</td>
+                                <td>${hit ? hwDateField(hit.unit, hit.fitment, 'removedDate') : '<span class="hw-none">—</span>'}</td>
                                 <td>${hwStatusBadge(hit)}</td>
                             </tr>`);
                         });
                     });
                 });
-                return `<div class="hw-ac-block">
-                    <div class="hw-ac-head">
+                return { a, fit, rows, recorded, hay };
+            }).filter(b => !q || b.hay.includes(q));
+
+            if (!blocks.length) return '<div class="maint-empty">No aircraft match.</div>';
+
+            return blocks.map(({ a, fit, rows, recorded }) => {
+                const open = !!hwExpandedAc[a.id];
+                return `<div class="hw-ac-block ${open ? 'open' : ''}">
+                    <div class="hw-ac-head" onclick="toggleHwAc('${escAttr(a.id)}')" role="button" tabindex="0" aria-expanded="${open}">
+                        <span class="hw-ac-chev" aria-hidden="true">▾</span>
                         <span class="hw-ac-reg">${escAttr(a.id)}</span>
                         <span class="tl-pill" style="${pill(TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL)}">${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</span>
                         <span class="status-badge fit-${fit}">${fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>
+                        <span class="hw-ac-count">${recorded} recorded</span>
                     </div>
-                    <div class="table-scroll-wrapper"><table class="hw-reg-table hw-ac-table"><thead><tr>
-                        <th>Equipment</th><th>Serial</th><th>Fitted</th><th>Status</th>
-                    </tr></thead><tbody>${rows.join('')}</tbody></table></div>
+                    ${open ? `<div class="table-scroll-wrapper"><table class="hw-reg-table hw-ac-table"><thead><tr>
+                        <th>Equipment</th><th>Serial</th><th>Fitted</th><th>Removed</th><th>Status</th>
+                    </tr></thead><tbody>${rows.join('')}</tbody></table></div>` : ''}
                 </div>`;
             }).join('');
         }
@@ -17923,6 +18052,41 @@
             }
         }
 
+        // Editing a MODMAN field in place on the Hardware register — it writes straight to
+        // /modmans (the Satcom register is the single source for the box), so both pages
+        // stay in step. Dates parse dd-mm-yyyy; status/days are derived from them.
+        async function saveModmanField(el) {
+            const id = el.dataset.mm, field = el.dataset.field;
+            const m = modmansLive[id];
+            if (!m) return;
+            const isDate = field === 'installDate' || field === 'removalDate';
+            let value;
+            if (isDate) {
+                value = readDateField(el);
+                if (value === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
+            } else {
+                value = el.value.trim();
+            }
+            const token = await getIdToken();
+            if (!token) return;
+            el.disabled = true;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/modmans/${id}.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify({ [field]: value || null }),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                if (!value) delete m[field]; else m[field] = value;
+                renderHardwarePage();
+                if (typeof renderSatcomPage === 'function') renderSatcomPage();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not save — ${ex.message}`, '#dc3545');
+            } finally {
+                el.disabled = false;
+            }
+        }
+
         // Inline CREATE from a blank register row (v2.136.1): typing a serial into an
         // empty slot writes a new /units record with one on-wing fitment at that
         // aircraft/position — the same shape Record Installed writes, one at a time. A
@@ -18014,10 +18178,6 @@
         }
 
         function updateHwEditUI() {
-            ['hwBaselineBtn', 'hwRemovalBtn'].forEach(id => {
-                const b = document.getElementById(id);
-                if (b) b.style.display = canEdit() ? '' : 'none';
-            });
             applyEditButton('hwEditBtn', hwEditMode && canEdit(), 'Edit', '💾 Save');
         }
 
@@ -19474,7 +19634,7 @@
                         const loc = o.location || aircraftLocationOf(a);
                         return `<li class="tl-pin tl-pin-${d.css}">
                             <div class="tl-row tl-grid">${tlCells({
-                                mark: '<span class="tl-pin-mark" aria-hidden="true">🛬</span>',
+                                mark: '',
                                 reg: escAttr(a.id),
                                 type: typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : '',
                                 kind: `<span class="tl-kind tl-kind-ops tl-kind-ops-${d.css}"${d.full ? ` title="${escAttr(d.full)}"` : ''}>${escAttr(d.short)}</span>`,
@@ -19487,9 +19647,9 @@
                         </li>`;
                     };
 
-                    // One MAINTENANCE row: 🔧 · tail · type · [IFC/W-IFE impact pill]
-                    // [severity pill] headline · days down. Click opens the Maintenance
-                    // view where the full issue (and its edit control) lives.
+                    // One MAINTENANCE row, same shape as Grounded (no per-row emoji): tail ·
+                    // type · [IFC/W-IFE impact pill] · since <informedDate> · days pill ·
+                    // [severity] · headline. Click opens the Maintenance view.
                     const maintRow = (i) => {
                         const a = aircraftData.find(x => x.id === i.tail) || {};
                         const typeColor = TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL;
@@ -19498,14 +19658,14 @@
                         const age = dateSpan(i.informedDate, '');
                         return `<li class="tl-pin tl-pin-click" onclick="switchTab('maintenance');setAvrView('issues')" title="Open in the Maintenance view">
                             <div class="tl-row tl-grid">${tlCells({
-                                mark: '<span class="tl-pin-mark" aria-hidden="true">🔧</span>',
+                                mark: '',
                                 reg: escAttr(i.tail || '—'),
                                 type: typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : '',
-                                kind: '',
-                                main: `<span class="issue-pill issue-pill-${i.impact}">${escAttr(svcTxt)}</span>`
+                                kind: `<span class="issue-pill issue-pill-${i.impact}">${escAttr(svcTxt)}</span>`,
+                                main: `<span class="tl-title">${i.informedDate ? `since ${escAttr(i.informedDate)}` : 'date not set'}</span>`
+                                    + `${age ? `<span class="age-pill" title="Service down for this long">${escAttr(age)}</span>` : ''}`
                                     + `<span class="issue-pill issue-pill-${i.severity}">${escAttr(issLabel(ISSUE_SEVERITIES, i.severity))}</span>`
-                                    + `<span class="tl-title">${escAttr(i.reason || 'Service issue')}</span>`
-                                    + `${age ? `<span class="age-pill" title="Service down for this long">${escAttr(age)}</span>` : ''}`,
+                                    + `${i.reason ? `<span class="tl-sub">${escAttr(i.reason)}</span>` : ''}`,
                             })}</div>
                         </li>`;
                     };
@@ -20233,7 +20393,7 @@
         // table or an overflowing tab strip simply had content that could not be got
         // at (user, 2026-08-28).
         const HSCROLL_SELECTOR = '.tabs, .cal-strip, .table-scroll-wrapper,'
-            + ' .media-widget-strip, .fb-filters, .quick-filters';
+            + ' .media-widget-strip, .fb-filters, .quick-filters, .hw-viewtoggle';
 
         // Translate a vertical wheel into horizontal scroll while the pointer is over
         // one of them. Delegated from the document because the strips are rebuilt on
