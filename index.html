@@ -7434,8 +7434,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.138.0';
-        const APP_BUILD    = '2026.09.12.09';
+        const APP_VERSION  = '2.138.1';
+        const APP_BUILD    = '2026.09.13.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -18150,7 +18150,7 @@
             const token = await getIdToken();
             if (!token) return;
             el.disabled = true;
-            const stamp = new Date().toISOString();
+            const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
             const fitId = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
             const unitId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
             const fitment = { aircraft: tail, state: 'on_wing', loggedAt: stamp };
@@ -18290,7 +18290,7 @@
 
             const token = await getIdToken();
             if (!token) return;
-            const stamp = new Date().toISOString();
+            const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
             const fitId = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
             const unitId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
             const fitment = { aircraft: r.aircraft.id, state: 'on_wing', loggedAt: stamp };
