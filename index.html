@@ -5478,7 +5478,7 @@
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet<span class="tab-count" id="tabCountFleet"></span></button>
                 <button class="tab-button" onclick="switchTab('sim')">📶 4G SIM</button>
                 <button class="tab-button" onclick="switchTab('satcom')">📡 Satcom</button>
-                <button class="tab-button" onclick="switchTab('maintenance')">🛠️ Activity<span class="tab-count tab-count-new" id="tabCountAvr"></span></button>
+                <button class="tab-button" onclick="switchTab('maintenance')">🛠️ Maintenance<span class="tab-count tab-count-new" id="tabCountAvr"></span></button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('hardware')">🔧 Hardware</button>
                 <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('serials')">🏷️ Serials</button>
             </nav>
@@ -7281,8 +7281,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.134.1';
-        const APP_BUILD    = '2026.09.12.02';
+        const APP_VERSION  = '2.134.2';
+        const APP_BUILD    = '2026.09.12.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -19109,8 +19109,11 @@
             }
         }
 
+
         // AVRs the viewer would treat as new: dated within the last 14 days, and only
         // the ones this viewer can actually see (published, unless signed in to edit).
+        // (No longer feeds the nav pill — that now counts open maintenance issues — but
+        // kept for a possible "new reports" indicator.)
         function newAvrCount() {
             if (typeof avrEntries !== 'function') return 0;
             const editor = typeof canEdit === 'function' && canEdit();
@@ -19136,7 +19139,9 @@
                 setTabCount('tabCountMedia', medDone, medTotal ? medDone / medTotal : 0);
             }
             if (typeof projectScope === 'function') setTabCount('tabCountFleet', projectScope());
-            setTabCount('tabCountAvr', newAvrCount());
+            // The nav pill now counts OPEN maintenance issues (the tab is "Maintenance"),
+            // not new AVRs — the red bullet mirrors the Maintenance view toggle's own badge.
+            setTabCount('tabCountAvr', (typeof issueEntries === 'function' ? issueEntries().filter(issueIsOpen).length : 0));
         }
 
         // ===== System status bar =====
