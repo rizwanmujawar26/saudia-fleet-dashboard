@@ -7434,8 +7434,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.138.1';
-        const APP_BUILD    = '2026.09.13.01';
+        const APP_VERSION  = '2.138.2';
+        const APP_BUILD    = '2026.09.13.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14413,7 +14413,8 @@
             const close = () => { overlay.style.display = 'none'; addActEditingId = null; };
 
             document.getElementById('addActCancel').addEventListener('click', close);
-            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            // No backdrop-click-to-close: a stray click outside must never discard a
+            // half-typed activity. The modal closes only on Cancel or a successful Save.
 
             document.getElementById('addActSave').addEventListener('click', async () => {
                 const val = id => (document.getElementById(id).value || '').trim();
