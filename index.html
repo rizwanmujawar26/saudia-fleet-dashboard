@@ -2721,6 +2721,27 @@
         }
         .tl-pinned-items .tl-pin .tl-row:hover { background: rgba(165, 40, 52, 0.03); }
         .tl-pin-mark { flex: 0 0 auto; font-size: 12px; line-height: 1; }
+        .tl-pin-click { cursor: pointer; }
+
+        /* Watchlist group headers (Grounded / Maintenance) — a labelled band that
+           separates the two categories inside the one pinned card. */
+        .tl-pin-group {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 12px;
+            font-size: 10px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;
+            color: #96545c; background: #fff5f6;
+        }
+        .tl-pin-group-sep { border-top: 1px solid #f4dfe2; }
+        .tl-pin-group-ico { font-size: 12px; }
+        .tl-pin-group-n {
+            font-weight: 800; color: #a52834; background: rgba(165, 40, 52, 0.10);
+            border-radius: 20px; padding: 1px 7px; font-size: 10px; font-variant-numeric: tabular-nums;
+        }
+        .tl-pin-group-note {
+            font-weight: 600; text-transform: none; letter-spacing: 0.2px;
+            color: #b08a8f; font-size: 10.5px;
+        }
+        @media (max-width: 720px) { .tl-pin-group-note { display: none; } }
 
         /* The state pill in the pinned block carries the same colour as the Fleet
            column's badge, so the two pages agree at a glance. */
@@ -4077,6 +4098,7 @@
         .issue-pill { padding: 2px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700;
             letter-spacing: .02em; border: 1px solid transparent; white-space: nowrap; }
         .issue-pill-inop { background: #fdecec; color: #b1242f; border-color: #f0b7b7; }
+        .issue-pill-partial { background: #fdeee0; color: #a2560a; border-color: #f2c79c; }
         .issue-pill-degraded { background: #fff4e0; color: #9a6400; border-color: #f0d59a; }
         .issue-pill-major { background: #f3e6ff; color: #6a2fb0; border-color: #dcc2f2; }
         .issue-pill-minor { background: #eef2f6; color: #5a6b7b; border-color: #d7dee5; }
@@ -7281,8 +7303,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.134.3';
-        const APP_BUILD    = '2026.09.12.04';
+        const APP_VERSION  = '2.135.0';
+        const APP_BUILD    = '2026.09.12.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -18662,7 +18684,7 @@
             const head = el.querySelector('.tl-pinned-head');
             if (head) {
                 head.setAttribute('aria-expanded', String(timelinePinnedExpanded));
-                head.setAttribute('title', (timelinePinnedExpanded ? 'Collapse' : 'Expand') + ' the out-of-service list');
+                head.setAttribute('title', (timelinePinnedExpanded ? 'Collapse' : 'Expand') + ' the watchlist');
             }
         }
 
@@ -18914,66 +18936,115 @@
                 </li>`;
             };
 
-            // ===== Pinned: what is out of service right now =====
+            // ===== Watchlist: aircraft that need attention right now =====
             // Built from the roster, NOT from `items` — this is a standing banner
             // rather than one of the day's activities, so a kind filter must not be
-            // able to hide the fact that two aircraft are on the ground. Nothing is
-            // pinned by hand: `out: true` on the state is the whole rule, so an
-            // aircraft pins itself when it goes AOG and unpins itself when it is back.
+            // able to hide it. Two groups, kept separate but in the one card:
+            //   • GROUNDED — the airframe is physically on the ground (operational
+            //     state out), whatever its programme status. Nothing pins by hand:
+            //     `out: true` on the state is the whole rule (was "Out of Service" —
+            //     renamed so it never reads as an IFC/W-IFE service outage).
+            //   • MAINTENANCE — the aircraft is still FLYING but its IFC/W-IFE service
+            //     is inoperative/partial/degraded (an open /issues record).
             const pinnedEl = document.getElementById('timelinePinned');
             if (pinnedEl) {
-                const outNow = opsOutFleet()
-                    // Every aircraft that is out of service, whatever its programme
-                    // status — an In-Retrofit airframe on a C-Check is still on the
-                    // ground, so it pins here just like an Active one going AOG.
+                // GROUNDED, longest-on-the-ground first.
+                const grounded = opsOutFleet()
                     .map(a => ({ a, o: opsOf(a.id) }))
                     .sort((x, y) => (dateSortKey(toISODate(x.o.since)) || '99999999')
                                     .localeCompare(dateSortKey(toISODate(y.o.since)) || '99999999'));
 
-                // The row count is stamped here and the actual show/hide is left to
+                // MAINTENANCE — every OPEN maintenance issue, longest-down first
+                // (oldest official inop date). All open impacts: inop, partial, degraded.
+                const maint = issueEntries().filter(issueIsOpen)
+                    .sort((x, y) => (dateSortKey(toISODate(x.informedDate)) || '99999999')
+                                    .localeCompare(dateSortKey(toISODate(y.informedDate)) || '99999999'));
+
+                // The count is stamped here and the actual show/hide is left to
                 // syncTimelineFocus, so the focused view can drop the banner without this
                 // block having to know about the filter state.
-                pinnedEl.dataset.count = String(outNow.length);
-                if (!outNow.length) {
+                const total = grounded.length + maint.length;
+                pinnedEl.dataset.count = String(total);
+                if (!total) {
                     pinnedEl.innerHTML = '';
                     pinnedEl.className = 'tl-pinned';
                 } else {
                     // Collapsed by default. The inline summary lists the registrations
-                    // so the closed head still answers "which aircraft are out".
+                    // so the closed head still answers "which aircraft need attention".
                     pinnedEl.className = 'tl-pinned' + (timelinePinnedExpanded ? ' expanded' : '');
-                    const regSummary = outNow.map(({ a }) => escAttr(a.id)).join(' · ');
+                    const regSummary = [...grounded.map(g => g.a.id), ...maint.map(i => i.tail)]
+                        .filter(Boolean).map(escAttr).join(' · ');
+
+                    // One GROUNDED row: 🛬 · tail · type · ops-state pill · location, since, age.
+                    const groundedRow = ({ a, o }) => {
+                        const d = opsDef(o.state);
+                        const typeColor = TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL;
+                        const typeLabel = TYPE_SHORT_LABEL[a.type] || a.type;
+                        const age = o.since ? dateSpan(o.since, '') : '';
+                        const loc = o.location || aircraftLocationOf(a);
+                        return `<li class="tl-pin tl-pin-${d.css}">
+                            <div class="tl-row tl-grid">${tlCells({
+                                mark: '<span class="tl-pin-mark" aria-hidden="true">🛬</span>',
+                                reg: escAttr(a.id),
+                                type: typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : '',
+                                kind: `<span class="tl-kind tl-kind-ops tl-kind-ops-${d.css}"${d.full ? ` title="${escAttr(d.full)}"` : ''}>${escAttr(d.short)}</span>`,
+                                main: `${loc ? `<span class="tl-loc-pill" style="${pillStyle(LOCATION_PILL_COLORS[loc] || NEUTRAL_PILL)}" title="${escAttr(loc)}">📍 ${escAttr(locationCode(loc))}</span>` : ''}`
+                                    + `<span class="tl-title">${o.since ? `since ${escAttr(o.since)}` : 'date not set'}</span>`
+                                    + `${age ? `<span class="age-pill" title="On the ground for this long">${escAttr(age)}</span>` : ''}`
+                                    + `${o.reason ? `<span class="tl-sub">${escAttr(o.reason)}</span>` : ''}`
+                                    + `${o.expectedReturn ? `<span class="tl-etr" title="Expected back in service">↩ ${escAttr(o.expectedReturn)}</span>` : ''}`,
+                            })}</div>
+                        </li>`;
+                    };
+
+                    // One MAINTENANCE row: 🔧 · tail · type · [IFC/W-IFE impact pill]
+                    // [severity pill] headline · days down. Click opens the Maintenance
+                    // view where the full issue (and its edit control) lives.
+                    const maintRow = (i) => {
+                        const a = aircraftData.find(x => x.id === i.tail) || {};
+                        const typeColor = TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL;
+                        const typeLabel = TYPE_SHORT_LABEL[a.type] || a.type || '';
+                        const svcTxt = `${issLabel(ISSUE_SERVICES, i.service)} ${issLabel(ISSUE_IMPACTS, i.impact)}`.trim();
+                        const age = dateSpan(i.informedDate, '');
+                        return `<li class="tl-pin tl-pin-click" onclick="switchTab('maintenance');setAvrView('issues')" title="Open in the Maintenance view">
+                            <div class="tl-row tl-grid">${tlCells({
+                                mark: '<span class="tl-pin-mark" aria-hidden="true">🔧</span>',
+                                reg: escAttr(i.tail || '—'),
+                                type: typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : '',
+                                kind: '',
+                                main: `<span class="issue-pill issue-pill-${i.impact}">${escAttr(svcTxt)}</span>`
+                                    + `<span class="issue-pill issue-pill-${i.severity}">${escAttr(issLabel(ISSUE_SEVERITIES, i.severity))}</span>`
+                                    + `<span class="tl-title">${escAttr(i.reason || 'Service issue')}</span>`
+                                    + `${age ? `<span class="age-pill" title="Service down for this long">${escAttr(age)}</span>` : ''}`,
+                            })}</div>
+                        </li>`;
+                    };
+
+                    let itemsHtml = '';
+                    if (grounded.length) {
+                        itemsHtml += `<li class="tl-pin-group"><span class="tl-pin-group-ico" aria-hidden="true">🛬</span>Grounded`
+                            + `<span class="tl-pin-group-n">${grounded.length}</span>`
+                            + `<span class="tl-pin-group-note">on the ground — not flying</span></li>`
+                            + grounded.map(groundedRow).join('');
+                    }
+                    if (maint.length) {
+                        itemsHtml += `<li class="tl-pin-group${grounded.length ? ' tl-pin-group-sep' : ''}"><span class="tl-pin-group-ico" aria-hidden="true">🔧</span>Maintenance`
+                            + `<span class="tl-pin-group-n">${maint.length}</span>`
+                            + `<span class="tl-pin-group-note">flying — IFC/W-IFE service affected</span></li>`
+                            + maint.map(maintRow).join('');
+                    }
+
                     pinnedEl.innerHTML = `
                         <div class="tl-pinned-head" onclick="toggleTimelinePinned()" role="button" tabindex="0"
                              aria-expanded="${timelinePinnedExpanded}"
-                             title="${timelinePinnedExpanded ? 'Collapse' : 'Expand'} the out-of-service list">
-                            <span class="tl-pinned-title">📌 Out of Service</span>
-                            <span class="tl-pinned-tag">${outNow.length} Aircraft</span>
+                             title="${timelinePinnedExpanded ? 'Collapse' : 'Expand'} the watchlist">
+                            <span class="tl-pinned-title">📌 Watchlist</span>
+                            <span class="tl-pinned-tag">${total} Aircraft</span>
                             <span class="tl-pinned-summary">${regSummary}</span>
-                            <span class="tl-pinned-count">${outNow.length} of ${programmeFleet().length}</span>
+                            <span class="tl-pinned-count">${total} of ${programmeFleet().length}</span>
                             <span class="tl-pinned-chevron" aria-hidden="true">▾</span>
                         </div>
-                        <ul class="tl-pinned-items">${outNow.map(({ a, o }) => {
-                            const d = opsDef(o.state);
-                            const typeColor = TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL;
-                            const typeLabel = TYPE_SHORT_LABEL[a.type] || a.type;
-                            const age = o.since ? dateSpan(o.since, '') : '';
-                            // Where it is grounded: the location entered against the ops
-                            // period, falling back to the aircraft's own location.
-                            const loc = o.location || aircraftLocationOf(a);
-                            return `<li class="tl-pin tl-pin-${d.css}">
-                                <div class="tl-row tl-grid">${tlCells({
-                                    mark: '<span class="tl-pin-mark" aria-hidden="true">📌</span>',
-                                    reg: escAttr(a.id),
-                                    type: typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : '',
-                                    kind: `<span class="tl-kind tl-kind-ops tl-kind-ops-${d.css}"${d.full ? ` title="${escAttr(d.full)}"` : ''}>${escAttr(d.short)}</span>`,
-                                    main: `${loc ? `<span class="tl-loc-pill" style="${pillStyle(LOCATION_PILL_COLORS[loc] || NEUTRAL_PILL)}" title="${escAttr(loc)}">📍 ${escAttr(locationCode(loc))}</span>` : ''}`
-                                        + `<span class="tl-title">${o.since ? `since ${escAttr(o.since)}` : 'date not set'}</span>`
-                                        + `${age ? `<span class="age-pill" title="Out of service for this long">${escAttr(age)}</span>` : ''}`
-                                        + `${o.reason ? `<span class="tl-sub">${escAttr(o.reason)}</span>` : ''}`
-                                        + `${o.expectedReturn ? `<span class="tl-etr" title="Expected back in service">↩ ${escAttr(o.expectedReturn)}</span>` : ''}`,
-                                })}</div>
-                            </li>`;
-                        }).join('')}</ul>`;
+                        <ul class="tl-pinned-items">${itemsHtml}</ul>`;
                 }
             }
 
