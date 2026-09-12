@@ -13,6 +13,79 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.138.0 — Hardware: Add-equipment flow, Days in By-Aircraft, Reset button
+User-directed (2026-09-12). Additive.
+
+- **Add button** in the Hardware filter bar (next to Edit), editor-only. On an equipment
+  tab it opens that unit's Add form directly; in By-Aircraft view it first offers a menu
+  to pick which equipment to add. **MODMAN routes to the Satcom Add MODMAN modal** (MODMAN
+  lives in `/modmans`, not `/units`).
+- **New Add-Equipment modal** (a `/units` unit): pick aircraft (+ position for CWAP,
+  RX/TX for antenna). It reads the slot's fitment history and shows the previous box, so a
+  new one **follows a previous removal** — it **pre-fills the install date from that
+  removal date**. When a box is still on wing there, a checkbox records it as removed on
+  the same date (a **swap**, one multi-path PATCH to `/units`). Dual units (SERVER) take
+  both serials; dedup on same-LRU serial. `openHwAddModal` / `hwAddSyncSlot` / `saveHwAdd`.
+- **Reset button** at the end of the actions row with the shared reset⇄back-to-top
+  behaviour; `resetHardwarePage` clears search, type filter and expanded aircraft.
+- **Days column added to the By-Aircraft table** (was missing).
+
+### v2.137.0 — Hardware polish (all-caps tabs, MODMAN from /modmans, collapsible By-Aircraft) + Watchlist row format
+User-directed (2026-09-12).
+
+- Equipment tabs all-caps + renamed: **MODMAN, SERVER, KANDU, KRFU, ANTENNA, CWAP, SIM**.
+- **MODMAN tab now reads `/modmans`** (the Satcom register) — every box incl. never-installed
+  spares, with Kontron/Eclipse (Astronics on an XLR), install/removal dates, on-wing status
+  and days. Edits write to `/modmans` (`saveModmanField`); badge = modman count.
+- Record Installed / Removed buttons **removed from Hardware** (inline edit covers it). ⚠️ The
+  bulk modal is still wired to the **Fleet tab's "Record Serials"** button — not deleted.
+- Equipment tables: **Type column dropped, "Aircraft"→"TAIL"**; universal search matches tail
+  · serial · alt-serial · **part number** (serial search fixed).
+- **By-Aircraft is collapsible** (`hwExpandedAc` / `toggleHwAc`): header shows tail, type, fit,
+  "N recorded"; adds a **Type filter** shown only in that view; rounded pill search.
+- Sub-tab row: single line, smaller/tighter, scrolls sideways (added to `HSCROLL_SELECTOR` +
+  the any-pointer scrollbar rules) instead of wrapping.
+- **Watchlist:** per-row 🛬/🔧 emoji removed (group headers keep theirs); Maintenance rows now
+  match Grounded — TAIL · type · status pill · `since <informedDate>` · days · detail. The
+  `.tl-pinned-items .tl-grid` status column is content-width (mark cell hidden) so there is no
+  dead gap between the type pill and the status.
+
+### v2.136.0 / v2.136.1 — Serials tab merged into Hardware: one editable `/units` register
+User-directed (2026-09-12). Removes a tab (authorised) — no data change; `/units` unchanged.
+
+- **The Serials tab is gone.** Hardware is now the single unit register over `/units`. A
+  centred equipment sub-tab row (same segmented `.avr-viewtoggle` as Maintenance) + a By-Aircraft
+  view. `renderHardwarePage` → `renderHwToggle` + `renderHwContent` → `renderHwGroup` /
+  `renderHwByAircraft`. `renderSerialsPage` is now an alias to `renderHardwarePage`; `RESTRICTED_TABS`
+  dropped `'serials'`.
+- **Everything editable in place** (v2.136.1): primary serial (`saveUnitSerial`, dedup guard),
+  alt serial, position, and **Fitted + Removed dates**. Uniform ROW-PER-UNIT table (a swapped-out
+  box stays as its own REMOVED row); a blank slot is an editable create-row (`hwCreateUnitFromField`).
+  Entering a **Removed date flips the row to REMOVED** (`saveFitmentDate` sets `fitment.state`);
+  Status + Days derive from it. MODMAN gained Kontron/Eclipse paired labels (an XLR box is Astronics).
+- ⚠️ Dead code left as guarded no-ops (their DOM is gone): `renderHwList`, `renderHwDetail`, the old
+  `renderSerialsPage` body, `hwSlotCell`/`hwSlotMatches`. A follow-up should delete them.
+
+### v2.135.0 — Home "Out of Service" strip → grouped "Watchlist"
+User-directed (2026-09-12). "Out of service" read as an IFC/W-IFE outage on a connectivity portal.
+
+- The red home banner (`#timelinePinned`) is renamed **"📌 Watchlist"** (aircraft needing
+  attention), split into two labelled groups: **Grounded** (🛬, `opsOutFleet` — physically not
+  flying) and **Maintenance** (🔧, open `/issues` — flying but IFC/W-IFE service affected).
+  Per-aircraft pin dropped (pin stays on the header only); combined count. `.issue-pill-partial` added.
+
+### v2.134.0–2.134.3 — Maintenance Issues (IFC/W-IFE + Partial) and the nav
+User-directed (2026-09-12). One rules change (`impact` regex gains `partial`).
+
+- **Affected service** is now the two distinct failures: **IFC** (Inflight Connectivity) and
+  **W-IFE** (Wireless Inflight Entertainment), or both. Form/on-screen use the abbreviation; the
+  **printed report spells them out** (`issFull`). Legacy value `wifi` == W-IFE (no data migration).
+- **Impact** gains a **Partial** state (one axis down, the other working) between Inoperative and
+  Degraded — new `svc-partial` badge, Fleet Service-filter option, and rules regex.
+- Nav: **"Activity" tab renamed "Maintenance"**, its red pill now counts **open maintenance issues**;
+  moved to **4th position** (Home · Software · Media · Maintenance · Fleet · 4G SIM · Satcom). The
+  Activities/Reports/Maintenance view toggle moved to its own centred row above the filter bar.
+
 ### v2.133.1 — AVRs derive a Timeline entry; Maintenance Issues can link to a report
 User-directed (2026-09-11). Additive + one rules change (`/issues` gains
 `originVisitId` / `resolutionVisitId`; no new node).

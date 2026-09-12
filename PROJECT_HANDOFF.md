@@ -6,7 +6,38 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.133.0–v2.133.1 (2026-09-11).** **Maintenance Issues — a THIRD availability
+**Latest — v2.134.0–v2.138.0 (2026-09-12).** A run of user-directed reshaping; full detail
+in CHANGELOG.md and `git log`, the load-bearing shape below.
+
+- **Hardware is now the single equipment/serial register — the Serials tab is GONE**
+  (v2.136.0). One page over `/units`, with a centred equipment sub-tab row (same segmented
+  `.avr-viewtoggle` as Maintenance): **MODMAN · SERVER · KANDU · KRFU · ANTENNA · CWAP · SIM**
+  (all-caps; badge = record count), plus a **By-Aircraft** toggle (collapsible per-tail blocks).
+  `renderHardwarePage` → `renderHwToggle` + `renderHwContent` → `renderHwGroup` /
+  `renderHwByAircraft`; `renderSerialsPage` is an alias to it; `RESTRICTED_TABS` = `['hardware']`.
+  - **Everything editable in place** — serial (`saveUnitSerial`), alt serial, position, Fitted +
+    Removed dates (`saveFitmentDate` flips `fitment.state` on a removed date; Status/Days derive
+    from it). Uniform ROW-PER-UNIT table (a swapped box stays as its own REMOVED row); an empty
+    slot is a create-row (`hwCreateUnitFromField`). **Add button** (`openHwAddModal`) adds a unit
+    with previous-fitment intelligence + swap; MODMAN's Add routes to the Satcom modal.
+  - ⚠️ **MODMAN reads `/modmans` (Satcom), NOT `/units`** — richer (spares, install/removal dates,
+    status). `renderHwModmanTable` from `satcomRows()`; edits via `saveModmanField`. So MODMAN is
+    a dual-source special case throughout (`groupRecordCount`, header counts).
+  - ⚠️ **Dead code to sweep:** `renderHwList`, `renderHwDetail`, old `renderSerialsPage` body,
+    `hwSlotCell`/`hwSlotMatches` are guarded no-ops. The **bulk Record-Installed/Removed modal is
+    still wired to the Fleet tab's "Record Serials" button** (removed only from Hardware).
+  - **Open (user):** fold **4G SIM + Satcom** tabs into this Hardware page (later).
+- **Maintenance Issues axis reshaped** (v2.134.0). `/issues` `service` is now **`ifc` / `wifi`
+  (== W-IFE) / `both`** and `impact` is **`inop` / `partial` / `degraded`** (rules regex updated).
+  Form/UI use abbreviations (IFC · W-IFE); the printed report spells them out (`issFull`). So the
+  v2.133 narrative below reading "wifi/ifc/both", "inop/degraded", "IFC INOP" is SUPERSEDED here.
+- **Nav** (v2.134.2–.3): the **Activity tab is renamed "Maintenance"**, its red pill counts **open
+  issues**, and it sits **4th** — Home · Software · Media · Maintenance · Fleet · 4G SIM · Satcom.
+- **Home "Watchlist"** (v2.135.0, v2.137.0): the old red "Out of Service" strip is **"📌 Watchlist"**
+  — **Grounded** (`opsOutFleet`) + **Maintenance** (open `/issues`) in one card, no per-row emoji,
+  both groups reading `TAIL · type · status · since <date> · days · detail`.
+
+**Prior — v2.133.0–v2.133.1 (2026-09-11).** **Maintenance Issues — a THIRD availability
 axis** (new `/issues` node; the four-edit checklist done: rules + `backup.sh` /
 `restore.sh` / `verify-deployment.sh` node lists). **v2.133.1** then made **AVRs derive
 their own Timeline entry** (`kind:'visit'`, on `dateStart`, all report types — a bare
