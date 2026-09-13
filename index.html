@@ -3624,9 +3624,19 @@
            viewport is too narrow to fit them, the row stays ONE line and scrolls sideways
            (registered in HSCROLL_SELECTOR + the any-pointer scrollbar rule) rather than
            wrapping into an awkward stack. */
-        .hw-viewtoggle { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .hw-viewtoggle .avr-vt-btn { padding: 6px 10px; font-size: 11.5px; white-space: nowrap; flex: 0 0 auto; }
-        .hw-viewtoggle .avr-vt-badge { min-width: 14px; padding: 1px 5px; font-size: 9.5px; }
+        /* The equipment sub-menu is a row of INDIVIDUAL pill buttons (not a fused segmented
+           bar), so it stays legible and thumb-scrollable on a narrow phone. One row always,
+           scroll sideways when it overflows. Count badges use the house green + white — red
+           is reserved for genuinely critical states, not a routine count. */
+        /* .avr-viewtoggle.hw-viewtoggle (two classes) so these beat the base .avr-viewtoggle,
+           which is defined later in the sheet — otherwise its overflow:hidden clips the row. */
+        .avr-viewtoggle.hw-viewtoggle { display: flex; gap: 6px; flex-wrap: nowrap; max-width: 100%; overflow-x: auto;
+            overflow-y: hidden; -webkit-overflow-scrolling: touch; background: transparent; border: none; border-radius: 0; padding: 2px 0; }
+        .hw-viewtoggle .avr-vt-btn { padding: 6px 12px; font-size: 11.5px; white-space: nowrap; flex: 0 0 auto;
+            border: 1px solid #d7dee5; border-radius: 8px; background: #f4f7fa; }
+        .hw-viewtoggle .avr-vt-btn.active { background: #0a5c34; color: #fff; border-color: #0a5c34; }
+        .hw-viewtoggle .avr-vt-badge { min-width: 14px; padding: 1px 5px; font-size: 9.5px; background: #0a5c34; color: #fff; }
+        .hw-viewtoggle .avr-vt-btn.active .avr-vt-badge { background: #fff; color: #0a5c34; }
         /* By Aircraft is a separate toggle on the filter bar, not a segment. */
         .hw-byac-btn { white-space: nowrap; flex: 0 0 auto; }
         .hw-byac-btn.active { background: #0a5c34; color: #fff; border-color: #0a5c34; }
@@ -7468,8 +7478,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.143.0';
-        const APP_BUILD    = '2026.09.13.08';
+        const APP_VERSION  = '2.144.0';
+        const APP_BUILD    = '2026.09.13.09';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -16981,56 +16991,90 @@
             } else {
             const dual = group.shape === 'dual';
             const hasPos = group.shape === 'pair' || group.shape === 'multi';
+            const isSim = group.id === 'sim';
+            const dash = '<span class="hw-none">—</span>';
 
             const posLabel = slot => {
                 if (group.shape === 'pair') return (slot.base.indexOf('rx') >= 0) ? 'RX' : 'TX';
                 if (group.shape === 'multi') return `${slot.position}/${lruQtyFor(slot.lru, slot.aircraft.type) || 1}`;
                 return '';
             };
+            const posCell = slot => hasPos ? `<td><span class="hw-pos">${escAttr(posLabel(slot))}</span></td>` : '';
             const rowMatch = (a, unit) => !q || pnMatch
                 || a.id.toLowerCase().includes(qLow)
                 || (unit && (String(unit.serial || '').toLowerCase().includes(qLow)
                           || String(unit.altSerial || '').toLowerCase().includes(qLow)));
+
+            // Roaming plan (SIM only): read from the fitment's own period of service (or the
+            // unit for a spare, which has no fitment), edited inline to the SAME /units path
+            // the 4G SIM tab writes — so the two views never disagree.
+            const roamCell = (unit, fitment) => {
+                const val = fitment ? (fitment.roaming || '') : (unit.roaming || '');
+                if (!editable) return val ? `<span class="status-badge roam-${escAttr(val)}">${val === 'global' ? 'GLOBAL' : 'LOCAL'}</span>` : dash;
+                return `<select class="edit-select hw-roam-select" data-unit="${escAttr(unit.id)}" data-fitment="${escAttr(fitment ? fitment.id : '')}" onchange="saveHwRoaming(this)">
+                    <option value="">—</option>
+                    <option value="global" ${val === 'global' ? 'selected' : ''}>Global</option>
+                    <option value="local" ${val === 'local' ? 'selected' : ''}>Local</option>
+                </select>`;
+            };
 
             const unitRow = (slot, hit) => {
                 const a = slot.aircraft, off = !fitmentIsOn(hit.fitment);
                 const days = fitmentDaysOnWing(hit.fitment);
                 return `<tr class="${off ? 'hw-row-off' : ''}">
                     <td><strong>${escAttr(a.id)}</strong></td>
-                    ${hasPos ? `<td><span class="hw-pos">${escAttr(posLabel(slot))}</span></td>` : ''}
+                    ${posCell(slot)}
                     <td>${hwSerialField(hit.unit)}</td>
                     ${dual ? `<td>${hwAltField(hit.unit, slot.lru)}</td>` : ''}
+                    ${isSim ? `<td>${roamCell(hit.unit, hit.fitment)}</td>` : ''}
                     <td>${hwDateField(hit.unit, hit.fitment, 'fittedDate')}</td>
                     <td>${hwDateField(hit.unit, hit.fitment, 'removedDate')}</td>
                     <td>${hwStatusBadge(hit)}</td>
-                    <td class="sr-days">${days == null ? '<span class="hw-none">—</span>' : days + 'd'}</td>
+                    <td class="sr-days">${days == null ? dash : days + 'd'}</td>
                 </tr>`;
             };
 
+            // A blank row now exposes EVERY column as its own editable box — serial, Eclipse
+            // alt, roaming (SIM), Fitted and Removed — all wired to hwCreateFromRow, so a whole
+            // record is typed in one go, exactly like the MODMAN table. Not just the serial.
             const blankRow = slot => {
                 const a = slot.aircraft;
-                const dash = '<span class="hw-none">—</span>';
-                // A fresh "type to add" input. For a dual box (Kontron + Eclipse) both cells
-                // are editable and share hwCreateDualFromField, so either serial — or both —
-                // creates the one unit; for single boxes the classic single-serial creator.
-                const newInput = (cls, placeholder, handler) =>
-                    `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-new${cls}" placeholder="${escAttr(placeholder)}"
-                        data-lru="${escAttr(slot.lruId)}" data-tail="${escAttr(a.id)}" data-position="${escAttr(slot.position || '')}" onchange="${handler}(this)">`;
-                const serialCell = editable
-                    ? newInput('', dual ? 'Kontron S/N — type to add' : 'Serial — type to add',
-                        dual ? 'hwCreateDualFromField' : 'hwCreateUnitFromField')
-                    : '<span class="hw-none">no record</span>';
-                const altCell = editable
-                    ? newInput(' hw-sn-alt', 'Eclipse S/N — type to add', 'hwCreateDualFromField')
-                    : dash;
+                const data = `data-lru="${escAttr(slot.lruId)}" data-tail="${escAttr(a.id)}" data-position="${escAttr(slot.position || '')}"`;
+                if (!editable) {
+                    return `<tr class="hw-row-empty">
+                        <td><strong>${escAttr(a.id)}</strong></td>${posCell(slot)}
+                        <td><span class="hw-none">no record</span></td>${dual ? `<td>${dash}</td>` : ''}${isSim ? `<td>${dash}</td>` : ''}
+                        <td>${dash}</td><td>${dash}</td><td>${dash}</td><td>${dash}</td>
+                    </tr>`;
+                }
+                const snNew = (cls, ph) => `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-new${cls}" placeholder="${escAttr(ph)}" ${data} onchange="hwCreateFromRow(this)">`;
+                const dateNew = fld => `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="hw-date-input hw-new-date" data-field="${fld}" ${data} onchange="hwCreateFromRow(this)">`;
+                const roamNew = `<select class="edit-select hw-new-roam" ${data} onchange="hwCreateFromRow(this)"><option value="">—</option><option value="global">Global</option><option value="local">Local</option></select>`;
                 return `<tr class="hw-row-empty">
                     <td><strong>${escAttr(a.id)}</strong></td>
-                    ${hasPos ? `<td><span class="hw-pos">${escAttr(posLabel(slot))}</span></td>` : ''}
-                    <td>${serialCell}</td>
-                    ${dual ? `<td>${altCell}</td>` : ''}
-                    <td>${dash}</td><td>${dash}</td><td>${dash}</td><td>${dash}</td>
+                    ${posCell(slot)}
+                    <td>${snNew('', dual ? 'Kontron S/N' : 'Serial')}</td>
+                    ${dual ? `<td>${snNew(' hw-sn-alt', 'Eclipse S/N')}</td>` : ''}
+                    ${isSim ? `<td>${roamNew}</td>` : ''}
+                    <td>${dateNew('fittedDate')}</td>
+                    <td>${dateNew('removedDate')}</td>
+                    <td>${dash}</td><td>${dash}</td>
                 </tr>`;
             };
+
+            // A SPARE card in the store — a SIM never assigned to an aircraft (no fitment
+            // carries a tail). These live at unit level and were invisible on the old
+            // per-aircraft grid; the Hardware page is the master, so they belong here.
+            const spareRow = u => `<tr class="hw-row-spare">
+                <td><span class="hw-none">spare</span></td>
+                ${hasPos ? `<td>${dash}</td>` : ''}
+                <td>${hwSerialField(u)}</td>
+                ${dual ? `<td>${hwAltField(u, baseLru)}</td>` : ''}
+                ${isSim ? `<td>${roamCell(u, null)}</td>` : ''}
+                <td>${dash}</td><td>${dash}</td>
+                <td><span class="sr-state">SPARE</span></td>
+                <td class="sr-days">${dash}</td>
+            </tr>`;
 
             const rowsHtml = groupSlots(group).map(slot => {
                 const history = unitsAtSlot(slot.lruId, slot.aircraft.id, slot.position).slice().reverse();
@@ -17041,13 +17085,24 @@
                 return history.filter(h => rowMatch(slot.aircraft, h.unit)).map(h => unitRow(slot, h)).join('');
             }).filter(Boolean).join('');
 
+            // Spares — SIM units with no tail on any fitment — appended after the fleet rows.
+            let spareHtml = '';
+            if (isSim) {
+                spareHtml = simUnitEntries().map(([id, u]) => ({ id, ...u }))
+                    .filter(u => !Object.values(u.fitments || {}).some(f => f.aircraft))
+                    .filter(u => !q || pnMatch || String(u.serial || '').toLowerCase().includes(qLow))
+                    .sort((a, b) => String(a.serial || '').localeCompare(String(b.serial || '')))
+                    .map(spareRow).join('');
+            }
+
             const serialHead = dual
                 ? `<th>${escAttr(baseLru.serialLabel || 'Serial')}</th><th>${escAttr(baseLru.altSerialLabel || 'Alt S/N')}</th>`
                 : `<th>${escAttr(baseLru.serialLabel || 'Serial')}</th>`;
-            const colspan = 6 + (hasPos ? 1 : 0) + (dual ? 1 : 0);
+            const roamHead = isSim ? '<th>Roaming</th>' : '';
+            const colspan = 6 + (hasPos ? 1 : 0) + (dual ? 1 : 0) + (isSim ? 1 : 0);
             table = `<table class="hw-reg-table"><thead><tr>
-                    <th>TAIL</th>${hasPos ? '<th>Position</th>' : ''}${serialHead}<th>Fitted</th><th>Removed</th><th>Status</th><th>Days</th>
-                </tr></thead><tbody>${rowsHtml || `<tr><td colspan="${colspan}" class="maint-empty">No records match.</td></tr>`}</tbody></table>`;
+                    <th>TAIL</th>${hasPos ? '<th>Position</th>' : ''}${serialHead}${roamHead}<th>Fitted</th><th>Removed</th><th>Status</th><th>Days</th>
+                </tr></thead><tbody>${(rowsHtml + spareHtml) || `<tr><td colspan="${colspan}" class="maint-empty">No records match.</td></tr>`}</tbody></table>`;
             }
 
             // --- Known Issues + Removed queue (both fits of the group) ---
@@ -17081,6 +17136,32 @@
                 </div>
             </li>`;
 
+            // MODMAN's removed boxes live in /modmans (status 'removed'), so its Removed / Shop
+            // Queue is built from that node — the same list the table shows, as cards with an
+            // editable Reason for removal (saved straight to /modmans via saveModmanField).
+            const mmRemovals = Object.entries(modmansLive || {}).map(([id, m]) => ({ id, ...m }))
+                .filter(m => m.status === 'removed')
+                .sort((a, b) => dateSortKey(toISODate(b.removalDate)).localeCompare(dateSortKey(toISODate(a.removalDate))));
+            const modmanRemovalCard = m => {
+                const isAstro = !!m.astronicsSn && !m.kontronSn;
+                const serial = (isAstro ? m.astronicsSn : m.kontronSn) || '—';
+                const days = dateSpan(m.installDate, m.removalDate || '');
+                const reasonField = editable
+                    ? `<input type="text" maxlength="200" autocomplete="off" class="hw-reason-input" value="${escAttr(m.removalReason || '')}" placeholder="e.g. No RF output after power cycle" data-mm="${escAttr(m.id)}" data-field="removalReason" onchange="saveModmanField(this)">`
+                    : (m.removalReason ? escAttr(m.removalReason) : '<span class="hw-none">not recorded</span>');
+                return `<li class="hw-removal">
+                    <div class="hw-issue-top">
+                        <span class="hw-serial hw-removal-sn">${escAttr(serial)}</span>
+                        <span class="status-badge shop-badge shop-removed">REMOVED</span>
+                        <span class="maint-act-cat">${m.aircraft ? escAttr('ex-' + m.aircraft) : '<span class="hw-none">spare</span>'}${m.installDate ? ` · fitted ${escAttr(m.installDate)}` : ''}${m.removalDate ? ` → removed ${escAttr(m.removalDate)}` : ''}${days ? ` · ${escAttr(days)} on wing` : ''}</span>
+                    </div>
+                    <div class="hw-removal-body">
+                        <div class="hw-issue-field"><b>Reason for removal</b>${reasonField}</div>
+                        ${!isAstro && m.eclipseSn ? `<div class="hw-issue-field"><b>Eclipse S/N</b>${escAttr(eclipseSnDisplay(m.eclipseSn))}</div>` : ''}
+                    </div>
+                </li>`;
+            };
+
             return `
                 <div class="hw-group-head">
                     <span class="hw-group-name">${escAttr(group.label)}</span>
@@ -17095,7 +17176,12 @@
                     ${canEdit() ? `<button class="qf-btn add-btn" style="margin-left:auto;" onclick="openAddIssue()">＋ Add issue</button>` : ''}
                 </div>
                 <ul class="hw-issues">${issues.length ? issues.map(issueCard).join('') : '<li class="maint-empty">No issues logged for this unit.</li>'}</ul>
-                ${isMm ? '' : `
+                ${isMm ? `
+                <div class="hw-section">
+                    <span class="hw-section-title">Removed / Shop Queue</span>
+                    <span class="timeline-day-count">${mmRemovals.length} removed</span>
+                </div>
+                <ul class="hw-issues">${mmRemovals.length ? mmRemovals.map(modmanRemovalCard).join('') : '<li class="maint-empty">No MODMANs removed yet.</li>'}</ul>` : `
                 <div class="hw-section">
                     <span class="hw-section-title">Removed / Shop Queue${openShop ? ` · ${openShop} awaiting shop` : ''}</span>
                     <span class="timeline-day-count">${removals.length} removed</span>
@@ -17237,7 +17323,7 @@
                             });
                             if (!history.length) {
                                 const serialCell = editable
-                                    ? `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-new" placeholder="Serial — type to add" data-lru="${escAttr(lruId)}" data-tail="${escAttr(a.id)}" data-position="${escAttr(pos || '')}" onchange="hwCreateUnitFromField(this)">`
+                                    ? `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-new" placeholder="Serial — type to add" data-lru="${escAttr(lruId)}" data-tail="${escAttr(a.id)}" data-position="${escAttr(pos || '')}" onchange="hwCreateFromRow(this)">`
                                     : hwSerialSpan('');
                                 rows.push(`<tr>
                                     <td>${escAttr(label)}</td>
@@ -18208,6 +18294,36 @@
             }
         }
 
+        // SIM roaming plan, edited inline on the Hardware SIM view. Writes to the SAME path
+        // the 4G SIM tab commits to (see commitSimChanges): the fitment's roaming for a
+        // fitted card, the unit's roaming for a spare — so both views read one value. Blank
+        // clears it (null).
+        async function saveHwRoaming(el) {
+            const unitId = el.dataset.unit, fitmentId = el.dataset.fitment || '';
+            const u = unitsLive[unitId];
+            if (!u) return;
+            const value = el.value;
+            const token = await getIdToken();
+            if (!token) return;
+            const path = fitmentId ? `/units/${unitId}/fitments/${fitmentId}` : `/units/${unitId}`;
+            el.disabled = true;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}${path}.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify({ roaming: value || null }),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                const target = fitmentId ? (u.fitments || {})[fitmentId] : u;
+                if (target) { if (!value) delete target.roaming; else target.roaming = value; }
+                renderHardwarePage();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not save roaming — ${ex.message}`, '#dc3545');
+            } finally {
+                el.disabled = false;
+            }
+        }
+
         // Correcting a unit's PRIMARY serial in place (new in v2.136.0 — the old Serials
         // tab could edit dates and the alt serial but not this). A serial is one physical
         // box within its equipment type, so a value already on another unit of the same
@@ -18285,54 +18401,23 @@
         // empty slot writes a new /units record with one on-wing fitment at that
         // aircraft/position — the same shape Record Installed writes, one at a time. A
         // serial already on another unit of the same LRU is blocked (one box, one number).
-        async function hwCreateUnitFromField(el) {
-            const value = el.value.trim();
-            if (!value) return;                     // empty blur — nothing to create
-            const lruId = el.dataset.lru, tail = el.dataset.tail, position = el.dataset.position || '';
-            const clash = unitEntries().find(x => x.lruId === lruId
-                && String(x.serial || '').trim().toLowerCase() === value.toLowerCase());
-            if (clash) {
-                setSyncStatus(`🔴 ${value} is already on another ${(lruById(lruId) || {}).label || 'unit'} — serials are unique`, '#dc3545');
-                el.value = '';
-                return;
-            }
-            const token = await getIdToken();
-            if (!token) return;
-            el.disabled = true;
-            const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-            const fitId = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-            const unitId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-            const fitment = { aircraft: tail, state: 'on_wing', loggedAt: stamp };
-            if (position) fitment.position = String(position);
-            const unit = { lruId, serial: value, addedAt: stamp, fitments: { [fitId]: fitment } };
-            try {
-                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
-                    method: 'PATCH', body: JSON.stringify({ [unitId]: unit }),
-                });
-                const data = await res.json();
-                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                unitsLive[unitId] = unit;
-                renderHardwarePage();
-                renderMaintenancePage();
-                setSyncStatus(`🟢 ${value} added on ${tail} — synced with your team`, '#28a745');
-            } catch (ex) {
-                setSyncStatus(`🔴 Could not add serial — ${ex.message}`, '#dc3545');
-                el.disabled = false;
-            }
-        }
-
-        // Create a dual-serial box (Kontron + Eclipse) from the blank-row inputs. Fired on
-        // blur of either field, it reads BOTH sibling inputs in the same row, so filling one
-        // or both then tabbing away records the single unit with whatever was typed — a
-        // server whose Eclipse S/N is known but Kontron is not is still recordable.
-        async function hwCreateDualFromField(el) {
+        // Create a /units box from a blank grid row — the ONE creator for every equipment
+        // type. It reads whatever inputs the row exposes: the serial, the Eclipse alt serial
+        // (dual boxes), the Fitted and Removed dates, and the roaming plan (SIM). So a whole
+        // record — serial + dates + roaming — is entered in one go, and every column is an
+        // editable box exactly like the MODMAN table, not just the serial. Fires on blur of
+        // any field; a Removed date sets the box off-wing at creation.
+        async function hwCreateFromRow(el) {
             const row = el.closest('tr');
             if (!row) return;
             const kEl = row.querySelector('.hw-sn-new:not(.hw-sn-alt)');
             const eEl = row.querySelector('.hw-sn-new.hw-sn-alt');
+            const fEl = row.querySelector('.hw-new-date[data-field="fittedDate"]');
+            const rEl = row.querySelector('.hw-new-date[data-field="removedDate"]');
+            const roamEl = row.querySelector('.hw-new-roam');
             const serial = kEl ? kEl.value.trim() : '';
             const alt = eEl ? eEl.value.trim() : '';
-            if (!serial && !alt) return;               // both empty — nothing to create
+            if (!serial && !alt) return;               // need a serial before dates mean anything
             const lruId = el.dataset.lru, tail = el.dataset.tail, position = el.dataset.position || '';
             if (serial) {
                 const clash = unitEntries().find(x => x.lruId === lruId
@@ -18343,15 +18428,21 @@
                     return;
                 }
             }
+            let fitted = '', removed = '';
+            if (fEl && fEl.value.trim()) { const v = readDateField(fEl); if (v === false) { setSyncStatus('🔴 Fitted date must be dd-mm-yyyy', '#dc3545'); return; } fitted = v || ''; }
+            if (rEl && rEl.value.trim()) { const v = readDateField(rEl); if (v === false) { setSyncStatus('🔴 Removed date must be dd-mm-yyyy', '#dc3545'); return; } removed = v || ''; }
+            const roaming = roamEl ? roamEl.value : '';
             const token = await getIdToken();
             if (!token) return;
-            if (kEl) kEl.disabled = true;
-            if (eEl) eEl.disabled = true;
+            [kEl, eEl, fEl, rEl, roamEl].forEach(x => { if (x) x.disabled = true; });
             const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
             const fitId = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
             const unitId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-            const fitment = { aircraft: tail, state: 'on_wing', loggedAt: stamp };
+            const fitment = { aircraft: tail, state: removed ? 'removed' : 'on_wing', loggedAt: stamp };
             if (position) fitment.position = String(position);
+            if (fitted) fitment.fittedDate = fitted;
+            if (removed) fitment.removedDate = removed;
+            if (roaming) fitment.roaming = roaming;
             const unit = { lruId, addedAt: stamp, fitments: { [fitId]: fitment } };
             if (serial) unit.serial = serial;
             if (alt) unit.altSerial = alt;
@@ -18367,8 +18458,7 @@
                 setSyncStatus(`🟢 ${serial || alt} added on ${tail} — synced with your team`, '#28a745');
             } catch (ex) {
                 setSyncStatus(`🔴 Could not add serial — ${ex.message}`, '#dc3545');
-                if (kEl) kEl.disabled = false;
-                if (eEl) eEl.disabled = false;
+                [kEl, eEl, fEl, rEl, roamEl].forEach(x => { if (x) x.disabled = false; });
             }
         }
 
