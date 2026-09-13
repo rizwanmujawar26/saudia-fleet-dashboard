@@ -5757,7 +5757,7 @@
                                 <th class="sortable-th" data-col="5" data-label="Type" onclick="sortAircraftTable(5)">Type</th>
                                 <th class="sortable-th" data-col="6" data-label="Status" onclick="sortAircraftTable(6)">Status</th>
                                 <th class="sortable-th" data-col="7" data-label="Middleware" onclick="sortAircraftTable(7)">Middleware</th>
-                                <th class="sortable-th" data-col="8" data-label="Install Location" onclick="sortAircraftTable(8)">Install Location</th>
+                                <th class="sortable-th" data-col="8" data-label="Middleware Site" onclick="sortAircraftTable(8)">Middleware Site</th>
                                 <th class="sortable-th col-comment" data-col="9" data-label="Comments" onclick="sortAircraftTable(9)">Comments</th>
                             </tr>
                         </thead>
@@ -7478,8 +7478,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.145.0';
-        const APP_BUILD    = '2026.09.13.10';
+        const APP_VERSION  = '2.146.0';
+        const APP_BUILD    = '2026.09.13.11';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -10110,6 +10110,7 @@
                 ]},
                 { title: 'Activation & Connectivity', rows: [
                     { node: 'ac', key: 'activatedDate',  label: 'Activated', kind: 'date' },
+                    { node: 'ac', key: 'activationLocation', label: 'Activation Location', kind: 'text', max: 60, hint: 'where it entered service (Jeddah) — not the install site' },
                     { node: 'ac', key: 'wifiVisibility', label: 'SSID Visibility', kind: 'select', opts: [['', '— none —'], ['public', 'Public'], ['hidden', 'Hidden']] },
                     { node: 'ac', key: 'simRoaming',     label: 'SIM Roaming', kind: 'select', opts: [['', '— none —'], ['active', 'Active'], ['inactive', 'Inactive']] },
                     { node: 'ac', key: 'swVersion',      label: 'Middleware Version', kind: 'text', re: /^[0-9]+\.[0-9]+\.[0-9]+$/, hint: 'x.y.z' },
@@ -10126,7 +10127,7 @@
                     { node: 'ac', key: 'retrofitEnd',        label: 'Mod End', kind: 'date' },
                     { node: 'ac', key: 'retrofitLocation',   label: 'Retrofit Location', kind: 'text', max: 60 },
                     { node: 'ac', key: 'completionDate',     label: 'Completion Date', kind: 'date' },
-                    { node: 'ac', key: 'completionLocation', label: 'Completion Site', kind: 'select', opts: [['', '— none —'], ['Jeddah', 'Jeddah'], ['Riyadh', 'Riyadh']] },
+                    { node: 'ac', key: 'completionLocation', label: 'Middleware Site', kind: 'select', opts: [['', '— none —'], ['Jeddah', 'Jeddah'], ['Riyadh', 'Riyadh']] },
                 ]},
                 { title: 'Operational State', rows: [
                     { node: 'ops', key: 'state',          label: 'State', kind: 'select', opts: OPS_STATES.map(o => [o.value, o.label]) },
@@ -10290,7 +10291,7 @@
             return o;
         }
         const AC_MOVE_FLEET = ['type', 'fit', 'scope', 'system', 'fleetStatus', 'comments', 'delivered'];
-        const AC_MOVE_AC = ['completionDate', 'otaPatchUTC', 'otaPatch3UTC', 'completionLocation', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'note', 'swVersion', 'retrofitLocation', 'retrofitStart', 'retrofitEnd', 'wifiVisibility', 'activatedDate', 'simRoaming', 'ugoVersion', 'tilesVersion', 'ops', 'opsLog', 'maintenance', 'modem', 'media'];
+        const AC_MOVE_AC = ['completionDate', 'otaPatchUTC', 'otaPatch3UTC', 'completionLocation', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'note', 'swVersion', 'retrofitLocation', 'retrofitStart', 'retrofitEnd', 'wifiVisibility', 'activatedDate', 'activationLocation', 'simRoaming', 'ugoVersion', 'tilesVersion', 'ops', 'opsLog', 'maintenance', 'modem', 'media'];
         const AC_MOVE_SPEC = ['manufacturer', 'family', 'variant', 'engineMfr', 'engineModel', 'engineQty', 'seatConfig', 'seatBusiness', 'seatEconomy', 'seatTotal', 'deliveryDate', 'msn', 'remark', 'ifcPrevious', 'ifcNote'];
 
         async function acPatch(path, body, token) {
@@ -10360,7 +10361,7 @@
 
             // ── /aircraft (flat + deep-path leaves; never a group path beside a leaf) ──
             const acBody = {};
-            ['activatedDate', 'wifiVisibility', 'simRoaming', 'swVersion', 'ugoVersion', 'tilesVersion', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'otaPatchUTC', 'note', 'retrofitStart', 'retrofitEnd', 'retrofitLocation', 'completionDate', 'completionLocation'].forEach(k => {
+            ['activatedDate', 'activationLocation', 'wifiVisibility', 'simRoaming', 'swVersion', 'ugoVersion', 'tilesVersion', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'otaPatchUTC', 'note', 'retrofitStart', 'retrofitEnd', 'retrofitLocation', 'completionDate', 'completionLocation'].forEach(k => {
                 if (c.ac[k] !== undefined) acBody[k] = c.ac[k] === '' ? null : c.ac[k];
             });
             const opsState = c.ops.state || '';
@@ -12449,7 +12450,7 @@
                     : cell('Middleware', swVersionOf(a)),
                 linefit
                     ? cell('Software Scope', 'HBC+ — outside MSP scope')
-                    : cell('Completion', a.completionLocation
+                    : cell('Middleware Site', a.completionLocation
                         ? `${escAttr(a.completionLocation)}${a.completionDate ? ' — ' + escAttr(a.completionDate) : ''}`
                         : 'Not completed'),
                 linefit
@@ -13235,7 +13236,7 @@
                 ['Install site', a.retrofitLocation || ''],
                 [linefit ? 'SBC config' : 'Activation', linefit
                     ? (a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
-                    : [a.retrofitLocation, a.activatedDate].filter(Boolean).join(' · ')],
+                    : (a.activatedDate ? [activationLocationOf(a), a.activatedDate].filter(Boolean).join(' · ') : '')],
                 ['Previous IFC', spec.ifcPrevious || ''],
             ];
             // Software — the loadable, changeable state: middleware, OTA patches, media,
@@ -19432,6 +19433,16 @@
             return '';
         }
 
+        // Where the aircraft ENTERED SERVICE — its own fact, independent of BOTH the
+        // install site (retrofitLocation, which may be abroad: Qatar, Toulouse, Malta…)
+        // and the middleware software-load station (completionLocation, e.g. Riyadh).
+        // The fleet re-enters service at its Jeddah base, so Jeddah is the default until
+        // a tail records a different activationLocation. Never derive this from the two
+        // fields above — that conflation is exactly what this field exists to end.
+        function activationLocationOf(a) {
+            return a.activationLocation || 'Jeddah';
+        }
+
         // The one place the three sources are folded into a single shape.
         // { iso, kind, tail, type, location, title, sub }
         function timelineActivities() {
@@ -19471,15 +19482,13 @@
                 // corrected on the Fleet or Activity tab corrects the Timeline with it.
                 const actIso = toISODate(a.activatedDate);
                 if (actIso) {
-                    // Entered-service location is where the aircraft was worked on and
-                    // returned to service — the retrofit/install location — NOT
-                    // completionLocation. completionLocation records ONLY where the one-off
-                    // middleware 2.1.0 software load happened (e.g. Riyadh); that belongs on
-                    // the Software event above and must not attach to the airframe itself
-                    // (user, 2026-09-13). This is the same field the modification MOD
-                    // START/END rows already use, so activation now agrees with them.
+                    // Entered-service location is its OWN field (activationLocation),
+                    // defaulting to the Jeddah base — NOT the install site (retrofitLocation,
+                    // which may be abroad, e.g. AS61 = Qatar) and NOT completionLocation, which
+                    // records only where the one-off middleware software load happened (e.g.
+                    // Riyadh) and must never attach to the airframe (user, 2026-09-13).
                     out.push({ iso: actIso, kind: 'activation', tail: a.id, type: a.type,
-                               location: a.retrofitLocation || '',
+                               location: activationLocationOf(a),
                                title: 'Entered Service', sub: '' });
                 }
 

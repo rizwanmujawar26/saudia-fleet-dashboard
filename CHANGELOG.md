@@ -13,6 +13,22 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.146.0 — Activation location is its own field; middleware site relabelled
+User-directed (2026-09-13). Three concepts were sharing two fields; this separates them.
+
+- **New `activationLocation` field** (rules leaf, ≤60, editable under Activation &
+  Connectivity). Where the aircraft ENTERED SERVICE — independent of the install site
+  (`retrofitLocation`, which may be abroad) and the middleware station (`completionLocation`).
+  `activationLocationOf()` defaults to the **Jeddah** base until a tail overrides it, and both
+  the report's Activation row and the Timeline "Entered Service" event now use it. Added to
+  the re-key move list and the promote whitelist so it survives an UNKNOWN→tail promotion.
+  Example that forced this out: **AS61** — install site **Qatar**, activation **Jeddah**
+  (set explicitly).
+- **`completionLocation` relabelled to "Middleware Site"** everywhere it shows (Software-tab
+  column header — was misleadingly "Install Location" — the aircraft profile card, and the
+  editor). It records only where the one-off middleware software load happened (Jeddah/Riyadh)
+  and must never read as an airframe location. Data untouched.
+
 ### v2.145.0 — AVR report: activation ≠ Riyadh, Specifications 3-per-line, wrapped notes; degraded ≠ down
 User-directed (2026-09-13). Four fixes to the printed AVR and the maintenance issue card.
 
