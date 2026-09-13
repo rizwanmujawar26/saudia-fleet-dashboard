@@ -1943,6 +1943,20 @@
         .fleet-fill-retrofit { background: linear-gradient(90deg, #f0ad4e, #d18b1f); }
         .fleet-fill-active, .fleet-fill-retrofit { transition: width 0.5s ease; }
 
+        /* A line under the split bar naming the smaller, incomplete share — which tails
+           are In Retrofit / SSID Closed — so the exception is spelled out, not just
+           counted. The tails carry the side's colour; the label stays quiet. */
+        .fleet-note {
+            margin-top: 8px;
+            font-size: 12px;
+            line-height: 1.45;
+            color: #6b7780;
+            font-variant-numeric: tabular-nums;
+        }
+        .fleet-note b { font-weight: 800; letter-spacing: 0.2px; }
+        .fleet-note-retrofit b { color: #8a5a12; }
+        .fleet-note-hidden   b { color: #a52834; }
+
         .media-widget-strip {
             display: flex;
             flex-wrap: nowrap;
@@ -7502,8 +7516,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.149.1';
-        const APP_BUILD    = '2026.09.13.16';
+        const APP_VERSION  = '2.150.0';
+        const APP_BUILD    = '2026.09.13.17';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -10472,10 +10486,11 @@
         }
 
         // Retrofit aircraft still on the ground being fitted. They are NOT Active, so
-        // swFleet() (and every count built on it) leaves them out — but the Software
-        // completion cards count them as PENDING work so the picture reads "42 of 44
-        // done, 2 still in retrofit" rather than a misleading 42 of 42. Whole-roster
-        // scope, non-linefit only, exactly the In-Retrofit programme status.
+        // swFleet() (and every count built on it) leaves them out. The Software
+        // completion cards used to fold these in as PENDING work, but that understated
+        // completion — software is loaded once an aircraft is fitted — so as of
+        // 2026-09-13 the cards count the active fleet only and this helper is unused.
+        // Whole-roster scope, non-linefit only, exactly the In-Retrofit programme status.
         function inRetrofitSwFleet() {
             return aircraftData.filter(a => fleetStatusOf(a) === 'In Retrofit' && !isLinefit(a));
         }
@@ -10495,9 +10510,8 @@
         // height so the three sit on one line.
         // One card for each software stream — Middleware, OTA Patch #2, OTA Patch #3 —
         // all built to the same shape so they read as one strip. Every card counts the
-        // Active retrofit fleet PLUS the In-Retrofit aircraft (still being fitted): the
-        // latter are always pending, so the total reads e.g. 42 of 44 done, 2 pending,
-        // and the two in-retrofit tails are named in the pending list.
+        // Active retrofit fleet only; in-retrofit aircraft (still being fitted) are out
+        // of scope, so Middleware and OTA #2 read 42 of 42 and only OTA #3 is partway.
         function swCard(opts) {
             const { label, doneList, pendingList, doneWord = 'Completed',
                     doneLabel, pendLabel, allDoneMsg } = opts;
@@ -10536,26 +10550,26 @@
         function renderSwVersionWidgets() {
             const grid = document.getElementById('swVersionWidgets');
             if (!grid) return;
+            // Active retrofit fleet only. In-retrofit airframes are excluded from the
+            // software picture (user, 2026-09-13): software is loaded once an aircraft
+            // is fitted, so counting the still-being-fitted tails as pending understated
+            // completion — Middleware and OTA #2 read 42 of 44 when they were 42 of 42.
             const active = swFleet();
-            const inRetro = inRetrofitSwFleet();
             const latest = latestSwVersion();
 
             // --- Middleware ---
             const onLatest = active.filter(a => swVersionOf(a) === latest);
-            const behindActive = active.filter(a => swVersionOf(a) !== latest);
-            const mwPending = behindActive.concat(inRetro);
-            const behindVersions = [...new Set(behindActive.map(swVersionOf))]
+            const mwPending = active.filter(a => swVersionOf(a) !== latest);
+            const behindVersions = [...new Set(mwPending.map(swVersionOf))]
                 .sort((a, b) => SW_VERSIONS.indexOf(b) - SW_VERSIONS.indexOf(a));
             const pendLabel = behindVersions.length === 1 ? behindVersions[0]
                             : behindVersions.length ? 'older'
-                            : inRetro.length ? 'in retrofit' : '—';
+                            : '—';
 
-            // --- OTA patches: "done" is simply having a patch date stamped. In-retrofit
-            //     aircraft are pending like every other un-patched airframe. ---
+            // --- OTA patches: "done" is simply having a patch date stamped. ---
             const otaSplit = field => {
-                const pool = active.concat(inRetro);
-                const done = pool.filter(a => !!a[field]);
-                const pending = pool.filter(a => !a[field]);
+                const done = active.filter(a => !!a[field]);
+                const pending = active.filter(a => !a[field]);
                 return { done, pending };
             };
             const ota2 = otaSplit('otaPatchUTC');
@@ -11370,6 +11384,11 @@
             // the bullet, and the bar draws the two shares against each other.
             const progTotal = activeCount + retrofitCount;
             const actPct = progTotal ? (activeCount / progTotal) * 100 : 0;
+            // Name the tails still In Retrofit under the bar — the smaller, incomplete
+            // share — rather than leaving the count to speak for itself.
+            const retroTails = fleetRoster
+                .filter(a => fleetStatusOf(a) === 'In Retrofit')
+                .map(a => a.id).sort();
             const totalCard = `<div class="media-widget fleet-total">
                 <div class="media-widget-head">
                     <span class="media-widget-label">IFC Fleet</span>
@@ -11383,6 +11402,9 @@
                     <div class="fleet-fill-active" style="width:${actPct}%"></div>
                     <div class="fleet-fill-retrofit" style="width:${100 - actPct}%"></div>
                 </div>
+                ${retroTails.length
+                    ? `<div class="fleet-note fleet-note-retrofit"><b>${retroTails.join(', ')}</b> In Retrofit</div>`
+                    : ''}
             </div>`;
 
             const card = (label, count, sub, type) => {
@@ -11398,11 +11420,13 @@
             // has not been activated, so it has no SSID on air to be public or hidden.
             const active = fleetRoster.filter(a => fleetStatusOf(a) === 'Active');
             let pub = 0, hid = 0;
+            const hidTails = [];
             active.forEach(a => {
                 const v = (aircraftLive[a.id] || {}).wifiVisibility;
-                if (v === 'hidden') hid++;
+                if (v === 'hidden') { hid++; hidTails.push(a.id); }
                 else if (v === 'public') pub++;
             });
+            hidTails.sort();
             const known = pub + hid;
             // The bar is the split itself rather than progress towards anything, so the
             // two shares are drawn against each other and always total the width.
@@ -11421,6 +11445,9 @@
                     <div class="ssid-fill-public" style="width:${pubPct}%"></div>
                     <div class="ssid-fill-hidden" style="width:${100 - pubPct}%"></div>
                 </div>
+                ${hidTails.length
+                    ? `<div class="fleet-note fleet-note-hidden"><b>${hidTails.join(', ')}</b> SSID Closed</div>`
+                    : ''}
             </div>`;
 
             // The Out-of-Service widget was removed (user, 2026-09-11): the AOG count pill
@@ -15349,7 +15376,9 @@
 
             strip.innerHTML =
                 card('Active Cards', n('active'), 'latest') +
-                card('Faulty Cards', n('fault'), 'alert') +
+                // Faulty is an exception state — only worth a tile when there is one.
+                // With no faulty cards the tile just read a green-less "0", so drop it.
+                (n('fault') ? card('Faulty Cards', n('fault'), 'alert') : '') +
                 card('Spare Cards', n('unused'), 'previous') +
                 split;
         }
