@@ -6,7 +6,37 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.138.1–v2.144.0 (2026-09-13).** MODMAN fully single-sourced, activation location
+**Latest — v2.145.0–v2.149.1 (2026-09-13).** AVR report polish, activation location made its
+own field, and the site given a favicon + social link preview. Full detail in CHANGELOG.md /
+`git log`; the load-bearing shape:
+
+- **Activation location is now its OWN field `activationLocation`** (v2.146–2.147; rules leaf ≤60,
+  editable under "Activation & Connectivity"; in `AC_MOVE_AC` + the promote whitelist). ⚠️ This
+  **SUPERSEDES the v2.141.0 note below** — activation is NO LONGER `retrofitLocation`. Three distinct
+  location concepts now, never conflated: `retrofitLocation` = **install site** (may be abroad),
+  `completionLocation` = **middleware software-load station** (relabelled "Middleware Site"
+  everywhere — was misleadingly "Install Location" in the Software column), `activationLocation` =
+  **entered service**. `activationLocationOf(a)` (do NOT simplify to `|| 'Jeddah'`): explicit wins;
+  a retrofit falls back to its install site; a linefit falls back to Jeddah. The only abroad-install
+  retrofits, all overridden to Jeddah: **AS59, AQL, AS60, AS61, AS67**; linefits overridden: **ASBA,
+  ASBB**. See [[timeline]] and the location-semantics memory.
+- **AVR report fixes** (v2.145): Work-Carried-Out details wrap in the page (dropped `white-space:nowrap`
+  on the sub-line, `table.tbl td` got `overflow-wrap:anywhere`); Specifications laid out three-per-line
+  (IFC/IFE/Fit · Mod start/end/window · Install site/Activation); Activation uses `activationLocationOf`
+  + `activatedDate`. A **degraded** maintenance issue reads "Degraded N days" / "Degraded from", not
+  "Down" / "Inoperative".
+- **Favicon + social link preview** (v2.148–2.149). Tab icon = inlined **data URI** (`rel="icon"` +
+  `apple-touch-icon`, square 256×256 from `favicon_saudia.png`) — self-contained. ⚠️ **The social
+  preview `og:image` is the ONE deliberate external asset** — `assets/og/og-image.png` (branded
+  1200×630, Pillow-generated), referenced by ABSOLUTE URL because scrapers fetch it over the network
+  and cannot use a data URI; never inline or remove it. OG + Twitter tags in the head; NO canonical
+  `<link>` (an `https` `<link>` trips the no-external-assets grep — `og:url` carries the URL). Domain
+  shown in an unfurl is the URL's real host — only a custom domain changes it; the head comment above
+  the OG block lists the 3 absolute URLs to update on a domain move. See the favicon-and-og memory.
+- **Data written:** `activationLocation='Jeddah'` on AS59/AQL/AS60/AS61/AS67 (abroad retrofit) and
+  ASBA/ASBB (linefit). `completionLocation` Riyadh on 17 tails LEFT AS-IS (correct middleware data).
+
+**Prior — v2.138.1–v2.144.0 (2026-09-13).** MODMAN fully single-sourced, activation location
 fixed, and the Hardware page pushed toward being the one master. Full detail in CHANGELOG.md /
 `git log`; the load-bearing shape:
 
