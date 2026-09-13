@@ -7478,8 +7478,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.144.0';
-        const APP_BUILD    = '2026.09.13.09';
+        const APP_VERSION  = '2.145.0';
+        const APP_BUILD    = '2026.09.13.10';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -13214,22 +13214,29 @@
                 ['Engines', engines],
                 ['Fleet status', fleetStatusOf(a) || ''],
             ];
-            // Specifications — the box-and-airframe facts: which IFC/IFE system, how it is
-            // fitted, and the modification window (Mod start/end/window come straight from
-            // the Fleet retrofit fields). Serials and MODMAN live in their own tables under
-            // this same heading in the dossier.
+            // Specifications — the box-and-airframe facts, laid out three to a line:
+            //   line 1  IFC system · IFE system · Fit
+            //   line 2  Mod start · Mod end · Mod window   (straight from the Fleet retrofit fields)
+            //   line 3  Install site · Activation
+            // Activation is where the aircraft ENTERED SERVICE — the airframe/retrofit
+            // location (Jeddah) on its activatedDate, exactly as the Timeline's "Entered
+            // Service" event derives it. It must NOT use completionLocation: that records
+            // only where the one-off middleware software load happened (e.g. Riyadh) and
+            // does not belong to the airframe (user, 2026-09-13). Previous IFC trails the
+            // block so it never disturbs the three-per-line grouping above.
+            // Serials and MODMAN live in their own tables under this same heading.
             const hardwareRows = [
                 ['IFC system', system],
-                ['Previous IFC', spec.ifcPrevious || ''],
                 ['IFE system', ifeSystemOf(a)],
                 ['Fit', linefit ? 'Linefit' : (fitOf(a) === 'retrofit' ? 'Retrofit' : '')],
-                ['Install site', a.retrofitLocation || ''],
                 ['Mod start', a.retrofitStart || ''],
                 ['Mod end', a.retrofitEnd || (a.retrofitStart ? 'Ongoing' : '')],
                 ['Mod window', retro && retroSpan ? retroSpan : ''],
+                ['Install site', a.retrofitLocation || ''],
                 [linefit ? 'SBC config' : 'Activation', linefit
                     ? (a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
-                    : (a.completionLocation ? `${a.completionLocation}${a.completionDate ? ' · ' + a.completionDate : ''}` : '')],
+                    : [a.retrofitLocation, a.activatedDate].filter(Boolean).join(' · ')],
+                ['Previous IFC', spec.ifcPrevious || ''],
             ];
             // Software — the loadable, changeable state: middleware, OTA patches, media,
             // activation and the connectivity toggles.
@@ -13883,8 +13890,11 @@
                     if (a.outcome) bits.push('<i>Outcome: ' + escAttr(a.outcome) + '</i>');
                     if (bits.length) details += ' <span class="d-sub">· ' + bits.join(' · ') + '</span>';
                 } else if (x.sub) {
-                    // Keep the S/N on the same line as the title, and never break the value itself.
-                    details += ' <span class="d-sub" style="color:#6b7883; white-space:nowrap;">· ' + escAttr(x.sub) + '</span>';
+                    // The sub starts on the title's line, then wraps WITHIN the page: a short
+                    // S/N stays inline, but a long service description (e.g. a MODMAN-failure
+                    // note) must reflow, never run off the right edge. No nowrap here — the
+                    // td's overflow-wrap is the safety net for an unbreakable token.
+                    details += ' <span class="d-sub" style="color:#6b7883;">· ' + escAttr(x.sub) + '</span>';
                 }
                 return `<tr>
                     <td class="c-date">${escAttr(fmtDate(x.iso) || '')}</td>
@@ -14001,7 +14011,7 @@
   table.tbl { width:100%; border-collapse:collapse; font-size:12px; }
   table.tbl th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted);
     border-bottom:1.5px solid var(--line); padding:6px 8px; }
-  table.tbl td { border-bottom:1px solid #eef2f6; padding:6px 8px; vertical-align:top; }
+  table.tbl td { border-bottom:1px solid #eef2f6; padding:6px 8px; vertical-align:top; overflow-wrap:anywhere; }
   table.tbl td.c-date, table.tbl td.c-cat { white-space:nowrap; }
   table.tbl td .d-sub { color:#6b7883; }
   table.tbl tbody tr:nth-child(even) td { background:#fafbfc; }
@@ -14860,10 +14870,10 @@
                 <div class="issue-reason">${escAttr(i.reason || '')}</div>
                 ${i.detail ? `<div class="issue-detail">${escAttr(i.detail)}</div>` : ''}
                 <div class="issue-dates">
-                    ${i.informedDate ? `<span class="issue-date"><b>Inoperative from</b> ${escAttr(i.informedDate)}${i.customer ? ` · ${escAttr(i.customer)} informed` : ''}</span>` : ''}
+                    ${i.informedDate ? `<span class="issue-date"><b>${i.impact === 'degraded' ? 'Degraded from' : 'Inoperative from'}</b> ${escAttr(i.informedDate)}${i.customer ? ` · ${escAttr(i.customer)} informed` : ''}</span>` : ''}
                     ${i.discoveredDate ? `<span class="issue-date">Discovered ${escAttr(i.discoveredDate)}</span>` : ''}
                     ${i.resolvedDate ? `<span class="issue-date"><b>Restored</b> ${escAttr(i.resolvedDate)}</span>` : ''}
-                    ${days ? `<span class="issue-days">${open ? 'Down' : 'Was down'} ${escAttr(days)}</span>` : ''}
+                    ${days ? `<span class="issue-days">${i.impact === 'degraded' ? (open ? 'Degraded' : 'Was degraded') : (open ? 'Down' : 'Was down')} ${escAttr(days)}</span>` : ''}
                 </div>
                 ${(originChip || resChip) ? `<div class="issue-links">${originChip} ${resChip}</div>` : ''}
                 ${i.resolutionNote ? `<div class="issue-detail">Resolution: ${escAttr(i.resolutionNote)}</div>` : ''}

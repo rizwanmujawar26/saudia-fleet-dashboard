@@ -13,6 +13,24 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.145.0 — AVR report: activation ≠ Riyadh, Specifications 3-per-line, wrapped notes; degraded ≠ down
+User-directed (2026-09-13). Four fixes to the printed AVR and the maintenance issue card.
+
+- **Work Carried Out wraps in the page.** The Details sub-line no longer carries
+  `white-space:nowrap` (it only ever suited a short S/N); a long service note — the
+  MODMAN-failure text — was running off the right edge. Removed it and gave `table.tbl td`
+  `overflow-wrap:anywhere` as the safety net for an unbreakable token.
+- **Specifications reflowed three-to-a-line:** IFC / IFE / Fit · Mod start / Mod end /
+  Mod window · Install site / Activation. Previous IFC trails the block so it never disturbs
+  the grouping when present.
+- **Activation no longer shows Riyadh.** The row derived from `completionLocation` +
+  `completionDate` — but `completionLocation` records only the one-off middleware software-load
+  station (Riyadh), not the airframe. Now it derives from `retrofitLocation` + `activatedDate`
+  (Jeddah · date), agreeing with the Timeline "Entered Service" event. `completionLocation`
+  data is untouched (still correct for the Software "Completion" cell and the middleware event).
+- **Degraded ≠ down.** A degraded service issue now reads "Degraded N days" / "Degraded from"
+  instead of "Down N days" / "Inoperative from" — degraded is intermittent, not a full outage.
+
 ### v2.144.0 — Hardware: full-edit rows, SIM master (roaming+spares), MODMAN shop queue, sub-menu
 User-directed (2026-09-13). Four fixes toward the Hardware page being the single master.
 
