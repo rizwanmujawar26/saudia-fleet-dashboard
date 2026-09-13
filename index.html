@@ -7443,8 +7443,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.140.0';
-        const APP_BUILD    = '2026.09.13.05';
+        const APP_VERSION  = '2.141.0';
+        const APP_BUILD    = '2026.09.13.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -19300,8 +19300,15 @@
                 // corrected on the Fleet or Activity tab corrects the Timeline with it.
                 const actIso = toISODate(a.activatedDate);
                 if (actIso) {
+                    // Entered-service location is where the aircraft was worked on and
+                    // returned to service — the retrofit/install location — NOT
+                    // completionLocation. completionLocation records ONLY where the one-off
+                    // middleware 2.1.0 software load happened (e.g. Riyadh); that belongs on
+                    // the Software event above and must not attach to the airframe itself
+                    // (user, 2026-09-13). This is the same field the modification MOD
+                    // START/END rows already use, so activation now agrees with them.
                     out.push({ iso: actIso, kind: 'activation', tail: a.id, type: a.type,
-                               location: aircraftLocationOf(a),
+                               location: a.retrofitLocation || '',
                                title: 'Entered Service', sub: '' });
                 }
 
