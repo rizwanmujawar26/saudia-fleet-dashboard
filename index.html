@@ -7256,6 +7256,31 @@
         function aircraftFitment(a) {
             const out = [];
             lrusForFit(fitOf(a)).forEach(lru => {
+                // MODMAN's single source is /modmans (the Satcom register), NOT /units — so
+                // every consumer of aircraftFitment (the Maintenance dossier's Installed
+                // Equipment, the report, the baseline serials tool) reads the same node the
+                // Hardware page does, never the retired /units copy. Current box first; the
+                // boxes it replaced feed removedUnits. Any serial present locks the baseline
+                // row read-only, so this can never re-create a /units MODMAN.
+                if (lru.id === 'modman' || lru.id === 'lf_modman') {
+                    const boxes = satcomRows().filter(r => r.aircraft === a.id);
+                    const cur = boxes.find(r => r.status !== 'removed');
+                    const off = boxes.filter(r => r.status === 'removed');
+                    const snOf = r => (r ? (r.isAstronics ? r.astronicsSn : r.kontronSn) : '') || '';
+                    out.push({
+                        lru, position: '', qty: 1,
+                        serial: snOf(cur),
+                        date: cur ? (cur.installDate || '') : '',
+                        vacant: !cur && boxes.length > 0,
+                        removals: off.length,
+                        changes: boxes.length,
+                        daysOnWing: null,
+                        removedUnits: off
+                            .map(r => ({ serial: snOf(r), removed: r.removalDate || '', fitted: r.installDate || '' }))
+                            .sort((p, q) => dateSortKey(toISODate(q.removed)).localeCompare(dateSortKey(toISODate(p.removed)))),
+                    });
+                    return;
+                }
                 const qty = lruQtyFor(lru, a.type);
                 if (qty <= 0) return;
                 const positions = lruIsMulti(lru)
@@ -7443,8 +7468,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.142.0';
-        const APP_BUILD    = '2026.09.13.07';
+        const APP_VERSION  = '2.143.0';
+        const APP_BUILD    = '2026.09.13.08';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
