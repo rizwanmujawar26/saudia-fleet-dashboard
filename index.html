@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Saudia Connectivity Fleet Status</title>
     <meta name="description" content="Live status of Saudia's wireless IFEC fleet — software loading, monthly media, the Satcom/MODMAN register and the fleet roster.">
-    <!-- Open Graph / social link preview -->
+    <!-- Open Graph / social link preview.
+         The domain shown under the title in an unfurl is the URL's real HOST — no tag can
+         change it; only serving the site from a custom domain does. To move domains:
+           1) GitHub → repo Settings → Pages → Custom domain (writes a CNAME file), then set DNS.
+           2) Find/replace the base URL below in the 3 absolute URLs: og:url, og:image, twitter:image.
+         These MUST stay absolute (scrapers fetch them over the network; a data URI or relative
+         path will not preview). og:site_name is the friendly label some platforms show. -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Saudia Connectivity Fleet Status">
     <meta property="og:title" content="Saudia Connectivity Fleet Status">
@@ -7496,8 +7502,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.149.0';
-        const APP_BUILD    = '2026.09.13.15';
+        const APP_VERSION  = '2.149.1';
+        const APP_BUILD    = '2026.09.13.16';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
