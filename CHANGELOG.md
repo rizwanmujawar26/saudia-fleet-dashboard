@@ -13,6 +13,52 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.144.0 — Hardware: full-edit rows, SIM master (roaming+spares), MODMAN shop queue, sub-menu
+User-directed (2026-09-13). Four fixes toward the Hardware page being the single master.
+
+- **Sub-menu** is now a row of INDIVIDUAL pill buttons that scroll in one row on a narrow
+  phone (was a fused segmented bar). Count badges are house green + white, not red — red is
+  for critical states only. ⚠️ Bug fixed: the container rules must be `.avr-viewtoggle.hw-viewtoggle`
+  (two classes); the base `.avr-viewtoggle` is declared LATER in the sheet, so at equal
+  specificity it won and its `overflow:hidden` clipped the scroll.
+- **Full-edit blank rows**: every equipment blank row exposes ALL columns as editable boxes —
+  serial, Eclipse alt, roaming (SIM), Fitted, Removed — via one unified creator `hwCreateFromRow`
+  (replaced `hwCreateUnitFromField` + `hwCreateDualFromField`). Type a whole record at once.
+- **SIM view** gains a Roaming column (edited inline to the SAME `/units` path the 4G SIM tab
+  writes — `fitment.roaming`, or `unit.roaming` for a spare) and shows SPARE cards (SIMs with no
+  tail on any fitment). Hardware can be the SIM master with no data lost when 4G SIM retires.
+- **MODMAN** section gains the Removed / Shop Queue card list (from `/modmans` removed boxes) with
+  an editable Reason for removal via `saveModmanField`. New `/modmans` `removalReason` field.
+
+### v2.143.0 — Retire /units MODMAN: /modmans is the sole source
+User-directed. `aircraftFitment()` now sources MODMAN from `/modmans` (so the Maintenance dossier,
+report and baseline tool read it too); deleted all 43 `/units` MODMAN records (42 modman + 1
+lf_modman), each verified to have a `/modmans` equivalent. `/units` 127→84.
+
+### v2.142.0 — Hardware By-Aircraft: MODMAN reads /modmans
+The By-Aircraft view was the last place reading the stale `/units` MODMAN copy; now `/modmans`,
+editable inline via `saveModmanField`, with swap history. Self-corrected stale tails (e.g. ASC).
+
+### v2.141.0 — Activation location = retrofit site, not the software-load station
+Activation "Entered Service" now derives location from `retrofitLocation`, not `completionLocation`.
+completionLocation records only where the one-off middleware 2.1.0 load happened (e.g. Riyadh) and
+belongs on the Software event, not the airframe. 17 tails retrofitted in Jeddah were showing RUH.
+
+### v2.140.0 — Hardware By-Aircraft: removed units shown alongside on-wing
+Each slot shows its whole history — current box first, then removed boxes (muted "↳ label" rows).
+
+### v2.139.0 — Hardware: editable Reason for Removal + Eclipse S/N on blank rows
+Inline Reason-for-removal editor on the Removed / Shop Queue cards (`hwReasonField` +
+`saveRemovalReason`). Dual blank rows get an Eclipse "type to add" (unified into `hwCreateFromRow`
+in v2.144.0). Add SERVER modal accepts an Eclipse-only entry.
+
+### v2.138.1–2.138.3 — Permission-denied fix + modals stop closing on backdrop click
+- **2.138.1** ⚠️ Add-equipment "Permission denied" was a millisecond stamp: `addedAt`/`loggedAt`
+  used bare `toISOString()` (…SS.mmmZ) but the rules require `…SSZ`. Every other write already
+  strips millis with `.replace(/\.\d{3}Z$/, 'Z')`; these two flows had missed it.
+- **2.138.2 / 2.138.3** — the Add-Activity modal, then EVERY modal, no longer close on a stray
+  backdrop click (only Cancel/Save/Close). The small assign-menu popovers keep click-away.
+
 ### v2.138.0 — Hardware: Add-equipment flow, Days in By-Aircraft, Reset button
 User-directed (2026-09-12). Additive.
 

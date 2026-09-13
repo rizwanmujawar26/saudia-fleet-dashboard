@@ -6,7 +6,42 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.134.0–v2.138.0 (2026-09-12).** A run of user-directed reshaping; full detail
+**Latest — v2.138.1–v2.144.0 (2026-09-13).** MODMAN fully single-sourced, activation location
+fixed, and the Hardware page pushed toward being the one master. Full detail in CHANGELOG.md /
+`git log`; the load-bearing shape:
+
+- **MODMAN is now `/modmans`-only, everywhere** (v2.142.0–2.143.0). The stale `/units` MODMAN copy
+  (42 tails, mostly no dates, ASC's serial wrong, no swap history) is **DELETED** — `/units` 127→84,
+  no `lruId 'modman'/'lf_modman'` records remain. `aircraftFitment()` now branches modman → `satcomRows()`,
+  so the Hardware By-Aircraft view, the Maintenance dossier, the report and the baseline tool all read
+  `/modmans`; the MODMAN sub-tab and Satcom already did. ⚠️ This SUPERSEDES the v2.134–2.138 note below
+  calling MODMAN a "dual-source special case" — it is single-source now. `/modmans` gained a `removalReason`
+  field (rules) for the MODMAN Removed/Shop-Queue reason editor.
+- **Hardware page enhancements** (v2.139–2.144): inline **Reason-for-removal** editor on Removed/Shop-Queue
+  cards (`hwReasonField`+`saveRemovalReason`; MODMAN via `saveModmanField`); **By-Aircraft shows removed +
+  on-wing** per slot (whole history); **blank rows are full-edit** — serial, alt, roaming, Fitted, Removed —
+  through ONE creator **`hwCreateFromRow`** (⚠️ replaced `hwCreateUnitFromField` + `hwCreateDualFromField`,
+  now gone); **SIM view gains a Roaming column + SPARE cards** (`saveHwRoaming` writes the same `fitment.roaming`
+  / `unit.roaming` path the 4G SIM tab commits, so no divergence — the Hardware SIM view is now the master).
+- **Activation location = `retrofitLocation`, not `completionLocation`** (v2.141.0). completionLocation only
+  records the one-off middleware 2.1.0 software-load station (e.g. Riyadh) and belongs on the Software event,
+  not the airframe; 17 Jeddah-retrofit tails were wrongly showing RUH on activation. The seed `station` field
+  is dead (unread). See [[timeline]] "Activation is a milestone".
+- **Every modal stopped closing on a backdrop click** (v2.138.2–.3) — only Cancel/Save/Close (Escape kept on
+  System Info); the small assign-menu popovers keep click-away.
+- **Equipment sub-menu** is individual scrollable pill buttons with green/white badges (not red), fixed for
+  narrow/mobile. ⚠️ Container rules need TWO classes `.avr-viewtoggle.hw-viewtoggle` to beat the later-declared
+  base `.avr-viewtoggle`.
+- ⚠️ **Two lessons that cost real time:** (1) a bare `new Date().toISOString()` stamp fails the rules regex
+  (millis) → silent "Permission denied"; always `.replace(/\.\d{3}Z$/, 'Z')` for `addedAt`/`loggedAt`.
+  (2) A GitHub Pages Actions "pages build and deployment" job stuck in **queued** ~40min (Pages-side, no code
+  error) — cleared by `gh run cancel <id>` + an empty commit to re-trigger; a fresh run picked up in seconds.
+- **Data fixes:** ASL had a duplicate hand-logged "IFE Server Installation" activity (deleted) and its MODMAN
+  install date corrected 24→21-May (`activities` 25→24).
+- **Open (user):** the 4G SIM + Satcom tabs still exist — SIM's spares/roaming now show in Hardware, so the
+  4G SIM tab can retire when ready; Satcom likewise (MODMAN fully managed from Hardware).
+
+**Prior — v2.134.0–v2.138.0 (2026-09-12).** A run of user-directed reshaping; full detail
 in CHANGELOG.md and `git log`, the load-bearing shape below.
 
 - **Hardware is now the single equipment/serial register — the Serials tab is GONE**
