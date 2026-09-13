@@ -7443,8 +7443,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.141.0';
-        const APP_BUILD    = '2026.09.13.06';
+        const APP_VERSION  = '2.142.0';
+        const APP_BUILD    = '2026.09.13.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -17147,6 +17147,52 @@
                 const rows = [];
                 let recorded = 0, hay = a.id.toLowerCase();
                 HW_GROUPS.forEach(group => {
+                    // MODMAN's single source is /modmans (the Satcom register) — the SAME
+                    // rows the MODMAN sub-tab and the Satcom tab read, editable here via
+                    // saveModmanField. The Hardware page thus manages MODMAN from one place
+                    // and one node, not a stale /units copy. (Active box first, then any it
+                    // replaced.) Every other group still reads /units below.
+                    if (group.id === 'modman') {
+                        const rankMm = { active: 0, fault: 1, spare: 2, removed: 3 };
+                        const mmRows = satcomRows().filter(r => r.aircraft === a.id)
+                            .sort((x, y) => (rankMm[x.status] - rankMm[y.status])
+                                || dateSortKey(toISODate(y.installDate)).localeCompare(dateSortKey(toISODate(x.installDate))));
+                        if (!mmRows.length) {
+                            rows.push(`<tr>
+                                <td>MODMAN</td>
+                                <td>${editable ? `<button class="qf-btn" style="padding:2px 8px;" onclick="openAddModman()">＋ Add MODMAN</button>` : hwSerialSpan('')}</td>
+                                <td><span class="hw-none">—</span></td><td><span class="hw-none">—</span></td>
+                                <td>${hwStatusBadge(null)}</td><td class="sr-days"><span class="hw-none">—</span></td>
+                            </tr>`);
+                            return;
+                        }
+                        mmRows.forEach((r, idx) => {
+                            if (r.status !== 'removed') recorded++;
+                            hay += ' ' + String(r.kontronSn || '').toLowerCase() + ' ' + String(r.eclipseSn || '').toLowerCase() + ' ' + String(r.astronicsSn || '').toLowerCase();
+                            const off = r.status === 'removed';
+                            const label = idx === 0 ? 'MODMAN' : `<span class="hw-hist-cont">↳ MODMAN</span>`;
+                            const primaryFld = r.isAstronics ? 'astronicsSn' : 'kontronSn';
+                            const primaryVal = r.isAstronics ? (r.astronicsSn || '') : (r.kontronSn || '');
+                            const eclipseVal = r.isAstronics ? '' : eclipseSnDisplay(r.eclipseSn || '');
+                            const note = r.isAstronics ? ' <span class="hw-slot-label">Astronics</span>' : '';
+                            const serialCell = editable
+                                ? `<input class="hw-sn-input" maxlength="60" autocomplete="off" value="${escAttr(primaryVal)}" placeholder="${r.isAstronics ? 'Astronics S/N' : 'Kontron S/N'}" data-mm="${escAttr(r.id)}" data-field="${primaryFld}" onchange="saveModmanField(this)">${note}${r.isAstronics ? '' : ` <input class="hw-sn-input hw-sn-alt" maxlength="60" autocomplete="off" value="${escAttr(r.eclipseSn || '')}" placeholder="Eclipse S/N" data-mm="${escAttr(r.id)}" data-field="eclipseSn" onchange="saveModmanField(this)">`}`
+                                : `<span class="hw-serial">${escAttr(primaryVal || '—')}</span>${note}${eclipseVal ? ` <span class="hw-alt-inline">${escAttr(eclipseVal)}</span>` : ''}`;
+                            const dateInput = fld => editable
+                                ? `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="hw-date-input" value="${escAttr(toDMY(r[fld] || ''))}" data-mm="${escAttr(r.id)}" data-field="${fld}" onchange="saveModmanField(this)">`
+                                : (r[fld] ? escAttr(r[fld]) : '<span class="hw-none">—</span>');
+                            const days = dateSpan(r.installDate, r.removalDate || '');
+                            rows.push(`<tr class="${off ? 'hw-row-off' : ''}${idx ? ' hw-hist-row' : ''}">
+                                <td>${label}</td>
+                                <td>${serialCell}</td>
+                                <td>${dateInput('installDate')}</td>
+                                <td>${dateInput('removalDate')}</td>
+                                <td><span class="sr-state ${off ? 'off' : 'on'}">${off ? 'REMOVED' : 'ON WING'}</span></td>
+                                <td class="sr-days">${days ? escAttr(days) : '<span class="hw-none">—</span>'}</td>
+                            </tr>`);
+                        });
+                        return;
+                    }
                     groupBases(group).forEach(base => {
                         const lruId = lruIdForFit(base, fit); if (!lruId) return;
                         const lru = lruById(lruId);
