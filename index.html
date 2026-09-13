@@ -7478,8 +7478,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.146.0';
-        const APP_BUILD    = '2026.09.13.11';
+        const APP_VERSION  = '2.147.0';
+        const APP_BUILD    = '2026.09.13.12';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -19433,14 +19433,20 @@
             return '';
         }
 
-        // Where the aircraft ENTERED SERVICE — its own fact, independent of BOTH the
-        // install site (retrofitLocation, which may be abroad: Qatar, Toulouse, Malta…)
-        // and the middleware software-load station (completionLocation, e.g. Riyadh).
-        // The fleet re-enters service at its Jeddah base, so Jeddah is the default until
-        // a tail records a different activationLocation. Never derive this from the two
-        // fields above — that conflation is exactly what this field exists to end.
+        // Where the aircraft ENTERED SERVICE — its own fact, never the middleware
+        // software-load station (completionLocation, e.g. Riyadh).
+        //   • explicit activationLocation always wins.
+        //   • a RETROFIT enters service where it was installed, so install site
+        //     (retrofitLocation) == activation for every Jeddah retrofit. The five
+        //     abroad-install retrofits (AS59 Jordan, AQL/AS60 Malta, AS61/AS67 Qatar)
+        //     are the exceptions and each carries an explicit Jeddah override.
+        //   • a LINEFIT's install site is the delivery factory (Toulouse/Hamburg), which
+        //     is never its activation, so it falls back to the Jeddah base until a tail
+        //     records otherwise.
         function activationLocationOf(a) {
-            return a.activationLocation || 'Jeddah';
+            if (a.activationLocation) return a.activationLocation;
+            if (isLinefit(a)) return 'Jeddah';
+            return a.retrofitLocation || 'Jeddah';
         }
 
         // The one place the three sources are folded into a single shape.

@@ -13,6 +13,18 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.147.0 — Activation-location default is retrofit-aware; exceptions set
+User-directed (2026-09-13). Encodes the rule "all other retrofits have the same install
+site and activation" and records the exceptions.
+
+- `activationLocationOf()` default is now retrofit-aware: explicit `activationLocation` wins;
+  a **retrofit** falls back to its install site (`retrofitLocation`) — install == activation for
+  every Jeddah retrofit; a **linefit** falls back to the Jeddah base (its install site is the
+  delivery factory, never its activation).
+- **Retrofit exceptions set to Jeddah** (abroad install, activated at base): AS59 (Jordan),
+  AQL + AS60 (Malta), AS61 + AS67 (Qatar). These are the only abroad-install retrofits.
+- **Linefits set to Jeddah:** ASBA, ASBB (Toulouse).
+
 ### v2.146.0 — Activation location is its own field; middleware site relabelled
 User-directed (2026-09-13). Three concepts were sharing two fields; this separates them.
 
