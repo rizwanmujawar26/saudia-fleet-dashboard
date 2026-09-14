@@ -7516,8 +7516,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.151.2';
-        const APP_BUILD    = '2026.09.14.04';
+        const APP_VERSION  = '2.151.3';
+        const APP_BUILD    = '2026.09.14.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14081,22 +14081,33 @@
             // The identity band — made prominent (v2.133.2): the full HZ- registration leads,
             // with dates and location, each as a large value under a small caps label.
             const metaGrid = `<div class="rpt-meta">
-                <div class="rpt-meta-cell"><span class="mk">Aircraft</span><span class="mv mv-lead">HZ-${escAttr(v.aircraft)}</span>${type ? `<span class="ms">${escAttr(type)}</span>` : ''}</div>
+                <div class="rpt-meta-cell"><span class="mk">Aircraft</span><span class="mv mv-lead">HZ-${escAttr(v.aircraft)}${type ? ` <span class="ms-inline">${escAttr(type)}</span>` : ''}</span></div>
                 <div class="rpt-meta-cell"><span class="mk">Dates</span><span class="mv">${escAttr(avrDateLabel(v))}</span></div>
                 <div class="rpt-meta-cell"><span class="mk">Location</span><span class="mv">${escAttr(avrLocationFull(v) || '—')}</span></div>
             </div>`;
 
-            // Engagement + People in one block. Names render in two clearly separate
-            // columns (On aircraft / Remote); the label sits above its list, not inline.
-            const nameLine = p => `<span class="pname">${escAttr(p.name || '—')}</span>${[p.company, p.role].filter(Boolean).map(escAttr).map(s => ` <span class="muted">· ${s}</span>`).join('')}`;
-            const pCol = (label, mode) => {
+            // Engagement + People in one enclosed box (v2.151.3) — the same soft/bordered
+            // shell as the identity band, so it reads as a designed panel rather than a
+            // loose stack of labels. Engagement mode is the header strip; the attendees sit
+            // below as person cards, grouped On aircraft / Remote. Only non-empty groups
+            // render, and a lone group spans the full width (no half-empty column).
+            const epGroup = (label, mode) => {
                 const list = people.filter(p => attMode(p.mode).value === mode);
                 if (!list.length) return '';
-                return `<div class="pcol"><div class="grp-label">${label}</div>${list.map(p => `<div class="prow">${nameLine(p)}</div>`).join('')}</div>`;
+                const chips = list.map(p => {
+                    const meta = [p.company, p.role].filter(Boolean).map(escAttr).join(' · ');
+                    return `<div class="ep-chip"><span class="ep-name">${escAttr(p.name || '—')}</span>${meta ? `<span class="ep-meta">${meta}</span>` : ''}</div>`;
+                }).join('');
+                return `<div class="ep-group"><div class="ep-group-head">${escAttr(label)} · ${list.length}</div><div class="ep-chips">${chips}</div></div>`;
             };
+            const epGroups = [epGroup('On aircraft', 'present'), epGroup('Remote', 'remote')].filter(Boolean);
             const engagementPeople = `<div class="sec">Engagement &amp; People</div>
-                <div class="rpt-grid"><div><span class="k">Engagement mode</span> ${escAttr(avrMode(v.mode).label)}</div></div>
-                ${people.length ? `<div class="people">${pCol('On aircraft', 'present')}${pCol('Remote', 'remote')}</div>` : '<div class="muted" style="font-size:12.5px;">No attendees recorded.</div>'}`;
+                <div class="ep-box">
+                    <div class="ep-mode"><span class="ep-mode-label">Engagement mode</span><span class="ep-mode-val">${escAttr(avrMode(v.mode).label)}</span></div>
+                    ${epGroups.length
+                        ? `<div class="ep-people ep-cols-${epGroups.length}">${epGroups.join('')}</div>`
+                        : '<div class="ep-empty">No attendees recorded.</div>'}
+                </div>`;
 
             const doc = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14136,7 +14147,9 @@
   .rpt-meta .mk { display:block; font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
   .rpt-meta .mv { display:block; font-size:15px; font-weight:700; color:var(--navy); }
   .rpt-meta .mv-lead { font-size:18px; font-weight:800; letter-spacing:.3px; }
-  .rpt-meta .ms { display:block; font-size:11px; color:var(--muted); margin-top:1px; }
+  /* Aircraft type rides inline beside the registration so the identity band is one
+     line shorter (it set the tallest cell and therefore the band's height). */
+  .rpt-meta .ms-inline { font-size:12px; font-weight:600; letter-spacing:0; color:var(--muted); margin-left:6px; }
   .muted { color:var(--muted); }
   .sec { font-size:12px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--navy);
     margin:20px 0 8px; padding-bottom:4px; border-bottom:1px solid var(--line); }
@@ -14149,12 +14162,22 @@
   table.tbl td.c-date, table.tbl td.c-cat { white-space:nowrap; }
   table.tbl td .d-sub { color:#6b7883; }
   table.tbl tbody tr:nth-child(even) td { background:#fafbfc; }
-  .people { display:grid; grid-template-columns:1fr 1fr; gap:12px 26px; margin-top:6px; font-size:12.5px; }
-  .people .pcol { min-width:0; }
-  .people .grp-label { display:block; font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
-    color:var(--muted); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--line); }
-  .people .prow { padding:1px 0; }
-  .people .pname { font-weight:700; color:var(--ink); }
+  /* Engagement & People — an enclosed panel (matches the identity band's shell). */
+  .ep-box { background:var(--soft); border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:12px 0 4px; }
+  .ep-mode { display:flex; align-items:baseline; gap:10px; padding:9px 16px; background:#fff; border-bottom:1px solid var(--line); }
+  .ep-mode-label { font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); }
+  .ep-mode-val { font-size:14px; font-weight:800; color:var(--navy); }
+  .ep-people { display:grid; gap:0; }
+  .ep-cols-1 { grid-template-columns:1fr; }
+  .ep-cols-2 { grid-template-columns:1fr 1fr; }
+  .ep-group { padding:11px 16px; border-left:1px solid var(--line); min-width:0; }
+  .ep-group:first-child { border-left:none; }
+  .ep-group-head { font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
+  .ep-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .ep-chip { background:#fff; border:1px solid var(--line); border-radius:6px; padding:5px 10px; min-width:0; }
+  .ep-name { display:block; font-weight:800; color:var(--ink); font-size:12.5px; }
+  .ep-meta { display:block; font-size:10.5px; color:var(--muted); margin-top:1px; }
+  .ep-empty { padding:11px 16px; color:var(--muted); font-size:12.5px; }
   .rpt-footer { display:flex; justify-content:space-between; gap:12px; color:var(--muted); font-size:10.5px;
     border-top:1px solid var(--line); margin-top:22px; padding-top:10px; }
   /* The repeating margin bars exist only for print; keep them out of the on-screen view. */
