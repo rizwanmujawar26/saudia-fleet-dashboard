@@ -7559,8 +7559,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.157.0';
-        const APP_BUILD    = '2026.09.15.03';
+        const APP_VERSION  = '2.158.0';
+        const APP_BUILD    = '2026.09.15.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -7805,6 +7805,7 @@
                 if (!fleetEditMode) populateFleetTable();  // Aircraft Age column reads /fleetSpecs
                 updateMetrics();           // the Timeline reads activities and loads
                 startLowTrafficPoll();
+                openAvrFromHash();         // a #avr=<id> deep link opens that report now data is in
             });
         }
 
@@ -13566,7 +13567,7 @@
                 ${headActions}
             </div>`;
 
-            if (!open) return `<div class="avr-card ${status === 'draft' ? 'is-draft' : ''}">${head}</div>`;
+            if (!open) return `<div class="avr-card ${status === 'draft' ? 'is-draft' : ''}" id="avrCard-${escAttr(v.id)}">${head}</div>`;
 
             const cell = ([k, val]) => `<div class="avr-meta-cell"><div class="avr-meta-key">${escAttr(k)}</div><div class="avr-meta-val">${escAttr(val) || '—'}</div></div>`;
             // The modification window (Mod start/end) is not duplicated here — it lives in the
@@ -13625,13 +13626,33 @@
                 </details>
             </div>`;
 
-            return `<div class="avr-card is-open ${status === 'draft' ? 'is-draft' : ''}">${head}${body}</div>`;
+            return `<div class="avr-card is-open ${status === 'draft' ? 'is-draft' : ''}" id="avrCard-${escAttr(v.id)}">${head}${body}</div>`;
         }
 
         function avrToggle(id) {
             if (avrExpanded.has(id)) avrExpanded.delete(id); else avrExpanded.add(id);
             renderAvrFeed();
         }
+
+        // Deep link: a printed report's linked AVR references point back at the live app as
+        // #avr=<id>. Opening such a URL lands on the Reports feed with that report expanded
+        // and scrolled into view. Called after data first loads and on every hashchange; a
+        // no-op until avrLive holds the id (so it survives being called before the fetch).
+        function openAvrFromHash() {
+            const m = (location.hash || '').match(/^#avr=(.+)$/);
+            if (!m) return;
+            const id = decodeURIComponent(m[1]);
+            if (!avrLive[id]) return;                    // not loaded yet — retried after fetch
+            switchTab('maintenance');
+            if (typeof setAvrView === 'function') setAvrView('visits');
+            avrExpanded.add(id);
+            renderMaintenancePage();
+            setTimeout(() => {
+                const el = document.getElementById('avrCard-' + id);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 150);
+        }
+        window.addEventListener('hashchange', openAvrFromHash);
 
         // ===== Editor-only extras: unassigned activities + Operational History =====
         // The standalone Operational-History panel was removed (user, 2026-09-10): every
@@ -14089,7 +14110,29 @@
             const type = avrTypeOf(v.aircraft);
             const rt = avrReportType(v);
             const kindLabel = k => ({ software: 'Software', media: 'Media', hardware: 'Hardware', commission: 'Commissioning', maintenance: 'Maintenance', modification: 'Modification', operational: 'Operational', service: 'Service', activation: 'Activation', visit: 'Visit' }[k] || k);
+            // A deep link back into the live dashboard, opening a given AVR in a new tab.
+            // Built from the page the report was generated on, so it is correct on GitHub
+            // Pages and locally alike; the app's #avr=<id> handler opens that report.
+            const appBase = location.origin + location.pathname;
+            const avrDeepLink = avrId => `${appBase}#avr=${encodeURIComponent(avrId)}`;
             const actRows = members.length ? members.map(x => {
+                // A VISIT row (another Aircraft Visit Report for this tail) reads differently
+                // (user, 2026-09-15): line 1 is the mode + the AVR reference — the reference a
+                // LINK that opens that report in a new tab — and line 2 is that report's own
+                // summary text, so each linked visit says what was done, not just its number.
+                if (x.kind === 'visit' && x.avrId) {
+                    const av = avrLive[x.avrId] || {};
+                    const ref = av.ref || 'Report';
+                    const modeLabel = avrMode(av.mode).label;
+                    const link = avrDeepLink(x.avrId);
+                    let details = `<div class="d-title">${escAttr(modeLabel)} · <a href="${escAttr(link)}" target="_blank" rel="noopener" style="color:#0a5c34; font-weight:700; text-decoration:underline;">${escAttr(ref)}</a></div>`;
+                    if (av.summary) details += `<div class="d-sub" style="color:#6b7883;">${escAttr(av.summary)}</div>`;
+                    return `<tr>
+                        <td class="c-date">${escAttr(fmtDate(x.iso) || '')}</td>
+                        <td class="c-cat">${escAttr(kindLabel(x.kind))}</td>
+                        <td>${details}</td>
+                    </tr>`;
+                }
                 // TEMPLATE RULE (user, 2026-09-14): the bold title is its OWN first line, and
                 // every descriptor after it drops to a second line (the description of the
                 // event), never crammed onto the title's line.
