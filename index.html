@@ -7516,8 +7516,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.151.1';
-        const APP_BUILD    = '2026.09.14.03';
+        const APP_VERSION  = '2.151.2';
+        const APP_BUILD    = '2026.09.14.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -13203,7 +13203,11 @@
             issueEntries().forEach(i => {
                 const isOrigin = i.originVisitId === v.id;
                 const isFix = i.resolutionVisitId === v.id;
-                if ((!isOrigin && !isFix) || haveIssue.has(i.id)) return;
+                // A linked issue must belong to THIS report's aircraft. Guards against a
+                // cross-tail link and — critically — against v.id being undefined (a raw
+                // avrLive record with no .id), which would otherwise make `undefined ===
+                // (absent resolutionVisitId)` true and pull EVERY unresolved issue in.
+                if ((!isOrigin && !isFix) || haveIssue.has(i.id) || i.tail !== v.aircraft) return;
                 // Report/PDF uses the spelled-out service name (issFull), not the abbreviation.
                 const svcTxt = `${issFull(ISSUE_SERVICES, i.service)} ${issLabel(ISSUE_IMPACTS, i.impact)}`.trim();
                 const iso = toISODate(isFix && !isOrigin ? (i.resolvedDate || v.dateStart) : (i.discoveredDate || i.informedDate || v.dateStart)) || startIso;
@@ -13211,6 +13215,28 @@
                             title: isFix && !isOrigin ? `Service restored — ${i.reason || svcTxt}` : `${svcTxt || 'Service issue'} — ${i.reason || ''}`.replace(/ — $/, ''),
                             sub: i.detail || '' });
                 haveIssue.add(i.id);
+            });
+
+            // Normalise every issue-derived row so it reads FULLY. The Timeline sources
+            // give an issue only a short one-line reason; a report whose only content is a
+            // Maintenance Issue (no logged activities) would otherwise be a bare headline.
+            // The fault row carries the issue's full DETAIL; the restored row leads with
+            // the RESOLUTION note and the days-down span. (user, 2026-09-14: the ASL W-IFE
+            // report showed only "W-IFE Inoperative", dropping the detail and the fix.)
+            const issueById = {};
+            issueEntries().forEach(i => { issueById[i.id] = i; });
+            base.forEach(m => {
+                const i = m.issueId && issueById[m.issueId];
+                if (!i) return;
+                const svcTxt = `${issFull(ISSUE_SERVICES, i.service)} ${issLabel(ISSUE_IMPACTS, i.impact)}`.trim();
+                if (m.svcRestored || /^Service restored/.test(m.title || '')) {
+                    const span = dateSpan(i.informedDate, i.resolvedDate);
+                    m.title = `Service restored — ${i.reason || svcTxt}`;
+                    m.sub = [i.resolutionNote && `Fixed: ${i.resolutionNote}`, span].filter(Boolean).join(' · ');
+                } else {
+                    m.title = `${svcTxt || 'Service issue'}${i.reason ? ` — ${i.reason}` : ''}`.trim();
+                    m.sub = i.detail || '';
+                }
             });
 
             return base.sort((a, b) => a.iso.localeCompare(b.iso) || a.kind.localeCompare(b.kind) || String(a.title).localeCompare(String(b.title)));
