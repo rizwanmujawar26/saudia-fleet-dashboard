@@ -6262,9 +6262,10 @@
                 <!-- Shown only while editing. Serials are one physical box each in
                      /units; changing a fitted one is a swap, not a text correction. -->
                 <div class="act-serial-note" id="addActSerialNote" style="display:none;">
-                    Serials are shown here for reference but are corrected on the
-                    <b>Serials</b> tab — they belong to the unit register, and changing
-                    a fitted one is a swap rather than a text edit.
+                    These serials come from the <b>unit register</b>. Editing one here
+                    renames that box; typing one the activity was missing adds it. To
+                    remove a box, use the <b>Hardware</b> tab — clearing a field here
+                    leaves the box in place.
                 </div>
             </div>
 
@@ -7549,8 +7550,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.155.0';
-        const APP_BUILD    = '2026.09.15.01';
+        const APP_VERSION  = '2.156.0';
+        const APP_BUILD    = '2026.09.15.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14675,17 +14676,16 @@
             const btn = document.getElementById('addActSave');
             if (btn) btn.textContent = editing ? 'Save Changes' : 'Save Activity';
 
-            // Serials are NOT editable here. They live in /units, one physical box per
-            // serial, and changing a fitted one is a swap needing a reason and a
-            // removed unit — not a text correction. Logging a NEW activity still
-            // creates them; correcting an old one must not rewrite the register behind
-            // the Serials tab's back.
+            // Serials are shown AND editable in both modes now. They live in /units (one
+            // physical box per serial); on an edit, saving reconciles them against the
+            // register in place — a changed serial renames its box, a newly typed one is
+            // created linked to this activity, and clearing one never deletes a box.
             ['addActOldPart', 'addActNewPart'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
-                el.disabled = !!editing;
-                el.style.opacity = editing ? '0.55' : '';
-                el.title = editing ? 'Serials are corrected on the Serials tab, not here' : '';
+                el.disabled = false;
+                el.style.opacity = '';
+                el.title = '';
             });
             const note = document.getElementById('addActSerialNote');
             if (note) note.style.display = editing ? 'block' : 'none';
@@ -14752,9 +14752,12 @@
             set('addActModemType', d.modemType);
             set('addActCommissioningResult', d.commissioningResult);
             set('addActRemovalReason', d.removalReason);
-            // Shown read-only so the record still reads completely; not saved from here.
-            set('addActOldPart', d.oldPart);
-            set('addActNewPart', d.newPart);
+            // Serials live in /units (linked by activityId), not on the activity — so resolve
+            // them back here rather than reading the long-empty details.oldPart/newPart. The
+            // details fallback covers any pre-migration record that still carries them.
+            const ser = activitySerials(id);
+            set('addActOldPart', ser.oldSerial || d.oldPart);
+            set('addActNewPart', ser.newSerial || d.newPart);
 
             // Parts and positions depend on the aircraft, so they are built after it
             // is set, then the stored values selected.
@@ -14859,12 +14862,19 @@
                     if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                     activitiesLive[id] = entry;
 
-                    // Then the register — on a NEW activity only. An edit deliberately
-                    // never writes /units: the serial inputs are disabled in that mode,
-                    // and re-running this would mint duplicate units for serials the
-                    // register already holds against this same activityId.
-                    const unitWrites = editing ? null
-                        : unitWritesForActivity(id, entry, val('addActOldPart'), val('addActNewPart'));
+                    // Then the register. A NEW activity creates the units its serials
+                    // imply. An EDIT reconciles the serials against the boxes already
+                    // linked to this activity — renaming a changed one, adding a newly
+                    // typed one — without minting duplicates for what is already there.
+                    let serialWarnings = [];
+                    let unitWrites;
+                    if (editing) {
+                        const rec = reconcileActivitySerials(id, entry, val('addActOldPart'), val('addActNewPart'));
+                        unitWrites = rec.payload;
+                        serialWarnings = rec.warnings || [];
+                    } else {
+                        unitWrites = unitWritesForActivity(id, entry, val('addActOldPart'), val('addActNewPart'));
+                    }
                     if (unitWrites) {
                         const ures = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
                             method: 'PATCH', body: JSON.stringify(unitWrites),
@@ -14884,7 +14894,11 @@
                     renderHardwarePage();
                     renderSerialsPage();
                     updateMetrics();                        // the Timeline picks it up here
-                    setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                    if (serialWarnings.length) {
+                        setSyncStatus('🟡 Saved — ' + serialWarnings[0], '#b8860b');
+                    } else {
+                        setSyncStatus('🟢 Live — synced with your team', '#28a745');
+                    }
                 } catch (e) {
                     err.textContent = `Could not save activity — ${e.message}`;
                     err.style.display = 'block';
@@ -18180,6 +18194,60 @@
             }
 
             return Object.keys(payload).length ? payload : null;
+        }
+
+        // The serials an activity recorded, resolved back from /units by activityId (the
+        // migration moved them off /activities — /units is the one place a serial lives).
+        // The box it took OFF is a removed fitment, the one it put ON an on-wing fitment.
+        // Falls back to any serial still on the activity's own details (pre-migration).
+        function activitySerials(id) {
+            const out = { oldSerial: '', oldUnitId: '', newSerial: '', newUnitId: '' };
+            unitEntries().forEach(u => {
+                unitFitments(u).forEach(f => {
+                    if (f.activityId !== id) return;
+                    if (fitmentIsOn(f)) { if (!out.newSerial) { out.newSerial = u.serial || ''; out.newUnitId = u.id; } }
+                    else { if (!out.oldSerial) { out.oldSerial = u.serial || ''; out.oldUnitId = u.id; } }
+                });
+            });
+            return out;
+        }
+
+        // Editing an activity's serials, safely, against the register. The serials live in
+        // /units; here we only reconcile the boxes THIS activity is linked to:
+        //   • a changed serial on a linked box → rename it in place (fix a typo),
+        //   • a serial typed where the activity had none → create it, linked to this id,
+        //   • a serial cleared → left alone (a removal is done on the Hardware tab, never
+        //     by blanking a text box, so a box is never orphaned from here).
+        // Returns a /units multi-path payload (or null), plus any warnings to surface.
+        function reconcileActivitySerials(id, entry, formOld, formNew) {
+            const d = entry.details || {};
+            const lruId = d.lruId;
+            const warnings = [];
+            if (!lruId) return { payload: null, warnings };
+            const cur = activitySerials(id);
+            const label = (lruById(lruId) || {}).label || 'unit';
+            let payload = {};
+            const side = (curSerial, curUnitId, formVal, isRemoved) => {
+                const want = (formVal || '').trim();
+                if (want === (curSerial || '')) return;                     // unchanged
+                if (want && curUnitId) {                                    // rename in place
+                    const clash = unitEntries().find(u => u.id !== curUnitId && u.lruId === lruId
+                        && String(u.serial || '').trim().toLowerCase() === want.toLowerCase());
+                    if (clash) { warnings.push(`${want} is already on another ${label} — not renamed`); return; }
+                    payload[`${curUnitId}/serial`] = want;
+                } else if (want && !curUnitId) {                            // serial added on an edit
+                    const clash = unitEntries().find(u => u.lruId === lruId
+                        && String(u.serial || '').trim().toLowerCase() === want.toLowerCase());
+                    if (clash) { warnings.push(`${want} is already on another ${label} — not added`); return; }
+                    const w = unitWritesForActivity(id, entry, isRemoved ? want : '', isRemoved ? '' : want);
+                    if (w) Object.assign(payload, w);
+                } else if (!want && curUnitId) {                            // cleared — keep the box
+                    warnings.push(`Clearing a serial here does not remove the box — do that on the Hardware tab.`);
+                }
+            };
+            side(cur.oldSerial, cur.oldUnitId, formOld, true);
+            side(cur.newSerial, cur.newUnitId, formNew, false);
+            return { payload: Object.keys(payload).length ? payload : null, warnings };
         }
 
         // ===== Record Removed Serials =====
