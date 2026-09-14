@@ -6,7 +6,41 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.145.0–v2.149.1 (2026-09-13).** AVR report polish, activation location made its
+**Latest — v2.150.0–v2.151.1 (2026-09-13 → 2026-09-14).** Fleet/Software widget honesty,
+the AVR report split into three text fields, and a per-report Last Heartbeat. Full detail in
+CHANGELOG.md / `git log`; the load-bearing shape:
+
+- **Fleet Composition widgets name the incomplete tails** (v2.150.0–2.150.1). A line under each
+  split bar spells out the smaller share — IFC Fleet "AQH, ASP In Retrofit", SSID "ASO, AS61 SSID
+  Closed" — rendered only when that share is non-zero (`renderFleetWidgets`, `.fleet-note`). Order
+  is `tailCompare()`: a LETTER sorts ahead of a DIGIT at the same position, so ASO precedes AS61
+  (plain and locale sorts both put the digit first) — use it, not `.sort()`, for tail lists that
+  must read this way.
+- **Software completion cards exclude in-retrofit aircraft** (v2.150.0). The cards count the active
+  retrofit fleet ONLY — in-retrofit tails (AQH, ASP) are no longer folded in as pending, so
+  Middleware and OTA #2 read 42/42 and only OTA #3 is partway (5/42). `inRetrofitSwFleet()` is now
+  unused (kept, harmless). ⚠️ This SUPERSEDES the v2.131.0 note that the cards count active PLUS
+  in-retrofit.
+- **4G SIM Faulty tile is conditional** (v2.150.0) — rendered only when a card is tagged faulty,
+  otherwise dropped (`renderSimWidgets`).
+- **AVR report is three optional text fields now** (v2.151.0): **Summary** (short, ≤2000),
+  **Report** (the full narrative, ≤20000 — the old single 2000-char field was truncating long
+  timelines mid-sentence), **Follow Up** (≤4000). New `/avr` leaves `detailedReport`, `followUp`
+  each need their own `.validate` (the node's `$other:false` lock rejects unruled fields).
+  On-screen + PDF headings read **Summary / Report / Follow Up**, each shown only when filled;
+  notes are `pre-wrap` so multi-line text keeps its breaks. ⚠️ SUPERSEDES the v2.150.2 one-off that
+  renamed the single "Summary" PDF heading to "REPORT".
+- **Last Heartbeat = a per-report field `/avr/{id}/lastHeartbeat`** (v2.151.0–2.151.1). Free-text
+  UTC timestamp, validated `YYYY-MM-DD HH:MM:SS` (rules + a client-side guard for a friendly error).
+  It is NOT in the report header box — it lives in the **Specifications** grid, in the vacant slot
+  next to Activation, and is hidden when blank (threaded through `avrDossierRows(tail, lastHeartbeat)`
+  / `avrDossierHTML`). Semantics: the last time the system phoned home — the reference point an
+  outage's downtime is measured from (a downtime/uptime derivation from it is still unbuilt).
+- **Open (user):** existing AS61 reports still hold their long timeline in the old `summary` field
+  (shows under the Summary heading) — move that text into the new Report field per report by hand;
+  no auto-migration was done.
+
+**Prior — v2.145.0–v2.149.1 (2026-09-13).** AVR report polish, activation location made its
 own field, and the site given a favicon + social link preview. Full detail in CHANGELOG.md /
 `git log`; the load-bearing shape:
 
