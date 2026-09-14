@@ -7516,8 +7516,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.151.0';
-        const APP_BUILD    = '2026.09.14.02';
+        const APP_VERSION  = '2.151.1';
+        const APP_BUILD    = '2026.09.14.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -13261,7 +13261,7 @@
         }
 
         // Shared cell rows for both the screen dossier and the print sheet.
-        function avrDossierRows(tail) {
+        function avrDossierRows(tail, lastHeartbeat) {
             const { a, spec, linefit, system, retro, retroSpan, media } = avrDossierData(tail);
             const ota = (a.otaPatchUTC || '').slice(0, 10);
             const ota3 = (a.otaPatch3UTC || '').slice(0, 10);
@@ -13305,6 +13305,11 @@
                 [linefit ? 'SBC config' : 'Activation', linefit
                     ? (a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
                     : (a.activatedDate ? [activationLocationOf(a), a.activatedDate].filter(Boolean).join(' · ') : '')],
+                // Last heartbeat is a per-REPORT field (v.lastHeartbeat), threaded in from
+                // the caller — the last time the system phoned home, which fixes the point
+                // the current outage is measured from. It sits in the vacant slot next to
+                // Activation and, like every other spec row, is dropped when blank.
+                ['Last heartbeat', lastHeartbeat ? lastHeartbeat + ' UTC' : ''],
                 ['Previous IFC', spec.ifcPrevious || ''],
             ];
             // Software — the loadable, changeable state: middleware, OTA patches, media,
@@ -13325,9 +13330,9 @@
             };
         }
 
-        function avrDossierHTML(tail) {
+        function avrDossierHTML(tail, lastHeartbeat) {
             const { a, spec, modman, equip } = avrDossierData(tail);
-            const { aircraftRows, hardwareRows, softwareRows } = avrDossierRows(tail);
+            const { aircraftRows, hardwareRows, softwareRows } = avrDossierRows(tail, lastHeartbeat);
             const cell = ([k, val]) => `<div class="avr-meta-cell"><div class="avr-meta-key">${escAttr(k)}</div><div class="avr-meta-val">${escAttr(val) || '—'}</div></div>`;
 
             const equipMulti = equip.some(r => r.position);
@@ -13462,7 +13467,6 @@
                 ['Dates', avrDateLabel(v)],
                 ['Engagement', mode.label],
                 avrLocationFull(v) ? ['Location', avrLocationFull(v)] : null,
-                v.lastHeartbeat ? ['Last Heartbeat', v.lastHeartbeat + ' UTC'] : null,
             ].filter(Boolean);
 
             // People, grouped into On aircraft / Remote — the names club under one tag per
@@ -13505,7 +13509,7 @@
                 ${v.detailedReport ? `<div class="avr-section-label">Report</div><div class="avr-note avr-summary-note">${escAttr(v.detailedReport)}</div>` : ''}
                 ${v.followUp ? `<div class="avr-section-label">Follow Up</div><div class="avr-note avr-summary-note">${escAttr(v.followUp)}</div>` : ''}
                 ${people.length ? `<div class="avr-section-label">People</div>${peopleBlock}` : ''}
-                ${avrDossierHTML(v.aircraft)}
+                ${avrDossierHTML(v.aircraft, v.lastHeartbeat)}
                 <details class="avr-worksec" open>
                     <summary class="avr-dossier-summary">🛠️ Work carried out — ${members.length} ${members.length === 1 ? 'entry' : 'entries'}</summary>
                     ${workTable}
@@ -14009,7 +14013,7 @@
 
             // Aircraft dossier for print — grouped Aircraft / Hardware / Software, plus
             // installed serials and MODMAN under Hardware.
-            const { aircraftRows, hardwareRows, softwareRows } = avrDossierRows(v.aircraft);
+            const { aircraftRows, hardwareRows, softwareRows } = avrDossierRows(v.aircraft, v.lastHeartbeat);
             const { spec: dspec, equip, modman } = avrDossierData(v.aircraft);
             const dossierGrid = rows => rows.map(([k, val]) => `<div><span class="k">${escAttr(k)}:</span> ${escAttr(val) || '—'}</div>`).join('');
             const equipMulti = equip.some(r => r.position);
@@ -14054,7 +14058,6 @@
                 <div class="rpt-meta-cell"><span class="mk">Aircraft</span><span class="mv mv-lead">HZ-${escAttr(v.aircraft)}</span>${type ? `<span class="ms">${escAttr(type)}</span>` : ''}</div>
                 <div class="rpt-meta-cell"><span class="mk">Dates</span><span class="mv">${escAttr(avrDateLabel(v))}</span></div>
                 <div class="rpt-meta-cell"><span class="mk">Location</span><span class="mv">${escAttr(avrLocationFull(v) || '—')}</span></div>
-                ${v.lastHeartbeat ? `<div class="rpt-meta-cell"><span class="mk">Last Heartbeat</span><span class="mv">${escAttr(v.lastHeartbeat)} UTC</span></div>` : ''}
             </div>`;
 
             // Engagement + People in one block. Names render in two clearly separate
