@@ -7516,8 +7516,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.153.0';
-        const APP_BUILD    = '2026.09.14.07';
+        const APP_VERSION  = '2.153.1';
+        const APP_BUILD    = '2026.09.14.08';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -13331,10 +13331,10 @@
                 ['IFE system', ifeSystemOf(a)],
                 ['Seat configuration', seats],
             ];
-            // Specifications — the box-and-airframe facts, laid out three to a line:
-            //   line 1  IFC system · IFE system · Fit
-            //   line 2  Mod start · Mod end · Mod window   (straight from the Fleet retrofit fields)
-            //   line 3  Install site · Activation
+            // Specifications — grouped so related facts share a row (user, 2026-09-14):
+            //   line 1  IFC system · Fit · Install site
+            //   line 2  Mod start · Mod end · Mod window   (the retrofit window, together)
+            //   line 3  Activation · Last heartbeat
             // Activation is where the aircraft ENTERED SERVICE — the airframe/retrofit
             // location (Jeddah) on its activatedDate, exactly as the Timeline's "Entered
             // Service" event derives it. It must NOT use completionLocation: that records
@@ -13345,14 +13345,14 @@
             const hardwareRows = [
                 ['IFC system', system],
                 ['Fit', linefit ? 'Linefit' : (fitOf(a) === 'retrofit' ? 'Retrofit' : '')],
-                ['Mod start', a.retrofitStart || ''],
-                ['Mod end', a.retrofitEnd || (a.retrofitStart ? 'Ongoing' : '')],
-                ['Mod window', retro && retroSpan ? retroSpan : ''],
                 // Install site is emphasised (alert) when it is NOT Jeddah — an abroad or
                 // out-of-base install is the exception worth flagging. Third tuple element
                 // is a render hint the print sheet honours (the on-screen cell ignores it).
                 ['Install site', a.retrofitLocation || '',
                     a.retrofitLocation && !/jeddah/i.test(a.retrofitLocation) ? 'alert' : ''],
+                ['Mod start', a.retrofitStart || ''],
+                ['Mod end', a.retrofitEnd || (a.retrofitStart ? 'Ongoing' : '')],
+                ['Mod window', retro && retroSpan ? retroSpan : ''],
                 // Activation is a key milestone, so its value is accented.
                 [linefit ? 'SBC config' : 'Activation', linefit
                     ? (a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
@@ -14083,7 +14083,7 @@
             // 'pill-green' render it as a status pill (used for a Hidden/Public SSID).
             const dossierGrid = rows => rows.map(([k, val, hint]) => {
                 const text = escAttr(val) || '—';
-                const valHtml = (hint === 'pill-red' || hint === 'pill-green')
+                const valHtml = (hint && hint.indexOf('pill-') === 0)
                     ? (val ? `<span class="pill ${hint}">${text}</span>` : '<span class="dv">—</span>')
                     : `<span class="dv${hint ? ' dv-' + hint : ''}">${text}</span>`;
                 return `<div class="di"><span class="k">${escAttr(k)}</span>${valHtml}</div>`;
@@ -14168,7 +14168,7 @@
             // The identity band — made prominent (v2.133.2): the full HZ- registration leads,
             // with dates and location, each as a large value under a small caps label.
             const metaGrid = `<div class="rpt-meta">
-                <div class="rpt-meta-cell"><span class="mk">Aircraft</span><span class="mv mv-lead">HZ-${escAttr(v.aircraft)}${type ? ` <span class="ms-inline">· ${escAttr(type)}</span>` : ''}${acConfig ? ` <span class="ms-inline">· ${escAttr(acConfig)}</span>` : ''}</span></div>
+                <div class="rpt-meta-cell"><span class="mk">Aircraft</span><span class="mv mv-lead">HZ-${escAttr(v.aircraft)}${type ? ` <span class="ms-inline">${escAttr(type)}</span>` : ''}${acConfig ? ` <span class="cfg-tag">${escAttr(acConfig)}</span>` : ''}</span></div>
                 <div class="rpt-meta-cell"><span class="mk">Dates</span><span class="mv">${escAttr(avrDateLabel(v))}</span></div>
                 <div class="rpt-meta-cell"><span class="mk">Location</span><span class="mv">${escAttr(avrLocationFull(v) || '—')}</span></div>
             </div>`;
@@ -14217,7 +14217,12 @@
   .rpt-header { display:flex; align-items:center; justify-content:space-between; gap:18px;
     border-bottom:3px solid var(--green); padding-bottom:14px; }
   .rpt-header img.saudia { height:52px; width:auto; }
-  .rpt-header img.nsg { height:52px; width:auto; }
+  /* The NSG artwork carries ~32% transparent padding top AND bottom, so at a plain
+     height it renders far smaller than the Saudia mark and looks to float high. This
+     crop shows only its ink band (a tall image centred in a short overflow-hidden box),
+     so the mark is enlarged to sit at the same centre-line and visual weight as Saudia. */
+  .rpt-header .nsg-wrap { height:36px; overflow:hidden; display:flex; align-items:center; flex:0 0 auto; }
+  .rpt-header .nsg-wrap img.nsg { height:96px; width:auto; flex:0 0 auto; }
   .rpt-titleband { margin:14px 0 6px; }
   .rpt-kicker { font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
   /* Title and reference share one baseline-aligned row — the ref right-aligned — so the
@@ -14258,7 +14263,11 @@
   .rpt-meta .mv-lead { font-size:18px; font-weight:800; letter-spacing:.3px; }
   /* Aircraft type rides inline beside the registration so the identity band is one
      line shorter (it set the tallest cell and therefore the band's height). */
-  .rpt-meta .ms-inline { font-size:12px; font-weight:600; letter-spacing:0; color:var(--muted); margin-left:6px; }
+  .rpt-meta .ms-inline { font-size:12px; font-weight:600; letter-spacing:0; color:var(--muted); margin-left:8px; }
+  /* Cabin config as a distinct text-pill, so registration · type · config read as
+     three separate values without dot separators. */
+  .rpt-meta .cfg-tag { display:inline-block; margin-left:8px; font-size:10.5px; font-weight:800; letter-spacing:.3px;
+    color:var(--navy); background:#eef1f5; border:1px solid #d7dde4; border-radius:99px; padding:1px 9px; vertical-align:2px; }
   .muted { color:var(--muted); }
   .sec { font-size:12px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--navy);
     margin:15px 0 7px; padding-bottom:4px; border-bottom:1px solid var(--line); }
@@ -14303,7 +14312,8 @@
       display:flex; align-items:center; justify-content:space-between;
       border-bottom:2px solid var(--green); padding-bottom:3mm; }
     .print-running-head img.saudia { height:11mm; }
-    .print-running-head img.nsg { height:11mm; }
+    .print-running-head .nsg-wrap { height:7.5mm; overflow:hidden; display:flex; align-items:center; flex:0 0 auto; }
+    .print-running-head .nsg-wrap img.nsg { height:20mm; width:auto; flex:0 0 auto; }
     .print-running-head .rh-title { font-size:10px; font-weight:800; color:var(--navy); text-transform:uppercase; letter-spacing:.5px; text-align:right; max-width:60mm; }
     .print-running-foot { position:fixed; bottom:-14mm; left:0; right:0; height:10mm;
       display:flex; align-items:center; justify-content:space-between;
@@ -14325,7 +14335,7 @@
   <div class="print-running-head">
     <img class="saudia" src="${saudiaReportLogo()}" alt="Saudia">
     <span class="rh-title">${escAttr(rt.label)} · ${escAttr(v.aircraft)}</span>
-    <img class="nsg" src="${NSG_REPORT_LOGO}" alt="NSG">
+    <span class="nsg-wrap"><img class="nsg" src="${NSG_REPORT_LOGO}" alt="NSG"></span>
   </div>
   <div class="print-running-foot">
     <span>Saudia Connectivity / IFEC Programme${v.ref ? ' · ' + escAttr(v.ref) : ''}</span>
@@ -14336,7 +14346,7 @@
   <div class="sheet">
     <div class="rpt-header">
       <img class="saudia" src="${saudiaReportLogo()}" alt="Saudia">
-      <img class="nsg" src="${NSG_REPORT_LOGO}" alt="NSG — Neo Space Group">
+      <span class="nsg-wrap"><img class="nsg" src="${NSG_REPORT_LOGO}" alt="NSG — Neo Space Group"></span>
     </div>
     <div class="rpt-titleband">
       <div class="rpt-kicker">Saudia Connectivity / IFEC Programme</div>
