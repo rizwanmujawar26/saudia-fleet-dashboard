@@ -7549,8 +7549,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.154.0';
-        const APP_BUILD    = '2026.09.14.11';
+        const APP_VERSION  = '2.155.0';
+        const APP_BUILD    = '2026.09.15.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -17047,6 +17047,19 @@
             const on = fitmentIsOn(hit.fitment);
             return `<span class="sr-state ${on ? 'on' : 'off'}">${on ? 'ON WING' : 'REMOVED'}</span>`;
         }
+        // One meta line for every removed box — /units or MODMAN — so the two shop queues
+        // read identically: where it came off, its fitted→removed span, and time on wing.
+        function hwRemovalMeta({ location, type, position, fittedDate, removedDate }) {
+            const head = [location, type ? (TYPE_SHORT_LABEL[type] || type) : '', position ? 'pos ' + position : '']
+                .filter(Boolean).map(escAttr).join(' · ');
+            let span;
+            if (fittedDate && removedDate) span = `fitted ${escAttr(fittedDate)} → removed ${escAttr(removedDate)}`;
+            else if (fittedDate) span = `fitted ${escAttr(fittedDate)}`;
+            else if (removedDate) span = `removed ${escAttr(removedDate)}`;
+            else span = 'removal date not recorded';
+            const days = dateSpan(fittedDate, removedDate || '');
+            return `${head}${head ? ' · ' : ''}${span}${days ? ` · ${escAttr(days)} on wing` : ''}`;
+        }
         // A stacked slot cell for the pair (RX/TX) and multi (CWAP) layouts: a small
         // label, the serial on top, its fitted date beneath, a REMOVED tag when off.
         function hwSlotCell(lruId, tail, position, label) {
@@ -17484,12 +17497,13 @@
                 <div class="hw-issue-top">
                     <span class="hw-serial hw-removal-sn">${escAttr(x.serial)}</span>
                     <span class="status-badge shop-badge shop-${escAttr(x.shopStatus)}">${escAttr(shopStatusLabel(x.shopStatus))}</span>
-                    <span class="maint-act-cat">${escAttr(x.tail)}${x.position ? ` · pos ${escAttr(x.position)}` : ''}${x.type ? ' · ' + escAttr(TYPE_SHORT_LABEL[x.type] || x.type) : ''}${x.date ? ' · ' + escAttr(x.date) : ''}${x.daysOnWing !== null ? ` · ${x.daysOnWing}d on wing` : ''}</span>
+                    <span class="maint-act-cat">${hwRemovalMeta({ location: x.tail ? 'ex-' + x.tail : '', type: x.type, position: x.position, fittedDate: x.fittedDate, removedDate: x.date })}</span>
                     ${canEdit() ? `<button class="hw-shop-btn" onclick="openShopReport('${escAttr(x.unitId)}','${escAttr(x.fitmentId)}')">Shop report</button>` : ''}
                 </div>
                 <div class="hw-removal-body">
                     <div class="hw-issue-field"><b>Reason for removal</b>${hwReasonField(x)}</div>
                     ${x.replacedBy ? `<div class="hw-issue-field"><b>Replaced by</b>${escAttr(x.replacedBy)}</div>` : ''}
+                    ${x.shopRef ? `<div class="hw-issue-field"><b>Shop reference</b>${escAttr(x.shopRef)}</div>` : ''}
                     ${x.shopFinding ? `<div class="hw-issue-field"><b>Shop finding</b>${escAttr(x.shopFinding)}</div>` : ''}
                 </div>
             </li>`;
@@ -17500,22 +17514,34 @@
             const mmRemovals = Object.entries(modmansLive || {}).map(([id, m]) => ({ id, ...m }))
                 .filter(m => m.status === 'removed')
                 .sort((a, b) => dateSortKey(toISODate(b.removalDate)).localeCompare(dateSortKey(toISODate(a.removalDate))));
+            const mmOpenShop = mmRemovals.filter(m => { const s = m.shopStatus || 'pending'; return s === 'pending' || s === 'in_shop'; }).length;
             const modmanRemovalCard = m => {
                 const isAstro = !!m.astronicsSn && !m.kontronSn;
                 const serial = (isAstro ? m.astronicsSn : m.kontronSn) || '—';
-                const days = dateSpan(m.installDate, m.removalDate || '');
+                // A removed box defaults to Awaiting Shop, exactly like a /units removal, so
+                // the two queues stay one shop pipeline. Reason and shop report both edit
+                // /modmans (saveModmanField / openShopReportMm), the box's single source.
+                const ss = m.shopStatus || 'pending';
+                const acType = m.aircraft ? (aircraftData.find(a => a.id === m.aircraft) || {}).type : '';
+                // The box on wing now on that tail — the one that took its place.
+                const repl = m.aircraft ? Object.values(modmansLive || {}).find(o => o.aircraft === m.aircraft && o.status !== 'removed') : null;
+                const replacedBy = repl ? ((repl.astronicsSn && !repl.kontronSn) ? repl.astronicsSn : repl.kontronSn) : '';
                 const reasonField = editable
                     ? `<input type="text" maxlength="200" autocomplete="off" class="hw-reason-input" value="${escAttr(m.removalReason || '')}" placeholder="e.g. No RF output after power cycle" data-mm="${escAttr(m.id)}" data-field="removalReason" onchange="saveModmanField(this)">`
                     : (m.removalReason ? escAttr(m.removalReason) : '<span class="hw-none">not recorded</span>');
-                return `<li class="hw-removal">
+                return `<li class="hw-removal shop-${escAttr(ss)}">
                     <div class="hw-issue-top">
                         <span class="hw-serial hw-removal-sn">${escAttr(serial)}</span>
-                        <span class="status-badge shop-badge shop-removed">REMOVED</span>
-                        <span class="maint-act-cat">${m.aircraft ? escAttr('ex-' + m.aircraft) : '<span class="hw-none">spare</span>'}${m.installDate ? ` · fitted ${escAttr(m.installDate)}` : ''}${m.removalDate ? ` → removed ${escAttr(m.removalDate)}` : ''}${days ? ` · ${escAttr(days)} on wing` : ''}</span>
+                        <span class="status-badge shop-badge shop-${escAttr(ss)}">${escAttr(shopStatusLabel(ss))}</span>
+                        <span class="maint-act-cat">${hwRemovalMeta({ location: m.aircraft ? 'ex-' + m.aircraft : 'spare', type: acType, position: '', fittedDate: m.installDate, removedDate: m.removalDate })}</span>
+                        ${canEdit() ? `<button class="hw-shop-btn" onclick="openShopReportMm('${escAttr(m.id)}')">Shop report</button>` : ''}
                     </div>
                     <div class="hw-removal-body">
                         <div class="hw-issue-field"><b>Reason for removal</b>${reasonField}</div>
+                        ${replacedBy ? `<div class="hw-issue-field"><b>Replaced by</b>${escAttr(replacedBy)}</div>` : ''}
                         ${!isAstro && m.eclipseSn ? `<div class="hw-issue-field"><b>Eclipse S/N</b>${escAttr(eclipseSnDisplay(m.eclipseSn))}</div>` : ''}
+                        ${m.shopRef ? `<div class="hw-issue-field"><b>Shop reference</b>${escAttr(m.shopRef)}</div>` : ''}
+                        ${m.shopFinding ? `<div class="hw-issue-field"><b>Shop finding</b>${escAttr(m.shopFinding)}</div>` : ''}
                     </div>
                 </li>`;
             };
@@ -17536,7 +17562,7 @@
                 <ul class="hw-issues">${issues.length ? issues.map(issueCard).join('') : '<li class="maint-empty">No issues logged for this unit.</li>'}</ul>
                 ${isMm ? `
                 <div class="hw-section">
-                    <span class="hw-section-title">Removed / Shop Queue</span>
+                    <span class="hw-section-title">Removed / Shop Queue${mmOpenShop ? ` · ${mmOpenShop} awaiting shop` : ''}</span>
                     <span class="timeline-day-count">${mmRemovals.length} removed</span>
                 </div>
                 <ul class="hw-issues">${mmRemovals.length ? mmRemovals.map(modmanRemovalCard).join('') : '<li class="maint-empty">No MODMANs removed yet.</li>'}</ul>` : `
@@ -19339,12 +19365,15 @@
         // collection that could drift from it.
         let shopReportUnitId = '';
         let shopReportFitmentId = '';
+        let shopReportMode = 'unit';   // 'unit' → /units fitment | 'modman' → a /modmans box
+        let shopReportMmId = '';
 
         function openShopReport(unitId, fitmentId) {
             const u = unitsLive[unitId];
             const f = u && (u.fitments || {})[fitmentId];
             if (!f) return;
             if (!canEdit()) { requireSignIn(); return; }
+            shopReportMode = 'unit';
             shopReportUnitId = unitId;
             shopReportFitmentId = fitmentId;
             setText('shopReportFor',
@@ -19358,32 +19387,59 @@
             document.getElementById('shopFinding').focus();
         }
 
+        // Same shop-report modal, driving a MODMAN box in /modmans instead of a /units
+        // fitment — so a removed MODMAN gets the identical shop pipeline as every other LRU.
+        function openShopReportMm(mmId) {
+            const m = (modmansLive || {})[mmId];
+            if (!m) return;
+            if (!canEdit()) { requireSignIn(); return; }
+            shopReportMode = 'modman';
+            shopReportMmId = mmId;
+            const serial = ((m.astronicsSn && !m.kontronSn) ? m.astronicsSn : m.kontronSn) || 'MODMAN';
+            setText('shopReportFor',
+                `${serial} removed from ${m.aircraft || 'store'}${m.removalDate ? ' on ' + m.removalDate : ' — removal date not yet recorded'}`);
+            document.getElementById('shopStatus').value = m.shopStatus || 'pending';
+            document.getElementById('shopRef').value = m.shopRef || '';
+            document.getElementById('shopFinding').value = m.shopFinding || '';
+            const err = document.getElementById('shopError');
+            err.textContent = ''; err.style.display = 'none';
+            document.getElementById('shopOverlay').style.display = 'flex';
+            document.getElementById('shopFinding').focus();
+        }
+
         function initShopReportModal() {
             const overlay = document.getElementById('shopOverlay');
             if (!overlay) return;
             const err = document.getElementById('shopError');
             const close = () => {
                 overlay.style.display = 'none';
-                shopReportUnitId = ''; shopReportFitmentId = '';
+                shopReportUnitId = ''; shopReportFitmentId = ''; shopReportMmId = '';
             };
             document.getElementById('shopCancel').addEventListener('click', close);
             overlay.addEventListener('click', ev => { if (ev.target === overlay) close(); });
 
             document.getElementById('shopSave').addEventListener('click', async () => {
-                const u = unitsLive[shopReportUnitId];
-                const f = u && (u.fitments || {})[shopReportFitmentId];
-                if (!f) return;
                 const patch = {
                     shopStatus:  document.getElementById('shopStatus').value,
                     shopRef:     document.getElementById('shopRef').value.trim() || null,
                     shopFinding: document.getElementById('shopFinding').value.trim() || null,
                 };
+                // A MODMAN box writes to /modmans (its single source); every other LRU writes
+                // to the /units fitment. The modal and its fields are identical either way.
+                const isMm = shopReportMode === 'modman';
+                const target = isMm ? (modmansLive || {})[shopReportMmId] : null;
+                const u = isMm ? null : unitsLive[shopReportUnitId];
+                const f = isMm ? target : (u && (u.fitments || {})[shopReportFitmentId]);
+                if (!f) return;
+                const url = isMm
+                    ? `${FIREBASE_DB_URL}/modmans/${shopReportMmId}.json?auth=`
+                    : `${FIREBASE_DB_URL}/units/${shopReportUnitId}/fitments/${shopReportFitmentId}.json?auth=`;
                 const token = await getIdToken();
                 if (!token) return;
                 const btn = document.getElementById('shopSave');
                 btn.disabled = true; btn.textContent = 'Saving...';
                 try {
-                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units/${shopReportUnitId}/fitments/${shopReportFitmentId}.json?auth=${token}`, {
+                    const res = await fetchWithTimeout(url + token, {
                         method: 'PATCH', body: JSON.stringify(patch),
                     });
                     const data = await res.json();
@@ -19392,6 +19448,7 @@
                         if (v === null) delete f[k]; else f[k] = v;
                     });
                     close();
+                    if (isMm) populateSatcomTable();
                     renderHardwarePage();
                     renderMaintenancePage();
                     renderSerialsPage();
