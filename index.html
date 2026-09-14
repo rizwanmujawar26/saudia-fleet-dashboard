@@ -6419,7 +6419,17 @@
                 <select id="addMmAircraft" class="add-sched-input" onchange="syncAddModmanSerials()"></select>
 
                 <label class="add-sched-label">Install Date <span style="text-transform:none; font-weight:400;">(optional)</span></label>
-                <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="addMmInstall" class="add-sched-input">
+                <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="addMmInstall" class="add-sched-input" oninput="syncAddModmanRemoval()">
+
+                <!-- Only for a box being recorded as already Removed: the completed
+                     install→removal history, with on-wing days and the reason. Optional. -->
+                <div id="addMmRemovedWrap" style="display:none;">
+                    <label class="add-sched-label">Removed Date <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+                    <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="addMmRemoved" class="add-sched-input" oninput="syncAddModmanRemoval()">
+                    <div id="addMmDays" class="hw-add-days" style="font-size:12.5px; color:#0a5c34; background:#eef7f1; border:1px solid #cfe6d8; border-radius:6px; padding:7px 10px; margin:2px 0 4px;"></div>
+                    <label class="add-sched-label">Reason for removal <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+                    <input id="addMmRemovalReason" class="add-sched-input" maxlength="200" placeholder="e.g. No RF output after power cycle" autocomplete="off">
+                </div>
             </div>
 
             <label class="add-sched-label">Comments</label>
@@ -6460,7 +6470,30 @@
                 <input id="hwAddAlt" class="add-sched-input" maxlength="60" autocomplete="off">
             </div>
             <label class="add-sched-label">Installed date</label>
-            <input id="hwAddFitted" class="add-sched-input" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off">
+            <input id="hwAddFitted" class="add-sched-input" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" oninput="hwAddSyncRemoval()">
+            <label class="add-sched-label">Removed date <span style="text-transform:none; font-weight:400;">(optional — leave blank if still on wing)</span></label>
+            <input id="hwAddRemoved" class="add-sched-input" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" oninput="hwAddSyncRemoval()">
+            <!-- Revealed only when a removed date is present: this box was fitted AND
+                 taken off, so it is a completed history record, not a live fit. Every
+                 field here is optional. -->
+            <div id="hwAddRemovalWrap" style="display:none;">
+                <div id="hwAddDays" class="hw-add-days" style="font-size:12.5px; color:#0a5c34; background:#eef7f1; border:1px solid #cfe6d8; border-radius:6px; padding:7px 10px; margin:2px 0 4px;"></div>
+                <label class="add-sched-label">Reason for removal <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+                <input id="hwAddRemovalReason" class="add-sched-input" maxlength="200" placeholder="e.g. No RF output after power cycle" autocomplete="off">
+                <label class="add-sched-label">Shop status <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+                <select id="hwAddShopStatus" class="add-sched-input">
+                    <option value="">— not sent to shop —</option>
+                    <option value="pending">Awaiting Shop</option>
+                    <option value="in_shop">In Shop</option>
+                    <option value="repaired">Repaired</option>
+                    <option value="no_fault">No Fault Found</option>
+                    <option value="scrap">Scrapped</option>
+                </select>
+                <label class="add-sched-label">Shop reference <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+                <input id="hwAddShopRef" class="add-sched-input" maxlength="60" placeholder="e.g. RO-2026-0418" autocomplete="off">
+                <label class="add-sched-label">Shop finding <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+                <textarea id="hwAddShopFinding" class="add-sched-input" maxlength="1000" placeholder="What the shop found, and what was done"></textarea>
+            </div>
             <label class="add-ac-check" id="hwAddReplaceWrap" style="display:none; align-items:center; gap:8px; font-size:13px; color:#444; margin-top:12px; cursor:pointer;">
                 <input type="checkbox" id="hwAddReplace" checked> <span id="hwAddReplaceText"></span>
             </label>
@@ -7516,8 +7549,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.153.3';
-        const APP_BUILD    = '2026.09.14.10';
+        const APP_VERSION  = '2.154.0';
+        const APP_BUILD    = '2026.09.14.11';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -16718,7 +16751,7 @@
             const overlay = document.getElementById('addModmanOverlay');
             if (!overlay) return;
             ['addMmEclipse', 'addMmKontron', 'addMmAstronics', 'addMmToldMg', 'addMmToldTid', 'addMmTnewMg',
-             'addMmTnewTid', 'addMmChassis', 'addMmEsn', 'addMmMac', 'addMmNotes']
+             'addMmTnewTid', 'addMmChassis', 'addMmEsn', 'addMmMac', 'addMmNotes', 'addMmRemoved', 'addMmRemovalReason']
                 .forEach(x => { const el = document.getElementById(x); if (el) el.value = ''; });
             document.getElementById('addMmStatus').value = 'spare';
             document.getElementById('addMmInstall').value = toDMY(new Date().toISOString().slice(0, 10));
@@ -16738,7 +16771,29 @@
             if (!wrap) return;
             const s = document.getElementById('addMmStatus').value;
             wrap.style.display = (s === 'active' || s === 'fault' || s === 'removed') ? '' : 'none';
+            const remWrap = document.getElementById('addMmRemovedWrap');
+            if (remWrap) remWrap.style.display = (s === 'removed') ? '' : 'none';
+            syncAddModmanRemoval();
             syncAddModmanSerials();
+        }
+
+        // Live on-wing days for a MODMAN being recorded as already Removed, from its
+        // install and removed dates (both dd-mm-yyyy). Mirrors the /units Add form.
+        function syncAddModmanRemoval() {
+            const daysEl = document.getElementById('addMmDays');
+            if (!daysEl) return;
+            if (document.getElementById('addMmStatus').value !== 'removed') { daysEl.textContent = ''; return; }
+            const fi = readDateField(document.getElementById('addMmInstall'));
+            const ri = readDateField(document.getElementById('addMmRemoved'));
+            if (!document.getElementById('addMmRemoved').value.trim()) { daysEl.textContent = ''; return; }
+            if (fi && ri && fi !== false && ri !== false) {
+                const span = dateSpan(fi, ri);
+                daysEl.textContent = span
+                    ? `On wing ${span} (${toDMY(fi)} → ${toDMY(ri)})`
+                    : 'Removed date is before the install date — check the dates.';
+            } else {
+                daysEl.textContent = 'Enter both dates as dd-mm-yyyy to see the on-wing days.';
+            }
         }
 
         // True when the box being added is (or is going onto) an A321XLR — the Astronics
@@ -16821,6 +16876,21 @@
                         const stored = fmtDate(inst);
                         if (!stored) { err.textContent = 'Install date must be dd-mm-yyyy.'; err.style.display = 'block'; return; }
                         entry.installDate = stored;
+                    }
+                    // A box recorded straight to Removed carries its completed history:
+                    // removed date (optional) plus the reason. On-wing days are derived.
+                    if (status === 'removed') {
+                        const rem = val('addMmRemoved');
+                        if (rem) {
+                            const storedR = fmtDate(rem);
+                            if (!storedR) { err.textContent = 'Removed date must be dd-mm-yyyy.'; err.style.display = 'block'; return; }
+                            if (entry.installDate && toISODate(storedR) < toISODate(entry.installDate)) {
+                                err.textContent = 'Removed date cannot be before the install date.'; err.style.display = 'block'; return;
+                            }
+                            entry.removalDate = storedR;
+                        }
+                        const reason = val('addMmRemovalReason');
+                        if (reason) entry.removalReason = reason;
                     }
                 }
 
@@ -18791,6 +18861,12 @@
             document.getElementById('hwAddSerial').value = '';
             document.getElementById('hwAddAlt').value = '';
             document.getElementById('hwAddFitted').value = '';
+            document.getElementById('hwAddRemoved').value = '';
+            document.getElementById('hwAddRemovalReason').value = '';
+            document.getElementById('hwAddShopStatus').value = '';
+            document.getElementById('hwAddShopRef').value = '';
+            document.getElementById('hwAddShopFinding').value = '';
+            hwAddSyncRemoval();
             const err = document.getElementById('hwAddError'); err.textContent = ''; err.style.display = 'none';
             const acSel = document.getElementById('hwAddAircraft');
             acSel.innerHTML = hwGroupFleet(group)
@@ -18861,6 +18937,33 @@
             }
         }
 
+        // A removed date turns the Add into a completed history record (fitted AND taken
+        // off). The reason/shop fields and a live on-wing days read-out appear only then;
+        // an on-wing add stays the plain serial + installed date.
+        function hwAddSyncRemoval() {
+            const rem = document.getElementById('hwAddRemoved');
+            const wrap = document.getElementById('hwAddRemovalWrap');
+            const daysEl = document.getElementById('hwAddDays');
+            if (!rem || !wrap) return;
+            const has = !!rem.value.trim();
+            wrap.style.display = has ? '' : 'none';
+            // A completed history record is not a live swap of the box on wing now.
+            const repWrap = document.getElementById('hwAddReplaceWrap');
+            if (has) { if (repWrap) repWrap.style.display = 'none'; }
+            else if (document.getElementById('hwAddAircraft').value) { hwAddSyncSlot(false); }
+            if (!has) return;
+            const fi = readDateField(document.getElementById('hwAddFitted'));
+            const ri = readDateField(rem);
+            if (fi && ri && fi !== false && ri !== false) {
+                const span = dateSpan(fi, ri);
+                daysEl.textContent = span
+                    ? `On wing ${span} (${toDMY(fi)} → ${toDMY(ri)})`
+                    : 'Removed date is before the installed date — check the dates.';
+            } else {
+                daysEl.textContent = 'Enter both dates as dd-mm-yyyy to see the on-wing days.';
+            }
+        }
+
         function closeHwAdd() {
             const ov = document.getElementById('hwAddOverlay');
             if (ov) ov.style.display = 'none';
@@ -18883,9 +18986,21 @@
             const fittedDate = readDateField(document.getElementById('hwAddFitted'));
             if (fittedDate === false) { fail('Installed date must be dd-mm-yyyy.'); return; }
 
+            // Optional: a box that was fitted AND already taken off is recorded complete,
+            // in one go — the backfill of past equipment with no record yet. The reason
+            // and shop fields only apply when there is a removed date.
+            let removedDate = '';
+            if (document.getElementById('hwAddRemoved').value.trim()) {
+                removedDate = readDateField(document.getElementById('hwAddRemoved'));
+                if (removedDate === false) { fail('Removed date must be dd-mm-yyyy.'); return; }
+                if (!fittedDate) { fail('Enter the installed date before the removed date.'); return; }
+                if (toISODate(removedDate) < toISODate(fittedDate)) { fail('Removed date cannot be before the installed date.'); return; }
+            }
+
             const history = unitsAtSlot(r.lruId, r.aircraft.id, r.position);
             const current = history.find(h => fitmentIsOn(h.fitment));
-            const replace = !!current && document.getElementById('hwAddReplace').checked;
+            // A historical (already-removed) record never swaps out the box on wing now.
+            const replace = !!current && !removedDate && document.getElementById('hwAddReplace').checked;
             if (replace && !fittedDate) { fail('Enter the installed date — it becomes the removal date of the box being swapped out.'); return; }
 
             const token = await getIdToken();
@@ -18893,9 +19008,20 @@
             const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
             const fitId = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
             const unitId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-            const fitment = { aircraft: r.aircraft.id, state: 'on_wing', loggedAt: stamp };
+            const fitment = { aircraft: r.aircraft.id, state: removedDate ? 'removed' : 'on_wing', loggedAt: stamp };
             if (r.position) fitment.position = String(r.position);
             if (fittedDate) fitment.fittedDate = fittedDate;
+            if (removedDate) {
+                fitment.removedDate = removedDate;
+                const reason = document.getElementById('hwAddRemovalReason').value.trim();
+                const shopStatus = document.getElementById('hwAddShopStatus').value;
+                const shopRef = document.getElementById('hwAddShopRef').value.trim();
+                const shopFinding = document.getElementById('hwAddShopFinding').value.trim();
+                if (reason) fitment.removalReason = reason;
+                if (shopStatus) fitment.shopStatus = shopStatus;
+                if (shopRef) fitment.shopRef = shopRef;
+                if (shopFinding) fitment.shopFinding = shopFinding;
+            }
             const unit = { lruId: r.lruId, addedAt: stamp, fitments: { [fitId]: fitment } };
             if (serial) unit.serial = serial;
             if (alt) unit.altSerial = alt;
@@ -18920,7 +19046,7 @@
                 closeHwAdd();
                 renderHardwarePage();
                 renderMaintenancePage();
-                setSyncStatus(`🟢 ${serial || alt} added on ${r.aircraft.id}${replace ? ' (swap recorded)' : ''} — synced with your team`, '#28a745');
+                setSyncStatus(`🟢 ${serial || alt} added on ${r.aircraft.id}${removedDate ? ' (fitted & removed record)' : (replace ? ' (swap recorded)' : '')} — synced with your team`, '#28a745');
             } catch (ex) {
                 fail(`Could not save — ${ex.message}`);
             } finally {
