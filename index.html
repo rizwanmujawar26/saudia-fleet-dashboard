@@ -7522,10 +7522,19 @@
 
         // A serial identifies one box WITHIN its equipment type — two different LRUs may
         // legitimately carry the same number.
+        // Match on the serial with ALL whitespace stripped, not just trimmed: a SIM S/N
+        // typed "899660 117002 235902" is the same physical box as the stored
+        // "899660117002235902", and treating them as different is exactly what minted a
+        // duplicate unit from a hand-logged swap. Internal spacing is never significant
+        // in a serial, so it is removed before comparing.
+        function normSerialKey(serial) {
+            return String(serial || '').replace(/\s+/g, '').toLowerCase();
+        }
         function unitBySerial(lruId, serial) {
-            const k = String(serial || '').trim().toLowerCase();
+            const k = normSerialKey(serial);
+            if (!k) return null;
             return unitEntries().find(u =>
-                u.lruId === lruId && String(u.serial || '').trim().toLowerCase() === k) || null;
+                u.lruId === lruId && normSerialKey(u.serial) === k) || null;
         }
 
         function hardwareRecordOf(lruId) {
@@ -7550,8 +7559,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.156.0';
-        const APP_BUILD    = '2026.09.15.02';
+        const APP_VERSION  = '2.157.0';
+        const APP_BUILD    = '2026.09.15.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -18149,6 +18158,16 @@
             if (oldSerial) {
                 const existing = unitBySerial(lruId, oldSerial);
                 if (existing) {
+                    // Guard: if this box is already recorded as removed from this aircraft
+                    // on this date, the removal is already in the register (an auto-import,
+                    // or this same activity re-saved) — link the activity to it rather than
+                    // logging the removal a second time.
+                    const dupOff = unitFitments(existing).find(f =>
+                        !fitmentIsOn(f) && f.aircraft === tail && f.removedDate === entry.date);
+                    if (dupOff) {
+                        if (!dupOff.activityId) payload[`${existing.id}/fitments/${dupOff.id}/activityId`] = activityId;
+                        // nothing else to write for this side
+                    } else {
                     // The box is already known: close the fitment it is sitting in
                     // rather than inventing a second one for the same unit.
                     const open = unitFitments(existing).find(fitmentIsOn);
@@ -18167,6 +18186,7 @@
                         if (d.removalReason) f.removalReason = d.removalReason;
                         payload[`${existing.id}/fitments/${fid}`] = f;
                     }
+                    }
                 } else {
                     const f = { aircraft: tail, state: 'removed', removedDate: entry.date,
                                 activityId, loggedAt: stamp };
@@ -18183,10 +18203,18 @@
                             activityId, loggedAt: stamp };
                 if (pos) f.position = pos;
                 if (existing) {
-                    // A unit coming back out of the shop onto another aircraft: a new
-                    // fitment on the same box, which is what makes its total time on
-                    // wing and its change count add up across airframes.
-                    payload[`${existing.id}/fitments/${uid('f')}`] = f;
+                    // Guard: if this box is already on wing on this aircraft, the fitment
+                    // is already in the register (auto-import, or this activity re-saved) —
+                    // link the activity to it rather than adding a second on-wing fitment.
+                    const dupOn = unitFitments(existing).find(x => fitmentIsOn(x) && x.aircraft === tail);
+                    if (dupOn) {
+                        if (!dupOn.activityId) payload[`${existing.id}/fitments/${dupOn.id}/activityId`] = activityId;
+                    } else {
+                        // A unit coming back out of the shop onto another aircraft: a new
+                        // fitment on the same box, which is what makes its total time on
+                        // wing and its change count add up across airframes.
+                        payload[`${existing.id}/fitments/${uid('f')}`] = f;
+                    }
                 } else {
                     payload[uid('u')] = { lruId, serial: newSerial, addedAt: stamp,
                                           fitments: { [uid('f')]: f } };
@@ -19995,6 +20023,34 @@
             return a.retrofitLocation || 'Jeddah';
         }
 
+        // Collapse rows that describe the SAME physical event so the Timeline shows it
+        // ONCE — the robust guard against duplication whatever its source: two /units
+        // fitments for one swap (an auto-import plus a hand-logged activity), a serial
+        // typed with and without spaces, or the same activity entered twice.
+        //
+        // The signature is what a reader would call "the same event": same day, same
+        // aircraft, same kind, same title, same subtitle — with the subtitle compared on
+        // alphanumerics only, so "S/N 899660 117002 235902" and "S/N 899660117002235902"
+        // are one. When rows collapse, the one carrying an actId (an editable /activities
+        // record) or an avrId wins, so the surviving row stays manageable; a purely
+        // derived duplicate simply drops. Rows with no tail AND no subtitle (a bare
+        // milestone) are never merged — they carry too little to be sure they match.
+        function dedupeTimeline(rows) {
+            const norm = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, '');
+            const rank = x => (x.actId ? 2 : 0) + (x.avrId ? 1 : 0);
+            const seen = new Map();
+            const out = [];
+            rows.forEach(r => {
+                const sub = norm(r.sub), tail = r.tail || '';
+                if (!tail && !sub) { out.push(r); return; }   // too thin to dedupe safely
+                const key = [r.kind, tail, r.iso || '', norm(r.title), sub].join('|');
+                if (!seen.has(key)) { seen.set(key, out.length); out.push(r); return; }
+                const i = seen.get(key);
+                if (rank(r) > rank(out[i])) out[i] = r;        // keep the editable one
+            });
+            return out;
+        }
+
         // The one place the three sources are folded into a single shape.
         // { iso, kind, tail, type, location, title, sub }
         function timelineActivities() {
@@ -20339,7 +20395,7 @@
                            actId: act.id, category: act.category, visitId: act.visitId || '' });
             });
 
-            return out;
+            return dedupeTimeline(out);
         }
 
         // The whole Timeline set, unfiltered by the Active-only gate — the Activity tab's
