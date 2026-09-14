@@ -7516,8 +7516,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.152.0';
-        const APP_BUILD    = '2026.09.14.06';
+        const APP_VERSION  = '2.153.0';
+        const APP_BUILD    = '2026.09.14.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -13153,9 +13153,15 @@
             const endIso = toISODate(v.dateEnd || v.dateStart) || startIso;
             const inWin = i => startIso && i && i >= startIso && (!endIso || i <= endIso);
             const base = timelineRepoEntries()
-                // kind:'visit' is the report's OWN derived Timeline entry — skip it, or a
-                // report would list itself as one of its members.
-                .filter(x => x.kind !== 'visit' && x.tail === v.aircraft && (x.actId ? x.visitId === v.id : inWin(x.iso)));
+                .filter(x => x.tail === v.aircraft && (
+                    // Other visits and remote sessions for this tail ARE part of the story
+                    // and come in regardless of date (a report on the 14th should list the
+                    // 13th's remote session); only THIS report's own visit is skipped, or it
+                    // would list itself (user, 2026-09-14).
+                    x.kind === 'visit'
+                        ? x.avrId !== v.id
+                        : (x.actId ? x.visitId === v.id : inWin(x.iso))
+                ));
 
             // Pinned derived rows — auto-generated activities a user explicitly added to this
             // report from the Activities list, even when they fall outside the date window.
@@ -13286,6 +13292,21 @@
             return { a, spec, modman, equip, linefit, system, retro, retroSpan, media: a.media || {} };
         }
 
+        // The roaming PLAN (global/local) of the SIM currently fitted to this tail, read
+        // from the same /units SIM register the 4G SIM tab shows — '' when none is on record.
+        function simRoamingOf(tail) {
+            const c = simCards().find(x => x.tailShown === tail && x.status === 'active');
+            return c ? (c.roaming || '') : '';
+        }
+
+        // A stored "YYYY-MM-DD HH:MM:SS" heartbeat rendered day-first with a UTC-Z time:
+        // "14-Sep-2026 08:25 Z". Anything unparseable is returned untouched.
+        function avrHeartbeatDisplay(s) {
+            const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+            if (!m) return s || '';
+            return `${m[3]}-${MONTH_NAMES[+m[2] - 1]}-${m[1]} ${m[4]}:${m[5]} Z`;
+        }
+
         // Shared cell rows for both the screen dossier and the print sheet.
         function avrDossierRows(tail, lastHeartbeat) {
             const { a, spec, linefit, system, retro, retroSpan, media } = avrDossierData(tail);
@@ -13300,12 +13321,15 @@
                 spec.seatTotal ? `Total ${spec.seatTotal}` : '',
             ].filter(Boolean).join(' · ');
             const seats = seatBits || spec.seatConfig || '';
+            // Row 1: Type · MSN · Delivery. Row 2: IFE system, then the seat configuration
+            // (LOPA) which the print sheet gives the width of the rest of the row. Fleet
+            // status was dropped (user, 2026-09-14) — it is on the Fleet page, not needed here.
             const aircraftRows = [
                 ['Type', spec.variant || a.type || ''],
                 ['MSN', spec.msn || ''],
                 ['Delivery / age', del],
-                ['Seating', seats],
-                ['Fleet status', fleetStatusOf(a) || ''],
+                ['IFE system', ifeSystemOf(a)],
+                ['Seat configuration', seats],
             ];
             // Specifications — the box-and-airframe facts, laid out three to a line:
             //   line 1  IFC system · IFE system · Fit
@@ -13320,7 +13344,6 @@
             // Serials and MODMAN live in their own tables under this same heading.
             const hardwareRows = [
                 ['IFC system', system],
-                ['IFE system', ifeSystemOf(a)],
                 ['Fit', linefit ? 'Linefit' : (fitOf(a) === 'retrofit' ? 'Retrofit' : '')],
                 ['Mod start', a.retrofitStart || ''],
                 ['Mod end', a.retrofitEnd || (a.retrofitStart ? 'Ongoing' : '')],
@@ -13339,7 +13362,7 @@
                 // the caller — the last time the system phoned home, which fixes the point
                 // the current outage is measured from. It sits in the vacant slot next to
                 // Activation and, like every other spec row, is dropped when blank.
-                ['Last heartbeat', lastHeartbeat ? lastHeartbeat + ' UTC' : ''],
+                ['Last heartbeat', lastHeartbeat ? avrHeartbeatDisplay(lastHeartbeat) : ''],
                 ['Previous IFC', spec.ifcPrevious || ''],
             ];
             // Software & Media — the loadable, changeable state. Order (user, 2026-09-14):
@@ -13352,13 +13375,16 @@
             const softwareRows = [
                 [linefit ? '' : 'Middleware', linefit ? '' : (a.swVersion || '')],
                 [linefit ? '' : 'Middleware loaded', linefit ? '' : [a.completionLocation, a.completionDate].filter(Boolean).join(' · ')],
-                ['OTA Patch #2', ota],
-                ['OTA Patch #3', ota3],
+                ['OTA Patch #2', ota ? (fmtDate(ota) || ota) : ''],
+                ['OTA Patch #3', ota3 ? (fmtDate(ota3) || ota3) : ''],
                 ['Media cycle', media.mediaCycle ? cycleToDisplay(media.mediaCycle) : ''],
                 ['UGO / Tiles', [a.ugoVersion && `UGO ${a.ugoVersion}`, a.tilesVersion && `Tiles ${a.tilesVersion}`].filter(Boolean).join(' · ')],
                 ['WiFi visibility', a.wifiVisibility ? a.wifiVisibility.charAt(0).toUpperCase() + a.wifiVisibility.slice(1) : '',
                     a.wifiVisibility === 'hidden' ? 'pill-red' : (a.wifiVisibility === 'public' ? 'pill-green' : '')],
-                ['SIM roaming', a.simRoaming ? (a.simRoaming === 'active' ? 'Active' : 'Inactive') : ''],
+                // Roaming PLAN (Global/Local) from the fitted SIM, as a pill — not the
+                // active/inactive toggle. Global reads blue, Local grey.
+                ['SIM roaming', (rm => rm ? (rm === 'global' ? 'Global' : 'Local') : '')(simRoamingOf(tail)),
+                    (rm => rm === 'global' ? 'pill-blue' : (rm === 'local' ? 'pill-grey' : ''))(simRoamingOf(tail))],
             ];
             return {
                 aircraftRows: aircraftRows.filter(r => r[0]),
@@ -14019,12 +14045,12 @@
             const people = avrAttendees(v);
             const type = avrTypeOf(v.aircraft);
             const rt = avrReportType(v);
-            const kindLabel = k => ({ software: 'Software', media: 'Media', hardware: 'Hardware', commission: 'Commissioning', maintenance: 'Maintenance', modification: 'Modification', operational: 'Operational', service: 'Service', activation: 'Activation' }[k] || k);
+            const kindLabel = k => ({ software: 'Software', media: 'Media', hardware: 'Hardware', commission: 'Commissioning', maintenance: 'Maintenance', modification: 'Modification', operational: 'Operational', service: 'Service', activation: 'Activation', visit: 'Visit' }[k] || k);
             const actRows = members.length ? members.map(x => {
-                let details = `<b>${escAttr(x.title || '')}</b>`;
-                // TEMPLATE RULE (universal): the Details cell reads as ONE line — the bold
-                // title, then every descriptor after it joined by " · ", never stacked on
-                // <br>s. The cell wraps naturally if it must, but nothing forces a break.
+                // TEMPLATE RULE (user, 2026-09-14): the bold title is its OWN first line, and
+                // every descriptor after it drops to a second line (the description of the
+                // event), never crammed onto the title's line.
+                let details = `<div class="d-title"><b>${escAttr(x.title || '')}</b></div>`;
                 if (x.actId && activitiesLive[x.actId]) {
                     const a = activitiesLive[x.actId], d = a.details || {};
                     const tech = [
@@ -14036,13 +14062,9 @@
                     if (a.task) bits.push(escAttr(a.task));
                     if (tech) bits.push('<span style="color:#555;">' + tech + '</span>');
                     if (a.outcome) bits.push('<i>Outcome: ' + escAttr(a.outcome) + '</i>');
-                    if (bits.length) details += ' <span class="d-sub">· ' + bits.join(' · ') + '</span>';
+                    if (bits.length) details += '<div class="d-sub">' + bits.join(' · ') + '</div>';
                 } else if (x.sub) {
-                    // The sub starts on the title's line, then wraps WITHIN the page: a short
-                    // S/N stays inline, but a long service description (e.g. a MODMAN-failure
-                    // note) must reflow, never run off the right edge. No nowrap here — the
-                    // td's overflow-wrap is the safety net for an unbreakable token.
-                    details += ' <span class="d-sub" style="color:#6b7883;">· ' + escAttr(x.sub) + '</span>';
+                    details += '<div class="d-sub" style="color:#6b7883;">' + escAttr(x.sub) + '</div>';
                 }
                 return `<tr>
                     <td class="c-date">${escAttr(fmtDate(x.iso) || '')}</td>
@@ -14054,7 +14076,8 @@
             // Aircraft dossier for print — grouped Aircraft / Hardware / Software, plus
             // installed serials and MODMAN under Hardware.
             const { aircraftRows, hardwareRows, softwareRows } = avrDossierRows(v.aircraft, v.lastHeartbeat);
-            const { spec: dspec, equip, modman } = avrDossierData(v.aircraft);
+            const { spec: dspec, equip, modman, a: acRec } = avrDossierData(v.aircraft);
+            const acConfig = (acRec && acRec.config) || '';
             // A dossier cell: small caps label above the value. The optional third tuple
             // element is a render hint — 'alert'/'accent' colour the value, 'pill-red'/
             // 'pill-green' render it as a status pill (used for a Hidden/Public SSID).
@@ -14065,6 +14088,17 @@
                     : `<span class="dv${hint ? ' dv-' + hint : ''}">${text}</span>`;
                 return `<div class="di"><span class="k">${escAttr(k)}</span>${valHtml}</div>`;
             }).join('');
+
+            // Aircraft section: Type/MSN/Delivery on row 1; IFE system then the seat
+            // configuration (LOPA) on row 2, the seat cell given the width of the rest of
+            // the row (span 2) with a seat glyph so it reads on one line, never wrapped.
+            const acSeatIdx = aircraftRows.findIndex(r => r[0] === 'Seat configuration');
+            const acSeatVal = acSeatIdx >= 0 ? aircraftRows[acSeatIdx][1] : '';
+            const acHeadRows = aircraftRows.filter((r, i) => i !== acSeatIdx);
+            const aircraftSection = `<div class="sec">Aircraft</div>
+                <div class="rpt-grid">${dossierGrid(acHeadRows)}${acSeatVal
+                    ? `<div class="di di-span2"><span class="k">Seat configuration</span><span class="dv dv-seat"><span class="seat-ico">\u{1F4BA}</span>${escAttr(acSeatVal)}</span></div>`
+                    : ''}</div>`;
 
             // Equipment, split into two concise tables — what is fitted now, and what has
             // been removed — each with dates and a day count. (user, 2026-09-14; moved to
@@ -14078,6 +14112,9 @@
             };
             const todayIso = new Date().toISOString().slice(0, 10);
             const eqPos = r => r.position ? ` <span class="eq-pos">${escAttr(r.position)}/${escAttr(r.qty)}</span>` : '';
+            // A SIM serial reads far easier in three six-digit groups (899660 117003 092837),
+            // the same grouping the 4G SIM tab uses (user, 2026-09-14).
+            const eqSerial = r => escAttr((r.lru && SIM_LRU_IDS.includes(r.lru.id) ? formatSimSerial(r.serial) : r.serial) || '—');
             const equipInstalled = equip.filter(r => r.serial && !r.vacant);
             const equipRemoved = [];
             equip.forEach(r => (r.removedUnits || []).forEach(u => equipRemoved.push(Object.assign({ lru: r.lru, position: r.position, qty: r.qty }, u))));
@@ -14086,14 +14123,14 @@
                 <table class="tbl eqtbl"><thead><tr><th>Equipment</th><th>Serial</th><th>Installed</th><th class="num">On wing</th></tr></thead>
                 <tbody>${equipInstalled.map(r => {
                     const days = r.daysOnWing != null ? r.daysOnWing : daysBetween(r.date, todayIso);
-                    return `<tr><td>${escAttr(r.lru.label)}${eqPos(r)}</td><td class="mono">${escAttr(r.serial || '—')}</td><td class="nowrap">${escAttr(r.date || '—')}</td><td class="num">${days != null ? days + 'd' : '—'}</td></tr>`;
+                    return `<tr><td>${escAttr(r.lru.label)}${eqPos(r)}</td><td class="mono">${eqSerial(r)}</td><td class="nowrap">${escAttr(r.date || '—')}</td><td class="num">${days != null ? days + 'd' : '—'}</td></tr>`;
                 }).join('')}</tbody></table>` : '';
             const removedTable = equipRemoved.length ? `
                 <div class="sec">Removed Equipment</div>
                 <table class="tbl eqtbl"><thead><tr><th>Equipment</th><th>Serial</th><th>Installed</th><th>Removed</th><th class="num">In&nbsp;service</th></tr></thead>
                 <tbody>${equipRemoved.map(u => {
                     const days = daysBetween(u.fitted, u.removed);
-                    return `<tr><td>${escAttr(u.lru.label)}${eqPos(u)}</td><td class="mono">${escAttr(u.serial || '—')}</td><td class="nowrap">${escAttr(u.fitted || '—')}</td><td class="nowrap">${escAttr(u.removed || '—')}</td><td class="num">${days != null ? days + 'd' : '—'}</td></tr>`;
+                    return `<tr><td>${escAttr(u.lru.label)}${eqPos(u)}</td><td class="mono">${eqSerial(u)}</td><td class="nowrap">${escAttr(u.fitted || '—')}</td><td class="nowrap">${escAttr(u.removed || '—')}</td><td class="num">${days != null ? days + 'd' : '—'}</td></tr>`;
                 }).join('')}</tbody></table>` : '';
             const equipPrint = installedTable + removedTable;
             const ifcNotePrint = dspec.ifcNote ? `<div class="note" style="margin-top:6px;"><b>IFC mod:</b> ${escAttr(dspec.ifcNote)}</div>` : '';
@@ -14101,14 +14138,17 @@
             if (modman) {
                 const snLabel = modman.isAstronics ? 'Astronics S/N' : 'Eclipse S/N';
                 const snVal = modman.isAstronics ? modman.astronicsSn : eclipseSnDisplay(modman.eclipseSn);
-                // Row 1: the box identities + ESN. Row 2: Taurus modem (IPHO, MG ID, TID).
-                // Row 3: Hughes chassis + MAC. (3-column grid fills left-to-right.)
+                // Two rows now (user, 2026-09-14): MAC address dropped, and Taurus MG ID /
+                // TID combined into one "101 / 61" field — which frees the slot so the
+                // Hughes Chassis ID sits on row 2. Row 1: box identities + ESN. Row 2: IPHO ·
+                // Taurus MG/TID · Hughes Chassis.
+                const taurusMg = modman.taurusNewMgId || modman.taurusOldMgId || '';
+                const taurusTid = modman.taurusNewTid || modman.taurusOldTid || '';
                 const mrows = [
                     ['Kontron S/N', modman.kontronSn], [snLabel, snVal], ['ESN', modman.hnsEsn],
                     ['IPHO', modman.ipho !== 'na' ? modman.ipho : ''],
-                    ['Taurus MG ID', modman.taurusNewMgId || modman.taurusOldMgId || ''],
-                    ['Taurus TID', modman.taurusNewTid || modman.taurusOldTid || ''],
-                    ['Hughes Chassis ID', modman.hnsChassisId], ['MAC Address', modman.hnsMac],
+                    ['Taurus MG / TID', [taurusMg, taurusTid].filter(Boolean).join(' / ')],
+                    ['Hughes Chassis ID', modman.hnsChassisId],
                 ].filter(r => r[1]);
                 modmanPrint = mrows.length ? `<div class="sec">MODMAN &amp; Commissioning</div><div class="rpt-grid">${dossierGrid(mrows)}</div>` : '';
             }
@@ -14128,7 +14168,7 @@
             // The identity band — made prominent (v2.133.2): the full HZ- registration leads,
             // with dates and location, each as a large value under a small caps label.
             const metaGrid = `<div class="rpt-meta">
-                <div class="rpt-meta-cell"><span class="mk">Aircraft</span><span class="mv mv-lead">HZ-${escAttr(v.aircraft)}${type ? ` <span class="ms-inline">${escAttr(type)}</span>` : ''}</span></div>
+                <div class="rpt-meta-cell"><span class="mk">Aircraft</span><span class="mv mv-lead">HZ-${escAttr(v.aircraft)}${type ? ` <span class="ms-inline">· ${escAttr(type)}</span>` : ''}${acConfig ? ` <span class="ms-inline">· ${escAttr(acConfig)}</span>` : ''}</span></div>
                 <div class="rpt-meta-cell"><span class="mk">Dates</span><span class="mv">${escAttr(avrDateLabel(v))}</span></div>
                 <div class="rpt-meta-cell"><span class="mk">Location</span><span class="mv">${escAttr(avrLocationFull(v) || '—')}</span></div>
             </div>`;
@@ -14191,12 +14231,17 @@
   .rpt-grid-4 { grid-template-columns:repeat(4,1fr); }
   .rpt-grid .k, .k { display:block; font-size:9.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); margin-bottom:1px; }
   .rpt-grid .di { line-height:1.35; }
+  .rpt-grid .di.di-span2 { grid-column:span 2; }
   .rpt-grid .dv { color:var(--ink); font-weight:600; }
   .rpt-grid .dv-alert { color:#a52834; font-weight:800; }
   .rpt-grid .dv-accent { color:var(--green); font-weight:800; }
+  .rpt-grid .dv-seat { white-space:nowrap; }
+  .rpt-grid .dv-seat .seat-ico { margin-right:6px; }
   .pill { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.3px; padding:1px 9px; border-radius:99px; }
   .pill-red { background:#fdecee; color:#a52834; border:1px solid #f3c2c8; }
   .pill-green { background:#e9f5ee; color:#0b7a3b; border:1px solid #bfe3cd; }
+  .pill-blue { background:#eaf2fb; color:#2f5f8a; border:1px solid #c4dcf2; }
+  .pill-grey { background:#eef1f4; color:#55606a; border:1px solid #d5dbe1; }
   /* Equipment tables — tight, with a right-aligned day count and monospaced serials. */
   .eqtbl td, .eqtbl th { padding:5px 8px; }
   .eqtbl th.num, .eqtbl td.num { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
@@ -14224,7 +14269,8 @@
     border-bottom:1.5px solid var(--line); padding:6px 8px; }
   table.tbl td { border-bottom:1px solid #eef2f6; padding:6px 8px; vertical-align:top; overflow-wrap:anywhere; }
   table.tbl td.c-date, table.tbl td.c-cat { white-space:nowrap; }
-  table.tbl td .d-sub { color:#6b7883; }
+  table.tbl td .d-title { font-weight:400; }
+  table.tbl td .d-sub { display:block; margin-top:2px; color:#6b7883; }
   table.tbl tbody tr:nth-child(even) td { background:#fafbfc; }
   /* Engagement & People — an enclosed panel (matches the identity band's shell). */
   .ep-box { background:var(--soft); border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:12px 0 4px; }
@@ -14304,8 +14350,7 @@
     ${v.detailedReport ? `<div class="sec">Report</div><div class="note">${escAttr(v.detailedReport)}</div>` : ''}
     ${v.followUp ? `<div class="sec">Follow Up</div><div class="note">${escAttr(v.followUp)}</div>` : ''}
     ${engagementPeople}
-    <div class="sec">Aircraft</div>
-    <div class="rpt-grid">${dossierGrid(aircraftRows)}</div>
+    ${aircraftSection}
     <div class="sec">Specifications</div>
     <div class="rpt-grid">${dossierGrid(hardwareRows)}</div>
     ${ifcNotePrint}
@@ -14318,7 +14363,7 @@
       <tbody>${actRows}</tbody>
     </table>
     <div class="rpt-footer">
-      <span>Generated from the Saudia Connectivity Fleet Status dashboard</span>
+      <span>HZ-${escAttr(v.aircraft)} · ${escAttr(rt.label)}${v.ref ? ' · ' + escAttr(v.ref) : ''}</span>
       <span>Downloaded ${escAttr(stamp)}</span>
     </div>
   </div>
