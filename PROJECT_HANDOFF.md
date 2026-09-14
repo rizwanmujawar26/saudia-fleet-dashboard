@@ -6,7 +6,58 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.150.0–v2.151.1 (2026-09-13 → 2026-09-14).** Fleet/Software widget honesty,
+**Latest — v2.151.2–v2.153.2 (2026-09-14).** A sustained redesign of the AVR **print / PDF
+report** (`printAvr`) plus the shared dossier data. Full detail in CHANGELOG.md / `git log`;
+the load-bearing shape:
+
+- **The report is `printAvr` — a self-contained `document.write` into a new tab.** ⚠️ To verify
+  it in the browser without a popup: stub `window.open` to capture the doc string, then
+  `document.open();document.write(doc);document.close()` into the current tab and screenshot.
+  ⚠️ The **printed PDF's header/footer come from `.print-running-head` / `.print-running-foot`**
+  (fixed, in the `@page` margins), NOT `.rpt-header` / `.rpt-footer` — those are `display:none`
+  in print. A header/footer change must touch BOTH.
+- **Shared dossier data lives in `avrDossierRows(tail, lastHeartbeat)`** (used by the on-screen
+  card AND the PDF), returning `[label, value, hint]` rows. Changes this session, so BOTH views
+  follow: engines row removed; Fleet status removed; **IFE system moved into the Aircraft
+  section** (was in Specifications); Software order is Middleware · Middleware **loaded**
+  (`completionLocation`+`completionDate`) · OTA #2 · OTA #3 / Media cycle · UGO/Tiles · WiFi ·
+  **SIM roaming** (the fitted SIM's PLAN via `simRoamingOf(tail)` → Global/Local, not the
+  active/inactive toggle); Last heartbeat printed day-first via `avrHeartbeatDisplay`.
+  ⚠️ `softwareRows` is filtered on the LABEL only (`r => r[0]`) so empty fields show "—" and the
+  fixed **4-across** Software grid never reflows; `hardwareRows`/`aircraftRows` still drop blanks.
+- **Specifications is grouped so related facts share a row** (v2.153.1): IFC system · Fit ·
+  Install site / Mod start · Mod end · Mod window / Activation · Last heartbeat.
+- **Colour is a per-row render HINT the PRINT `dossierGrid` honours** (the on-screen `cell`
+  ignores the 3rd tuple element, so highlights are print-only): `alert` = red bold (Install site
+  when NOT Jeddah), `accent` = green (Activation), and any `pill-*` renders a pill — `pill-red`
+  Hidden SSID, `pill-green` Public, `pill-blue` Global roaming, `pill-grey` Local. ⚠️ The pill
+  branch must test `hint.indexOf('pill-') === 0`, NOT a red/green whitelist — that bug left
+  Local/Global as plain text and shipped once.
+- **Equipment is two concise tables** (`.eqtbl`) below Software & Media — **Installed** (serial ·
+  installed · on-wing days) and **Removed** (serial · installed · removed · in-service days).
+  SIM serials are grouped in six-digit blocks with `formatSimSerial` (899660 117003 092837).
+- **Work Carried Out includes other visits/remote sessions for the tail** (v2.153.0): the base
+  filter now keeps `kind:'visit'` entries whose `avrId !== v.id` (any date; only THIS report's own
+  visit is skipped), so a 14-Sep report lists the 13-Sep remote session. Each Details cell puts the
+  **bold title on its own line** and the description beneath (`.d-title` / `.d-sub` blocks).
+  ⚠️ Issue-only reports were bare headlines: `avrReportMembers` now normalises every `issueId` row —
+  the fault row carries the issue's full `detail`, the restored row leads with the `resolutionNote`
+  (+ days-down). And the linked-issue match requires **`i.tail === v.aircraft`** (guards a cross-tail
+  link AND a raw record with `v.id` undefined, which made `undefined === (absent resolutionVisitId)`
+  true and pulled every unresolved issue in).
+- **Identity band**: registration · type · **config pill** (`.cfg-tag`, from `/fleet/{tail}/config`,
+  no dots). Footer left = `HZ-<tail> · <report type> · <ref>`.
+- **NSG logo is now `assets/logos/nsg_logo_v.png`** (stacked mark, 500×204), **inlined as a base64
+  data URI** in the `NSG_REPORT_LOGO` constant, sized to the Saudia logo's height (52px / 11mm),
+  right-aligned. ⚠️ The previous wide artwork carried ~32% symmetric transparent padding, so it
+  rendered small and floated high; to diagnose logo whitespace, draw it to a canvas and read the
+  non-transparent bounds. This is an inlined asset (self-contained) — distinct from the ONE external
+  asset, the `og:image`.
+- ⚠️ **`printAvr` const ordering:** a template-building const (e.g. `aircraftSection`) that calls
+  `dossierGrid` must be declared AFTER `dossierGrid`, or it throws "Cannot access before
+  initialization" (TDZ) the moment a report opens.
+
+**Prior — v2.150.0–v2.151.1 (2026-09-13 → 2026-09-14).** Fleet/Software widget honesty,
 the AVR report split into three text fields, and a per-report Last Heartbeat. Full detail in
 CHANGELOG.md / `git log`; the load-bearing shape:
 
