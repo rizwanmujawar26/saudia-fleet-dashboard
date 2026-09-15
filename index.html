@@ -3693,6 +3693,10 @@
         .hw-ac-chev { flex: 0 0 auto; font-size: 11px; color: #7a8791; transition: transform 0.18s ease; }
         .hw-ac-block.open .hw-ac-chev { transform: rotate(180deg); }
         .hw-ac-count { margin-left: auto; font-size: 11px; font-weight: 700; color: #5a6b78; background: #eef2f5; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+        .hw-ac-counts { margin-left: auto; display: flex; gap: 6px; align-items: center; flex: 0 0 auto; }
+        .hw-ac-pill { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+        .hw-ac-pill.on  { background: #e3f3ea; color: #0a5c34; }
+        .hw-ac-pill.off { background: #fdeff0; color: #a52834; }
         /* Add-Equipment modal: the previous-fitment context panel. */
         .hw-add-prev { background: #f4f7fa; border: 1px solid #e6ecf1; border-radius: 8px; padding: 8px 11px; font-size: 12.5px; color: #3a4750; margin: 12px 0; line-height: 1.5; }
         .hw-add-prev b { color: #17324b; }
@@ -7559,8 +7563,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.159.0';
-        const APP_BUILD    = '2026.09.15.07';
+        const APP_VERSION  = '2.160.0';
+        const APP_BUILD    = '2026.09.15.08';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -17742,7 +17746,7 @@
             const blocks = fleet.map(a => {
                 const fit = fitOf(a);
                 const rows = [];
-                let recorded = 0, hay = a.id.toLowerCase();
+                let recorded = 0, removedCount = 0, hay = a.id.toLowerCase();
                 HW_GROUPS.forEach(group => {
                     // MODMAN's single source is /modmans (the Satcom register) — the SAME
                     // rows the MODMAN sub-tab and the Satcom tab read, editable here via
@@ -17764,7 +17768,7 @@
                             return;
                         }
                         mmRows.forEach((r, idx) => {
-                            if (r.status !== 'removed') recorded++;
+                            if (r.status === 'removed') removedCount++; else recorded++;
                             hay += ' ' + String(r.kontronSn || '').toLowerCase() + ' ' + String(r.eclipseSn || '').toLowerCase() + ' ' + String(r.astronicsSn || '').toLowerCase();
                             const off = r.status === 'removed';
                             const label = idx === 0 ? 'MODMAN' : `<span class="hw-hist-cont">↳ MODMAN</span>`;
@@ -17840,7 +17844,7 @@
                                 return;
                             }
                             history.forEach((hit, idx) => {
-                                if (fitmentIsOn(hit.fitment)) recorded++;
+                                if (fitmentIsOn(hit.fitment)) recorded++; else removedCount++;
                                 hay += ' ' + String(hit.unit.serial || '').toLowerCase() + ' ' + String(hit.unit.altSerial || '').toLowerCase();
                                 const off = !fitmentIsOn(hit.fitment);
                                 const altCell = lru.altSerialLabel ? ` <span class="hw-alt-inline">${hwAltField(hit.unit, lru)}</span>` : '';
@@ -17860,20 +17864,31 @@
                         });
                     });
                 });
-                return { a, fit, rows, recorded, hay };
+                return { a, fit, rows, recorded, removedCount, hay };
             }).filter(b => !q || b.hay.includes(q));
 
             if (!blocks.length) return '<div class="maint-empty">No aircraft match.</div>';
 
-            return blocks.map(({ a, fit, rows, recorded }) => {
+            return blocks.map(({ a, fit, rows, recorded, removedCount }) => {
                 const open = !!hwExpandedAc[a.id];
+                // Install site (retrofitLocation) pill — shown ONLY when the retrofit was
+                // done somewhere OTHER than Jeddah (Doha, Amman, Malta …), so a non-standard
+                // install site is visible at a glance and Jeddah stays uncluttered.
+                const site = (a.retrofitLocation || '').trim();
+                const locPill = (site && site !== 'Jeddah')
+                    ? `<span class="tl-loc-pill" style="${pill(LOCATION_PILL_COLORS[site] || NEUTRAL_PILL)}">📍 ${escAttr(site)}</span>`
+                    : '';
                 return `<div class="hw-ac-block ${open ? 'open' : ''}">
                     <div class="hw-ac-head" onclick="toggleHwAc('${escAttr(a.id)}')" role="button" tabindex="0" aria-expanded="${open}">
                         <span class="hw-ac-chev" aria-hidden="true">▾</span>
                         <span class="hw-ac-reg">${escAttr(a.id)}</span>
                         <span class="tl-pill" style="${pill(TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL)}">${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</span>
+                        ${locPill}
                         <span class="status-badge fit-${fit}">${fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>
-                        <span class="hw-ac-count">${recorded} recorded</span>
+                        <span class="hw-ac-counts">
+                            <span class="hw-ac-pill on">${recorded} On-Wing</span>
+                            <span class="hw-ac-pill off">${removedCount} Removed</span>
+                        </span>
                     </div>
                     ${open ? `<div class="table-scroll-wrapper"><table class="hw-reg-table hw-ac-table"><thead><tr>
                         <th>Equipment</th><th>Serial</th><th>Fitted</th><th>Removed</th><th>Status</th><th>Days</th>
