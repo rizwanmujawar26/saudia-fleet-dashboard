@@ -4795,6 +4795,23 @@
             color: #0a5c34;
         }
         .fb-quick-btn.active .fb-quick-count { background: rgba(255, 255, 255, 0.28); color: #fff; }
+        /* The Assets filter pills reuse .qf-btn, so give the count bullet the same
+           active-state flip the Fleet quick pills have. */
+        .qf-btn.active .fb-quick-count { background: rgba(255, 255, 255, 0.28); color: #fff; }
+
+        /* ===== Assets register (Hardware page) ===== */
+        .asset-filterbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+        .asset-table td, .asset-table th { white-space: nowrap; }
+        .asset-table .edit-text.asset-input { min-width: 90px; width: 100%; }
+        .asset-table .hw-del-cell { text-align: center; }
+        .asset-del { cursor: pointer; }
+        /* Disk-type and laptop-status chips — the status-badge shell with their own tints. */
+        .status-badge.asset-type-ssd { background: #e7f4ec; color: #1e7e34; border: 1px solid #bfe3cd; }
+        .status-badge.asset-type-hdd { background: #eaf2fb; color: #14649e; border: 1px solid #c4dcf2; }
+        .status-badge.asset-status-available   { background: #e7f4ec; color: #1e7e34; border: 1px solid #bfe3cd; }
+        .status-badge.asset-status-in_use      { background: #eaf2fb; color: #14649e; border: 1px solid #c4dcf2; }
+        .status-badge.asset-status-maintenance { background: #fdf3e2; color: #8a5a12; border: 1px solid #f2ddb4; }
+        .status-badge.asset-status-retired     { background: #eef1f4; color: #55606a; border: 1px solid #d5dbe1; }
 
         /* The Fleet bar keeps its All / Active / AOG pills at EVERY width (they are three
            small, high-value views) — unlike the default, which shows quick pills only
@@ -6896,6 +6913,12 @@
         // Polled with the other low-traffic nodes, so every save is mirrored locally.
         let issuesLive = {};
 
+        // /assets — the support-resource register on the Hardware page: Software USB,
+        // Media Disk and Maintenance Laptop kit used to maintain and operate the fleet.
+        // Not an aircraft fitment (no tail/position/on-wing), so it lives in its own node
+        // rather than /units. Polled with the other low-traffic nodes; saves mirror here.
+        let assetsLive = {};
+
         // Two distinct service-outage axes: IFC (Inflight Connectivity) and W-IFE
         // (Wireless Inflight Entertainment), or both. `label` is the abbreviation shown
         // on-screen / in the form; `full` is spelled out for the printed report (PDF).
@@ -7563,8 +7586,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.161.0';
-        const APP_BUILD    = '2026.09.15.09';
+        const APP_VERSION  = '2.162.0';
+        const APP_BUILD    = '2026.09.15.10';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -7797,9 +7820,9 @@
             // to LOW_TRAFFIC_POLL_MS late, and since the Media widgets are built from
             // it, every monthly card was missing for the first 25 seconds of each page
             // load — the strip looked broken.
-            Promise.all(['hardware', 'units', 'activities', 'issues', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr', 'configs'].map(n =>
+            Promise.all(['hardware', 'units', 'activities', 'issues', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr', 'configs', 'assets'].map(n =>
                 fetch(`${FIREBASE_DB_URL}/${n}.json`).then(r => r.json()).catch(() => null)
-            )).then(([hw, un, ac, is, ml, mm, fs, av, cf]) => {
+            )).then(([hw, un, ac, is, ml, mm, fs, av, cf, as]) => {
                 hardwareLive   = hw || {};
                 unitsLive      = un || {};
                 activitiesLive = ac || {};
@@ -7809,6 +7832,7 @@
                 fleetSpecsLive = fs || {};
                 avrLive        = av || {};
                 configsLive    = cf || {};
+                assetsLive     = as || {};
                 markDataSync();
                 rebuildAircraftData();     // current media is derived from the log
                 renderHardwarePage();      // fitment is derived from units
@@ -7862,6 +7886,7 @@
                 fleetSpecs: d => { fleetSpecsLive = d || {}; },
                 avr:        d => { avrLive = d || {}; },
                 configs:    d => { configsLive = d || {}; },
+                assets:     d => { assetsLive = d || {}; },
             };
             let changed = false;
 
@@ -7901,6 +7926,7 @@
                 fleetSpecs: JSON.stringify(Object.keys(fleetSpecsLive).length ? fleetSpecsLive : null),
                 avr:        JSON.stringify(Object.keys(avrLive).length ? avrLive : null),
                 configs:    JSON.stringify(Object.keys(configsLive).length ? configsLive : null),
+                assets:     JSON.stringify(Object.keys(assetsLive).length ? assetsLive : null),
             };
             setInterval(pollLowTrafficNodes, LOW_TRAFFIC_POLL_MS);
         }
@@ -17055,6 +17081,38 @@
         let hwTypeFilter = '';          // By-Aircraft view: restrict to one aircraft type
         let hwExpandedAc = {};          // By-Aircraft view: which tail accordions are open
 
+        // ===== Assets — support-resource register (Software USB / Media Disk / Laptop) =====
+        // A new equipment item on the Hardware page for the kit used to maintain and
+        // operate the fleet. Scalable: add a category to ASSET_CATS (and a matching regex
+        // in database.rules.json) and it appears as its own filter with a table — the two
+        // disk categories share one layout, the laptop has its own. `shape` picks the table;
+        // `widget` is the media-widget colour variant its card uses on the strip.
+        const ASSET_CATS = [
+            { id: 'software_usb', label: 'Software USB',        shape: 'disk',   widget: 'media-widget-light' },
+            { id: 'media_disk',   label: 'Media Disk',         shape: 'disk',   widget: 'media-widget-latest' },
+            { id: 'laptop',       label: 'Maintenance Laptop', shape: 'laptop', widget: 'media-widget-older' },
+        ];
+        // Laptop status vocabulary — kept small and slugged so the rules can validate it.
+        const LAPTOP_STATES = [
+            { value: 'available',   label: 'Available' },
+            { value: 'in_use',      label: 'In Use' },
+            { value: 'maintenance', label: 'Maintenance' },
+            { value: 'retired',     label: 'Retired' },
+        ];
+        function assetCatById(id) { return ASSET_CATS.find(c => c.id === id) || null; }
+        let assetFilter = 'all';        // 'all' or an ASSET_CATS id
+        function setAssetFilter(v) { assetFilter = v; renderHwContent(); }
+        function assetEntries() { return Object.keys(assetsLive).map(id => ({ id, ...assetsLive[id] })); }
+        // Sort by NSG serial, numeric-aware so H-SVA-SSD-2 sorts before H-SVA-SSD-10.
+        function assetsOfCat(cat) {
+            return assetEntries().filter(a => a.category === cat)
+                .sort((a, b) => String(a.nsgSerial || '').localeCompare(String(b.nsgSerial || ''), undefined, { numeric: true }));
+        }
+        function assetMatchesQuery(a, q) {
+            return [a.nsgSerial, a.mfrSerial, a.make, a.model, a.type, a.content, a.totalSize, a.location, a.custodian]
+                .some(v => String(v || '').toLowerCase().includes(q));
+        }
+
         function setHwView(id) {
             hwView = id;
             hwSearchQ = '';
@@ -17421,6 +17479,10 @@
                 const n = groupRecordCount(g);
                 return `<button class="avr-vt-btn ${hwView === g.id ? 'active' : ''}" role="tab" onclick="setHwView('${g.id}')">${escAttr(g.label)}${n ? ` <span class="avr-vt-badge">${n}</span>` : ''}</button>`;
             }).join('');
+            // Assets — the support-resource register — sits after the aircraft LRUs as its
+            // own tab, with a live count badge like every equipment tab.
+            const na = assetEntries().length;
+            el.innerHTML += `<button class="avr-vt-btn ${hwView === 'assets' ? 'active' : ''}" role="tab" onclick="setHwView('assets')">ASSETS${na ? ` <span class="avr-vt-badge">${na}</span>` : ''}</button>`;
             const b = document.getElementById('hwByAircraftBtn');
             if (b) b.classList.toggle('active', hwView === 'aircraft');
         }
@@ -17428,6 +17490,13 @@
         function renderHwContent() {
             const host = document.getElementById('hwContent');
             if (!host) return;
+            // Assets is its own register — no Type filter (that belongs to By-Aircraft).
+            if (hwView === 'assets') {
+                const tf0 = document.getElementById('hwTypeFilter');
+                if (tf0) tf0.style.display = 'none';
+                host.innerHTML = renderHwAssets();
+                return;
+            }
             const byAc = hwView === 'aircraft';
             // The Type filter belongs to the By-Aircraft view only — same filter-bar
             // dropdown look as the rest of the page.
@@ -17698,6 +17767,203 @@
                     <span class="timeline-day-count">${removals.length} removed</span>
                 </div>
                 <ul class="hw-issues">${removals.length ? removals.map(removalCard).join('') : '<li class="maint-empty">No units removed for this equipment yet.</li>'}</ul>`}`;
+        }
+
+        // ===== Assets page — support resources, consistent with the equipment tabs =====
+        // Widget strip (counts) + filter pills (All + per category) + one table per
+        // visible category. Software USB and Media Disk share the disk table; the laptop
+        // has its own. Read-only when signed out; inline-editable in Hardware Edit mode,
+        // each cell saving straight to /assets like the serial table saves to /units.
+        function renderHwAssets() {
+            const editable = hwEditable();
+            const q = hwSearchQ.trim().toLowerCase();
+            const all = assetEntries();
+
+            // Widgets — same cards as the Media strip: a total plus one per category.
+            const widget = (label, value, sub, cls) => `<div class="media-widget ${cls || ''}">
+                <div class="media-widget-label">${escAttr(label)}</div>
+                <div class="media-widget-figures"><span class="media-widget-count">${value}</span>
+                <span class="media-widget-pct">${escAttr(sub)}</span></div></div>`;
+            const widgets = `<div class="media-widget-strip">
+                ${widget('Total Assets', all.length, all.length === 1 ? 'item' : 'items', 'media-widget-previous')}
+                ${ASSET_CATS.map(c => widget(c.label, all.filter(a => a.category === c.id).length, 'tracked', c.widget)).join('')}
+            </div>`;
+
+            // Filter pills — All + one per category, each with a live count bullet.
+            const countPill = n => n ? ` <span class="fb-quick-count">${n}</span>` : '';
+            const pill = (id, label, n) => `<button class="qf-btn ${assetFilter === id ? 'active' : ''}" onclick="setAssetFilter('${id}')">${escAttr(label)}${countPill(n)}</button>`;
+            const pills = `<div class="fb-filters asset-filterbar">
+                ${pill('all', 'All', all.length)}
+                ${ASSET_CATS.map(c => pill(c.id, c.label, all.filter(a => a.category === c.id).length)).join('')}
+            </div>`;
+
+            const cats = assetFilter === 'all' ? ASSET_CATS : ASSET_CATS.filter(c => c.id === assetFilter);
+            const sections = cats.map(c => {
+                const total = assetsOfCat(c.id).length;
+                let rows = assetsOfCat(c.id);
+                if (q) rows = rows.filter(a => assetMatchesQuery(a, q));
+                const table = c.shape === 'disk' ? assetDiskTable(c, rows, editable) : assetLaptopTable(c, rows, editable);
+                return `<div class="hw-group-head">
+                        <span class="hw-group-name">${escAttr(c.label)}</span>
+                        <span class="hw-fitted ${rows.length ? '' : 'none'}">${rows.length}${q ? ` of ${total}` : ''} ${total === 1 ? 'item' : 'items'}</span>
+                        ${editable ? `<button class="qf-btn add-btn" style="margin-left:auto;" onclick="addAsset('${c.id}')">＋ Add ${escAttr(c.label)}</button>` : ''}
+                    </div>
+                    <div class="table-scroll-wrapper">${table}</div>`;
+            }).join('');
+
+            return widgets + pills + sections;
+        }
+
+        // --- editable cells (save straight to /assets on change, like the serial table) ---
+        function assetTextCell(a, field, ph, maxlen) {
+            const val = a[field] || '';
+            if (!hwEditable()) return val ? escAttr(val) : '<span class="hw-none">—</span>';
+            return `<input type="text" maxlength="${maxlen || 60}" autocomplete="off" class="edit-text asset-input" value="${escAttr(val)}"
+                placeholder="${escAttr(ph || '')}" data-id="${escAttr(a.id)}" data-field="${escAttr(field)}" onchange="saveAssetField(this)">`;
+        }
+        // NSG serial reads as the row's identity (bold serial) when signed out.
+        function assetNsgCell(a) {
+            if (!hwEditable()) return a.nsgSerial ? `<span class="hw-serial">${escAttr(a.nsgSerial)}</span>` : '<span class="hw-none">no serial</span>';
+            return assetTextCell(a, 'nsgSerial', 'NSG S/N');
+        }
+        function assetTypeCell(a) {
+            const val = a.type || '';
+            if (!hwEditable()) return val ? `<span class="status-badge asset-type-${escAttr(val.toLowerCase())}">${escAttr(val)}</span>` : '<span class="hw-none">—</span>';
+            return `<select class="edit-select asset-input" data-id="${escAttr(a.id)}" data-field="type" onchange="saveAssetField(this)">
+                <option value="">—</option>
+                <option value="SSD" ${val === 'SSD' ? 'selected' : ''}>SSD</option>
+                <option value="HDD" ${val === 'HDD' ? 'selected' : ''}>HDD</option>
+            </select>`;
+        }
+        function assetStatusCell(a) {
+            const val = a.status || '';
+            const cur = LAPTOP_STATES.find(s => s.value === val);
+            if (!hwEditable()) return cur ? `<span class="status-badge asset-status-${escAttr(val)}">${escAttr(cur.label)}</span>` : '<span class="hw-none">—</span>';
+            return `<select class="edit-select asset-input" data-id="${escAttr(a.id)}" data-field="status" onchange="saveAssetField(this)">
+                <option value="">—</option>
+                ${LAPTOP_STATES.map(s => `<option value="${s.value}" ${val === s.value ? 'selected' : ''}>${escAttr(s.label)}</option>`).join('')}
+            </select>`;
+        }
+        function assetDeleteBtn(a) {
+            return `<button class="hw-issue-del asset-del" title="Delete asset" onclick="deleteAsset('${escAttr(a.id)}')">🗑</button>`;
+        }
+
+        // Software USB and Media Disk: physical-disk layout.
+        function assetDiskTable(cat, rows, editable) {
+            const cols = 8 + (editable ? 1 : 0);
+            const head = `<thead><tr>
+                <th>NSG S/N</th><th>Mfr S/N</th><th>Make</th><th>Type</th><th>Content</th><th>Total Size</th><th>Location</th><th>Custodian</th>${editable ? '<th></th>' : ''}
+            </tr></thead>`;
+            const body = rows.length ? rows.map(a => `<tr>
+                <td>${assetNsgCell(a)}</td>
+                <td>${editable ? assetTextCell(a, 'mfrSerial', 'Mfr S/N') : (a.mfrSerial ? `<span class="hw-serial">${escAttr(a.mfrSerial)}</span>` : '<span class="hw-none">—</span>')}</td>
+                <td>${assetTextCell(a, 'make', 'Make', 40)}</td>
+                <td>${assetTypeCell(a)}</td>
+                <td>${assetTextCell(a, 'content', 'e.g. Media', 60)}</td>
+                <td>${assetTextCell(a, 'totalSize', 'e.g. 512 GB', 20)}</td>
+                <td>${assetTextCell(a, 'location', 'Location', 60)}</td>
+                <td>${assetTextCell(a, 'custodian', 'Custodian', 60)}</td>
+                ${editable ? `<td class="hw-del-cell">${assetDeleteBtn(a)}</td>` : ''}
+            </tr>`).join('') : `<tr><td colspan="${cols}" class="maint-empty">No ${escAttr(cat.label)} assets recorded yet.${editable ? ' Use ＋ Add.' : ''}</td></tr>`;
+            return `<table class="hw-reg-table asset-table">${head}<tbody>${body}</tbody></table>`;
+        }
+
+        // Maintenance Laptop: same shell, laptop-relevant columns.
+        function assetLaptopTable(cat, rows, editable) {
+            const cols = 7 + (editable ? 1 : 0);
+            const head = `<thead><tr>
+                <th>NSG S/N</th><th>Mfr S/N</th><th>Make</th><th>Model</th><th>Location</th><th>Custodian</th><th>Status</th>${editable ? '<th></th>' : ''}
+            </tr></thead>`;
+            const body = rows.length ? rows.map(a => `<tr>
+                <td>${assetNsgCell(a)}</td>
+                <td>${editable ? assetTextCell(a, 'mfrSerial', 'Mfr S/N') : (a.mfrSerial ? `<span class="hw-serial">${escAttr(a.mfrSerial)}</span>` : '<span class="hw-none">—</span>')}</td>
+                <td>${assetTextCell(a, 'make', 'Make', 40)}</td>
+                <td>${assetTextCell(a, 'model', 'Model', 40)}</td>
+                <td>${assetTextCell(a, 'location', 'Location', 60)}</td>
+                <td>${assetTextCell(a, 'custodian', 'Custodian', 60)}</td>
+                <td>${assetStatusCell(a)}</td>
+                ${editable ? `<td class="hw-del-cell">${assetDeleteBtn(a)}</td>` : ''}
+            </tr>`).join('') : `<tr><td colspan="${cols}" class="maint-empty">No maintenance laptops recorded yet.${editable ? ' Use ＋ Add.' : ''}</td></tr>`;
+            return `<table class="hw-reg-table asset-table">${head}<tbody>${body}</tbody></table>`;
+        }
+
+        // One field, saved immediately (onchange, so focus has already left the cell).
+        // A polled node — mirror the write locally or the change looks lost until the poll.
+        async function saveAssetField(el) {
+            const id = el.dataset.id, field = el.dataset.field;
+            const a = assetsLive[id];
+            if (!a) { setSyncStatus('🔴 That asset is no longer there — reload', '#dc3545'); return; }
+            const value = (el.value || '').trim();
+            // The NSG serial is the human label for the asset — keep it unique.
+            if (field === 'nsgSerial' && value) {
+                const clash = assetEntries().find(x => x.id !== id
+                    && String(x.nsgSerial || '').trim().toLowerCase() === value.toLowerCase());
+                if (clash) {
+                    setSyncStatus(`🔴 ${value} is already used by another asset — NSG serials are unique`, '#dc3545');
+                    el.value = a.nsgSerial || '';
+                    return;
+                }
+            }
+            const token = await getIdToken();
+            if (!token) return;
+            el.disabled = true;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/assets/${id}.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify({ [field]: value || null }),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                if (!value) delete a[field]; else a[field] = value;
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not save — ${ex.message}`, '#dc3545');
+                el.value = a[field] || '';
+            } finally {
+                el.disabled = false;
+            }
+        }
+
+        // Add a blank asset of a category and drop into Edit mode so its row is fillable.
+        async function addAsset(cat) {
+            if (!canEdit()) { requireSignIn(); return; }
+            const c = assetCatById(cat) || ASSET_CATS[0];
+            const token = await getIdToken();
+            if (!token) return;
+            const id = 'asset_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+            const rec = { category: c.id, addedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z') };
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/assets/${id}.json?auth=${token}`, {
+                    method: 'PUT', body: JSON.stringify(rec),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                assetsLive[id] = rec;
+                if (assetFilter !== 'all' && assetFilter !== c.id) assetFilter = c.id;
+                if (!hwEditMode) hwEditMode = true;   // a blank row is only useful with its inputs on
+                setSyncStatus(`🟢 New ${c.label} added — fill in its details`, '#28a745');
+                renderHardwarePage();
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not add asset — ${ex.message}`, '#dc3545');
+            }
+        }
+
+        async function deleteAsset(id) {
+            const a = assetsLive[id];
+            if (!a) return;
+            if (!canEdit()) { requireSignIn(); return; }
+            const name = a.nsgSerial || (assetCatById(a.category) || {}).label || 'this asset';
+            if (!confirm(`Delete ${name}?\n\nThis cannot be undone.`)) return;
+            const token = await getIdToken();
+            if (!token) return;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/assets/${id}.json?auth=${token}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('delete failed');
+                delete assetsLive[id];
+                setSyncStatus('🟢 Asset deleted', '#28a745');
+                renderHardwarePage();
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not delete — ${ex.message}`, '#dc3545');
+            }
         }
 
         // The MODMAN register table — sourced from /modmans (Satcom), not /units. One row
@@ -19354,6 +19620,7 @@
             hwSearchQ = '';
             hwTypeFilter = '';
             hwExpandedAc = {};
+            assetFilter = 'all';
             const s = document.getElementById('hwSearch'); if (s) s.value = '';
             renderHardwarePage();
         }
@@ -19362,6 +19629,9 @@
         // in By-Aircraft view it first offers a menu to pick which equipment to add.
         function hwAddClick() {
             if (!canEdit()) { requireSignIn(); return; }
+            // On the Assets tab, Add creates a blank asset of the current category (the
+            // Media Disk table when no single category is filtered).
+            if (hwView === 'assets') { addAsset(assetFilter === 'all' ? 'media_disk' : assetFilter); return; }
             if (hwView === 'aircraft') { openHwAddMenu(); return; }
             hwAddDispatch(hwView);
         }
