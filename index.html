@@ -7559,8 +7559,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.158.0';
-        const APP_BUILD    = '2026.09.15.04';
+        const APP_VERSION  = '2.159.0';
+        const APP_BUILD    = '2026.09.15.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -7648,6 +7648,7 @@
         function mediaScope()      { return mediaFleet().length; }
 
         function renderAll() {
+            if (reportTookOver) return;   // the tab is showing a report, not the dashboard
             if (editMode) {
                 // Freeze the Software table while someone is mid-edit so incoming
                 // live updates can't overwrite their staged changes. Everything else
@@ -7732,7 +7733,15 @@
                 .finally(() => { aircraftReloadPending = false; });
         }
 
+        // Set once a #avr=<id> deep link has replaced this tab's document with a report
+        // (renderAvrReportInPlace). The report keeps the JS realm alive, so the live
+        // streams and interval timers from the dashboard would keep firing against a DOM
+        // that no longer exists — and the version watch could even reload the tab out from
+        // under the report. Every periodic/stream DOM-toucher bails on this flag.
+        let reportTookOver = false;
+
         function applyLivePathUpdate(type, path, data) {
+            if (reportTookOver) return;
             aircraftLive = applyStreamEvent(aircraftLive, type, path, data);
             if (aircraftStoreLooksBroken()) { reloadAircraftStore(); return; }
             renderAll();
@@ -7745,6 +7754,7 @@
         let syncState = { text: 'Connecting to live data…', level: 'warn' };
 
         function setSyncStatus(text, color) {
+            if (reportTookOver) return;
             // The `u` flag is load-bearing: these emoji are surrogate pairs, and without
             // it the class matches half a pair and leaves a replacement character behind.
             syncState = { text: String(text || '').replace(/^[🟢🟡🔴]\s*/u, ''), level: syncLevelOf(color) };
@@ -7837,6 +7847,7 @@
         let lowTrafficSnapshot = {};
 
         async function pollLowTrafficNodes() {
+            if (reportTookOver) return;
             const nodes = {
                 hardware:   d => { hardwareLive = d || {}; },
                 units:      d => { unitsLive = d || {}; },
@@ -7932,8 +7943,11 @@
         }
 
         function reloadToBuild(build) {
+            if (reportTookOver) return;   // never yank a rendered report out of its tab
             // A fresh URL the HTML cache has never seen — see the max-age note above.
-            location.replace(location.pathname + '?v=' + encodeURIComponent(build));
+            // Carry the hash through: a tab opened on an #avr=<id> deep link must keep it
+            // across the version reload, or the report it was asked to open is lost.
+            location.replace(location.pathname + '?v=' + encodeURIComponent(build) + location.hash);
         }
 
         async function checkForNewBuild() {
@@ -13635,22 +13649,16 @@
         }
 
         // Deep link: a printed report's linked AVR references point back at the live app as
-        // #avr=<id>. Opening such a URL lands on the Reports feed with that report expanded
-        // and scrolled into view. Called after data first loads and on every hashchange; a
-        // no-op until avrLive holds the id (so it survives being called before the fetch).
+        // #avr=<id>. Opening such a URL renders that report's PDF straight into the tab the
+        // link opened — clicking an AVR inside a report opens the other report as its own
+        // PDF, never the on-screen feed. Called after data first loads and on hashchange;
+        // a no-op until avrLive holds the id (so it survives being called before the fetch).
         function openAvrFromHash() {
             const m = (location.hash || '').match(/^#avr=(.+)$/);
             if (!m) return;
             const id = decodeURIComponent(m[1]);
             if (!avrLive[id]) return;                    // not loaded yet — retried after fetch
-            switchTab('maintenance');
-            if (typeof setAvrView === 'function') setAvrView('visits');
-            avrExpanded.add(id);
-            renderMaintenancePage();
-            setTimeout(() => {
-                const el = document.getElementById('avrCard-' + id);
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 150);
+            renderAvrReportInPlace(id);
         }
         window.addEventListener('hashchange', openAvrFromHash);
 
@@ -14096,8 +14104,13 @@
         // (about:blank, written via document.write) needs nothing from this origin. A
         // repeating header (logos + title) and footer (download stamp + ref) sit in the
         // @page margins so they recur on every printed page.
-        function printAvr(id) {
-            if (!avrLive[id]) return;
+        // Builds the self-contained report document (full HTML string) for one AVR, or
+        // null if unknown. Two callers render it: printAvr() writes it to a NEW window
+        // (the on-screen 📋 buttons), and the #avr=<id> deep link writes it into the tab
+        // the link opened — so a report referenced from another report opens as its own
+        // PDF, never the on-screen feed.
+        function buildAvrReportDoc(id) {
+            if (!avrLive[id]) return null;
             // The stored record does NOT carry its own id, but avrReportMembers() matches
             // linked activities on x.visitId === v.id — so the object handed to it MUST
             // have .id set, exactly as avrEntries() does for the on-screen card. Reading
@@ -14461,12 +14474,35 @@
   </div>
 </body></html>`;
 
+            return doc;
+        }
+
+        // On-screen entry point: open the report in a new tab/window.
+        function printAvr(id) {
+            const doc = buildAvrReportDoc(id);
+            if (!doc) return;
             const w = window.open('', '_blank');
             if (!w) { setSyncStatus('🔴 Pop-up blocked — allow pop-ups to open the report', '#dc3545'); return; }
             w.document.open();
             w.document.write(doc);
             w.document.close();
             w.focus();
+        }
+
+        // Render a report into THIS document — used by the #avr=<id> deep link, so a tab
+        // opened from a report's AVR link becomes that report's own PDF, with no second
+        // pop-up to be blocked.
+        function renderAvrReportInPlace(id) {
+            const doc = buildAvrReportDoc(id);
+            if (!doc) return false;
+            // Quiesce the dashboard's streams/timers BEFORE replacing the DOM: document.write
+            // keeps the JS realm, so anything periodic would otherwise fire against the gone
+            // dashboard DOM (and the version watch could reload the tab away from the report).
+            reportTookOver = true;
+            document.open();
+            document.write(doc);
+            document.close();
+            return true;
         }
 
         // Counts come from committed data, so these read the same as the global card:
@@ -21140,6 +21176,7 @@
         }
 
         function renderSysBar() {
+            if (reportTookOver) return;
             setText('sysVersion', 'v' + APP_VERSION);
             setText('sysFleetCount', projectScope());
             setText('sysSyncAge', sysRelTime(lastDataSyncAt));
@@ -21295,6 +21332,7 @@
         // Every part is UTC, so weekday, date and time can never disagree with each
         // other. hourCycle h23 keeps midnight as 00 rather than 24.
         function renderHeaderClock() {
+            if (reportTookOver) return;
             const now = new Date();
             const part = opt => new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', ...opt }).format(now);
             setText('hcWeekday', part({ weekday: 'short' }).toUpperCase());
