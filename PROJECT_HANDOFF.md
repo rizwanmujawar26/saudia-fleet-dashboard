@@ -6,7 +6,46 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.151.2–v2.153.2 (2026-09-14).** A sustained redesign of the AVR **print / PDF
+**Latest — v2.154.0–v2.160.0 (2026-09-15).** Hardware/serial data integrity, an anti-duplication
+methodology, and AVR report deep-linking. Full detail in CHANGELOG.md / `git log`; the load-bearing
+shape:
+
+- **Add-equipment form records a fitted-AND-removed unit in one go** (v2.154.0). Both Add modals
+  (the `/units` one and MODMAN) gained an optional **Removed date**; when present it reveals a live
+  on-wing days read-out, Reason for removal, and (units only, where `/units` stores them) Shop
+  status/ref/finding. Blank = a normal on-wing add. A historical record never swaps the box on wing.
+- **Shop queue is one consistent card for MODMAN and /units** (v2.155.0). Shared `hwRemovalMeta()`
+  gives both the same `ex-TAIL · type · fitted → removed · Nd on wing` line. MODMAN removed boxes
+  got the full shop module (badge, `openShopReportMm` reusing the shop modal → writes shopStatus/
+  shopRef/shopFinding to `/modmans`, which gained those three fields in the rules). Units cards now
+  show the fitted→removed span too.
+- **Edit Activity serials are viewable AND editable again** (v2.156.0). Serials live in `/units`
+  linked by `fitment.activityId`; `activitySerials(id)` resolves them back into the form (fallback to
+  the legacy `details.oldPart/newPart`), and `reconcileActivitySerials()` on save renames the linked
+  box in place / creates a newly typed one / never deletes on a cleared field.
+- ⚠️ **Anti-duplication, once and for all** (v2.157.0). `dedupeTimeline()` wraps the return of
+  `timelineActivities()` (so the Overview AND the Activity feed are deduped) and collapses rows with
+  the same signature `kind|tail|iso|title|sub` — `sub` compared on ALPHANUMERICS ONLY (a S/N with and
+  without spaces is one), keeping the `actId`/`avrId`-bearing row. `unitBySerial()` now matches on
+  `normSerialKey()` (all whitespace stripped) — the space-vs-no-space mismatch is what minted a
+  duplicate SIM unit from a hand-logged swap. `unitWritesForActivity()` won't add a second
+  on-wing / same-date-removed fitment; it links the activity to the existing one. Data: cleaned AS61
+  (dup SIM units, phantom serial-less IFE unit, dup IFE fitment) to exactly one on-wing + one removed
+  per LRU. See [[timeline-dedup-and-serial-norm-v2157]].
+- **AVR report deep-linking** (v2.158.0–v2.159.0). The PDF's Work-Carried-Out **visit rows** now read
+  line 1 = mode + the AVR ref (a LINK), line 2 = that report's `summary`. The link is `<app>#avr=<id>`
+  and, when opened, **renders that report's PDF into the tab** (`renderAvrReportInPlace` →
+  `buildAvrReportDoc`, the shape `printAvr` also uses) — not the on-screen feed. ⚠️ Two supports:
+  `reloadToBuild()` now carries `location.hash` through the `?v=<build>` version-reload (or a
+  stale-cache tab loses `#avr=` and lands on home — this is exactly the "deep link is broken"
+  transient); and a `reportTookOver` flag makes every periodic/stream DOM-toucher (`renderAll`,
+  clock, sysbar, poll, `applyLivePathUpdate`, `setSyncStatus`, `reloadToBuild`) bail once the report
+  has replaced the tab's DOM, since `document.write` keeps the JS realm alive.
+- **By Aircraft header** (v2.160.0): the single "N recorded" became two pills — green **N On-Wing**
+  and red **N Removed** (`removedCount` tracked alongside `recorded`) — plus a 📍 install-site pill
+  (`retrofitLocation`) shown next to the type pill ONLY when the site is not Jeddah.
+
+**Prior — v2.151.2–v2.153.2 (2026-09-14).** A sustained redesign of the AVR **print / PDF
 report** (`printAvr`) plus the shared dossier data. Full detail in CHANGELOG.md / `git log`;
 the load-bearing shape:
 
