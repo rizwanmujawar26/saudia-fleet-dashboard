@@ -6,7 +6,33 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.154.0–v2.160.0 (2026-09-15).** Hardware/serial data integrity, an anti-duplication
+**Latest — v2.161.0–v2.163.0 (2026-09-17).** A Safari print fix, a new Assets register, and a
+Hardware-page restructure. Full detail in CHANGELOG.md / `git log`; the load-bearing shape:
+
+- **Safari printed the AVR PDF blank** (v2.161.0). WebKit renders a completely blank page (content
+  stream `q Q`, no fonts/images) whenever the printed document contains a `position:fixed` element —
+  the report's running head/foot. `buildAvrReportDoc` now tags `<html>` with `is-webkit-print` on
+  Safari and the print CSS drops the fixed bars there, falling back to the inline `.rpt-header`/
+  `.rpt-footer`; Blink keeps the per-page bars. ⚠️ Two gotchas: a literal `</script>` inside a
+  template string ends the page's own script — write `<\/script>`; and headless Chrome is Blink, so
+  it cannot reproduce a WebKit print bug (verify Safari in real Safari). See
+  [[safari-print-blank-fix-v2161]].
+- **Assets register** (v2.162.0). New `/assets` node for support kit — Software USB, Media Disk,
+  Maintenance Laptop — on a Hardware **ASSETS** tab. Not a fitment, so not `/units`. `ASSET_CATS` is
+  scalable (add a category + rules regex → a new filter+table). Seeded 28 Media Disks from
+  `saudia_disk_inventory.json` verbatim. Wired the four node lists PLUS the initial fetch, the
+  low-traffic poll and its snapshot seed. See [[assets-register-v2162]].
+- **OTA Patch #3 batch** (data, 2026-09-15). Stamped `otaPatch3UTC` on 39 aircraft from a supplied
+  JSON (times treated as UTC verbatim); 32 new, 7 identical, siblings untouched.
+- **Hardware page restructure** (v2.163.0). Sub-menu AIRCRAFT · ASSETS · SIM · MODMAN · SERVER ·
+  KANDU · KRFU · ANTENNA · CWAP. **AIRCRAFT** (the old By-Aircraft view, now a tab, default view) is
+  scoped Active + In Retrofit (46), sorts by a dropdown (default activation-newest), and its header
+  carries Activation (dd-Mon-yyyy) + days pill with the location pill moved to the right. **Equipment
+  tables** gained a `#` column + clickable sortable headers (shared `sortTable` under id
+  `hwGroupTable`, cleared on tab switch) and the aircraft-Type filter; the meta strip moved below the
+  table. Aircraft & Assets keep their own layouts. See [[hardware-page-overhaul-v2163]].
+
+**Prior — v2.154.0–v2.160.0 (2026-09-15).** Hardware/serial data integrity, an anti-duplication
 methodology, and AVR report deep-linking. Full detail in CHANGELOG.md / `git log`; the load-bearing
 shape:
 
@@ -1083,6 +1109,18 @@ It is where an engineering or DevOps finding goes; all four render only when non
 
 **Serial numbers are deliberately NOT here.** They live in `/units` — see above.
 
+### `/assets/{id}` — support-resource register (v2.162.0)
+
+The kit used to maintain and operate the fleet — **not** an aircraft fitment, so it
+lives in its own node, not `/units` (no tail, position or on-wing state). Fields:
+`category` (`software_usb`|`media_disk`|`laptop`), `nsgSerial`, `mfrSerial`, `make`,
+`model` (laptop), `type` (`SSD`|`HDD`, disks), `content`, `totalSize`, `location`,
+`custodian`, `status` (`available`|`in_use`|`maintenance`|`retired`, laptop), `addedAt`.
+Keyed by a generated `asset_…` id (the 28 seeded Media Disks are keyed by NSG serial).
+Rendered on the Hardware page's **ASSETS** tab; scalable via `ASSET_CATS` — add a
+category there plus a rules regex and it appears as its own filter with a table.
+Software USB and Media Disk share the disk layout; Maintenance Laptop has its own.
+
 ### `/visits` — the only world-writable node in the database
 
 `total` and `daily/{YYYY-MM-DD}`, both plain integers. **A write is accepted only
@@ -1258,6 +1296,31 @@ an aircraft showing "⚠ needed to count as done".
 ---
 
 ## Hardware tab — the LRU catalogue is code
+
+**Page shape (v2.163.0).** The sub-menu is **AIRCRAFT · ASSETS · SIM · MODMAN ·
+SERVER · KANDU · KRFU · ANTENNA · CWAP**, built in `renderHwToggle` (AIRCRAFT and
+ASSETS are prepended; the LRU groups follow `HW_GROUPS`, now SIM-first). `hwView`
+defaults to `'aircraft'`.
+
+- **AIRCRAFT** is the old By-Aircraft accordion, moved out of the filter bar into
+  the sub-menu. Its scope is `hwAircraftFleet()` = **Active + In Retrofit (46)**,
+  not `activeFleet()` (44). It sorts by `hwAcSort` (default activation-newest) via a
+  Sort dropdown shown only on this tab; each header shows Reg · Type · Fit, then
+  Activation (`fmtDate`, dd-Mon-yyyy) + a days-in-service pill, with the location
+  pill (`retrofitLocation`, non-Jeddah only) and On-Wing/Removed counts pushed
+  right (`.hw-ac-right`). In-retrofit tails have no `activatedDate` → show "—" and
+  sort to the bottom.
+- **ASSETS** is the `/assets` register (see the data-model entry). Its own filter
+  pills + tables; the shared Type/Sort dropdowns are hidden on it.
+- **Equipment tabs** (SIM/MODMAN/SERVER/KANDU/KRFU/ANTENNA/CWAP) are uniform with
+  the other pages: a leading **"#"** column and **clickable sortable headers**,
+  reusing the shared `sortTable`/`renumberVisibleRows`/`updateSortIndicators` under
+  ONE table id **`hwGroupTable`**. Because column indices differ per tab, the stored
+  sort (`lastSort['hwGroupTable']`) is cleared on tab switch and re-applied after
+  every re-render by `applyHwGroupSort()`. Cells carry `data-sort` (dates via
+  `dateSortKey` padded to 8 digits, status→rank, days→number). The Type (aircraft
+  type) filter applies here too; the unit metadata strip sits **below** the table so
+  the filter bar reads directly above it.
 
 `HARDWARE_LRUS` in the page is the single definition of which line-replaceable
 units the programme fits: `{ id, label, fit, aliases }`. It is code, not data,
@@ -1982,6 +2045,13 @@ clicks a header — the move the SIM tiers already made.
 | Media | Loading Date, **NEWEST first** — a build order, not a column | `mediaLoadKey()` |
 | Fleet | Activation Date (`activatedDate`) | `FLEET_DEFAULT_SORT` |
 | 4G SIM | Installation Date (fitment `fittedDate`) | tiers — see below |
+
+**v2.163.0 added a fifth surface**: the Hardware **equipment tables** (SIM, MODMAN,
+SERVER, KANDU, KRFU, ANTENNA, CWAP) now use this same DOM sorter under one shared id
+`hwGroupTable`, with a leading `#` column and clickable headers. They open in build
+order (tail) rather than a date; the stored sort is cleared on tab switch because the
+column indices differ per tab. The Hardware **AIRCRAFT** tab is an accordion, so it
+sorts via its own dropdown (`hwAcSort`, default activation-newest), not column clicks.
 
 ### Four rules that apply to every one of them
 
