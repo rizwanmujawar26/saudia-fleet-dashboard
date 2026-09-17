@@ -3688,6 +3688,8 @@
             flex: 0 0 auto; padding: 6px 12px; border: 1px solid #d7dee5; border-radius: 999px;
             font-size: 12.5px; font-weight: 600; background: #fff; color: #3a4750; cursor: pointer;
         }
+        /* Asset category pills (DISK · USB · LAPTOP) — the rounded pill-button filter. */
+        .fb-quick.hw-quick { align-items: center; gap: 8px; flex-wrap: wrap; }
         /* By-Aircraft collapsible blocks. */
         .hw-ac-head { cursor: pointer; }
         .hw-ac-chev { flex: 0 0 auto; font-size: 11px; color: #7a8791; transition: transform 0.18s ease; }
@@ -3705,6 +3707,11 @@
         .hw-ac-act { font-size: 12.5px; font-weight: 700; color: #17324b; white-space: nowrap; }
         .hw-ac-act.none { color: #b3bcc4; font-weight: 600; }
         .hw-ac-days { font-size: 10.5px; font-weight: 700; background: #eef2f5; color: #5a6b78; border-radius: 999px; padding: 1px 7px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        /* Eclipse serial pill — a blue "ECL 000" chip so an Eclipse S/N reads distinctly
+           from a Kontron/primary serial wherever the two sit side by side (MODMAN, SERVER). */
+        .hw-ecl-pill { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px;
+            background: #e8f0fe; color: #1a56c4; border: 1px solid #c5d8f7; border-radius: 999px;
+            padding: 1px 8px; white-space: nowrap; font-variant-numeric: tabular-nums; vertical-align: middle; }
         /* Line-item "#" column shared by the equipment tables. */
         .hw-reg-table .hw-num-col { width: 34px; text-align: right; color: #9aa6af; font-variant-numeric: tabular-nums; font-size: 11.5px; padding-right: 6px; }
         /* Sortable headers on the light Hardware tables — a soft hover, not the green one. */
@@ -3741,6 +3748,14 @@
         }
         .hw-sn-input:focus { outline: none; border-color: #0a5c34; box-shadow: 0 0 0 2px rgba(10,92,52,0.12); }
         .hw-sn-alt { width: 110px; }
+        /* SIM Comments column — an inline note, matching the 4G SIM table's comment. */
+        .hw-note-col { min-width: 160px; max-width: 260px; }
+        .hw-note-text { font-size: 12px; color: #4a555e; }
+        .hw-note-input {
+            width: 100%; max-width: 240px; padding: 4px 7px; border: 1px solid #cdd6dd;
+            border-radius: 5px; font-size: 12px; color: #2a333b;
+        }
+        .hw-note-input:focus { outline: none; border-color: #0a5c34; box-shadow: 0 0 0 2px rgba(10,92,52,0.12); }
         /* Inline reason-for-removal editor on the Removed / Shop Queue cards. */
         .hw-reason-input {
             margin-top: 3px; width: 100%; max-width: 340px; padding: 4px 7px;
@@ -5936,8 +5951,12 @@
                 <div class="avr-viewtoggle-row">
                     <div class="avr-viewtoggle hw-viewtoggle" role="tablist" aria-label="Hardware equipment" id="hwViewToggle"></div>
                 </div>
+                <!-- Page order (user 2026-09-17): sub-menu · TABLE TITLE + details strip
+                     (hwHead) · FILTER MENU (below) · the table (hwContent). -->
+                <div id="hwHead"></div>
                 <div class="filterbar hw-filterbar">
                     <div class="fb-filters">
+                        <div class="fb-quick hw-quick" id="hwQuickFilters" style="display:none;"></div>
                         <select id="hwTypeFilter" class="hw-type-filter" onchange="setHwTypeFilter(this.value)" style="display:none;"></select>
                         <select id="hwSortSelect" class="hw-type-filter" onchange="setHwAcSort(this.value)" style="display:none;" title="Sort aircraft"></select>
                         <input id="hwSearch" class="hw-search" placeholder="Search tail, serial or part no." autocomplete="off" oninput="setHwSearch(this.value)">
@@ -7602,8 +7621,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.163.0';
-        const APP_BUILD    = '2026.09.17.01';
+        const APP_VERSION  = '2.164.0';
+        const APP_BUILD    = '2026.09.17.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15757,6 +15776,11 @@
         function renderSimWidgets() {
             const strip = document.getElementById('simWidgets');
             if (!strip) return;
+            strip.innerHTML = simWidgetsHTML();
+        }
+        // The SIM widget markup, factored out so the Hardware > SIM tab can show the same
+        // Active / Faulty / Spare / Roaming strip the 4G SIM page does (user 2026-09-17).
+        function simWidgetsHTML() {
             const cards = simCards();
             const total = cards.length || 1;
             const n = st => cards.filter(c => c.status === st).length;
@@ -15800,8 +15824,7 @@
                 </div>
             </div>`;
 
-            strip.innerHTML =
-                card('Active Cards', n('active'), 'latest') +
+            return card('Active Cards', n('active'), 'latest') +
                 // Faulty is an exception state — only worth a tile when there is one.
                 // With no faulty cards the tile just read a green-less "0", so drop it.
                 (n('fault') ? card('Faulty Cards', n('fault'), 'alert') : '') +
@@ -17107,10 +17130,12 @@
         // in database.rules.json) and it appears as its own filter with a table — the two
         // disk categories share one layout, the laptop has its own. `shape` picks the table;
         // `widget` is the media-widget colour variant its card uses on the strip.
+        // Order + short labels drive the filter pills (DISK · USB · LAPTOP, user 2026-09-17):
+        // one category is always selected and only its table shows — there is no "All".
         const ASSET_CATS = [
-            { id: 'software_usb', label: 'Software USB',        shape: 'disk',   widget: 'media-widget-light' },
-            { id: 'media_disk',   label: 'Media Disk',         shape: 'disk',   widget: 'media-widget-latest' },
-            { id: 'laptop',       label: 'Maintenance Laptop', shape: 'laptop', widget: 'media-widget-older' },
+            { id: 'media_disk',   label: 'Media Disk',         short: 'DISK',   shape: 'disk',   widget: 'media-widget-latest' },
+            { id: 'software_usb', label: 'Software USB',        short: 'USB',    shape: 'disk',   widget: 'media-widget-light' },
+            { id: 'laptop',       label: 'Maintenance Laptop', short: 'LAPTOP', shape: 'laptop', widget: 'media-widget-older' },
         ];
         // Laptop status vocabulary — kept small and slugged so the rules can validate it.
         const LAPTOP_STATES = [
@@ -17120,7 +17145,7 @@
             { value: 'retired',     label: 'Retired' },
         ];
         function assetCatById(id) { return ASSET_CATS.find(c => c.id === id) || null; }
-        let assetFilter = 'all';        // 'all' or an ASSET_CATS id
+        let assetFilter = ASSET_CATS[0].id;   // always one category — no "All" (user 2026-09-17)
         function setAssetFilter(v) { assetFilter = v; renderHwContent(); }
         function assetEntries() { return Object.keys(assetsLive).map(id => ({ id, ...assetsLive[id] })); }
         // Sort by NSG serial, numeric-aware so H-SVA-SSD-2 sorts before H-SVA-SSD-10.
@@ -17213,6 +17238,13 @@
         function hwSerialSpan(serial) {
             return serial ? `<span class="hw-serial">${escAttr(serial)}</span>` : '<span class="hw-none">no record</span>';
         }
+        // An Eclipse S/N rendered as a blue "ECL 000" pill — display only (strips the
+        // stored SN_ prefix via eclipseSnDisplay), so an Eclipse serial is unmistakable
+        // beside a Kontron/primary one on the MODMAN and SERVER views. '' when absent.
+        function eclipsePill(sn) {
+            const d = eclipseSnDisplay(sn || '');
+            return d ? `<span class="hw-ecl-pill">ECL ${escAttr(d)}</span>` : '';
+        }
         function hwSerialField(unit) {
             if (!hwEditable()) return hwSerialSpan(unit && unit.serial);
             return `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input" value="${escAttr(unit ? (unit.serial || '') : '')}"
@@ -17221,7 +17253,10 @@
         function hwAltField(unit, lru) {
             const label = (lru && lru.altSerialLabel) || 'Alt S/N';
             const alt = unit ? (unit.altSerial || '') : '';
-            if (!hwEditable()) return alt ? `<span class="hw-serial">${escAttr(alt)}</span>` : '<span class="hw-none">not recorded</span>';
+            if (!hwEditable()) {
+                if (!alt) return '<span class="hw-none">not recorded</span>';
+                return /eclipse/i.test(label) ? eclipsePill(alt) : `<span class="hw-serial">${escAttr(alt)}</span>`;
+            }
             return `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-alt" value="${escAttr(alt)}"
                 placeholder="${escAttr(label)}" data-unit="${escAttr(unit.id)}" onchange="saveUnitAltSerial(this)">`;
         }
@@ -17524,11 +17559,15 @@
         function renderHwContent() {
             const host = document.getElementById('hwContent');
             if (!host) return;
+            const head = document.getElementById('hwHead');
             const byAc = hwView === 'aircraft';
             const isAssets = hwView === 'assets';
             const tf = document.getElementById('hwTypeFilter');
             const ss = document.getElementById('hwSortSelect');
             const sb = document.getElementById('hwSearch');
+            // Asset category pills (DISK · USB · LAPTOP) live in the filter row, only on Assets.
+            const qf = document.getElementById('hwQuickFilters');
+            if (qf) { qf.style.display = isAssets ? 'flex' : 'none'; qf.innerHTML = isAssets ? assetFilterPills() : ''; }
 
             // Type filter — on AIRCRAFT and every equipment tab (filter rows to one
             // aircraft type), hidden on Assets (which has its own filter pills).
@@ -17555,13 +17594,36 @@
             }
             if (sb) sb.style.display = '';   // search applies on every tab, Assets included
 
-            if (isAssets) { host.innerHTML = renderHwAssets(); return; }
-            if (byAc) { host.innerHTML = renderHwByAircraft(); return; }
-            const g = hwGroupById(hwView);
-            host.innerHTML = g ? renderHwGroup(g) : '<div class="maint-empty">Unknown equipment.</div>';
+            // Every view returns { head, body }: the title + details strip go ABOVE the
+            // filter row (into #hwHead), the table + issue lists BELOW it (into #hwContent).
+            let r;
+            if (isAssets) r = renderHwAssets();
+            else if (byAc) r = { head: renderHwAircraftHead(), body: renderHwByAircraft() };
+            else { const g = hwGroupById(hwView); r = g ? renderHwGroup(g) : { head: '', body: '<div class="maint-empty">Unknown equipment.</div>' }; }
+            if (head) head.innerHTML = r.head || '';
+            host.innerHTML = r.body || '';
             // Equipment tables sort/number via the shared DOM sorter — re-apply the stored
             // sort after each re-render, or just number the rows on first paint.
-            applyHwGroupSort();
+            if (!isAssets && !byAc) applyHwGroupSort();
+        }
+        // AIRCRAFT view header — a title + count, so it matches the equipment tabs' layout.
+        function renderHwAircraftHead() {
+            let fleet = hwAircraftFleet();
+            if (hwTypeFilter) fleet = fleet.filter(a => a.type === hwTypeFilter);
+            const n = fleet.length;
+            return `<div class="hw-group-head">
+                <span class="hw-group-name">By Aircraft</span>
+                <span class="hw-fitted ${n ? '' : 'none'}">${n} aircraft</span>
+            </div>`;
+        }
+        // Asset filter pills for the filter row — one per category, no "All"; the selected
+        // one's table is the only one shown (user 2026-09-17).
+        function assetFilterPills() {
+            const all = assetEntries();
+            const countPill = n => n ? ` <span class="fb-quick-count">${n}</span>` : '';
+            return ASSET_CATS.map(c =>
+                `<button class="fb-quick-btn qf-btn ${assetFilter === c.id ? 'active' : ''}" onclick="setAssetFilter('${c.id}')">${escAttr(c.short || c.label)}${countPill(all.filter(a => a.category === c.id).length)}</button>`
+            ).join('');
         }
 
         // One equipment tab: metadata header, the editable serial/date table (shape by
@@ -17572,6 +17634,7 @@
             const q = hwSearchQ.trim();
             const qLow = q.toLowerCase();
             const isMm = group.id === 'modman';
+            const isSimGroup = group.id === 'sim';
             const baseId = lruIdForFit(groupBases(group)[0], 'retrofit') || groupBases(group)[0];
             const rec = hardwareRecordOf(baseId);
             const baseLru = lruById(baseId) || {};
@@ -17644,6 +17707,15 @@
                 </select>`;
             };
 
+            // Comment (SIM only) — the same per-period note the 4G SIM tab carries, edited
+            // inline to the SAME /units path (fitment.notes, or unit.notes for a spare).
+            const notesCell = (unit, fitment) => {
+                const val = fitment ? (fitment.notes || '') : (unit.notes || '');
+                if (!editable) return val ? `<span class="hw-note-text">${escAttr(val)}</span>` : dash;
+                return `<input type="text" maxlength="200" autocomplete="off" class="hw-note-input" value="${escAttr(val)}"
+                    placeholder="Comment" data-unit="${escAttr(unit.id)}" data-fitment="${escAttr(fitment ? fitment.id : '')}" onchange="saveHwNotes(this)">`;
+            };
+
             const unitRow = (slot, hit) => {
                 const a = slot.aircraft, off = !fitmentIsOn(hit.fitment);
                 const days = fitmentDaysOnWing(hit.fitment);
@@ -17659,6 +17731,7 @@
                     <td${ds(dkey(hit.fitment && hit.fitment.removedDate))}>${hwDateField(hit.unit, hit.fitment, 'removedDate')}</td>
                     <td${ds(off ? 1 : 0)}>${hwStatusBadge(hit)}</td>
                     <td class="sr-days"${ds(days == null ? -1 : days)}>${days == null ? dash : days + 'd'}</td>
+                    ${isSim ? `<td class="hw-note-col"${ds(((hit.fitment && hit.fitment.notes) || '').toLowerCase())}>${notesCell(hit.unit, hit.fitment)}</td>` : ''}
                 </tr>`;
             };
 
@@ -17673,7 +17746,7 @@
                         ${numTd}
                         <td${ds(a.id)}><strong>${escAttr(a.id)}</strong></td>${posCell(slot)}
                         <td${ds('')}><span class="hw-none">no record</span></td>${dual ? `<td${ds('')}>${dash}</td>` : ''}${isSim ? `<td${ds('')}>${dash}</td>` : ''}
-                        <td${ds('00000000')}>${dash}</td><td${ds('00000000')}>${dash}</td><td${ds(3)}>${dash}</td><td${ds(-1)}>${dash}</td>
+                        <td${ds('00000000')}>${dash}</td><td${ds('00000000')}>${dash}</td><td${ds(3)}>${dash}</td><td${ds(-1)}>${dash}</td>${isSim ? `<td class="hw-note-col"${ds('')}>${dash}</td>` : ''}
                     </tr>`;
                 }
                 const snNew = (cls, ph) => `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input hw-sn-new${cls}" placeholder="${escAttr(ph)}" ${data} onchange="hwCreateFromRow(this)">`;
@@ -17688,7 +17761,7 @@
                     ${isSim ? `<td${ds('')}>${roamNew}</td>` : ''}
                     <td${ds('00000000')}>${dateNew('fittedDate')}</td>
                     <td${ds('00000000')}>${dateNew('removedDate')}</td>
-                    <td${ds(3)}>${dash}</td><td${ds(-1)}>${dash}</td>
+                    <td${ds(3)}>${dash}</td><td${ds(-1)}>${dash}</td>${isSim ? `<td class="hw-note-col"${ds('')}>${dash}</td>` : ''}
                 </tr>`;
             };
 
@@ -17706,6 +17779,7 @@
                 <td${ds('00000000')}>${dash}</td><td${ds('00000000')}>${dash}</td>
                 <td${ds(2)}><span class="sr-state">SPARE</span></td>
                 <td class="sr-days"${ds(-1)}>${dash}</td>
+                ${isSim ? `<td class="hw-note-col"${ds((u.notes || '').toLowerCase())}>${notesCell(u, null)}</td>` : ''}
             </tr>`;
 
             const rowsHtml = groupSlots(group).map(slot => {
@@ -17740,7 +17814,8 @@
                 + (dual ? (sortTh(baseLru.serialLabel || 'Serial') + sortTh(baseLru.altSerialLabel || 'Alt S/N'))
                         : sortTh(baseLru.serialLabel || 'Serial'))
                 + (isSim ? sortTh('Roaming') : '')
-                + sortTh('Fitted') + sortTh('Removed') + sortTh('Status') + sortTh('Days');
+                + sortTh('Fitted') + sortTh('Removed') + sortTh('Status') + sortTh('Days')
+                + (isSim ? sortTh('Comments') : '');
             const colspan = ci + 1;
             table = `<table id="hwGroupTable" class="hw-reg-table"><thead><tr>${headHtml}</tr></thead>`
                 + `<tbody>${(rowsHtml + spareHtml) || `<tr><td colspan="${colspan}" class="maint-empty">No records match.</td></tr>`}</tbody></table>`;
@@ -17816,15 +17891,21 @@
                 </li>`;
             };
 
-            // The table sits directly beneath the filter bar (user, 2026-09-17); the unit
-            // metadata (part number, vendor, SW, notes) drops below it as a details strip.
-            return `
+            // Page order (user 2026-09-17): the table TITLE and the details strip (part
+            // number, vendor, SW, notes) sit ABOVE the filter row, in #hwHead; the table
+            // and the issue/removal lists sit below it, in #hwContent.
+            // SIM carries the 4G-SIM widget strip (Active / Faulty / Spare / Roaming) as
+            // well, so Hardware > SIM is a full stand-in for the 4G SIM page (user 2026-09-17).
+            const simStrip = isSimGroup ? `<div class="media-widget-strip">${simWidgetsHTML()}</div>` : '';
+            const head = `
                 <div class="hw-group-head">
                     <span class="hw-group-name">${escAttr(group.label)}</span>
                     <span class="hw-fitted ${fitted ? '' : 'none'}">${fitted}/${total} on record</span>
                 </div>
+                ${simStrip}
+                ${meta}`;
+            const body = `
                 <div class="table-scroll-wrapper">${table}</div>
-                ${meta}
 
                 <div class="hw-section">
                     <span class="hw-section-title">Known Issues</span>
@@ -17843,12 +17924,14 @@
                     <span class="timeline-day-count">${removals.length} removed</span>
                 </div>
                 <ul class="hw-issues">${removals.length ? removals.map(removalCard).join('') : '<li class="maint-empty">No units removed for this equipment yet.</li>'}</ul>`}`;
+            return { head, body };
         }
 
         // ===== Assets page — support resources, consistent with the equipment tabs =====
-        // Widget strip (counts) + filter pills (All + per category) + one table per
-        // visible category. Software USB and Media Disk share the disk table; the laptop
-        // has its own. Read-only when signed out; inline-editable in Hardware Edit mode,
+        // ONE category at a time (user 2026-09-17): the DISK · USB · LAPTOP pills in the
+        // filter row pick it, and only that table shows — no "All". Returns { head, body }
+        // like the equipment tabs: the title + widget strip go above the filter row, the
+        // table below it. Read-only when signed out; inline-editable in Hardware Edit mode,
         // each cell saving straight to /assets like the serial table saves to /units.
         function renderHwAssets() {
             const editable = hwEditable();
@@ -17865,29 +17948,20 @@
                 ${ASSET_CATS.map(c => widget(c.label, all.filter(a => a.category === c.id).length, 'tracked', c.widget)).join('')}
             </div>`;
 
-            // Filter pills — All + one per category, each with a live count bullet.
-            const countPill = n => n ? ` <span class="fb-quick-count">${n}</span>` : '';
-            const pill = (id, label, n) => `<button class="qf-btn ${assetFilter === id ? 'active' : ''}" onclick="setAssetFilter('${id}')">${escAttr(label)}${countPill(n)}</button>`;
-            const pills = `<div class="fb-filters asset-filterbar">
-                ${pill('all', 'All', all.length)}
-                ${ASSET_CATS.map(c => pill(c.id, c.label, all.filter(a => a.category === c.id).length)).join('')}
-            </div>`;
+            const c = assetCatById(assetFilter) || ASSET_CATS[0];
+            const total = assetsOfCat(c.id).length;
+            let rows = assetsOfCat(c.id);
+            if (q) rows = rows.filter(a => assetMatchesQuery(a, q));
+            const table = c.shape === 'disk' ? assetDiskTable(c, rows, editable) : assetLaptopTable(c, rows, editable);
 
-            const cats = assetFilter === 'all' ? ASSET_CATS : ASSET_CATS.filter(c => c.id === assetFilter);
-            const sections = cats.map(c => {
-                const total = assetsOfCat(c.id).length;
-                let rows = assetsOfCat(c.id);
-                if (q) rows = rows.filter(a => assetMatchesQuery(a, q));
-                const table = c.shape === 'disk' ? assetDiskTable(c, rows, editable) : assetLaptopTable(c, rows, editable);
-                return `<div class="hw-group-head">
-                        <span class="hw-group-name">${escAttr(c.label)}</span>
-                        <span class="hw-fitted ${rows.length ? '' : 'none'}">${rows.length}${q ? ` of ${total}` : ''} ${total === 1 ? 'item' : 'items'}</span>
-                        ${editable ? `<button class="qf-btn add-btn" style="margin-left:auto;" onclick="addAsset('${c.id}')">＋ Add ${escAttr(c.label)}</button>` : ''}
-                    </div>
-                    <div class="table-scroll-wrapper">${table}</div>`;
-            }).join('');
-
-            return widgets + pills + sections;
+            const head = `<div class="hw-group-head">
+                    <span class="hw-group-name">${escAttr(c.label)}</span>
+                    <span class="hw-fitted ${rows.length ? '' : 'none'}">${rows.length}${q ? ` of ${total}` : ''} ${total === 1 ? 'item' : 'items'}</span>
+                    ${editable ? `<button class="qf-btn add-btn" style="margin-left:auto;" onclick="addAsset('${c.id}')">＋ Add ${escAttr(c.label)}</button>` : ''}
+                </div>
+                ${widgets}`;
+            const body = `<div class="table-scroll-wrapper">${table}</div>`;
+            return { head, body };
         }
 
         // --- editable cells (save straight to /assets on change, like the serial table) ---
@@ -18014,7 +18088,7 @@
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 assetsLive[id] = rec;
-                if (assetFilter !== 'all' && assetFilter !== c.id) assetFilter = c.id;
+                assetFilter = c.id;   // show the category the new row belongs to
                 if (!hwEditMode) hwEditMode = true;   // a blank row is only useful with its inputs on
                 setSyncStatus(`🟢 New ${c.label} added — fill in its details`, '#28a745');
                 renderHardwarePage();
@@ -18064,7 +18138,7 @@
             const snCell = (r, which) => {
                 if (which === 'eclipse') {
                     if (r.isAstronics) return '<span class="sn-na">N/A</span>';
-                    if (!editable) return r.eclipseSn ? `<span class="hw-serial">${escAttr(eclipseSnDisplay(r.eclipseSn))}</span>` : '<span class="hw-none">—</span>';
+                    if (!editable) return r.eclipseSn ? eclipsePill(r.eclipseSn) : '<span class="hw-none">—</span>';
                     return `<input class="hw-sn-input" maxlength="60" autocomplete="off" value="${escAttr(r.eclipseSn)}" placeholder="Eclipse S/N" data-mm="${escAttr(r.id)}" data-field="eclipseSn" onchange="saveModmanField(this)">`;
                 }
                 const fld = r.isAstronics ? 'astronicsSn' : 'kontronSn';
@@ -18168,7 +18242,7 @@
                             const note = r.isAstronics ? ' <span class="hw-slot-label">Astronics</span>' : '';
                             const serialCell = editable
                                 ? `<input class="hw-sn-input" maxlength="60" autocomplete="off" value="${escAttr(primaryVal)}" placeholder="${r.isAstronics ? 'Astronics S/N' : 'Kontron S/N'}" data-mm="${escAttr(r.id)}" data-field="${primaryFld}" onchange="saveModmanField(this)">${note}${r.isAstronics ? '' : ` <input class="hw-sn-input hw-sn-alt" maxlength="60" autocomplete="off" value="${escAttr(r.eclipseSn || '')}" placeholder="Eclipse S/N" data-mm="${escAttr(r.id)}" data-field="eclipseSn" onchange="saveModmanField(this)">`}`
-                                : `<span class="hw-serial">${escAttr(primaryVal || '—')}</span>${note}${eclipseVal ? ` <span class="hw-alt-inline">${escAttr(eclipseVal)}</span>` : ''}`;
+                                : `<span class="hw-serial">${escAttr(primaryVal || '—')}</span>${note}${eclipseVal ? ' ' + eclipsePill(r.eclipseSn) : ''}`;
                             const dateInput = fld => editable
                                 ? `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="hw-date-input" value="${escAttr(toDMY(r[fld] || ''))}" data-mm="${escAttr(r.id)}" data-field="${fld}" onchange="saveModmanField(this)">`
                                 : (r[fld] ? escAttr(r[fld]) : '<span class="hw-none">—</span>');
@@ -18269,20 +18343,31 @@
                     ? `<span class="tl-loc-pill" style="${pill(LOCATION_PILL_COLORS[site] || NEUTRAL_PILL)}">📍 ${escAttr(site)}</span>`
                     : '';
                 // Activation date (dd-mmm-yyyy) + days-in-service pill, on the left after
-                // Type/Fit. In-retrofit airframes have no activation yet — show a dash.
+                // Type/Fit. An aircraft still In Retrofit has no activation yet — for it we
+                // show "In Retrofit" and its Mod start date (Fleet retrofitStart) instead,
+                // which is the fact that matters for a tail on the bench (user, 2026-09-17).
+                const inRetrofit = fleetStatusOf(a) === 'In Retrofit';
                 const actRaw = a.activatedDate || '';
                 const actIsoV = toISODate(actRaw) || '';
                 const days = actIsoV ? Math.round((Date.now() - new Date(actIsoV + 'T00:00:00Z')) / 86400000) : null;
-                const actCell = actRaw
-                    ? `<span class="hw-ac-act">${escAttr(fmtDate(actRaw) || actRaw)}</span>${(days != null && days >= 0) ? ` <span class="hw-ac-days">${days}d</span>` : ''}`
-                    : `<span class="hw-ac-act none">—</span>`;
+                const modRaw = a.retrofitStart || '';
+                const actCell = inRetrofit
+                    ? (modRaw
+                        ? `<span class="hw-ac-act">${escAttr(fmtDate(modRaw) || modRaw)}</span>`
+                        : `<span class="hw-ac-act none">—</span>`)
+                    : (actRaw
+                        ? `<span class="hw-ac-act">${escAttr(fmtDate(actRaw) || actRaw)}</span>${(days != null && days >= 0) ? ` <span class="hw-ac-days">${days}d</span>` : ''}`
+                        : `<span class="hw-ac-act none">—</span>`);
+                const fitBadge = inRetrofit
+                    ? `<span class="status-badge fit-in-retrofit">IN RETROFIT</span>`
+                    : `<span class="status-badge fit-${fit}">${fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>`;
                 return `<div class="hw-ac-block ${open ? 'open' : ''}">
                     <div class="hw-ac-head" onclick="toggleHwAc('${escAttr(a.id)}')" role="button" tabindex="0" aria-expanded="${open}">
                         <span class="hw-ac-chev" aria-hidden="true">▾</span>
                         <span class="hw-ac-reg">${escAttr(a.id)}</span>
                         <span class="tl-pill" style="${pill(TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL)}">${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</span>
-                        <span class="status-badge fit-${fit}">${fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>
-                        <span class="hw-ac-actwrap"><span class="hw-ac-act-label">Activated</span>${actCell}</span>
+                        ${fitBadge}
+                        <span class="hw-ac-actwrap"><span class="hw-ac-act-label">${inRetrofit ? 'Mod start' : 'Activated'}</span>${actCell}</span>
                         <span class="hw-ac-right">
                             ${locPill}
                             <span class="hw-ac-counts">
@@ -19317,6 +19402,35 @@
             }
         }
 
+        // SIM comment — the per-period note, saved to the same /units path the 4G SIM tab
+        // writes (fitment.notes, or the unit for a spare). Mirror the write locally or the
+        // change looks lost until the next poll. onchange, so focus has already left.
+        async function saveHwNotes(el) {
+            const unitId = el.dataset.unit, fitmentId = el.dataset.fitment || '';
+            const u = unitsLive[unitId];
+            if (!u) return;
+            const value = (el.value || '').trim();
+            const token = await getIdToken();
+            if (!token) return;
+            const path = fitmentId ? `/units/${unitId}/fitments/${fitmentId}` : `/units/${unitId}`;
+            el.disabled = true;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}${path}.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify({ notes: value || null }),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                const target = fitmentId ? (u.fitments || {})[fitmentId] : u;
+                if (target) { if (!value) delete target.notes; else target.notes = value; }
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not save comment — ${ex.message}`, '#dc3545');
+                el.value = (fitmentId ? ((u.fitments || {})[fitmentId] || {}).notes : u.notes) || '';
+            } finally {
+                el.disabled = false;
+            }
+        }
+
         // Correcting a unit's PRIMARY serial in place (new in v2.136.0 — the old Serials
         // tab could edit dates and the alt serial but not this). A serial is one physical
         // box within its equipment type, so a value already on another unit of the same
@@ -19734,7 +19848,7 @@
             hwSearchQ = '';
             hwTypeFilter = '';
             hwExpandedAc = {};
-            assetFilter = 'all';
+            assetFilter = ASSET_CATS[0].id;
             hwAcSort = 'activation_desc';
             delete lastSort['hwGroupTable'];
             const s = document.getElementById('hwSearch'); if (s) s.value = '';
