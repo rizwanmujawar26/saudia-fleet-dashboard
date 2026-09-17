@@ -2817,6 +2817,15 @@
             font-size: 11.5px;
             color: #7a838c;
         }
+        /* A Timeline REPORT (AVR) row: the reference is a right-aligned link to the report
+           PDF, and the 📋 mark is the same link. Both open the #avr=<id> deep link in a new
+           tab (user, 2026-09-17). */
+        .tl-avr-link { margin-left: auto; font-size: 12px; font-weight: 700; color: #0a5c34;
+            text-decoration: none; white-space: nowrap; padding: 1px 3px; border-radius: 4px; }
+        .tl-avr-link:hover { text-decoration: underline; background: rgba(10, 92, 52, 0.07); }
+        .tl-avr-mark { display: inline-flex; align-items: center; justify-content: center;
+            text-decoration: none; cursor: pointer; font-size: 12px; line-height: 1; transition: transform 0.12s ease; }
+        .tl-avr-mark:hover { transform: scale(1.18); }
 
         /* ===== Maintenance page: two-panel (list + detail) ===== */
         .maint-split {
@@ -7621,8 +7630,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.164.0';
-        const APP_BUILD    = '2026.09.17.02';
+        const APP_VERSION  = '2.165.0';
+        const APP_BUILD    = '2026.09.17.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -20824,6 +20833,10 @@
                            tail: v.aircraft, type: (byTail[v.aircraft] || {}).type,
                            location: v.location || '',
                            title: rt.label,
+                           // ref + mode kept as their own fields so the Timeline row can show the
+                           // mode on the left and the AVR reference as a right-aligned link to the
+                           // report; `sub` still carries both for the search haystack.
+                           ref: v.ref || '', mode: md.label,
                            sub: [md.label, v.ref].filter(Boolean).join(' · ') });
             });
 
@@ -21343,6 +21356,27 @@
                             type: regPill,
                             kind: `<span class="tl-kind tl-kind-modification">${start ? 'MOD START' : 'MOD END'}</span>`,
                             main: `${locPill}<span class="tl-title">${escAttr(x.title)}</span>${start && x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}${tail}`,
+                        })}</div>
+                    </li>`;
+                }
+
+                // A REPORT (AVR) row: the 📋 mark and the AVR reference both open the report
+                // as a PDF in a new tab. The reference is a right-aligned link (via the
+                // #avr=<id> deep link, so middle/right-click and "open in new tab" all work);
+                // the mark is the same link wrapped round the clipboard (user, 2026-09-17).
+                if (x.kind === 'visit' && x.avrId) {
+                    const href = `${location.origin + location.pathname}#avr=${encodeURIComponent(x.avrId)}`;
+                    const refLink = x.ref
+                        ? `<a class="tl-avr-link" href="${escAttr(href)}" target="_blank" rel="noopener" title="Open report ${escAttr(x.ref)} (PDF)" onclick="event.stopPropagation();">${escAttr(x.ref)}</a>`
+                        : '';
+                    const markLink = `<a class="tl-avr-mark" href="${escAttr(href)}" target="_blank" rel="noopener" title="Open report (PDF)" onclick="event.stopPropagation();">📋</a>`;
+                    return `<li>
+                        <div class="tl-row tl-grid">${tlCells({
+                            mark: markLink,
+                            reg: escAttr(x.tail),
+                            type: regPill,
+                            kind: kind ? '' : `<span class="tl-kind tl-kind-visit">REPORT</span>`,
+                            main: `${locPill}<span class="tl-title">${escAttr(x.title)}</span>${x.mode ? `<span class="tl-sub">${escAttr(x.mode)}</span>` : ''}${refLink}`,
                         })}</div>
                     </li>`;
                 }
