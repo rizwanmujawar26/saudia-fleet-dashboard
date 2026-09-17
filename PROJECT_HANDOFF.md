@@ -6,7 +6,35 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.161.0–v2.163.0 (2026-09-17).** A Safari print fix, a new Assets register, and a
+**Latest — v2.164.0 (2026-09-17).** Hardware-page reorder + single-select Assets + SIM absorbs
+the 4G SIM page + Eclipse pills + an In-Retrofit aircraft header. Full detail in CHANGELOG.md /
+`git log`; the load-bearing shape:
+
+- **One page order for every Hardware view** (title → details strip → filter row → table). The
+  render is now split across two hosts: `#hwHead` (the `hw-group-head` title + the part-number
+  meta strip / widget strip) sits ABOVE the filter bar, `#hwContent` (the table + issue/removal
+  lists) BELOW it. `renderHwGroup` / `renderHwAssets` therefore return **`{ head, body }`** (not a
+  string) and `renderHwContent` places each half; the aircraft view has `renderHwAircraftHead()`.
+  ⚠️ The static `#hwSearch` box stays in the filter bar so it keeps focus while typing re-renders
+  head+body.
+- **Assets = one category at a time.** DISK · USB · LAPTOP rounded pills in the filter row (into
+  `#hwQuickFilters`); no "All". `assetFilter` defaults to `ASSET_CATS[0].id` and is never `'all'`.
+  ⚠️ `.fb-quick` is `display:none` by default, so the pill container must be set to `flex` (not
+  `''`) or it stays hidden. ASSET_CATS reordered to DISK(media_disk)·USB(software_usb)·LAPTOP and
+  each carries a `short` label.
+- **Hardware > SIM is now a full stand-in for the 4G SIM page** so it can be retired later without
+  data loss. It carries the 4G SIM widget strip (Active/Faulty/Spare/Roaming — `simWidgetsHTML()`,
+  factored out of `renderSimWidgets`) and an editable **Comments** column (per-fitment notes →
+  same `/units` path via new `saveHwNotes`, mirroring `saveHwRoaming`). No new DB field — notes
+  already existed on fitments. The 4G SIM tab is untouched (open item: hide/delete on request).
+- **Eclipse S/N = a blue "ECL 000" pill** (`eclipsePill()`, `.hw-ecl-pill`) on MODMAN and SERVER,
+  in the aircraft view and the equipment tables, so it reads distinctly from the Kontron/primary
+  serial. Display-only (strips `SN_` via `eclipseSnDisplay`).
+- **AIRCRAFT view, In-Retrofit tail** shows an amber `IN RETROFIT` badge + **Mod start** date
+  (`retrofitStart`) instead of `Activated` + activation date. Detected by `fleetStatusOf(a) ===
+  'In Retrofit'`.
+
+**Prior — v2.161.0–v2.163.0 (2026-09-17).** A Safari print fix, a new Assets register, and a
 Hardware-page restructure. Full detail in CHANGELOG.md / `git log`; the load-bearing shape:
 
 - **Safari printed the AVR PDF blank** (v2.161.0). WebKit renders a completely blank page (content
