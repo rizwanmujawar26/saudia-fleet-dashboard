@@ -6,7 +6,15 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.164.0 (2026-09-17).** Hardware-page reorder + single-select Assets + SIM absorbs
+**Latest — v2.165.0 (2026-09-17).** Home timeline REPORT (AVR) rows now link to the report PDF.
+The 📋 mark and the AVR reference are both `<a target="_blank">` to the `#avr=<id>` deep link, so a
+fresh tab renders the report as its own PDF (`openAvrFromHash` → `renderAvrReportInPlace`) — real
+hyperlinks (middle-click / "open in new tab" work, no pop-up-blocker risk), not `printAvr` buttons.
+The reference is right-aligned (`.tl-avr-link { margin-left:auto }`) in the `main` flex cell.
+Timeline visit rows carry `ref` + `mode` as their own model fields (`sub` still holds both for the
+search haystack); `renderRow` has a visit branch. See [[timeline-avr-pdf-link-v2165]].
+
+**Prior — v2.164.0 (2026-09-17).** Hardware-page reorder + single-select Assets + SIM absorbs
 the 4G SIM page + Eclipse pills + an In-Retrofit aircraft header. Full detail in CHANGELOG.md /
 `git log`; the load-bearing shape:
 
