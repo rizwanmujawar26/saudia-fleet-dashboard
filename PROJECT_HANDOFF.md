@@ -6,7 +6,37 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.165.0 (2026-09-17).** Home timeline REPORT (AVR) rows now link to the report PDF.
+**Latest — v2.166.0–v2.168.0 (2026-09-19).** AVR pill on the Home timeline + a proper fix for
+the AVR PDF (logos, pagination, aircraft box).
+
+- **Home timeline AVR reference is now a green report pill** (v2.166.0). `.tl-avr-link` was plain
+  green text and didn't read as an action; restyled into the same rounded pill the Activity feed
+  uses (`.repo-visit-chip` — `#e7f4ec` bg, `#bfe3cd` border, `#146c3a` text) with a `📋` inside.
+  Still the `#avr=<id>` deep-link anchor. See [[avr-pill-and-pdf-print-fix-v2166-2168]].
+- **AVR PDF print — the running-bar approach was abandoned entirely** (v2.167.0 → v2.168.0). The
+  v2.161 Safari fix (tag `<html class="is-webkit-print">` from an inline `<script>`) **never ran on
+  the `#avr` deep-link path**: a script written via `document.write` after load does not execute,
+  AND `document.write` does not re-apply `<html>` attributes to the existing `documentElement`. So
+  that path (the timeline pill / AVR links) always printed the `position:fixed` running bars and
+  WebKit blanked it. v2.167 first inverted the default (inline header for all, running bars only for
+  Blink); v2.168 then **removed the `position:fixed` running header/footer completely** — Chrome was
+  also clipping the negative-offset running head off the top margin, so the Saudia/NSG logos never
+  printed. The report now uses ONE inline `.rpt-header`/`.rpt-footer` (real `<img>` logos) for every
+  engine: logos print, no blank page, no `is-webkit-print`/`print-blink`/`isPrintBlink` left.
+  ⚠️ **Lesson: a `position:fixed` running head in a printed doc is a trap** — WebKit blanks it,
+  Chrome clips a margin-offset one. Use an inline header. And a `<script>` in a `document.write`-n
+  report doc will not run on the deep-link path — do such work in the app realm before writing.
+- **Long report text now flows across pages** (v2.168.0). The free-text notes had
+  `break-inside: avoid`, which shoved an oversized Report block wholesale to the next page and left a
+  gap. Changed to `break-inside: auto`; table rows still never split (`tr { break-inside: avoid }`),
+  section titles stay with their block (`.sec { break-after: avoid }`), header/identity band stay
+  whole.
+- **Aircraft identity box holds tail · type · config on one line** (v2.168.0). The `32N`-style
+  `.cfg-tag` pill wrapped under the tail; `.rpt-meta` columns changed from `repeat(3,1fr)` to
+  `1.55fr 0.95fr 1.25fr` (Aircraft widest, Dates narrowest) and `.mv-lead` set to
+  `white-space:nowrap`.
+
+**Prior — v2.165.0 (2026-09-17).** Home timeline REPORT (AVR) rows now link to the report PDF.
 The 📋 mark and the AVR reference are both `<a target="_blank">` to the `#avr=<id>` deep link, so a
 fresh tab renders the report as its own PDF (`openAvrFromHash` → `renderAvrReportInPlace`) — real
 hyperlinks (middle-click / "open in new tab" work, no pop-up-blocker risk), not `printAvr` buttons.
@@ -45,7 +75,9 @@ the 4G SIM page + Eclipse pills + an In-Retrofit aircraft header. Full detail in
 **Prior — v2.161.0–v2.163.0 (2026-09-17).** A Safari print fix, a new Assets register, and a
 Hardware-page restructure. Full detail in CHANGELOG.md / `git log`; the load-bearing shape:
 
-- **Safari printed the AVR PDF blank** (v2.161.0). WebKit renders a completely blank page (content
+- **Safari printed the AVR PDF blank** (v2.161.0 — ⚠️ SUPERSEDED by v2.168.0, which removed the
+  `position:fixed` running bars entirely; there is no `is-webkit-print`/`print-blink` any more).
+  WebKit renders a completely blank page (content
   stream `q Q`, no fonts/images) whenever the printed document contains a `position:fixed` element —
   the report's running head/foot. `buildAvrReportDoc` now tags `<html>` with `is-webkit-print` on
   Safari and the print CSS drops the fixed bars there, falling back to the inline `.rpt-header`/

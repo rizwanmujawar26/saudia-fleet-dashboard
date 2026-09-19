@@ -13,6 +13,20 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.166.0–v2.168.0 — Home timeline AVR pill + AVR PDF fixed (2026-09-19)
+User-directed. See [[avr-pill-and-pdf-print-fix-v2166-2168]] and Where-things-stand.
+
+- **v2.166.0** — Home timeline AVR reference restyled from plain green text into the green
+  `.repo-visit-chip` pill (with `📋`); still the `#avr=<id>` deep-link anchor.
+- **v2.167.0** — first pass at the blank PDF: inverted the print default (inline header for all,
+  running bars only for Blink) after finding the v2.161 `is-webkit-print` script never runs on the
+  `#avr` deep-link path.
+- **v2.168.0** — removed the `position:fixed` running header/footer **entirely** (Chrome clipped the
+  margin-offset head → logos vanished; WebKit blanks any fixed element). One inline header/footer
+  with real `<img>` logos for every engine; dropped `is-webkit-print`/`print-blink`/`isPrintBlink`.
+  Notes `break-inside:auto` (text flows across pages); `.rpt-meta` columns `1.55/0.95/1.25` +
+  `.mv-lead { white-space:nowrap }` (aircraft tail·type·config on one line).
+
 ### v2.147.0 — Activation-location default is retrofit-aware; exceptions set
 User-directed (2026-09-13). Encodes the rule "all other retrofits have the same install
 site and activation" and records the exceptions.
