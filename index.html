@@ -3787,6 +3787,22 @@
         /* A removed unit's row reads as history: muted, faint red wash. */
         .hw-reg-table tr.hw-row-off td { background: #fdf6f6; color: #8a5a5e; }
         .hw-reg-table tr.hw-row-off:hover td { background: #fbeeef; }
+        /* By-Aircraft split: labelled Installed / Removed sub-tables. */
+        .hw-ac-subhead {
+            font-size: 11px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;
+            color: #6b7683; margin: 16px 2px 6px;
+        }
+        .hw-ac-subhead.first { margin-top: 6px; }
+        .hw-ac-empty { text-align: center; color: #97a1a9; padding: 14px 10px; }
+        /* Shop Report cell: the status pill, clickable to open the report when editable. */
+        .hw-shop-cell-btn { background: none; border: none; padding: 0; margin: 0; cursor: pointer; font: inherit; line-height: 1; }
+        .hw-shop-cell-btn:hover .status-badge { filter: brightness(0.96); }
+        .hw-shop-cell-btn:focus-visible { outline: 2px solid rgba(10,92,52,0.35); outline-offset: 2px; border-radius: 99px; }
+        /* Shop finding: a second line hung beneath its removed LRU, reading as a continuation. */
+        .hw-reg-table tr.hw-shop-finding-row td { border-top: none; padding-top: 0; }
+        .hw-reg-table td.hw-finding-pad { padding: 0; }
+        .hw-reg-table td.hw-finding-cell { font-size: 11.5px; color: #8a5a5e; padding-bottom: 8px; }
+        .hw-reg-table td.hw-finding-cell b { color: #6b4a4d; font-weight: 700; }
         .hw-reg-table tr.hw-row-empty td { color: #97a1a9; }
         .hw-sn-new { border-style: dashed; border-color: #cbd5db; }
         .hw-sn-new::placeholder { color: #a9b3ba; font-style: italic; }
@@ -7432,7 +7448,7 @@
                         changes: boxes.length,
                         daysOnWing: null,
                         removedUnits: off
-                            .map(r => ({ serial: snOf(r), removed: r.removalDate || '', fitted: r.installDate || '' }))
+                            .map(r => ({ serial: snOf(r), removed: r.removalDate || '', fitted: r.installDate || '', shopStatus: r.shopStatus || '', shopFinding: r.shopFinding || '' }))
                             .sort((p, q) => dateSortKey(toISODate(q.removed)).localeCompare(dateSortKey(toISODate(p.removed)))),
                     });
                     return;
@@ -7457,7 +7473,7 @@
                         // The units that came OFF this slot — serial + when — so a report can
                         // say what a swap removed, not just what is fitted now.
                         removedUnits: history.filter(x => !fitmentIsOn(x.fitment))
-                            .map(x => ({ serial: x.unit.serial, removed: x.fitment.removedDate || '', fitted: x.fitment.fittedDate || '' }))
+                            .map(x => ({ serial: x.unit.serial, removed: x.fitment.removedDate || '', fitted: x.fitment.fittedDate || '', shopStatus: x.fitment.shopStatus || '', shopFinding: x.fitment.shopFinding || '' }))
                             .sort((p, q) => dateSortKey(toISODate(q.removed)).localeCompare(dateSortKey(toISODate(p.removed)))),
                     });
                 });
@@ -7633,8 +7649,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.168.0';
-        const APP_BUILD    = '2026.09.19.03';
+        const APP_VERSION  = '2.169.0';
+        const APP_BUILD    = '2026.09.20.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14301,13 +14317,20 @@
                     const days = r.daysOnWing != null ? r.daysOnWing : daysBetween(r.date, todayIso);
                     return `<tr><td>${escAttr(r.lru.label)}${eqPos(r)}</td><td class="mono">${eqSerial(r)}</td><td class="nowrap">${escAttr(r.date || '—')}</td><td class="num">${days != null ? days + 'd' : '—'}</td></tr>`;
                 }).join('')}</tbody></table>` : '';
+            // Removed equipment carries a Shop Report status pill (Awaiting until the box
+            // is booked in, then In Shop / Repaired / NFF / Scrapped), and — when the shop
+            // finding is recorded — a second line beneath the row with the full finding.
+            const shopShort = s => ({ pending: 'Awaiting', in_shop: 'In Shop', repaired: 'Repaired', no_fault: 'NFF', scrap: 'Scrapped' })[s] || 'Awaiting';
+            const shopPill = s => ({ pending: 'pill-amber', in_shop: 'pill-blue', repaired: 'pill-green', no_fault: 'pill-grey', scrap: 'pill-red' })[s] || 'pill-amber';
             const removedTable = equipRemoved.length ? `
                 <div class="sec">Removed Equipment</div>
-                <table class="tbl eqtbl"><thead><tr><th>Equipment</th><th>Serial</th><th>Installed</th><th>Removed</th><th class="num">In&nbsp;service</th></tr></thead>
-                <tbody>${equipRemoved.map(u => {
+                <table class="tbl eqtbl"><thead><tr><th>Equipment</th><th>Serial</th><th>Installed</th><th>Removed</th><th>Shop&nbsp;Report</th><th class="num">In&nbsp;service</th></tr></thead>
+                ${equipRemoved.map(u => {
                     const days = daysBetween(u.fitted, u.removed);
-                    return `<tr><td>${escAttr(u.lru.label)}${eqPos(u)}</td><td class="mono">${eqSerial(u)}</td><td class="nowrap">${escAttr(u.fitted || '—')}</td><td class="nowrap">${escAttr(u.removed || '—')}</td><td class="num">${days != null ? days + 'd' : '—'}</td></tr>`;
-                }).join('')}</tbody></table>` : '';
+                    const ss = u.shopStatus || 'pending';
+                    const finding = (u.shopFinding || '').trim();
+                    return `<tbody class="eq-grp"><tr><td>${escAttr(u.lru.label)}${eqPos(u)}</td><td class="mono">${eqSerial(u)}</td><td class="nowrap">${escAttr(u.fitted || '—')}</td><td class="nowrap">${escAttr(u.removed || '—')}</td><td><span class="pill ${shopPill(ss)}">${escAttr(shopShort(ss))}</span></td><td class="num">${days != null ? days + 'd' : '—'}</td></tr>${finding ? `<tr class="eq-finding-row"><td></td><td colspan="5" class="eq-finding"><b>Shop finding:</b> ${escAttr(finding)}</td></tr>` : ''}</tbody>`;
+                }).join('')}</table>` : '';
             const equipPrint = installedTable + removedTable;
             const ifcNotePrint = dspec.ifcNote ? `<div class="note" style="margin-top:6px;"><b>IFC mod:</b> ${escAttr(dspec.ifcNote)}</div>` : '';
             let modmanPrint = '';
@@ -14420,12 +14443,17 @@
   .pill-green { background:#e9f5ee; color:#0b7a3b; border:1px solid #bfe3cd; }
   .pill-blue { background:#eaf2fb; color:#2f5f8a; border:1px solid #c4dcf2; }
   .pill-grey { background:#eef1f4; color:#55606a; border:1px solid #d5dbe1; }
+  .pill-amber { background:#fdf1e3; color:#8a5312; border:1px solid #f1d9b6; }
   /* Equipment tables — tight, with a right-aligned day count and monospaced serials. */
   .eqtbl td, .eqtbl th { padding:5px 8px; }
   .eqtbl th.num, .eqtbl td.num { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
   .eqtbl td.mono { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; }
   .eqtbl td.nowrap { white-space:nowrap; }
   .eqtbl .eq-pos { color:var(--muted); font-weight:700; font-size:11px; }
+  .eqtbl tbody.eq-grp { break-inside:avoid; }
+  .eqtbl tr.eq-finding-row td { border-top:none; padding-top:0; background:#fff; }
+  .eqtbl tr.eq-finding-row .eq-finding { color:var(--muted); font-size:11px; line-height:1.4; }
+  .eqtbl tr.eq-finding-row .eq-finding b { color:var(--navy); font-weight:700; }
   /* The prominent identity band (aircraft / dates / location) — v2.133.2. */
   /* Aircraft gets the widest cell (registration · type · config on ONE line) and Dates the
      narrowest, so the config pill never wraps under the tail (user, 2026-09-19). */
@@ -16511,6 +16539,10 @@
                     hnsChassisId: pick('hnsChassisId'), hnsEsn: pick('hnsEsn'), hnsMac: pick('hnsMac'),
                     installDate: pick('installDate'), removalDate,
                     notes: pick('notes'),
+                    // Shop report lives on the /modmans record itself (openShopReportMm),
+                    // so the by-aircraft view and the AVR dossier can show a removed box's
+                    // status/finding the same way a /units removal does.
+                    shopStatus: pick('shopStatus'), shopRef: pick('shopRef'), shopFinding: pick('shopFinding'),
                     // A removed box is still identified by where it came off.
                     tailLabel: !aircraft ? '' : (status === 'removed' ? 'ex-' + aircraft : aircraft),
                 };
@@ -18188,9 +18220,24 @@
                 return hwAcSort === 'activation_asc' ? ai.localeCompare(bi) : bi.localeCompare(ai);
             });
 
+            // The equipment is shown in two tables (user, 2026-09-19): what is fitted now
+            // (Installed) and what has come off (Removed). The Removed table swaps the
+            // always-"REMOVED" Status column for a Shop Report status pill, and hangs the
+            // full shop finding beneath the row on a second line when one is recorded.
+            const shopCell = (openAttr, status) => {
+                const ss = status || 'pending';
+                const pill = `<span class="status-badge shop-badge shop-${escAttr(ss)}">${escAttr(shopStatusLabel(ss))}</span>`;
+                return editable
+                    ? `<button type="button" class="hw-shop-cell-btn" ${openAttr} title="Open shop report">${pill}</button>`
+                    : pill;
+            };
+            const findingRow = (finding, cont) => finding
+                ? `<tr class="hw-row-off hw-shop-finding-row${cont ? ' hw-hist-row' : ''}"><td class="hw-finding-pad"></td><td colspan="5" class="hw-finding-cell">↳ <b>Shop finding:</b> ${escAttr(finding)}</td></tr>`
+                : '';
+
             const blocks = fleet.map(a => {
                 const fit = fitOf(a);
-                const rows = [];
+                const onRows = [], offRows = [];
                 let recorded = 0, removedCount = 0, hay = a.id.toLowerCase();
                 HW_GROUPS.forEach(group => {
                     // MODMAN's single source is /modmans (the Satcom register) — the SAME
@@ -18204,7 +18251,7 @@
                             .sort((x, y) => (rankMm[x.status] - rankMm[y.status])
                                 || dateSortKey(toISODate(y.installDate)).localeCompare(dateSortKey(toISODate(x.installDate))));
                         if (!mmRows.length) {
-                            rows.push(`<tr>
+                            onRows.push(`<tr>
                                 <td>MODMAN</td>
                                 <td>${editable ? `<button class="qf-btn" style="padding:2px 8px;" onclick="openAddModman()">＋ Add MODMAN</button>` : hwSerialSpan('')}</td>
                                 <td><span class="hw-none">—</span></td><td><span class="hw-none">—</span></td>
@@ -18212,11 +18259,14 @@
                             </tr>`);
                             return;
                         }
-                        mmRows.forEach((r, idx) => {
-                            if (r.status === 'removed') removedCount++; else recorded++;
-                            hay += ' ' + String(r.kontronSn || '').toLowerCase() + ' ' + String(r.eclipseSn || '').toLowerCase() + ' ' + String(r.astronicsSn || '').toLowerCase();
+                        let mmOnSeen = false, mmOffSeen = false;
+                        mmRows.forEach((r) => {
                             const off = r.status === 'removed';
-                            const label = idx === 0 ? 'MODMAN' : `<span class="hw-hist-cont">↳ MODMAN</span>`;
+                            if (off) removedCount++; else recorded++;
+                            hay += ' ' + String(r.kontronSn || '').toLowerCase() + ' ' + String(r.eclipseSn || '').toLowerCase() + ' ' + String(r.astronicsSn || '').toLowerCase();
+                            const cont = off ? mmOffSeen : mmOnSeen;
+                            if (off) mmOffSeen = true; else mmOnSeen = true;
+                            const label = cont ? `<span class="hw-hist-cont">↳ MODMAN</span>` : 'MODMAN';
                             const primaryFld = r.isAstronics ? 'astronicsSn' : 'kontronSn';
                             const primaryVal = r.isAstronics ? (r.astronicsSn || '') : (r.kontronSn || '');
                             const eclipseVal = r.isAstronics ? '' : eclipseSnDisplay(r.eclipseSn || '');
@@ -18228,14 +18278,27 @@
                                 ? `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="hw-date-input" value="${escAttr(toDMY(r[fld] || ''))}" data-mm="${escAttr(r.id)}" data-field="${fld}" onchange="saveModmanField(this)">`
                                 : (r[fld] ? escAttr(r[fld]) : '<span class="hw-none">—</span>');
                             const days = dateSpan(r.installDate, r.removalDate || '');
-                            rows.push(`<tr class="${off ? 'hw-row-off' : ''}${idx ? ' hw-hist-row' : ''}">
-                                <td>${label}</td>
-                                <td>${serialCell}</td>
-                                <td>${dateInput('installDate')}</td>
-                                <td>${dateInput('removalDate')}</td>
-                                <td><span class="sr-state ${off ? 'off' : 'on'}">${off ? 'REMOVED' : 'ON WING'}</span></td>
-                                <td class="sr-days">${days ? escAttr(days) : '<span class="hw-none">—</span>'}</td>
-                            </tr>`);
+                            const daysCell = `<td class="sr-days">${days ? escAttr(days) : '<span class="hw-none">—</span>'}</td>`;
+                            if (off) {
+                                offRows.push(`<tr class="hw-row-off${cont ? ' hw-hist-row' : ''}">
+                                    <td>${label}</td>
+                                    <td>${serialCell}</td>
+                                    <td>${dateInput('installDate')}</td>
+                                    <td>${dateInput('removalDate')}</td>
+                                    <td>${shopCell(`onclick="openShopReportMm('${escAttr(r.id)}')"`, r.shopStatus)}</td>
+                                    ${daysCell}
+                                </tr>`);
+                                offRows.push(findingRow(r.shopFinding, cont));
+                            } else {
+                                onRows.push(`<tr class="${cont ? 'hw-hist-row' : ''}">
+                                    <td>${label}</td>
+                                    <td>${serialCell}</td>
+                                    <td>${dateInput('installDate')}</td>
+                                    <td>${dateInput('removalDate')}</td>
+                                    <td><span class="sr-state on">ON WING</span></td>
+                                    ${daysCell}
+                                </tr>`);
+                            }
                         });
                         return;
                     }
@@ -18263,7 +18326,7 @@
                                 // a whole record is typed in one go, not just the serial.
                                 const dualB = !!lru.altSerialLabel;
                                 if (!editable) {
-                                    rows.push(`<tr>
+                                    onRows.push(`<tr>
                                         <td>${escAttr(label)}</td>
                                         <td>${hwSerialSpan('')}</td>
                                         <td><span class="hw-none">—</span></td>
@@ -18278,7 +18341,7 @@
                                 const dateNew = fld => `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="hw-date-input hw-new-date" data-field="${fld}" ${data} onchange="hwCreateFromRow(this)">`;
                                 const serialCell = snNew('', dualB ? 'Kontron S/N' : 'Serial — type to add')
                                     + (dualB ? ` ${snNew(' hw-sn-alt', 'Eclipse S/N')}` : '');
-                                rows.push(`<tr>
+                                onRows.push(`<tr>
                                     <td>${escAttr(label)}</td>
                                     <td>${serialCell}</td>
                                     <td>${dateNew('fittedDate')}</td>
@@ -18288,33 +18351,49 @@
                                 </tr>`);
                                 return;
                             }
-                            history.forEach((hit, idx) => {
-                                if (fitmentIsOn(hit.fitment)) recorded++; else removedCount++;
-                                hay += ' ' + String(hit.unit.serial || '').toLowerCase() + ' ' + String(hit.unit.altSerial || '').toLowerCase();
+                            let onSeen = false, offSeen = false;
+                            history.forEach((hit) => {
                                 const off = !fitmentIsOn(hit.fitment);
+                                if (off) removedCount++; else recorded++;
+                                hay += ' ' + String(hit.unit.serial || '').toLowerCase() + ' ' + String(hit.unit.altSerial || '').toLowerCase();
                                 const altCell = lru.altSerialLabel ? ` <span class="hw-alt-inline">${hwAltField(hit.unit, lru)}</span>` : '';
                                 const days = fitmentDaysOnWing(hit.fitment);
-                                // Equipment name on the first (current) row; a removed box beneath
-                                // it hangs off a muted "↳ <label>" so the slot reads as one group.
-                                const labelCell = idx === 0 ? escAttr(label) : `<span class="hw-hist-cont">↳ ${escAttr(label)}</span>`;
-                                rows.push(`<tr class="${off ? 'hw-row-off' : ''}${idx ? ' hw-hist-row' : ''}">
-                                    <td>${labelCell}</td>
-                                    <td>${hwSerialField(hit.unit)}${altCell}</td>
-                                    <td>${hwDateField(hit.unit, hit.fitment, 'fittedDate')}</td>
-                                    <td>${hwDateField(hit.unit, hit.fitment, 'removedDate')}</td>
-                                    <td>${hwStatusBadge(hit)}</td>
-                                    <td class="sr-days">${days == null ? '<span class="hw-none">—</span>' : days + 'd'}</td>
-                                </tr>`);
+                                // Equipment name on the first row of each table; a second box in the
+                                // same slot hangs off a muted "↳ <label>" so the slot reads as one group.
+                                const cont = off ? offSeen : onSeen;
+                                if (off) offSeen = true; else onSeen = true;
+                                const labelCell = cont ? `<span class="hw-hist-cont">↳ ${escAttr(label)}</span>` : escAttr(label);
+                                const daysCell = `<td class="sr-days">${days == null ? '<span class="hw-none">—</span>' : days + 'd'}</td>`;
+                                if (off) {
+                                    offRows.push(`<tr class="hw-row-off${cont ? ' hw-hist-row' : ''}">
+                                        <td>${labelCell}</td>
+                                        <td>${hwSerialField(hit.unit)}${altCell}</td>
+                                        <td>${hwDateField(hit.unit, hit.fitment, 'fittedDate')}</td>
+                                        <td>${hwDateField(hit.unit, hit.fitment, 'removedDate')}</td>
+                                        <td>${shopCell(`onclick="openShopReport('${escAttr(hit.unit.id)}','${escAttr(hit.fitment.id)}')"`, hit.fitment.shopStatus)}</td>
+                                        ${daysCell}
+                                    </tr>`);
+                                    offRows.push(findingRow(hit.fitment.shopFinding, cont));
+                                } else {
+                                    onRows.push(`<tr class="${cont ? 'hw-hist-row' : ''}">
+                                        <td>${labelCell}</td>
+                                        <td>${hwSerialField(hit.unit)}${altCell}</td>
+                                        <td>${hwDateField(hit.unit, hit.fitment, 'fittedDate')}</td>
+                                        <td>${hwDateField(hit.unit, hit.fitment, 'removedDate')}</td>
+                                        <td>${hwStatusBadge(hit)}</td>
+                                        ${daysCell}
+                                    </tr>`);
+                                }
                             });
                         });
                     });
                 });
-                return { a, fit, rows, recorded, removedCount, hay };
+                return { a, fit, onRows, offRows, recorded, removedCount, hay };
             }).filter(b => !q || b.hay.includes(q));
 
             if (!blocks.length) return '<div class="maint-empty">No aircraft match.</div>';
 
-            return blocks.map(({ a, fit, rows, recorded, removedCount }) => {
+            return blocks.map(({ a, fit, onRows, offRows, recorded, removedCount }) => {
                 const open = !!hwExpandedAc[a.id];
                 // Install site (retrofitLocation) pill — shown ONLY when the retrofit was
                 // done somewhere OTHER than Jeddah (Doha, Amman, Malta …), so a non-standard
@@ -18357,9 +18436,17 @@
                             </span>
                         </span>
                     </div>
-                    ${open ? `<div class="table-scroll-wrapper"><table class="hw-reg-table hw-ac-table"><thead><tr>
-                        <th>Equipment</th><th>Serial</th><th>Fitted</th><th>Removed</th><th>Status</th><th>Days</th>
-                    </tr></thead><tbody>${rows.join('')}</tbody></table></div>` : ''}
+                    ${open ? `
+                        <div class="hw-ac-subhead first">Installed Equipment</div>
+                        <div class="table-scroll-wrapper"><table class="hw-reg-table hw-ac-table"><thead><tr>
+                            <th>Equipment</th><th>Serial</th><th>Fitted</th><th>Removed</th><th>Status</th><th>Days</th>
+                        </tr></thead><tbody>${onRows.join('') || '<tr><td colspan="6" class="hw-ac-empty">No installed equipment recorded.</td></tr>'}</tbody></table></div>
+                        ${offRows.length ? `
+                        <div class="hw-ac-subhead">Removed Equipment</div>
+                        <div class="table-scroll-wrapper"><table class="hw-reg-table hw-ac-table hw-ac-removed"><thead><tr>
+                            <th>Equipment</th><th>Serial</th><th>Fitted</th><th>Removed</th><th>Shop&nbsp;Report</th><th>Days</th>
+                        </tr></thead><tbody>${offRows.join('')}</tbody></table></div>` : ''}
+                    ` : ''}
                 </div>`;
             }).join('');
         }
