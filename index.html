@@ -7633,8 +7633,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.167.0';
-        const APP_BUILD    = '2026.09.19.02';
+        const APP_VERSION  = '2.168.0';
+        const APP_BUILD    = '2026.09.19.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14372,11 +14372,7 @@
                         : '<div class="ep-empty">No attendees recorded.</div>'}
                 </div>`;
 
-            // Decide the print header strategy HERE, in the app realm, and bake the class
-            // onto <html> (see isPrintBlink). The callers ALSO set it on the written
-            // document after close(), because on the #avr deep-link path document.write
-            // does not re-apply <html> attributes to the existing documentElement.
-            const doc = `<!doctype html><html lang="en"${isPrintBlink() ? ' class="print-blink"' : ''}><head><meta charset="utf-8">
+            const doc = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escAttr(v.ref || rt.label)} — ${escAttr(v.aircraft)}</title>
 <style>
@@ -14431,13 +14427,15 @@
   .eqtbl td.nowrap { white-space:nowrap; }
   .eqtbl .eq-pos { color:var(--muted); font-weight:700; font-size:11px; }
   /* The prominent identity band (aircraft / dates / location) — v2.133.2. */
-  .rpt-meta { display:grid; grid-template-columns:repeat(3,1fr); gap:0; margin:10px 0 4px;
+  /* Aircraft gets the widest cell (registration · type · config on ONE line) and Dates the
+     narrowest, so the config pill never wraps under the tail (user, 2026-09-19). */
+  .rpt-meta { display:grid; grid-template-columns:1.55fr 0.95fr 1.25fr; gap:0; margin:10px 0 4px;
     background:var(--soft); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
   .rpt-meta-cell { padding:11px 16px; border-left:1px solid var(--line); }
   .rpt-meta-cell:first-child { border-left:none; }
   .rpt-meta .mk { display:block; font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
   .rpt-meta .mv { display:block; font-size:15px; font-weight:700; color:var(--navy); }
-  .rpt-meta .mv-lead { font-size:18px; font-weight:800; letter-spacing:.3px; }
+  .rpt-meta .mv-lead { font-size:18px; font-weight:800; letter-spacing:.3px; white-space:nowrap; }
   /* Aircraft type rides inline beside the registration so the identity band is one
      line shorter (it set the tallest cell and therefore the band's height). */
   .rpt-meta .ms-inline { font-size:12px; font-weight:600; letter-spacing:0; color:var(--muted); margin-left:8px; }
@@ -14476,41 +14474,28 @@
   .ep-empty { padding:11px 16px; color:var(--muted); font-size:12.5px; }
   .rpt-footer { display:flex; justify-content:space-between; gap:12px; color:var(--muted); font-size:10.5px;
     border-top:1px solid var(--line); margin-top:22px; padding-top:10px; }
-  /* The repeating margin bars exist only for print; keep them out of the on-screen view. */
-  .print-running-head, .print-running-foot { display:none; }
   @media print {
     body { background:#fff; }
     .toolbar { display:none; }
     .sheet { box-shadow:none; margin:0; max-width:none; padding:0; }
-    @page { size:A4; margin:26mm 14mm 18mm; }
-    /* Repeat the header/footer bars in the page margins on every printed page (Chrome
-       recurs position:fixed elements). Page numbers via @page counters where supported. */
-    .print-running-head { position:fixed; top:-20mm; left:0; right:0; height:16mm;
-      display:flex; align-items:center; justify-content:space-between;
-      border-bottom:2px solid var(--green); padding-bottom:3mm; }
-    .print-running-head img.saudia { height:11mm; }
-    .print-running-head img.nsg { height:11mm; width:auto; }
-    .print-running-head .rh-title { font-size:10px; font-weight:800; color:var(--navy); text-transform:uppercase; letter-spacing:.5px; text-align:right; max-width:60mm; }
-    .print-running-foot { position:fixed; bottom:-14mm; left:0; right:0; height:10mm;
-      display:flex; align-items:center; justify-content:space-between;
-      color:var(--muted); font-size:8.5px; border-top:1px solid var(--line); padding-top:2mm; }
-    .print-running-foot .pageno::after { content: counter(page); }
-    /* SAFE DEFAULT — the single inline header/footer, which every print engine renders.
-       WebKit (Safari, and ALL iOS browsers, which are WebKit) prints a COMPLETELY BLANK
-       page — content stream "q Q", no text/images — whenever the printed document holds a
-       position:fixed element, which the running head/foot are. (Blank AVR PDF: Safari
-       2026-09-15, and again 2026-09-19.) Only Blink (Chrome/Edge/Opera/Brave on desktop)
-       is verified to print the fixed per-page running bars, so we default EVERYONE to the
-       inline header/footer and switch to the running bars only when .print-blink is set —
-       an unknown engine now gets the working report, not a blank one. */
-    .print-running-head, .print-running-foot { display:none; }
+    @page { size:A4; margin:14mm 13mm 14mm; }
+    /* One inline header/footer for every engine. The old position:fixed per-page
+       running bars were removed: WebKit (Safari + all iOS browsers) prints a blank page
+       when any fixed element is present, and Chrome clipped the negative-offset running
+       head off the top margin so the Saudia/NSG logos vanished from the PDF. The inline
+       header carries real <img> logos that print everywhere (user, 2026-09-19). */
     .rpt-header, .rpt-footer { display:flex; }
-    .print-blink .print-running-head,
-    .print-blink .print-running-foot { display:flex !important; }
-    .print-blink .rpt-header,
-    .print-blink .rpt-footer { display:none !important; }
+    /* Repeat the "Work Carried Out" table's column header on every page, and never split
+       a single table row across a page boundary. */
     thead { display: table-header-group; }
-    tr, .note { break-inside: avoid; }
+    tr { break-inside: avoid; }
+    /* Keep the small structural blocks whole — but let the long free-text notes FLOW and
+       split across pages, so a big Report fills page 1 and continues on page 2 instead of
+       being pushed wholesale to the next page and leaving a gap. A section title stays with
+       the block that follows it. */
+    .rpt-header, .rpt-meta, .rpt-grid { break-inside: avoid; }
+    .sec { break-after: avoid; }
+    .note { break-inside: auto; }
   }
 </style></head>
 <body>
@@ -14518,18 +14503,6 @@
     <button class="btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
     <span class="sp"></span>
     <span class="stamp">Downloaded ${escAttr(stamp)}</span>
-  </div>
-
-  <!-- Running header/footer copies that live in the printed page margins -->
-  <div class="print-running-head">
-    <img class="saudia" src="${saudiaReportLogo()}" alt="Saudia">
-    <span class="rh-title">${escAttr(rt.label)} · ${escAttr(v.aircraft)}</span>
-    <img class="nsg" src="${NSG_REPORT_LOGO}" alt="NSG">
-  </div>
-  <div class="print-running-foot">
-    <span>Saudia Connectivity / IFEC Programme${v.ref ? ' · ' + escAttr(v.ref) : ''}</span>
-    <span>Downloaded ${escAttr(stamp)}</span>
-    <span class="pageno">Page </span>
   </div>
 
   <div class="sheet">
@@ -14571,18 +14544,6 @@
             return doc;
         }
 
-        // True only for Blink on a non-touch (desktop) platform — Chrome/Edge/Opera/Brave.
-        // Blink is the one print engine verified to render the position:fixed per-page
-        // running bars; WebKit (Safari + every iOS browser, which are all WebKit) prints a
-        // BLANK page when any position:fixed element is present, so it must keep the inline
-        // header/footer. The print CSS shows the running bars only under .print-blink.
-        function isPrintBlink() {
-            const ua = navigator.userAgent;
-            const isIOS = /iphone|ipad|ipod/i.test(ua) ||
-                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS reports as Mac
-            return !isIOS && /chrome|chromium|edg\/|opr\/|brave/i.test(ua) && !/edgios|crios|fxios/i.test(ua);
-        }
-
         // On-screen entry point: open the report in a new tab/window.
         function printAvr(id) {
             const doc = buildAvrReportDoc(id);
@@ -14592,10 +14553,6 @@
             w.document.open();
             w.document.write(doc);
             w.document.close();
-            // document.write may not carry <html class> onto an existing documentElement,
-            // so set it explicitly — otherwise the page could print with the running bars
-            // on WebKit and come out blank.
-            try { w.document.documentElement.classList.toggle('print-blink', isPrintBlink()); } catch (e) {}
             w.focus();
         }
 
@@ -14612,10 +14569,6 @@
             document.open();
             document.write(doc);
             document.close();
-            // The written <html class="print-blink"> does not re-apply to the existing
-            // documentElement on this in-place path, so set it explicitly (WebKit must NOT
-            // get the class, or the position:fixed running bars blank the printed page).
-            document.documentElement.classList.toggle('print-blink', isPrintBlink());
             return true;
         }
 
