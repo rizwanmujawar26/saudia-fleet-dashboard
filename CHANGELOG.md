@@ -13,6 +13,23 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.169.0 — Shop Report status + finding on removed equipment (2026-09-20)
+User-directed. Hardware **Aircraft** view and the **AVR PDF/report**, in parallel.
+
+- **Aircraft view (`renderHwByAircraft`)** — the one merged equipment table is now **two labelled
+  tables**: *Installed Equipment* (unchanged 6 cols) and *Removed Equipment*, which swaps the
+  always-`REMOVED` Status column for a **Shop Report** status pill (`.status-badge.shop-badge`,
+  `shopStatusLabel`) and hangs the full **shop finding** on a muted `↳` second line
+  (`.hw-shop-finding-row` / `.hw-finding-cell`) beneath each removed LRU when one is recorded.
+  Editable → the pill is a `.hw-shop-cell-btn` that opens `openShopReport` / `openShopReportMm`.
+- **AVR PDF/report (`printAvr` template)** — Removed Equipment table gains a **Shop Report** column
+  (`.pill` + new `.pill-amber` for Awaiting; `shopShort`/`shopPill` local maps → Awaiting / In Shop /
+  Repaired / NFF / Scrapped) and a `Shop finding:` continuation row. Each unit wrapped in its own
+  `<tbody class="eq-grp">` (`break-inside:avoid`) so the finding stays with its row across a page break.
+- **Data** — `satcomRows()` and `aircraftFitment().removedUnits` now carry `shopStatus`/`shopFinding`
+  (MODMAN from `/modmans`, other LRUs from the `/units` fitment). No new node, no rules change —
+  both views read the existing shop-report fields (`openShopReport` already wrote them).
+
 ### v2.166.0–v2.168.0 — Home timeline AVR pill + AVR PDF fixed (2026-09-19)
 User-directed. See [[avr-pill-and-pdf-print-fix-v2166-2168]] and Where-things-stand.
 

@@ -6,7 +6,29 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.166.0–v2.168.0 (2026-09-19).** AVR pill on the Home timeline + a proper fix for
+**Latest — v2.169.0 (2026-09-20).** Removed equipment now carries its **shop-report status and
+finding** — in the Hardware **Aircraft** view and in the **AVR PDF/report**, in parallel.
+
+- **Hardware Aircraft view is split into two labelled tables** — *Installed Equipment* and
+  *Removed Equipment* (`renderHwByAircraft` now builds `onRows` / `offRows`, not one `rows`). The
+  Removed table drops the always-`REMOVED` Status column and puts a **Shop Report** status pill in
+  its place (`.status-badge.shop-badge.shop-<status>`, `shopStatusLabel` → Awaiting Shop / In Shop /
+  Repaired / No Fault Found / Scrapped). When a shop finding is recorded it hangs on a muted `↳`
+  **second line** beneath that LRU (`.hw-shop-finding-row` → `.hw-finding-cell`). Signed in, the
+  pill is a `.hw-shop-cell-btn` that opens the shop-report modal (`openShopReport` for `/units`,
+  `openShopReportMm` for a `/modmans` box). The Installed table is the old 6-column layout unchanged,
+  so the editable removed-date (how a box is marked off) is still there.
+- **AVR PDF/report Removed Equipment table gains a Shop Report column + finding line.** New column
+  renders a `.pill` (added `.pill-amber` for Awaiting) via local `shopShort`/`shopPill` maps
+  (Awaiting / In Shop / Repaired / NFF / Scrapped); a `Shop finding:` row follows when present. Each
+  removed unit is wrapped in its own `<tbody class="eq-grp">` with `break-inside:avoid` so the
+  finding never splits from its row across a page.
+- **The data was already there.** `satcomRows()` (MODMAN) and `aircraftFitment().removedUnits`
+  (every other LRU) now surface `shopStatus`/`shopFinding` — MODMAN from the `/modmans` record, other
+  LRUs from the `/units` fitment. No new node, no rules change: `openShopReport`/`openShopReportMm`
+  already wrote these fields; the two views just read them now. See [[shop-report-on-removed-equipment-v2169]].
+
+**Prior — v2.166.0–v2.168.0 (2026-09-19).** AVR pill on the Home timeline + a proper fix for
 the AVR PDF (logos, pagination, aircraft box).
 
 - **Home timeline AVR reference is now a green report pill** (v2.166.0). `.tl-avr-link` was plain
@@ -138,6 +160,11 @@ shape:
 - **By Aircraft header** (v2.160.0): the single "N recorded" became two pills — green **N On-Wing**
   and red **N Removed** (`removedCount` tracked alongside `recorded`) — plus a 📍 install-site pill
   (`retrofitLocation`) shown next to the type pill ONLY when the site is not Jeddah.
+- **By Aircraft body is two tables** (v2.169.0): `renderHwByAircraft` fills `onRows`/`offRows` (not
+  one `rows`) → an *Installed Equipment* table (old 6 cols, incl. the editable Removed-date that
+  marks a box off) and a *Removed Equipment* table whose 5th column is a **Shop Report** pill instead
+  of the always-`REMOVED` Status, with the shop finding on a `↳` second line when present. Same
+  shop data the equipment-tab removal cards use — see the v2.169 note in *Where things stand*.
 
 **Prior — v2.151.2–v2.153.2 (2026-09-14).** A sustained redesign of the AVR **print / PDF
 report** (`printAvr`) plus the shared dossier data. Full detail in CHANGELOG.md / `git log`;
