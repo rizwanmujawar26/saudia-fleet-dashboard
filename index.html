@@ -2820,9 +2820,12 @@
         /* A Timeline REPORT (AVR) row: the reference is a right-aligned link to the report
            PDF, and the 📋 mark is the same link. Both open the #avr=<id> deep link in a new
            tab (user, 2026-09-17). */
-        .tl-avr-link { margin-left: auto; font-size: 12px; font-weight: 700; color: #0a5c34;
-            text-decoration: none; white-space: nowrap; padding: 1px 3px; border-radius: 4px; }
-        .tl-avr-link:hover { text-decoration: underline; background: rgba(10, 92, 52, 0.07); }
+        /* The reference renders as the same green pill the Activity feed uses for a report
+           (.repo-visit-chip) so it reads as a button/action, not plain text (user, 2026-09-19). */
+        .tl-avr-link { margin-left: auto; font-size: 10.5px; font-weight: 700; color: #146c3a;
+            text-decoration: none; white-space: nowrap; padding: 2px 8px; border-radius: 999px;
+            background: #e7f4ec; border: 1px solid #bfe3cd; }
+        .tl-avr-link:hover { text-decoration: none; background: #d5ecdf; border-color: #9fd3b4; }
         .tl-avr-mark { display: inline-flex; align-items: center; justify-content: center;
             text-decoration: none; cursor: pointer; font-size: 12px; line-height: 1; transition: transform 0.12s ease; }
         .tl-avr-mark:hover { transform: scale(1.18); }
@@ -7630,8 +7633,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.165.0';
-        const APP_BUILD    = '2026.09.17.03';
+        const APP_VERSION  = '2.166.0';
+        const APP_BUILD    = '2026.09.19.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -21367,7 +21370,7 @@
                 if (x.kind === 'visit' && x.avrId) {
                     const href = `${location.origin + location.pathname}#avr=${encodeURIComponent(x.avrId)}`;
                     const refLink = x.ref
-                        ? `<a class="tl-avr-link" href="${escAttr(href)}" target="_blank" rel="noopener" title="Open report ${escAttr(x.ref)} (PDF)" onclick="event.stopPropagation();">${escAttr(x.ref)}</a>`
+                        ? `<a class="tl-avr-link" href="${escAttr(href)}" target="_blank" rel="noopener" title="Open report ${escAttr(x.ref)} (PDF)" onclick="event.stopPropagation();">📋 ${escAttr(x.ref)}</a>`
                         : '';
                     const markLink = `<a class="tl-avr-mark" href="${escAttr(href)}" target="_blank" rel="noopener" title="Open report (PDF)" onclick="event.stopPropagation();">📋</a>`;
                     return `<li>
