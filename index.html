@@ -7177,6 +7177,15 @@
         function lruById(id) {
             return HARDWARE_LRUS.find(l => l.id === id) || null;
         }
+        // A dual-identity LRU carries a Kontron S/N (the primary serial) AND an Eclipse S/N
+        // (in the unit's altSerial): the IFE server and the MODMAN, retrofit and linefit.
+        // The altSerialLabel is what turns the pairing on, so it is also the test — used to
+        // show a hardware R&R on these boxes the Hardware way: Kontron S/N in plain text,
+        // Eclipse S/N as a blue "ECL 000" pill.
+        function isDualEclipseLru(lruId) {
+            const l = lruById(lruId);
+            return !!(l && /eclipse/i.test(l.altSerialLabel || ''));
+        }
 
         function lrusForFit(fit) {
             return HARDWARE_LRUS.filter(l => l.fit === fit);
@@ -7651,8 +7660,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.170.0';
-        const APP_BUILD    = '2026.09.21.01';
+        const APP_VERSION  = '2.171.0';
+        const APP_BUILD    = '2026.09.21.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -21088,13 +21097,33 @@
                 const cat = activityCategory(act.category);
                 const air = byTail[act.aircraft] || {};
                 const title = act.title || cat.label;
+                let sub = dedupeSubtitle(title, activitySubtitle(act));
+                // An R&R on the IFE server reads the Hardware way: the Kontron S/N in plain
+                // text and the Eclipse S/N as a blue ECL pill. The server is a dual-identity
+                // box whose PRIMARY serial is the Kontron, so the R&R's oldPart/newPart hold
+                // the Kontron serial (prefer the box now fitted — newPart — over the one
+                // removed) and the paired Eclipse serial lives on the matching /units record,
+                // looked up by that Kontron serial. Restricted to the server: a MODMAN R&R
+                // records the short Eclipse number in newPart, and the MODMAN's own fit/remove
+                // rows already carry the pair via the /modmans pass above.
+                let ecl = '';
+                const d = act.details || {};
+                const rrLru = act.category === 'hardware_rr' ? lruById(d.lruId) : null;
+                if (rrLru && isDualEclipseLru(d.lruId) && /server/i.test(rrLru.label || '')) {
+                    const kontron = d.newPart || d.oldPart || '';
+                    if (kontron) {
+                        const unit = unitBySerial(d.lruId, kontron);
+                        ecl = unit ? (unit.altSerial || '') : '';
+                        sub = sub ? `${sub} · S/N ${kontron}` : `S/N ${kontron}`;
+                    }
+                }
                 // actId marks this as an editable /activities record (vs a derived event)
                 // and carries the visit link, which the Activity-tab repository reads to
                 // draw its Edit and Assign-to-visit controls. The Overview Timeline ignores
                 // these extra fields.
                 out.push({ iso, kind: cat.kind, tail: act.aircraft, type: air.type || '',
                            location: act.location || aircraftLocationOf(air),
-                           title, sub: dedupeSubtitle(title, activitySubtitle(act)),
+                           title, sub, ecl,
                            actId: act.id, category: act.category, visitId: act.visitId || '' });
             });
 
