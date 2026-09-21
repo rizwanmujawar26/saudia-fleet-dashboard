@@ -13,6 +13,30 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.170.0–v2.172.0 — Dual-serial + full unit fit/remove on the Timeline (2026-09-21)
+User-directed, three increments on `timelineActivities()` (Overview Timeline + Activity feed).
+
+- **v2.170.0 — MODMAN dual serial.** MODMAN fit/remove rows read the Hardware way: the
+  **Kontron S/N in the `sub` text** and the **Eclipse S/N as a blue `ECL 000` pill**. New
+  item field `ecl` (raw `m.eclipseSn`) + new `tlEclPill()` helper (reuses `.hw-ecl-pill`,
+  adds `.tl-ecl-pill` margin); rendered in both `renderRow` (Home) and `renderRepoRow`
+  (Activity). Eclipse S/N kept searchable via the search haystacks (`eclipseSnDisplay(x.ecl)`
+  added at both `renderMaintenanceRepo` filter and `timelineHaystack`). A321XLR Astronics
+  boxes keep the single `S/N nnn`, no pill.
+- **v2.171.0 — IFE server R&R (superseded).** `isDualEclipseLru()` helper; injected the
+  server's Kontron+Eclipse onto the `hardware_rr` **activity** row (looked up from `/units`
+  by the R&R's `newPart`/`oldPart` Kontron serial). **Reverted in v2.172** — see below.
+- **v2.172.0 — all LRUs from `/units`.** Generalised the MODMAN pass to the whole unit
+  register: a pass over `unitEntries()` (skipping `SIM_LRU_IDS` + `modman`/`lf_modman`)
+  emits `{label} fitted`/`{label} removed` per fitment on its `fittedDate`/`removedDate` —
+  IFE server, KANDU, KRFU, RX/TX antennas, CWAP, waveguide, coax. `sub = S/N {u.serial}`;
+  dual-identity LRUs (server) also set `ecl = u.altSerial` for the pill; multi-position
+  units carry the slot (`CWAP 1 fitted`). Every past fitment imported on its own date;
+  future R&Rs appear automatically (an R&R writes the `/units` fitment). The v2.171
+  activity-row injection was reverted here so the serial lives only on the derived rows,
+  not shown twice. ~95 rows across roster history; `isBaselineRecord()` guards only the
+  `/activities` pass, so baseline fits DO appear here.
+
 ### v2.169.0 — Shop Report status + finding on removed equipment (2026-09-20)
 User-directed. Hardware **Aircraft** view and the **AVR PDF/report**, in parallel.
 

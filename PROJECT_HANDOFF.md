@@ -6,7 +6,25 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.169.0 (2026-09-20).** Removed equipment now carries its **shop-report status and
+**Latest — v2.170.0–v2.172.0 (2026-09-21).** The Timeline/Activity feed now shows **hardware
+serials the Hardware way**, and imports **every unit fit/remove** from the register.
+
+- **Dual serial on MODMAN + IFE-server rows** — Kontron S/N in the `sub` text, Eclipse S/N as
+  a blue `ECL 000` pill. New item field `ecl` (raw Eclipse S/N) + `tlEclPill()` helper, drawn
+  in both `renderRow` (Home) and `renderRepoRow` (Activity); Eclipse kept searchable. A321XLR
+  Astronics MODMANs keep the plain single `S/N`.
+- **All LRUs derived from `/units` (v2.172)** — a pass over `unitEntries()` (skipping SIM +
+  MODMAN, which their own passes own) emits `{label} fitted`/`{label} removed` per fitment on
+  its own date: IFE server, KANDU, KRFU, RX/TX antennas, CWAP (per slot, `CWAP 1 fitted`),
+  waveguide, coax. **This is how server R&Rs (and all equipment swaps) now carry serials** —
+  an R&R writes the `/units` fitment, so past events are imported and future ones appear
+  automatically; the `hardware_rr` activity row stays the context. ~95 rows across history
+  (baseline fits included — `isBaselineRecord()` guards only the `/activities` pass, not this).
+- ⚠️ **v2.171 briefly injected the server's serial onto the R&R activity row — reverted in
+  v2.172** once the derived rows carried it, or the same S/N showed twice per swap. See the
+  *Timeline — derived, never stored* section and [[timeline-dedup-and-serial-norm-v2157]].
+
+**Prior — v2.169.0 (2026-09-20).** Removed equipment now carries its **shop-report status and
 finding** — in the Hardware **Aircraft** view and in the **AVR PDF/report**, in parallel.
 
 - **Hardware Aircraft view is split into two labelled tables** — *Installed Equipment* and
@@ -1645,7 +1663,9 @@ the `id`.
 ## Timeline — derived, never stored
 
 `timelineActivities()` is the one place the three sources are folded into a
-single shape (`{ iso, kind, tail, type, location, title, sub }`):
+single shape (`{ iso, kind, tail, type, location, title, sub, ecl? }`; `ecl` is an
+optional raw Eclipse S/N that `renderRow` / `renderRepoRow` draw as a blue `ECL` pill
+via `tlEclPill()`, on the dual-identity MODMAN and IFE-server rows):
 
 | kind | source | date it uses |
 |---|---|---|
@@ -1685,13 +1705,31 @@ service yields up to two Hardware rows naming the unit's S/N:
   swap writes BOTH an activity and the fitment (the 4 fitments carrying an `activityId`), and
   without the skip AQJ/ASV's 16-Aug swaps showed twice.
 - **MODMAN** — a flat pass over `modmansLive` (one record per box, dates stored on it, NOT
-  per fitment). `MODMAN fitted` on `installDate`, `MODMAN removed` on `removalDate`. The
-  serial **follows the supplier**, as the Satcom table does: `air.type === 'A321XLR'` →
-  Astronics S/N, else Eclipse S/N — the Eclipse S/N shown **without its `SN_` prefix**
-  (`eclipseSnDisplay()`, v2.107; `SN_066` → `066`). ⚠️ **No de-dup guard** — MODMAN swaps
-  are NOT also on `/activities`, so a box reaches the Timeline once. The lone free-text
-  `Modman Replacement` activity (ASBB 18-Aug, empty `lruId`) coexists with its register
-  rows; no clean signal to suppress it on, left for the user to keep or delete.
+  per fitment). `MODMAN fitted` on `installDate`, `MODMAN removed` on `removalDate`.
+  **v2.170** — a MODMAN is a dual-identity box, so the row now reads the Hardware way:
+  the **Kontron S/N in the `sub` text** (`S/N {m.kontronSn}`) and the **Eclipse S/N as a
+  blue `ECL 000` pill** carried on a new item field `ecl` (raw `m.eclipseSn`, rendered by
+  `tlEclPill()` → `eclipseSnDisplay()` strips the `SN_` prefix). An **A321XLR** carries a
+  single-serial Astronics box, so it keeps the plain `S/N {astronicsSn}` and no pill. ⚠️
+  **No de-dup guard** — MODMAN swaps are NOT also on `/activities`, so a box reaches the
+  Timeline once. The lone free-text `Modman Replacement` activity (ASBB 18-Aug, empty
+  `lruId`) coexists with its register rows; left for the user to keep or delete.
+- **Every other LRU (v2.172)** — a pass over `unitEntries()` (skipping `SIM_LRU_IDS` +
+  `modman`/`lf_modman`, which the two passes above own) emitting `{label} fitted` on
+  `f.fittedDate` and `{label} removed` on `f.removedDate` for every fitment — the IFE
+  server, KANDU, KRFU, RX/TX antennas, CWAP, waveguide, coax. `sub` is `S/N {u.serial}`;
+  a **dual-identity** LRU (`isDualEclipseLru()` — currently only the IFE server) also sets
+  `ecl = u.altSerial` for the Eclipse pill. Multi-position units carry the slot on the
+  fitment (`f.position`) so the row reads `CWAP 1 fitted`. **This is what surfaces server
+  R&Rs with serials** — an R&R writes the fitment to `/units` (`unitWritesForActivity`),
+  so every past fit/remove is imported on its own date and every future swap appears the
+  moment it is logged, nothing back-filled. The `hardware_rr` **activity** row stays the
+  *context* (no serial injected). ⚠️ **v2.171 briefly injected the server's Kontron+Eclipse
+  onto the R&R activity row itself — REVERTED in v2.172** once the derived rows carried the
+  serial, or the same S/N showed twice per swap. (`isDualEclipseLru()` survives, used here
+  for the pill.) `isBaselineRecord()` guards the `/activities` pass, NOT this one, so the
+  initial baseline fit of each box IS a row here — ~95 rows across the roster's history,
+  spread over their real dates and folded behind the 7-day window on Home.
 - **OTA patches (v2.106)** — a pass over `aircraftData` emitting one **Software**-kind row
   per patch stamp: `OTA Patch #2` from `otaPatchUTC`, `OTA Patch #3` from `otaPatch3UTC`
   (both full UTC timestamps; sub is the `hh:mm UTC` time). Location-independent, like a
