@@ -7660,8 +7660,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.171.0';
-        const APP_BUILD    = '2026.09.21.02';
+        const APP_VERSION  = '2.172.0';
+        const APP_BUILD    = '2026.09.21.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -21082,6 +21082,50 @@
                 }
             });
 
+            // --- Every other LRU: install and removal, straight from the unit register ---
+            // The IFE server, KANDU, KRFU, RX/TX antennas, CWAP, waveguide, coax… each carry
+            // their fit/remove history on /units (fittedDate / removedDate per fitment), just
+            // as the MODMAN carries it on /modmans. Surface each as a Hardware row naming the
+            // box's S/N, so the Activity timeline shows what went on and off and when — every
+            // past fitment on its own date, and any future R&R the moment it is logged (an
+            // R&R writes the fitment to /units, so nothing has to be back-filled and a date
+            // corrected on the Hardware tab corrects the Timeline with it).
+            //
+            // SIM and MODMAN are OWNED by the two passes above — SIM by its own units pass
+            // (which formats the SIM serial), MODMAN by /modmans — so skip them here or the
+            // same event shows twice. A dual-identity box (the IFE server) shows the Kontron
+            // S/N in text and the Eclipse S/N as a blue "ECL 000" pill, exactly like MODMAN.
+            // Multi-position LRUs (CWAP, antennas) carry the slot on the fitment, so the row
+            // reads "CWAP 1 fitted" rather than three indistinguishable "CWAP fitted" rows.
+            const unitTlSkip = new Set(SIM_LRU_IDS.concat(['modman', 'lf_modman']));
+            unitEntries().forEach(u => {
+                if (unitTlSkip.has(u.lruId)) return;
+                const lru = lruById(u.lruId);
+                const label = lru ? lru.label : u.lruId;
+                const sub = u.serial ? `S/N ${u.serial}` : '';
+                const ecl = isDualEclipseLru(u.lruId) ? (u.altSerial || '') : '';
+                unitFitments(u).forEach(f => {
+                    const tail = f.aircraft || '';
+                    // Any airframe in the roster, NOT Active-only — a box going on or off is a
+                    // physical event, like a MODMAN or SIM fitment, so it reaches the Timeline
+                    // even while the airframe is still In Retrofit. A fitment with no aircraft
+                    // (an off-wing / spare box) emits nothing.
+                    if (!byTail[tail]) return;
+                    const air = byTail[tail];
+                    const pos = f.position ? ` ${f.position}` : '';
+                    const fitIso = toISODate(f.fittedDate);
+                    if (fitIso) {
+                        out.push({ iso: fitIso, kind: 'hardware', tail, type: air.type || '',
+                                   location: '', title: `${label}${pos} fitted`, sub, ecl });
+                    }
+                    const remIso = toISODate(f.removedDate);
+                    if (remIso) {
+                        out.push({ iso: remIso, kind: 'hardware', tail, type: air.type || '',
+                                   location: '', title: `${label}${pos} removed`, sub, ecl });
+                    }
+                });
+            });
+
             // --- Maintenance + Hardware: the activity records ---
             activityEntries().forEach(act => {
                 const iso = toISODate(act.date);
@@ -21097,33 +21141,16 @@
                 const cat = activityCategory(act.category);
                 const air = byTail[act.aircraft] || {};
                 const title = act.title || cat.label;
-                let sub = dedupeSubtitle(title, activitySubtitle(act));
-                // An R&R on the IFE server reads the Hardware way: the Kontron S/N in plain
-                // text and the Eclipse S/N as a blue ECL pill. The server is a dual-identity
-                // box whose PRIMARY serial is the Kontron, so the R&R's oldPart/newPart hold
-                // the Kontron serial (prefer the box now fitted — newPart — over the one
-                // removed) and the paired Eclipse serial lives on the matching /units record,
-                // looked up by that Kontron serial. Restricted to the server: a MODMAN R&R
-                // records the short Eclipse number in newPart, and the MODMAN's own fit/remove
-                // rows already carry the pair via the /modmans pass above.
-                let ecl = '';
-                const d = act.details || {};
-                const rrLru = act.category === 'hardware_rr' ? lruById(d.lruId) : null;
-                if (rrLru && isDualEclipseLru(d.lruId) && /server/i.test(rrLru.label || '')) {
-                    const kontron = d.newPart || d.oldPart || '';
-                    if (kontron) {
-                        const unit = unitBySerial(d.lruId, kontron);
-                        ecl = unit ? (unit.altSerial || '') : '';
-                        sub = sub ? `${sub} · S/N ${kontron}` : `S/N ${kontron}`;
-                    }
-                }
                 // actId marks this as an editable /activities record (vs a derived event)
                 // and carries the visit link, which the Activity-tab repository reads to
                 // draw its Edit and Assign-to-visit controls. The Overview Timeline ignores
-                // these extra fields.
+                // these extra fields. The serials for an R&R are NOT injected here: every
+                // fit/remove is surfaced as its own S/N-bearing Hardware row by the unit
+                // register pass above (MODMAN from /modmans, the rest from /units), exactly
+                // as the MODMAN swap reads — the activity row stays the context for it.
                 out.push({ iso, kind: cat.kind, tail: act.aircraft, type: air.type || '',
                            location: act.location || aircraftLocationOf(air),
-                           title, sub, ecl,
+                           title, sub: dedupeSubtitle(title, activitySubtitle(act)),
                            actId: act.id, category: act.category, visitId: act.visitId || '' });
             });
 
