@@ -13,6 +13,21 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.174.0 — Fix: LRU R&R double-listed on AVR reports (2026-09-22)
+User-reported: the ASAD report showed **KRFU fitted / KRFU removed twice** (10 entries, not 8).
+
+- **Root cause** — `avrReportMembers()` had two overlapping sources for component fit/remove.
+  `base` (from `timelineRepoEntries()`) already carries every LRU fit/remove since **v2.172**
+  made the Timeline unit pass whole-roster; a *second* pass over `/units` in
+  `avrReportMembers` then re-listed the same swaps. Non-SIM/MODMAN LRUs (KRFU, IFE server,
+  KANDU, antennas, CWAP, coax) appeared twice; MODMAN — skipped in that second pass — appeared
+  once, which is exactly the asymmetry the user saw. Not a data duplicate: ASAD legitimately
+  has three distinct KRFU fitments (S/N 37847 / 37181 / 37378).
+- **Fix** — removed the now-redundant `/units` pass from `avrReportMembers`. The R&R still
+  shows (via `base`), once, in its richer derived form (e.g. the IFE server's Eclipse `ECL`
+  pill). Verified fleet-wide: 0 duplicate rows across all 23 reports; ASAD-2026-003 back to
+  8 entries.
+
 ### v2.173.0 — Aircraft delivery events on the Timeline (2026-09-22)
 User-directed. Aircraft **deliveries** now surface on the Overview Timeline + Activity feed,
 filed under the existing **Operational** kind.
