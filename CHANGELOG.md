@@ -13,6 +13,24 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.173.0 — Aircraft delivery events on the Timeline (2026-09-22)
+User-directed. Aircraft **deliveries** now surface on the Overview Timeline + Activity feed,
+filed under the existing **Operational** kind.
+
+- **Derived, never stored** — a whole-roster pass in `timelineActivities()` reads
+  `/fleetSpecs/{tail}.deliveryDate` (via `deliveryDateOf`) and emits an `Aircraft Delivered`
+  row (`kind: 'operational'`, `delivery: true`). Like Activation/Modification, nothing is
+  written and nothing is backfilled — the same delivery date shown on the Fleet page drives
+  the row, so a correction there corrects the Timeline. Not Active-only: a just-delivered
+  airframe still Installed (e.g. **ASBE**, delivered 21-Sep-2026) shows its delivery.
+- **Scope gate** — `DELIVERY_TIMELINE_FROM = '2024-01-01'`: only 2024-onward deliveries
+  (11 aircraft) render, so the older fleet does not bury the recent, relevant hand-overs.
+  Widen or drop the constant to show more history.
+- **Renders as a milestone, not an outage** — a delivery row carries a 🛬 mark and **no**
+  `tl-ops-out` red accent (branch on `x.delivery` in `renderRow`/`renderRepoRow`); the repo
+  source tag reads **Fleet**. No location pill: `deliveryDate` stores no place and
+  `retrofitLocation` is the install site, not where the aircraft was handed over.
+
 ### v2.170.0–v2.172.0 — Dual-serial + full unit fit/remove on the Timeline (2026-09-21)
 User-directed, three increments on `timelineActivities()` (Overview Timeline + Activity feed).
 
