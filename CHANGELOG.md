@@ -13,6 +13,23 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.187.0 — Menu reshuffle: Hardware public, Satcom → Hardware > MODEM (2026-09-24)
+User-requested (agreed in chat before building). Main menu is now Home · Software · Hardware ·
+Media · Maintenance · Fleet. **4G SIM and Satcom left the menu**:
+- **Hardware is public**: `RESTRICTED_TABS = []`, so every sub-tab is readable signed out.
+  Edit/Add still need sign-in. No rules change: /units and /assets were already public-read.
+- **Satcom moved whole into Hardware > MODEM**, a new sub-tab after SIM:
+  AIRCRAFT · ASSETS · SIM · MODEM · MODMAN · SERVER … Its markup moved into `#hwModem` inside
+  `#hardware` with the same ids, so `populateSatcomTable`, the `satcom` fb bar, edit and
+  Add MODMAN run unchanged. When `hwView === 'modem'`, `renderHwContent` hides the shared
+  hw head/bar/content and shows `#hwModem`. It skips the repaint in `satcomEditMode`, the same
+  guard the poll keeps. Hardware framing: a `MODEM` title with an "N/49 on wing" pill, the widget
+  strip, a rounded `hw-filterbar`, and light Hardware table colours via class `.hw-modem-table`
+  (so the frozen-head copy inherits it). Grouped heads are kept, recoloured.
+- **Old names redirect**: `switchTab('sim')` → Hardware > SIM, `switchTab('satcom')` →
+  Hardware > MODEM. The `#sim` page markup/code is kept dormant (user: redirect, keep code).
+- Hardware > MODMAN (the /units serial view) is untouched. Nothing deleted, no data touched.
+
 ### v2.186.0 — Fleet HBC+ pill = Active only (2026-09-24)
 User-requested: the HBC+ quick pill counted and showed all 8 HBC+ aircraft, including the five
 FUTURE / In-Scope A321XLRs. It now shows Active HBC+ only (3 today: ASBA, ASBB, ASBE). New

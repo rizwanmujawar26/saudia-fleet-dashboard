@@ -3124,6 +3124,31 @@
         .aircraft-table .satcom-comm-end { border-right: 2px solid #e3e8ec; }
         .aircraft-table thead .satcom-comm-end { border-right: 2px solid rgba(255, 255, 255, 0.35); }
 
+        /* Hardware > MODEM (v2.187.0, user 2026-09-24): the Satcom table in the Hardware
+           page's LIGHT colours — the .hw-reg-table look (pale head, grey small caps, soft
+           row rules) with the module groups kept as a tinted top row. Scoped by CLASS
+           (.hw-modem-table): the frozen-head copy inherits className, never id. Two
+           classes on the table out-specify the `.aircraft-table th.satcom-group-*` fills. */
+        .hw-modem .media-widget-strip { margin-bottom: 12px; }
+        .aircraft-table.hw-modem-table { margin-top: 8px; }
+        .aircraft-table.hw-modem-table th {
+            background: #f7f9fb; color: #8a97a1; font-size: 10px; font-weight: 800;
+            letter-spacing: 0.5px; padding: 7px 8px; border-bottom: 2px solid #e6ecf1;
+        }
+        .aircraft-table.hw-modem-table th.sortable-th:hover { background: #eef2f5; color: #0a5c34; }
+        .aircraft-table.hw-modem-table th.satcom-group {
+            background: #eef4f0; color: #0a5c34; font-size: 10.5px; letter-spacing: 1.2px;
+            padding: 7px 10px; border-bottom: 1px solid #dfe8e2;
+        }
+        .aircraft-table.hw-modem-table thead .satcom-group-start { border-left: 2px solid #e1e7ec; }
+        .aircraft-table.hw-modem-table thead .satcom-comm-end { border-right: 2px solid #e1e7ec; }
+        .aircraft-table.hw-modem-table th.satcom-group-details { border-left: none; }
+        .aircraft-table.hw-modem-table td { padding: 7px 8px; border-bottom: 1px solid #eef2f5; font-size: 12.5px; }
+        .aircraft-table.hw-modem-table tbody tr:hover { background: #f8fbfd; }
+        .aircraft-table.hw-modem-table .sim-sort-mode { color: #9aa6af; }
+        .table-freeze:not(.is-overflowing) .hw-modem-table thead tr:last-child th::after,
+        .table-freeze:not(.is-overflowing) .hw-modem-table thead th[rowspan="2"]::after { background: #e6ecf1; }
+
         /* Commissioning pills — the ON-WING size (tiny), one green (Done) one amber
            (To-Do). Editable via a dropdown sized down to match the pills. */
         #satcomTable .comm-pill {
@@ -5732,12 +5757,13 @@
             <nav class="tabs" role="tablist" aria-label="Primary navigation">
                 <button class="tab-button active" onclick="switchTab('overview')">🏠 Home</button>
                 <button class="tab-button" onclick="switchTab('aircraft')">💿 Software<span class="tab-count" id="tabCountSw"></span></button>
+                <!-- Hardware is public and sits after Software (user, 2026-09-24, v2.187.0).
+                     4G SIM and Satcom left the menu: they live at Hardware > SIM and
+                     Hardware > MODEM, and switchTab redirects the old names there. -->
+                <button class="tab-button" onclick="switchTab('hardware')">🔧 Hardware</button>
                 <button class="tab-button" onclick="switchTab('media')">🎬 Media<span class="tab-count" id="tabCountMedia"></span></button>
                 <button class="tab-button" onclick="switchTab('maintenance')">🛠️ Maintenance<span class="tab-count tab-count-new" id="tabCountAvr"></span></button>
                 <button class="tab-button" onclick="switchTab('fleet')">✈️ Fleet<span class="tab-count" id="tabCountFleet"></span></button>
-                <button class="tab-button" onclick="switchTab('sim')">📶 4G SIM</button>
-                <button class="tab-button" onclick="switchTab('satcom')">📡 Satcom</button>
-                <button class="tab-button" data-restricted="1" style="display:none;" onclick="switchTab('hardware')">🔧 Hardware</button>
             </nav>
         </div><!-- /.navbar -->
 
@@ -5983,8 +6009,89 @@
                 </div>
                 <!-- Page order (user 2026-09-17): sub-menu · TABLE TITLE + details strip
                      (hwHead) · FILTER MENU (below) · the table (hwContent). -->
+                <!-- Hardware > MODEM (user, 2026-09-24, v2.187.0) — the former Satcom page,
+                     moved WHOLE into the Hardware tab: same ids, same render code
+                     (populateSatcomTable / renderSatcomWidgets / fb bar "satcom"), so every
+                     save, filter and sort path is unchanged. Hardware framing: title pill,
+                     widget strip, the rounded hw filter bar, light Hardware table colours
+                     (scoped by .hw-modem-table, a CLASS so the frozen head copy inherits it).
+                     Shown only when hwView === 'modem' (renderHwContent).
+
+                     Satcom — the MODMAN register. One row per PHYSICAL modman box, the same
+                     shape as the 4G SIM register (which lists a physical card): on-wing,
+                     spare, faulty and removed boxes all appear, so a spare in the store and
+                     a box that came off an airframe are both accounted for.
+
+                     It is the AUTHORITATIVE source for a modman's identity — the Modem tab
+                     reads Kontron/Eclipse from here — and it carries fields /units has no
+                     home for: two Taurus identifier sets (Old and New) and the Hughes MAC.
+                     Grouped headers say which numbers belong to which module. -->
+                <div id="hwModem" class="hw-modem" style="display:none;">
+                    <div class="hw-group-head">
+                        <span class="hw-group-name">MODEM</span>
+                        <span class="hw-fitted" id="hwModemFitted"></span>
+                    </div>
+                    <div class="media-widget-strip" id="satcomWidgets"></div>
+
+                    <div class="filterbar hw-filterbar">
+                        <div class="fb-filters" data-bar="satcom"></div>
+                        <div class="fb-actions">
+                            <button id="satcomAddBtn" class="qf-btn add-btn icon-btn" style="display:none;" onclick="openAddModman()" title="Add MODMAN" aria-label="Add MODMAN"><span class="ib-icon" aria-hidden="true">＋</span><span class="ib-label">Add</span></button>
+                            <button id="satcomEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleSatcomEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
+                            <button id="satcomResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetOrTop(this, resetSatcomTable)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
+                        </div>
+                    </div>
+
+                    <div class="table-scroll-wrapper table-freeze">
+                        <!-- Two header rows: a master head per module, then that module's own
+                             columns beneath it. Taurus carries two sets — an Old MG/TID pair
+                             and a New one — and Hughes carries Chassis ID, ESN and MAC. The
+                             install and removal dates sit together at the front of MODMAN
+                             Details (install then removal, so the on-wing span reads left to
+                             right); the serials follow, and Aircraft / Status span both rows
+                             outside the modules. The Commissioning Status box now holds THREE
+                             columns — IPHO, then the Taurus and Hughes commissioning pills
+                             (user, 2026-09-01). IPHO is the aircraft's top-level iphoStatus,
+                             shown only for an active retrofit box — linefit, not-yet-active
+                             and off-wing rows read N/A. The Removal Date head wraps to two
+                             lines so its column stays as narrow as its content. -->
+                        <table class="aircraft-table has-grouphead satcom-table hw-modem-table" id="satcomTable">
+                            <thead>
+                                <tr class="satcom-grouphead">
+                                    <th colspan="6" class="satcom-group satcom-group-details">MODMAN Details</th>
+                                    <th colspan="2" class="satcom-group satcom-group-told satcom-told-col">Taurus · Old</th>
+                                    <th colspan="2" class="satcom-group satcom-group-tnew satcom-tnew-col">Taurus · New</th>
+                                    <th colspan="3" class="satcom-group satcom-group-hughes satcom-hughes-col">Hughes</th>
+                                    <th rowspan="2" class="sortable-th satcom-group-start satcom-tight" data-col="13" data-label="Aircraft" onclick="sortTable('satcomTable', 13)">Aircraft</th>
+                                    <th rowspan="2" class="sortable-th satcom-tight" data-col="14" data-label="Status" onclick="sortTable('satcomTable', 14)">Status</th>
+                                    <th colspan="3" class="satcom-group satcom-group-comm satcom-group-start satcom-comm-end">Commissioning Status</th>
+                                </tr>
+                                <tr>
+                                    <th>#</th>
+                                    <th class="sortable-th" data-col="1" data-label="Install Date" id="satcomDateHead" onclick="cycleSatcomDateSort()">Install Date</th>
+                                    <th class="sortable-th satcom-tight satcom-rem-head" data-col="2" data-label="Removal Date" onclick="sortTable('satcomTable', 2)">Removal Date</th>
+                                    <th class="sortable-th satcom-serial" data-col="3" data-label="Eclipse S/N" onclick="sortTable('satcomTable', 3)">Eclipse S/N</th>
+                                    <th class="sortable-th satcom-serial" data-col="4" data-label="Kontron S/N" onclick="sortTable('satcomTable', 4)">Kontron S/N</th>
+                                    <th class="sortable-th satcom-serial" data-col="5" data-label="Astronics S/N" onclick="sortTable('satcomTable', 5)">Astronics S/N</th>
+                                    <th class="sortable-th satcom-told-col satcom-group-start" data-col="6" data-label="MG ID" onclick="sortTable('satcomTable', 6)">MG ID</th>
+                                    <th class="sortable-th satcom-told-col" data-col="7" data-label="TID" onclick="sortTable('satcomTable', 7)">TID</th>
+                                    <th class="sortable-th satcom-tnew-col satcom-group-start" data-col="8" data-label="MG ID" onclick="sortTable('satcomTable', 8)">MG ID</th>
+                                    <th class="sortable-th satcom-tnew-col" data-col="9" data-label="TID" onclick="sortTable('satcomTable', 9)">TID</th>
+                                    <th class="sortable-th satcom-hughes-col satcom-group-start" data-col="10" data-label="Chassis ID" onclick="sortTable('satcomTable', 10)">Chassis ID</th>
+                                    <th class="sortable-th satcom-hughes-col" data-col="11" data-label="ESN" onclick="sortTable('satcomTable', 11)">ESN</th>
+                                    <th class="sortable-th satcom-hughes-col" data-col="12" data-label="MAC" onclick="sortTable('satcomTable', 12)">MAC Address</th>
+                                    <th class="sortable-th satcom-group-start satcom-comm-col satcom-tight" data-col="15" data-label="IPHO" onclick="sortTable('satcomTable', 15)">IPHO</th>
+                                    <th class="satcom-comm-col satcom-tight">Taurus</th>
+                                    <th class="satcom-comm-end satcom-comm-col satcom-tight">Hughes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="satcomTableBody"></tbody>
+                        </table>
+                    </div>
+                    <p class="bl-hint" id="satcomCount" style="padding: 0 4px 16px;"></p>
+                </div>
                 <div id="hwHead"></div>
-                <div class="filterbar hw-filterbar">
+                <div class="filterbar hw-filterbar" id="hwFilterBar">
                     <div class="fb-filters">
                         <div class="fb-quick hw-quick" id="hwQuickFilters" style="display:none;"></div>
                         <select id="hwTypeFilter" class="hw-type-filter" onchange="setHwTypeFilter(this.value)" style="display:none;"></select>
@@ -6042,79 +6149,6 @@
                     </table>
                 </div>
                 <p class="bl-hint" id="simCount" style="padding: 0 4px 16px;"></p>
-            </div>
-
-            <!-- Satcom — the MODMAN register. One row per PHYSICAL modman box, the same
-                 shape as the 4G SIM register (which lists a physical card): on-wing,
-                 spare, faulty and removed boxes all appear, so a spare in the store and
-                 a box that came off an airframe are both accounted for.
-
-                 It is the AUTHORITATIVE source for a modman's identity — the Modem tab
-                 reads Kontron/Eclipse from here — and it carries fields /units has no
-                 home for: two Taurus identifier sets (Old and New) and the Hughes MAC.
-                 Grouped headers say which numbers belong to which module. -->
-            <div id="satcom" class="tab-content">
-                <div class="media-widget-section">
-                    <span class="filter-group-label">MODMAN Register &amp; Commissioning</span>
-                    <div class="media-widget-strip" id="satcomWidgets"></div>
-                </div>
-
-                <div class="filterbar">
-                    <div class="fb-filters" data-bar="satcom"></div>
-                    <div class="fb-actions">
-                        <button id="satcomAddBtn" class="qf-btn add-btn icon-btn" style="display:none;" onclick="openAddModman()" title="Add MODMAN" aria-label="Add MODMAN"><span class="ib-icon" aria-hidden="true">＋</span><span class="ib-label">Add</span></button>
-                        <button id="satcomEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleSatcomEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
-                        <button id="satcomResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetOrTop(this, resetSatcomTable)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
-                    </div>
-                </div>
-
-                <div class="table-scroll-wrapper table-freeze">
-                    <!-- Two header rows: a master head per module, then that module's own
-                         columns beneath it. Taurus carries two sets — an Old MG/TID pair
-                         and a New one — and Hughes carries Chassis ID, ESN and MAC. The
-                         install and removal dates sit together at the front of MODMAN
-                         Details (install then removal, so the on-wing span reads left to
-                         right); the serials follow, and Aircraft / Status span both rows
-                         outside the modules. The Commissioning Status box now holds THREE
-                         columns — IPHO, then the Taurus and Hughes commissioning pills
-                         (user, 2026-09-01). IPHO is the aircraft's top-level iphoStatus,
-                         shown only for an active retrofit box — linefit, not-yet-active
-                         and off-wing rows read N/A. The Removal Date head wraps to two
-                         lines so its column stays as narrow as its content. -->
-                    <table class="aircraft-table has-grouphead satcom-table" id="satcomTable">
-                        <thead>
-                            <tr class="satcom-grouphead">
-                                <th colspan="6" class="satcom-group satcom-group-details">MODMAN Details</th>
-                                <th colspan="2" class="satcom-group satcom-group-told satcom-told-col">Taurus · Old</th>
-                                <th colspan="2" class="satcom-group satcom-group-tnew satcom-tnew-col">Taurus · New</th>
-                                <th colspan="3" class="satcom-group satcom-group-hughes satcom-hughes-col">Hughes</th>
-                                <th rowspan="2" class="sortable-th satcom-group-start satcom-tight" data-col="13" data-label="Aircraft" onclick="sortTable('satcomTable', 13)">Aircraft</th>
-                                <th rowspan="2" class="sortable-th satcom-tight" data-col="14" data-label="Status" onclick="sortTable('satcomTable', 14)">Status</th>
-                                <th colspan="3" class="satcom-group satcom-group-comm satcom-group-start satcom-comm-end">Commissioning Status</th>
-                            </tr>
-                            <tr>
-                                <th>#</th>
-                                <th class="sortable-th" data-col="1" data-label="Install Date" id="satcomDateHead" onclick="cycleSatcomDateSort()">Install Date</th>
-                                <th class="sortable-th satcom-tight satcom-rem-head" data-col="2" data-label="Removal Date" onclick="sortTable('satcomTable', 2)">Removal Date</th>
-                                <th class="sortable-th satcom-serial" data-col="3" data-label="Eclipse S/N" onclick="sortTable('satcomTable', 3)">Eclipse S/N</th>
-                                <th class="sortable-th satcom-serial" data-col="4" data-label="Kontron S/N" onclick="sortTable('satcomTable', 4)">Kontron S/N</th>
-                                <th class="sortable-th satcom-serial" data-col="5" data-label="Astronics S/N" onclick="sortTable('satcomTable', 5)">Astronics S/N</th>
-                                <th class="sortable-th satcom-told-col satcom-group-start" data-col="6" data-label="MG ID" onclick="sortTable('satcomTable', 6)">MG ID</th>
-                                <th class="sortable-th satcom-told-col" data-col="7" data-label="TID" onclick="sortTable('satcomTable', 7)">TID</th>
-                                <th class="sortable-th satcom-tnew-col satcom-group-start" data-col="8" data-label="MG ID" onclick="sortTable('satcomTable', 8)">MG ID</th>
-                                <th class="sortable-th satcom-tnew-col" data-col="9" data-label="TID" onclick="sortTable('satcomTable', 9)">TID</th>
-                                <th class="sortable-th satcom-hughes-col satcom-group-start" data-col="10" data-label="Chassis ID" onclick="sortTable('satcomTable', 10)">Chassis ID</th>
-                                <th class="sortable-th satcom-hughes-col" data-col="11" data-label="ESN" onclick="sortTable('satcomTable', 11)">ESN</th>
-                                <th class="sortable-th satcom-hughes-col" data-col="12" data-label="MAC" onclick="sortTable('satcomTable', 12)">MAC Address</th>
-                                <th class="sortable-th satcom-group-start satcom-comm-col satcom-tight" data-col="15" data-label="IPHO" onclick="sortTable('satcomTable', 15)">IPHO</th>
-                                <th class="satcom-comm-col satcom-tight">Taurus</th>
-                                <th class="satcom-comm-end satcom-comm-col satcom-tight">Hughes</th>
-                            </tr>
-                        </thead>
-                        <tbody id="satcomTableBody"></tbody>
-                    </table>
-                </div>
-                <p class="bl-hint" id="satcomCount" style="padding: 0 4px 16px;"></p>
             </div>
 
             <div id="fleet" class="tab-content">
@@ -7661,8 +7695,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.186.0';
-        const APP_BUILD    = '2026.09.24.14';
+        const APP_VERSION  = '2.187.0';
+        const APP_BUILD    = '2026.09.24.15';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -8656,7 +8690,7 @@
         // PUBLISHED visit reports; viewers see published AVRs read-only, editing is gated
         // on canEdit(). Hardware (the unit register, formerly Hardware + Serials) stays
         // an editor-only working surface.
-        const RESTRICTED_TABS = ['hardware'];
+        const RESTRICTED_TABS = [];   // Hardware went public in v2.187.0 (user, 2026-09-24)
 
         // The trust boundary is the editor allowlist, the same one canEdit() uses — an
         // account that is not on it can sign in but is not recognised, and revealing the
@@ -8809,6 +8843,13 @@
         }
 
         function switchTab(tabName, btn) {
+            // 4G SIM and Satcom moved into Hardware (v2.187.0): an old call lands on the
+            // matching Hardware sub-tab. The #sim page markup is kept, dormant.
+            if (tabName === 'sim' || tabName === 'satcom') {
+                hwView = tabName === 'sim' ? 'sim' : 'modem';
+                tabName = 'hardware';
+                btn = null;
+            }
             // A restricted tab is never opened for a signed-out viewer, including by a
             // stale click or a call from the console.
             if (RESTRICTED_TABS.includes(tabName) && !canViewRestricted()) {
@@ -17931,7 +17972,10 @@
             // the filter bar; ASSETS second; the LRU groups follow in HW_GROUPS order.
             let html = seg('aircraft', 'AIRCRAFT', hwAircraftFleet().length, hwView === 'aircraft');
             html += seg('assets', 'ASSETS', assetEntries().length, hwView === 'assets');
-            html += HW_GROUPS.map(g => seg(g.id, g.label, groupRecordCount(g), hwView === g.id)).join('');
+            // MODEM (the former Satcom page) sits right after SIM (user, 2026-09-24); its
+            // badge is the register's box count, as Satcom's widgets count against.
+            html += HW_GROUPS.map(g => seg(g.id, g.label, groupRecordCount(g), hwView === g.id)
+                + (g.id === 'sim' ? seg('modem', 'MODEM', satcomRows().length, hwView === 'modem') : '')).join('');
             el.innerHTML = html;
         }
 
@@ -17939,6 +17983,26 @@
             const host = document.getElementById('hwContent');
             if (!host) return;
             const head = document.getElementById('hwHead');
+            // MODEM is the Satcom register moved in whole: it brings its own widgets, fb
+            // filter bar and table, so the shared hw head / bar / content step aside.
+            const isModem = hwView === 'modem';
+            const modem = document.getElementById('hwModem');
+            const hwBar = document.getElementById('hwFilterBar');
+            [head, hwBar, host].forEach(n => { if (n) n.style.display = isModem ? 'none' : ''; });
+            if (modem) modem.style.display = isModem ? '' : 'none';
+            if (isModem) {
+                const pill = document.getElementById('hwModemFitted');
+                if (pill) {
+                    const onWing = satcomRows().filter(r => r.status === 'active').length;
+                    pill.textContent = `${onWing}/${hwAircraftFleet().length} on wing`;
+                }
+                // A live poll repaints Hardware; mid-edit it must not redraw the register
+                // (the same guard the poll keeps on renderSatcomPage).
+                if (!satcomEditMode) populateSatcomTable();
+                updateSatcomEditUI();
+                publishStickyHeights();
+                return;
+            }
             const byAc = hwView === 'aircraft';
             const isAssets = hwView === 'assets';
             const tf = document.getElementById('hwTypeFilter');
