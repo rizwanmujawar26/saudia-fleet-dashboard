@@ -6,7 +6,40 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.170.0–v2.172.0 (2026-09-21).** The Timeline/Activity feed now shows **hardware
+**Latest — v2.173.0–v2.178.0 (2026-09-24).** A fleet import (8 A321XLR), two data-integrity
+fixes, and a full visual pass on the AVR report.
+
+- **Aircraft delivery events on the Timeline (v2.173.0)** — a whole-roster pass in
+  `timelineActivities()` derives an `Aircraft Delivered` row (`kind:'operational'`,
+  `delivery:true`) from `/fleetSpecs/{tail}.deliveryDate`, gated to `DELIVERY_TIMELINE_FROM`
+  (`'2024-01-01'`). Renders as a milestone (🛬, no `tl-ops-out` red accent), repo source tag
+  "Fleet". Nothing stored — same pattern as Activation / Modification.
+- **AVR report redesign (v2.176–v2.178).** Removed Equipment is sorted **oldest-removal first**;
+  the four spec sections (Aircraft / Specifications / MODMAN / Software & Media) became bordered
+  **`.rpt-panel`** cards — white cells on a 1px hairline grid via a new `rptPanel(rows, cols,
+  tailCells, tailSpan)` helper, last row padded with `.di-fill` blanks; the Installed / Removed /
+  **Work Carried Out** tables are wrapped in **`.tbl-card`** (rounded border, soft header).
+  ⚠️ Carded tables use `overflow:visible` under `@media print` so a long, multi-page table FLOWS
+  — `overflow:hidden` (rounded corners on screen) suppresses fragmentation and clips it.
+- ⚠️ **AVR "Work Carried Out" double-listed component R&Rs (v2.174.0).** Since v2.172 the derived
+  Timeline already carries every LRU fit/remove, so `avrReportMembers`' *separate* `/units` pass
+  duplicated them — a swap showed twice (KANDU twice; MODMAN once, because it was skipped in that
+  pass — the tell). Removed the redundant pass; the R&R still shows once via `base` (the richer
+  derived row, ECL pill and all).
+- ⚠️ **KANDU serial mix-up + R&R entry guard (v2.175.0).** A swap typed a *removed* serial that
+  was not the box on wing, so `unitWritesForActivity` attached the removal to the wrong unit and
+  the real box (710350) was never created. Data corrected in `/units`. The Add-Activity **Removed
+  S/N** field now shows a live on-wing hint, **prefills** the fitted serial, and a **pre-save
+  `confirm()`** warns when the typed serial is not the box currently on wing (`onWingUnitFor`).
+  See [[lru-rr-onwing-serial-guard-v2175]].
+
+**Data (2026-09-24):** roster **99 → 105** — 8 A321XLR added, all `config:324` (Panasonic
+Astrova) + `system:HBC+`: ASBA/ASBB already Active (untouched); **ASBE** delivered 21-Sep,
+linefit `Installed`, install site Toulouse; ASBC/D/F/G/H **Future** (`delivered:false`, no
+`fit`/`fleetStatus`, `scope:in`). Missing `msn`/`deliveryDate` merged into `/fleetSpecs`. See
+[[fleet-import-99-and-fleetspecs]].
+
+**Prior — v2.170.0–v2.172.0 (2026-09-21).** The Timeline/Activity feed now shows **hardware
 serials the Hardware way**, and imports **every unit fit/remove** from the register.
 
 - **Dual serial on MODMAN + IFE-server rows** — Kontron S/N in the `sub` text, Eclipse S/N as
@@ -1670,7 +1703,7 @@ via `tlEclPill()`, on the dual-identity MODMAN and IFE-server rows):
 | kind | source | date it uses |
 |---|---|---|
 | **Activation** | `/aircraft` — every Active aircraft that has one. Title is `Entered Service` | `activatedDate` |
-| **Operational** | `/aircraft/{tail}/ops` for the open period, `opsLog` for closed ones. A closed period yields **two** rows — going out, and `Returned to service` on its `until` | `ops.since` · `opsLog.since` / `.until` |
+| **Operational** | `/aircraft/{tail}/ops` for the open period, `opsLog` for closed ones. A closed period yields **two** rows — going out, and `Returned to service` on its `until`. **Plus `Aircraft Delivered` (v2.173)** — a whole-roster pass emitting one row per tail from `/fleetSpecs/{tail}.deliveryDate`, gated to `DELIVERY_TIMELINE_FROM` (`'2024-01-01'`), carried on the same kind. It sets `delivery:true` so `renderRow`/`renderRepoRow` mark it 🛬 with **no** `tl-ops-out` red accent and no location pill, source tag "Fleet" | `ops.since` · `opsLog.since` / `.until` · `deliveryDate` |
 | Software | `/aircraft` completion fields — `Middleware {swVersion}` for retrofit, `SBC Configuration A.13` for the linefit pair when `beamcfgStatus === 'done'`; **plus `OTA Patch #2`/`#3`** (v2.106, below) | `completionDate` · `otaPatchUTC` · `otaPatch3UTC` |
 | Media | `/aircraft/{tail}/media` | `loadedDateUTC` |
 | **Commission** (v2.108) | `/activities` with `category === 'modem_commissioning'` | `date` |
@@ -3068,6 +3101,17 @@ PUBLISHED reports read-only, editing gated on `canEdit()`). See the memory note
     the renamed **Specifications** section (was Hardware, `avrDossierRows` unchanged) and
     reads `a.retrofitStart/End` (the Fleet retrofit fields, `node:'ac'`). The retrofit
     "Completion" row is labelled **Activation**.
+  - **Report layout is all cards now (v2.176–v2.178, `buildAvrReportDoc`).** The four spec
+    sections (Aircraft / Specifications / MODMAN / Software & Media) render through
+    `rptPanel(rows, cols, tailCells, tailSpan)` as bordered **`.rpt-panel`** cards — white cells
+    on a 1px hairline grid (gap:1px over a line-coloured bg), the last row padded with `.di-fill`
+    blanks so no coloured gap shows; the Aircraft seat-config LOPA is the span-2 `tailCells`. The
+    Installed / Removed / Work-Carried-Out tables are wrapped in **`.tbl-card`** (rounded border,
+    `.tbl th` soft header). **Removed Equipment is sorted oldest-removal first** (`equipRemoved`
+    by `dateSortKey(toISODate(removed))`, tie-break install date then serial). ⚠️ `.tbl-card`
+    uses `overflow:hidden` on screen (rounded corners) but **`overflow:visible` under
+    `@media print`** — otherwise a long, multi-page table is clipped at the page edge instead of
+    flowing. Small `.rpt-panel`/`.ep-box` blocks keep `break-inside:avoid`; the table cards flow.
 **Add New Activity** writes one `/activities` record and nothing else — the
 aircraft history and the Timeline both derive from it.
 **Every activity card carries ✏️ Edit as well as 🗑 Delete.** Edit reuses the same
