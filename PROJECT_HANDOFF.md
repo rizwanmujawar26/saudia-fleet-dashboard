@@ -6,18 +6,37 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.173.0–v2.178.0 (2026-09-24).** A fleet import (8 A321XLR), two data-integrity
-fixes, and a full visual pass on the AVR report.
+**Latest — v2.173.0–v2.184.0 (2026-09-24).** A fleet import (8 A321XLR), two data-integrity
+fixes, and a full redesign of the AVR report (`buildAvrReportDoc` only — the on-screen dossier
+and `avrDossierRows()` are unchanged).
+
+- **AVR report redesign, second pass (v2.179–v2.184).** Top to bottom:
+  - **Masthead `.mast`** — navy band (kicker + "<type> Report" title | framed **Report
+    Reference**), then **three leading facts** `.mast-lead`: **Registration** (largest, with
+    small `TYPE`/`CONFIG` pills attached beneath), **Visit Date** (+ weekday / span), **Location**
+    (+ Line/Hangar bay). ⚠️ User rejected equal columns (v2.182) — Registration, Date, Location
+    lead; Type/Config are supporting pills, never peers.
+  - **Engagement & People `.ep-bar`** — one ~40px line: mode pill + "ON AIRCRAFT · n" / "REMOTE ·
+    n" groups of one-line name chips.
+  - **Aircraft & Configuration** replaces the four boxed sections: a milestone strip
+    (`.cfg-strip`: system/fit pills, "Installed at 📍 site" pill, track) over a 2×2 grid of
+    label⟷value `.spec-card`s (Airframe · MODMAN & Commissioning · Software · Media &
+    Connectivity) built by `kvRow`/`specCard`; report-only Title Case via `RPT_LABEL`; MODMAN S/N
+    = Kontron + `ECL nnn` pill; Seats text + total pill.
+  - ⚠️ **Mod end = return to commercial service**, so activation usually PRECEDES it (20
+    aircraft). When `activatedDate` ∈ [retrofitStart, retrofitEnd) the strip draws a
+    proportional `.ms-prop` track with the activation pinned at its real date (caption above
+    the bar); otherwise Mod start → Mod end → "N days to service" → Activated.
+  - Whole report prints with `print-color-adjust:exact`. `rptPanel`/`.rpt-panel`/`.rpt-meta`/
+    `.ep-box` are gone.
 
 - **Aircraft delivery events on the Timeline (v2.173.0)** — a whole-roster pass in
   `timelineActivities()` derives an `Aircraft Delivered` row (`kind:'operational'`,
   `delivery:true`) from `/fleetSpecs/{tail}.deliveryDate`, gated to `DELIVERY_TIMELINE_FROM`
   (`'2024-01-01'`). Renders as a milestone (🛬, no `tl-ops-out` red accent), repo source tag
   "Fleet". Nothing stored — same pattern as Activation / Modification.
-- **AVR report redesign (v2.176–v2.178).** Removed Equipment is sorted **oldest-removal first**;
-  the four spec sections (Aircraft / Specifications / MODMAN / Software & Media) became bordered
-  **`.rpt-panel`** cards — white cells on a 1px hairline grid via a new `rptPanel(rows, cols,
-  tailCells, tailSpan)` helper, last row padded with `.di-fill` blanks; the Installed / Removed /
+- **AVR report redesign, first pass (v2.176–v2.178; spec panels superseded by v2.179).**
+  Removed Equipment is sorted **oldest-removal first**; the Installed / Removed /
   **Work Carried Out** tables are wrapped in **`.tbl-card`** (rounded border, soft header).
   ⚠️ Carded tables use `overflow:visible` under `@media print` so a long, multi-page table FLOWS
   — `overflow:hidden` (rounded corners on screen) suppresses fragmentation and clips it.
@@ -3101,17 +3120,19 @@ PUBLISHED reports read-only, editing gated on `canEdit()`). See the memory note
     the renamed **Specifications** section (was Hardware, `avrDossierRows` unchanged) and
     reads `a.retrofitStart/End` (the Fleet retrofit fields, `node:'ac'`). The retrofit
     "Completion" row is labelled **Activation**.
-  - **Report layout is all cards now (v2.176–v2.178, `buildAvrReportDoc`).** The four spec
-    sections (Aircraft / Specifications / MODMAN / Software & Media) render through
-    `rptPanel(rows, cols, tailCells, tailSpan)` as bordered **`.rpt-panel`** cards — white cells
-    on a 1px hairline grid (gap:1px over a line-coloured bg), the last row padded with `.di-fill`
-    blanks so no coloured gap shows; the Aircraft seat-config LOPA is the span-2 `tailCells`. The
-    Installed / Removed / Work-Carried-Out tables are wrapped in **`.tbl-card`** (rounded border,
-    `.tbl th` soft header). **Removed Equipment is sorted oldest-removal first** (`equipRemoved`
-    by `dateSortKey(toISODate(removed))`, tie-break install date then serial). ⚠️ `.tbl-card`
-    uses `overflow:hidden` on screen (rounded corners) but **`overflow:visible` under
-    `@media print`** — otherwise a long, multi-page table is clipped at the page edge instead of
-    flowing. Small `.rpt-panel`/`.ep-box` blocks keep `break-inside:avoid`; the table cards flow.
+  - **Report layout (v2.179–v2.184, `buildAvrReportDoc`).** Masthead `.mast` (navy title band +
+    framed Report Reference, then the three leading facts Registration / Visit Date / Location,
+    Type + Config as pills under the registration) → Summary / Report / Follow Up notes →
+    one-line **Engagement & People** `.ep-bar` → **Aircraft & Configuration** (milestone strip
+    `.cfg-strip` + 2×2 label⟷value `.spec-card`s via `kvRow`/`specCard`, report-only labels in
+    `RPT_LABEL`) → Installed / Removed equipment → Work Carried Out. ⚠️ Activation inside the mod
+    window (mod end = return to service) draws the proportional `.ms-prop` track. The Installed
+    / Removed / Work-Carried-Out tables are wrapped in **`.tbl-card`**. **Removed Equipment is
+    sorted oldest-removal first** (`equipRemoved` by `dateSortKey(toISODate(removed))`,
+    tie-break install date then serial). ⚠️ `.tbl-card` uses `overflow:hidden` on screen
+    (rounded corners) but **`overflow:visible` under `@media print`** — otherwise a long,
+    multi-page table is clipped at the page edge instead of flowing. Small blocks (`.mast`,
+    `.ep-bar`, `.cfg-strip`, `.spec-card`) keep `break-inside:avoid`; the table cards flow.
 **Add New Activity** writes one `/activities` record and nothing else — the
 aircraft history and the Timeline both derive from it.
 **Every activity card carries ✏️ Edit as well as 🗑 Delete.** Edit reuses the same
