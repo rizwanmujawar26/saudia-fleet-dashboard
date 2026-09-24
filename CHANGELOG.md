@@ -13,6 +13,15 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.190.0 — Media report: no target, % on the bar, loading measured from disk delivery (2026-09-25)
+User: every mention of the 95% target is removed (constant, curve line, bar marker, narrative, method),
+and the verdict pill is now just Cycle closed / In progress. The fleet % rides at the end of the progress
+fill. Journey labels are now **Media downloaded** and **Disks delivered** (the field stays `disksToTeam`).
+⚠️ **Loading starts when the disks reach the loading team (Saudia Technic), not at "release".** The
+Start paragraph measures the first load from `disksToTeam` when it is set (Sep: delivered 23-Aug, first
+load 25-Aug = 2 days later), and falls back to the loading-window opening. The new "Disks to first load"
+duration shows the same gap. The window's `start` is now called **Loading start** everywhere.
+
 ### v2.189.0 — Media Cycle form + /mediaCycles; Media Loading Report redesign (2026-09-25)
 At the user's instruction. **New node `/mediaCycles/{MMYY}`**: `size` (exact, e.g. `799.7 GB`),
 `partNumber` (optional), `start`, `end`, `contentDelivered`, `downloaded`, `disksDuplicated`,

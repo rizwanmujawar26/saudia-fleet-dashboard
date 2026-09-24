@@ -7726,8 +7726,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.189.1';
-        const APP_BUILD    = '2026.09.25.04';
+        const APP_VERSION  = '2.190.0';
+        const APP_BUILD    = '2026.09.25.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14993,15 +14993,15 @@
         // ⚠️ The fleet a cycle is measured against is the CURRENT programme scope
         // (mediaFleet) minus aircraft that entered service after the cycle closed — they
         // could never have taken it. An aircraft that took the media is always counted.
-        const MLR_TARGET_PCT = 95;   // share of the eligible fleet a cycle should reach
+        // No completion target is shown (user, 2026-09-25) — the report states what happened.
 
         // The media journey, content to cabin. The first four are dates on /mediaCycles,
         // entered in the Media Cycle form; the last two are derived from the load log.
         const MEDIA_JOURNEY = [
             { key: 'contentDelivered', label: 'Content delivered', icon: '📦' },
-            { key: 'downloaded',       label: 'Downloaded',        icon: '⬇️' },
+            { key: 'downloaded',       label: 'Media downloaded',  icon: '⬇️' },
             { key: 'disksDuplicated',  label: 'Disks duplicated',  icon: '💽' },
-            { key: 'disksToTeam',      label: 'Disks to team',     icon: '🤝' },
+            { key: 'disksToTeam',      label: 'Disks delivered',   icon: '🤝' },
         ];
 
         function mlrRef(cycle) { return `MLR-20${cycle.slice(2)}-${cycle.slice(0, 2)}`; }
@@ -15148,6 +15148,7 @@
             const span = (a, b) => (a && b ? mlrDaysBetween(a, b) : null);
             const durations = {
                 ground: span(iso('contentDelivered'), iso('disksToTeam')),
+                disksToFirst: iso('disksToTeam') && firstLoad ? mlrDaysBetween(iso('disksToTeam'), firstLoad.iso) : null,
                 rollout: firstLoad && lastLoad ? mlrDaysBetween(firstLoad.iso, lastLoad.iso) + 1 : null,
                 endToEnd: span(iso('contentDelivered'), lastLoad && !open ? lastLoad.iso : ''),
             };
@@ -15161,7 +15162,7 @@
                 t50: reach(50), t90: reach(90), t100: reach(100),
                 median, daily, peak: { day: peakDay + 1, iso: isoOfDay(peakDay + 1), n: daily[peakDay] || 0 },
                 weeks, busiestWeek, byType, missing, late: loads.filter(l => l.late).length,
-                journey, durations, disks: mediaDisksForCycle(cycle),
+                journey, durations, disks: mediaDisksForCycle(cycle), disksISO: iso('disksToTeam'),
                 isoOfDay,
             };
         }
@@ -15173,9 +15174,7 @@
 
         function mlrRating(d) {
             if (d.open) return { label: 'In progress', css: 'blue' };
-            if (d.pct >= MLR_TARGET_PCT) return { label: 'Target met', css: 'green' };
-            if (d.pct >= 85) return { label: 'Near target', css: 'amber' };
-            return { label: 'Below target', css: 'red' };
+            return { label: 'Cycle closed', css: 'green' };
         }
 
         const mlrPlural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
@@ -15185,28 +15184,30 @@
         function mediaReportNarrative(d, prev) {
             const out = [];
             const fd = iso => fmtDate(iso);
-            const r = mlrRating(d);
             out.push({ k: 'Outcome', t: d.open
-                ? `${d.label} media${d.size ? ` (${d.size})` : ''} has reached ${d.done} of ${d.scope} eligible aircraft so far — ${d.pct}% of the fleet — ${mlrPlural(d.days, 'day')} after its release on ${d.start}. The cycle is still open.`
-                : `${d.label} media${d.size ? ` (${d.size})` : ''} reached ${d.done} of ${d.scope} eligible aircraft — ${d.pct}% of the fleet — over a ${d.days}-day cycle from ${d.start} to ${d.end}. `
-                  + (d.pct >= MLR_TARGET_PCT
-                    ? `That meets the ${MLR_TARGET_PCT}% completion target.`
-                    : `That is ${Math.round((MLR_TARGET_PCT - d.pct) * 10) / 10} points short of the ${MLR_TARGET_PCT}% completion target.`) });
+                ? `${d.label} media${d.size ? ` (${d.size})` : ''} has reached ${d.done} of ${d.scope} eligible aircraft so far — ${d.pct}% of the fleet — ${mlrPlural(d.days, 'day')} since loading opened on ${d.start}. The cycle is still open.`
+                : `${d.label} media${d.size ? ` (${d.size})` : ''} reached ${d.done} of ${d.scope} eligible aircraft — ${d.pct}% of the fleet — over a ${d.days}-day loading window from ${d.start} to ${d.end}.` });
 
             const jd = d.journey.filter(j => j.date);
             if (jd.length) {
                 out.push({ k: 'Journey', t:
                     jd.map(j => `${j.label.toLowerCase().replace(/^./, c => c.toUpperCase())} ${j.date}`).join('; ') + '.'
-                    + (d.durations.ground != null ? ` Ground lead time from content to disks in the team's hands was ${mlrPlural(d.durations.ground, 'day')}.` : '')
+                    + (d.durations.ground != null ? ` Ground lead time from content delivery to disks delivered was ${mlrPlural(d.durations.ground, 'day')}.` : '')
                     + (d.durations.endToEnd != null ? ` From content delivery to the last aircraft took ${mlrPlural(d.durations.endToEnd, 'day')}.` : '') });
             }
 
+            // START — loading can only begin once the disks are in the loading team's hands,
+            // so the first load is measured from Disks delivered when that date is known
+            // (user, 2026-09-25: disks reached Saudia Technic 23-Aug, loading began 25-Aug —
+            // "began on the release day" was wrong). Without it, from the window's opening.
             if (d.firstLoad) {
-                const lag = d.firstLoad.day - 1;
                 const share = d.scope ? Math.round(d.firstWeek / d.scope * 100) : 0;
                 const tone = share >= 40 ? 'a fast start' : share >= 20 ? 'a steady start' : 'a slow start';
-                out.push({ k: 'Start', t:
-                    `Loading began ${lag === 0 ? 'on the release day itself' : `${mlrPlural(lag, 'day')} after release`} (${fd(d.firstLoad.iso)}). `
+                const dd = d.disksISO ? mlrDaysBetween(d.disksISO, d.firstLoad.iso) : null;
+                const lead = dd != null && dd >= 0
+                    ? `The media disks were delivered to the loading team on ${fd(d.disksISO)}, and the first aircraft was loaded ${dd === 0 ? 'the same day' : `${mlrPlural(dd, 'day')} later`} (${fd(d.firstLoad.iso)}). `
+                    : `The first aircraft was loaded on ${fd(d.firstLoad.iso)}${d.firstLoad.day > 1 ? `, ${mlrPlural(d.firstLoad.day - 1, 'day')} after the loading window opened` : ''}. `;
+                out.push({ k: 'Start', t: lead
                     + (d.days >= 7 ? `${mlrPlural(d.firstWeek, 'aircraft', 'aircraft')} (${share}% of the fleet) were loaded in the first seven days — ${tone}.` : '') });
             }
 
@@ -15251,7 +15252,7 @@
             } else if (d.done) {
                 out.push({ k: 'Not loaded', t: 'Every eligible aircraft took this media.' });
             }
-            out.push({ k: 'Assessment', t: `${r.label}.` + (d.joinedDuring ? ` ${mlrPlural(d.joinedDuring, 'aircraft', 'aircraft')} entered service during the cycle and ${d.joinedDuring === 1 ? 'is' : 'are'} included in the fleet count.` : '') });
+            if (d.joinedDuring) out.push({ k: 'Fleet', t: `${mlrPlural(d.joinedDuring, 'aircraft', 'aircraft')} entered service during the cycle and ${d.joinedDuring === 1 ? 'is' : 'are'} included in the fleet count.` });
             return out;
         }
 
@@ -15279,8 +15280,6 @@
                 g += `<line x1="${L}" x2="${W - R}" y1="${y(p)}" y2="${y(p)}" stroke="#e6ebf0" stroke-width="1"/>`
                    + `<text x="${L - 6}" y="${y(p) + 3.5}" text-anchor="end" font-size="10" fill="#8a96a1">${p}%</text>`;
             });
-            g += `<line x1="${L}" x2="${W - R}" y1="${y(MLR_TARGET_PCT)}" y2="${y(MLR_TARGET_PCT)}" stroke="#c47f1c" stroke-width="1" stroke-dasharray="4 3"/>`
-               + `<text x="${L + 6}" y="${y(MLR_TARGET_PCT) - 4}" text-anchor="start" font-size="9.5" font-weight="700" fill="#8a5312">Target ${MLR_TARGET_PCT}%</text>`;
             for (let dday = 0; dday <= span; dday += 7) {
                 const lx = x(dday);
                 g += `<line x1="${lx}" x2="${lx}" y1="${H - B}" y2="${H - B + 4}" stroke="#b8c1ca"/>`
@@ -15344,15 +15343,15 @@
   .mlr-prog { border:1px solid #e3e8ee; border-radius:10px; padding:12px 16px 6px; margin-top:10px; background:#fff; }
   .mlr-prog-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
   .mlr-prog-fig { font-size:22px; font-weight:800; color:#0b1f3a; }
-  .mlr-prog-pct { font-size:16px; font-weight:800; color:#0b7a3b; }
   .mlr-verdict { margin-left:auto; font-size:11px; font-weight:800; padding:2px 10px; border-radius:99px; border:1px solid transparent; white-space:nowrap; }
   .mlr-v-green { background:#e9f5ee; color:#0b7a3b; border-color:#bfe3cd; }
   .mlr-v-blue  { background:#eaf2fb; color:#2f5f8a; border-color:#c4dcf2; }
   .mlr-v-amber { background:#fdf1e3; color:#8a5312; border-color:#f1d9b6; }
   .mlr-v-red   { background:#fdecee; color:#a52834; border-color:#f3c2c8; }
-  .mlr-bar { position:relative; height:12px; background:#eef1f4; border-radius:99px; margin:9px 0 3px; }
-  .mlr-bar > i { display:block; height:100%; background:#1f8a52; border-radius:99px; }
-  .mlr-bar > b { position:absolute; top:-4px; bottom:-4px; border-left:1.5px dashed #c47f1c; }
+  .mlr-bar { position:relative; height:20px; background:#eef1f4; border-radius:99px; margin:10px 0 2px; }
+  .mlr-bar > i { position:relative; display:block; height:100%; min-width:4px; background:#1f8a52; border-radius:99px; }
+  .mlr-bar > i > span { position:absolute; right:9px; top:50%; transform:translateY(-50%); font-size:11.5px; font-weight:800; color:#fff; white-space:nowrap; font-style:normal; }
+  .mlr-bar > i > span.out { right:auto; left:100%; margin-left:7px; color:#0b7a3b; }
   .mlr-scale { position:relative; height:14px; font-size:10px; color:#8a96a1; font-weight:700; }
   .mlr-scale span { position:absolute; transform:translateX(-50%); white-space:nowrap; }
   .mlr-scale span.t { color:#8a5312; }
@@ -15397,7 +15396,7 @@
             // Milestone strip: Released (start) · 50% · 90% above the line · Closed / Today.
             const nodes = [];
             const cap = (cls, em, b) => `<span class="mlr-ms-c ${cls}"><em>${escAttr(em)}</em><b>${escAttr(b)}</b></span>`;
-            nodes.push(`<span class="mlr-ms-n" style="left:0%"><i></i>${cap('dn l', 'Released', fmtDateShort(d.start))}</span>`);
+            nodes.push(`<span class="mlr-ms-n" style="left:0%"><i></i>${cap('dn l', 'Loading start', fmtDateShort(d.start))}</span>`);
             [['50%', d.t50], ['90%', d.t90]].forEach(([lab, m]) => {
                 if (m) nodes.push(`<span class="mlr-ms-n" style="left:${pos(m.t).toFixed(1)}%"><i></i>${cap('up m', `${lab} · day ${m.day}`, fmtDateShort(fmtDate(m.iso)))}</span>`);
             });
@@ -15431,18 +15430,16 @@
                 <div class="mlr-prog-head">
                     <span class="mlr-k">Fleet loaded</span>
                     <span class="mlr-prog-fig">${d.done} / ${d.scope}</span>
-                    <span class="mlr-prog-pct">${d.pct}%</span>
                     <span class="mlr-verdict mlr-v-${r.css}">${escAttr(r.label)}</span>
                 </div>
-                <div class="mlr-bar"><i style="width:${clamp(d.pct)}%"></i><b style="left:${MLR_TARGET_PCT}%"></b></div>
-                <div class="mlr-scale"><span style="left:0; transform:none;">0%</span><span class="t" style="left:${MLR_TARGET_PCT}%">Target ${MLR_TARGET_PCT}%</span></div>
+                <div class="mlr-bar"><i style="width:${clamp(d.pct)}%"><span class="${d.pct < 14 ? 'out' : ''}">${d.pct}%</span></i></div>
                 <div class="mlr-ms"><div class="mlr-ms-line"></div><div class="mlr-ms-fill" style="width:${reachedTo.toFixed(1)}%"></div>${nodes.join('')}</div>
                 ${facts.length ? `<div class="mlr-facts">${facts.map(f => `<span>${f}</span>`).join('')}</div>` : ''}
             </div>
             <div class="mlr-jr">
                 <div class="mlr-k">Media journey — content to cabin</div>
                 <div class="mlr-jr-steps">${steps}</div>
-                <div class="mlr-jr-dur">${dur('Ground lead time', d.durations.ground)}${dur('Roll-out', d.durations.rollout)}${dur('Content to last aircraft', d.durations.endToEnd)}</div>
+                <div class="mlr-jr-dur">${dur('Ground lead time', d.durations.ground)}${dur('Disks to first load', d.durations.disksToFirst)}${dur('Roll-out', d.durations.rollout)}${dur('Content to last aircraft', d.durations.endToEnd)}</div>
             </div>`;
         }
 
@@ -15636,7 +15633,7 @@
 
     <div class="sec">Roll-out curve</div>
     <div class="chart">${mlrCurveSVG(d, prev)}
-      <div class="cap">Share of the eligible fleet carrying ${escAttr(d.label)} media, by day of the cycle (day 1 = release, ${escAttr(d.start)}).${prev && prev.loads.length ? ` Dashed: ${escAttr(prev.label)} for comparison.` : ''}</div>
+      <div class="cap">Share of the eligible fleet carrying ${escAttr(d.label)} media, by day of the loading window (day 1 = ${escAttr(d.start)}).${prev && prev.loads.length ? ` Dashed: ${escAttr(prev.label)} for comparison.` : ''}</div>
     </div>
 
     <div class="page2">
@@ -15686,8 +15683,7 @@
     <div class="method">
       <b>Source.</b> The dashboard's media load log (one record per load, UTC), the cycle's dates from the Media Cycle form, and the Media Disks tagged with this media in Hardware › Assets. An aircraft that loaded the same media twice counts once, at its first load.
       <b>Fleet.</b> The wireless IFE programme fleet, less any aircraft that entered service after the cycle closed (they could not have taken it).
-      <b>Days.</b> Day 1 is the release date${d.open ? '; the cycle is still open, so figures run to today' : `; the cycle closed on ${escAttr(d.end)}. A load after the close still counts towards the cycle and is marked Late`}.
-      <b>Target.</b> ${MLR_TARGET_PCT}% of the eligible fleet within the cycle window.
+      <b>Days.</b> Day 1 is the day the loading window opened${d.open ? '; the cycle is still open, so figures run to today' : `; the cycle closed on ${escAttr(d.end)}. A load after the close still counts towards the cycle and is marked Late`}.
       This report is generated automatically and reflects the data at the time it was opened.
     </div>
     </div>
@@ -15733,10 +15729,10 @@
 
         const MC_DATE_FIELDS = [
             ['contentDelivered', 'Content delivered',    'Media content received from the provider'],
-            ['downloaded',       'Downloaded',           'Content downloaded by NSG'],
+            ['downloaded',       'Media downloaded',     'Content downloaded by NSG'],
             ['disksDuplicated',  'Disks duplicated',     'Media copied onto the loading disks'],
-            ['disksToTeam',      'Disks to team',        'Disks handed to the loading team'],
-            ['start',            'Released / loading start *', 'Opens the cycle — day 1 of the report'],
+            ['disksToTeam',      'Disks delivered',      'Disks delivered to the loading team (Saudia Technic)'],
+            ['start',            'Loading start *',      'Opens the loading window — day 1 of the report'],
             ['end',              'Cycle closed',         'Leave empty while loading continues'],
         ];
 
@@ -15755,7 +15751,7 @@
             const list = Object.keys(MEDIA_CYCLES).filter(c => !isLightMediaCycle(c)).sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
             const sel = cycle && MEDIA_CYCLES[cycle] ? cycle : '__new';
             const opts = `<option value="__new" ${sel === '__new' ? 'selected' : ''}>＋ New cycle…</option>`
-                + list.map(c => `<option value="${c}" ${c === sel ? 'selected' : ''}>${escAttr(cycleToDisplay(c))}${MEDIA_CYCLES[c].end ? ' · closed' : MEDIA_CYCLES[c].start ? ' · loading' : ' · not released'}</option>`).join('');
+                + list.map(c => `<option value="${c}" ${c === sel ? 'selected' : ''}>${escAttr(cycleToDisplay(c))}${MEDIA_CYCLES[c].end ? ' · closed' : MEDIA_CYCLES[c].start ? ' · loading' : ' · not started'}</option>`).join('');
             document.getElementById('mcEditBody').innerHTML = `
                 <div class="ac-edit-grid">
                     <div class="ac-edit-field" style="grid-column:1 / -1;">
@@ -15786,7 +15782,7 @@
             document.getElementById('mcEditTitle').textContent = isNew ? 'New Media Cycle' : `Edit ${cycleToDisplay(pick)}`;
             document.getElementById('mcEditSub').textContent = isNew
                 ? 'Declare next month\'s media. It shows greyed out on the Media page until the first aircraft takes it.'
-                : 'Dates feed the Media Loading Report; the release and close dates set the loading window.';
+                : 'Dates feed the Media Loading Report; the loading start and close dates set the loading window.';
             document.getElementById('mcFields').innerHTML = `
                 ${isNew ? `<div class="ac-edit-grid">
                     <div class="ac-edit-field"><label>Month *</label><select id="mcMonth">${MONTH_FULL.map((m, i) => `<option value="${i + 1}" ${i + 1 === mm ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
@@ -15833,8 +15829,8 @@
                 if (v === false) return show(`${lab.replace(' *', '')}: enter a date as dd-mm-yyyy.`);
                 if (v) entry[k] = v;
             }
-            if (entry.end && !entry.start) return show('A cycle cannot be closed before it has a release date.');
-            if (entry.end && toISODate(entry.end) < toISODate(entry.start)) return show('The close date is before the release date.');
+            if (entry.end && !entry.start) return show('A cycle cannot be closed before it has a loading start date.');
+            if (entry.end && toISODate(entry.end) < toISODate(entry.start)) return show('The close date is before the loading start date.');
             const notes = document.getElementById('mcNotes').value.trim();
             if (notes) entry.notes = notes;
             entry.updatedAt = new Date().toISOString().slice(0, 19) + 'Z';
