@@ -7661,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.177.0';
-        const APP_BUILD    = '2026.09.24.03';
+        const APP_VERSION  = '2.178.0';
+        const APP_BUILD    = '2026.09.24.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14480,7 +14480,7 @@
   /* Equipment tables enclosed in the same card shell, header on a soft fill. */
   .tbl-card { border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:8px 0 10px; }
   .tbl-card table.tbl { font-size:12px; }
-  .tbl-card .eqtbl th { background:var(--soft); border-bottom:1px solid var(--line); }
+  .tbl-card table.tbl th { background:var(--soft); border-bottom:1px solid var(--line); }
   .pill { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.3px; padding:1px 9px; border-radius:99px; }
   .pill-red { background:#fdecee; color:#a52834; border:1px solid #f3c2c8; }
   .pill-green { background:#e9f5ee; color:#0b7a3b; border:1px solid #bfe3cd; }
@@ -14566,6 +14566,10 @@
        the block that follows it. */
     .rpt-header, .rpt-meta, .rpt-grid, .rpt-panel, .ep-box { break-inside: avoid; }
     .sec { break-after: avoid; }
+    /* A carded table (equipment, Work Carried Out) must FLOW across pages — overflow:hidden,
+       used for rounded corners on screen, would otherwise suppress fragmentation and clip
+       long tables at the page edge. The rows themselves stay whole (tr break-inside:avoid). */
+    .tbl-card { overflow: visible; }
     .note { break-inside: auto; }
   }
 </style></head>
@@ -14601,10 +14605,10 @@
     ${softwareRows.length ? `<div class="sec">Software &amp; Media</div>${rptPanel(softwareRows, 4)}` : ''}
     ${equipPrint}
     <div class="sec">Work Carried Out — ${members.length} ${members.length === 1 ? 'entry' : 'entries'}</div>
-    <table class="tbl">
+    <div class="tbl-card"><table class="tbl">
       <thead><tr><th style="width:96px; white-space:nowrap;">Date</th><th style="width:118px; white-space:nowrap;">Category</th><th>Details</th></tr></thead>
       <tbody>${actRows}</tbody>
-    </table>
+    </table></div>
     <div class="rpt-footer">
       <span>HZ-${escAttr(v.aircraft)} · ${escAttr(rt.label)}${v.ref ? ' · ' + escAttr(v.ref) : ''}</span>
       <span>Downloaded ${escAttr(stamp)}</span>

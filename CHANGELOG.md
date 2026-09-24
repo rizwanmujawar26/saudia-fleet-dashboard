@@ -13,6 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.178.0 — AVR report: Work Carried Out table carded too (2026-09-24)
+User-requested. The **Work Carried Out** table now gets the same `.tbl-card` shell as the
+equipment tables (rounded border, soft-fill header), so every block on the report reads as a
+card. The soft header fill was broadened from `.eqtbl` to any carded `.tbl`. Print safety:
+carded tables switch to `overflow:visible` under `@media print` so a long, multi-page Work
+Carried Out table FLOWS across pages (the on-screen `overflow:hidden` used for rounded
+corners would otherwise suppress fragmentation and clip it); rows still stay whole.
+
 ### v2.177.0 — AVR report: bordered spec panels + carded equipment tables (2026-09-24)
 User-requested visual pass on the AVR PDF (`buildAvrReportDoc`). The four spec sections —
 **Aircraft, Specifications, MODMAN & Commissioning, Software & Media** — that were loose
