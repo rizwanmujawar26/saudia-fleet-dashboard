@@ -4545,6 +4545,23 @@
         .avr-rtype-flight { background: #e6f5ee; color: #0a6b3c; border-color: #c4e7d4; }
         .avr-rtype-retrofit { background: #fbeee0; color: #97530f; border-color: #f0d3ae; }
         .avr-rtype-other  { background: #eef1f4; color: #566573; border-color: #dbe2e8; }
+        .avr-rtype-media  { background: #e6f5ee; color: #0a5c34; border-color: #c4e7d4; }
+
+        /* Media Loading Report card (v2.188.0) — derived, one per closed media cycle */
+        .mlr-rating { font-size: 10.5px; font-weight: 800; padding: 2px 9px; border-radius: 99px; border: 1px solid transparent; white-space: nowrap; }
+        .mlr-rating-green { background: #e9f5ee; color: #0b7a3b; border-color: #bfe3cd; }
+        .mlr-rating-blue  { background: #eaf2fb; color: #2f5f8a; border-color: #c4dcf2; }
+        .mlr-rating-amber { background: #fdf1e3; color: #8a5312; border-color: #f1d9b6; }
+        .mlr-rating-red   { background: #fdecee; color: #a52834; border-color: #f3c2c8; }
+        .mlr-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 4px 0 12px; }
+        .mlr-kpi { border: 1px solid #e3e8ee; border-radius: 8px; padding: 8px 12px; background: #f8fafb; min-width: 0; }
+        .mlr-kpi-k { font-size: 9.5px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: #7c8894; }
+        .mlr-kpi-v { font-size: 19px; font-weight: 800; color: #0b1f3a; line-height: 1.25; }
+        .mlr-kpi-s { font-size: 11px; font-weight: 600; color: #7c8894; }
+        .mlr-chart { border: 1px solid #e3e8ee; border-radius: 8px; padding: 10px 8px 4px; margin-bottom: 10px; }
+        .mlr-narr p { margin: 0 0 7px; font-size: 13px; line-height: 1.5; color: #2c3a45; }
+        .mlr-narr p b { color: #0a5c34; }
+        .mlr-foot { font-size: 11.5px; color: #7c8894; margin-top: 8px; }
 
         /* The banner strip at the top of an opened report */
         .avr-report-banner { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
@@ -7696,8 +7713,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.187.1';
-        const APP_BUILD    = '2026.09.25.01';
+        const APP_VERSION  = '2.188.0';
+        const APP_BUILD    = '2026.09.25.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -7956,6 +7973,7 @@
                 updateMetrics();           // the Timeline reads activities and loads
                 startLowTrafficPoll();
                 openAvrFromHash();         // a #avr=<id> deep link opens that report now data is in
+                openMlrFromHash();         // …and #mlr=<cycle> a Media Loading Report
             });
         }
 
@@ -9637,8 +9655,12 @@
                           // still recorded, still counted and still have their widget —
                           // they are simply not offered as a view, because there is no
                           // window to view them against.
-                          const declared = new Set(Object.keys(MEDIA_CYCLES));
-                          const keys = [...new Set(Object.keys(MEDIA_CYCLES)
+                          // An undelivered (upcoming) cycle is left out — it could only view
+                          // an empty table.
+                          const newest = latestMediaCycle();
+                          const declared = new Set(Object.keys(MEDIA_CYCLES)
+                              .filter(c => newest && cycleSortKey(c) <= cycleSortKey(newest)));
+                          const keys = [...new Set([...declared]
                               .concat(mediaLoadEntries().map(loadCycleKey)
                                   .filter(c => c && (declared.has(c) || c === MEDIA_DEV_VIEW || isLightMediaCycle(c)))))];
                           // Months newest first, then the two out-of-cycle kinds — they
@@ -12214,8 +12236,11 @@
         // aircraft carries it, which is how next month's load shows at 0/40 while it is
         // being deployed.
         const MEDIA_CYCLES = {
-            '0826': { size: '791 GB', start: '26-Jul-2026' },
-            '0926': { size: '884 GB', start: '25-Aug-2026' },
+            '0826': { size: '791 GB', start: '26-Jul-2026', end: '20-Aug-2026' },
+            '0926': { size: '884 GB', start: '25-Aug-2026', end: '19-Sep-2026' },
+            // October: declared with its size (799.7 GB) ahead of release, so its widget
+            // shows greyed out (upcoming) until the first aircraft takes it. No start yet.
+            '1026': { size: '800 GB' },
         };
 
         // The oldest monthly widget the strip shows. Cycles before it (July 2026 and
@@ -12230,8 +12255,12 @@
 
         // The window a cycle owns: its own release date, to the day before the next
         // cycle's. An open-ended cycle (the newest declared) has no end yet.
+        // An explicit `end` (v2.188.0, user 2026-09-25) is the day the cycle was CLOSED
+        // and wins over the derived one — August closed 20-Aug and September 19-Sep,
+        // days before the next release. A closed cycle gets a Media Loading Report.
         function mediaCycleWindow(cycle) {
             const start = (MEDIA_CYCLES[cycle] || {}).start || '';
+            if ((MEDIA_CYCLES[cycle] || {}).end) return { start, end: MEDIA_CYCLES[cycle].end };
             const next = Object.keys(MEDIA_CYCLES)
                 .filter(c => cycleSortKey(c) > cycleSortKey(cycle) && (MEDIA_CYCLES[c] || {}).start)
                 .sort((a, b) => cycleSortKey(a) - cycleSortKey(b))[0];
@@ -12940,7 +12969,8 @@
             if (ta) ta.classList.toggle('active', avrView === 'activities');
             if (tv) {
                 tv.classList.toggle('active', avrView === 'visits');
-                const n = avrEntries().filter(v => canEdit() || v.status === 'published').length;
+                const n = avrEntries().filter(v => canEdit() || v.status === 'published').length
+                    + (typeof mediaClosedCycles === 'function' ? mediaClosedCycles().length : 0);
                 tv.innerHTML = `📋 Reports${n ? ` <span class="avr-vt-badge">${n}</span>` : ''}`;
             }
             if (ti) {
@@ -13297,7 +13327,10 @@
             const host = document.getElementById('avrFeed');
             if (!host) return;
             const list = avrVisibleList();
-            if (!list.length) {
+            // Media Loading Reports (derived, one per closed cycle) interleave with the
+            // visit reports by date — a media report dates from its cycle's close.
+            const mlrs = mlrVisibleList();
+            if (!list.length && !mlrs.length) {
                 const any = avrEntries().length;
                 host.innerHTML = `<div class="avr-empty">${
                     any ? 'No visit reports match these filters.'
@@ -13307,7 +13340,11 @@
                 }</div>`;
                 return;
             }
-            host.innerHTML = list.map(renderAvrCard).join('');
+            const items = list.map(v => ({ key: dateSortKey(toISODate(v.dateEnd || v.dateStart)) || '', html: () => renderAvrCard(v) }))
+                .concat(mlrs.map(d => ({ key: dateSortKey(d.endISO) || '', html: () => renderMlrCard(d) })));
+            // Stable merge: AVRs keep their own order; a media report slots in by its date.
+            items.sort((a, b) => String(b.key).localeCompare(String(a.key)));
+            host.innerHTML = items.map(x => x.html()).join('');
         }
 
         // ===== Location: airport → Line/Hangar → stand/bay =====
@@ -14907,6 +14944,576 @@
             document.close();
             return true;
         }
+
+        // ===== Media Loading Report (MLR) — one per CLOSED media cycle (v2.188.0) =====
+        // An executive read-out of how a monthly media roll-out went: how many aircraft
+        // took it, how fast it started, when it crossed 50% / 90%, how long the tail was,
+        // and how it compared with the cycle before. DERIVED, never stored — like the
+        // Timeline's cycle-closed row, it is rebuilt from /mediaLoads + MEDIA_CYCLES every
+        // time it is opened, so a corrected load date corrects the report. A cycle gets a
+        // report the moment it has an end date (an explicit `end`, or the next cycle's
+        // start). The written summary is composed from the figures by rule — no AI service
+        // is called (the page is static, with no backend and no keys).
+        //
+        // ⚠️ The fleet a cycle is measured against is the CURRENT programme scope
+        // (mediaFleet) minus aircraft that entered service after the cycle closed — they
+        // could never have taken it. An aircraft that took the media is always counted.
+        const MLR_TARGET_PCT = 95;   // share of the eligible fleet a cycle should reach
+
+        function mlrRef(cycle) { return `MLR-20${cycle.slice(2)}-${cycle.slice(0, 2)}`; }
+
+        // Every cycle with a start AND an end — the ones a report can be written for.
+        function mediaClosedCycles() {
+            return Object.keys(MEDIA_CYCLES)
+                .filter(c => { const w = mediaCycleWindow(c); return w.start && w.end; })
+                .sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
+        }
+
+        function mlrSizeGB(cycle) {
+            const m = String(mediaCycleSize(cycle)).match(/([\d.]+)\s*(TB|GB)/i);
+            if (!m) return 0;
+            return parseFloat(m[1]) * (m[2].toUpperCase() === 'TB' ? 1000 : 1);
+        }
+
+        function mlrStamp(iso) {
+            if (!iso) return '—';
+            return `${fmtDate(iso.slice(0, 10))} ${iso.slice(11, 16)} UTC`;
+        }
+
+        // All the figures for one cycle. Day 1 is the release day; `t` is the exact
+        // fractional day a load landed on, used to draw the curve.
+        function mediaReportData(cycle) {
+            const w = mediaCycleWindow(cycle);
+            if (!w.start || !w.end) return null;
+            const startISO = toISODate(w.start), endISO = toISODate(w.end);
+            const t0 = Date.parse(startISO + 'T00:00:00Z');
+            const tEnd = Date.parse(endISO + 'T00:00:00Z');
+            const days = Math.round((tEnd - t0) / 864e5) + 1;
+            const dayOf = iso => Math.max(1, Math.floor((Date.parse(iso) - t0) / 864e5) + 1);
+            const isoOfDay = n => new Date(t0 + (n - 1) * 864e5).toISOString().slice(0, 10);
+
+            const fleet = mediaFleet();
+            const byTail = new Map(fleet.map(a => [a.id, a]));
+            // Earliest load of this cycle per in-scope tail — a reload is not a second aircraft.
+            const first = new Map();
+            cycleLoads(cycle).forEach(l => {
+                if (!byTail.has(l.aircraft) || !l.loadedAt) return;
+                const cur = first.get(l.aircraft);
+                if (!cur || l.loadedAt < cur.loadedAt) first.set(l.aircraft, l);
+            });
+            const loads = [...first.values()]
+                .sort((a, b) => a.loadedAt.localeCompare(b.loadedAt))
+                .map(l => {
+                    const a = byTail.get(l.aircraft) || {};
+                    return { tail: l.aircraft, type: TYPE_SHORT_LABEL[a.type] || a.type || '—',
+                             at: l.loadedAt, iso: l.loadedAt.slice(0, 10), day: dayOf(l.loadedAt),
+                             t: Math.max(0, (Date.parse(l.loadedAt) - t0) / 864e5),
+                             source: l.source || '', late: l.loadedAt.slice(0, 10) > endISO };
+                });
+
+            // Eligible = in service by the close date, or took the media anyway.
+            const eligible = fleet.filter(a => {
+                if (first.has(a.id)) return true;
+                const act = toISODate(a.activatedDate || '');
+                return !act || act <= endISO;
+            });
+            const scope = eligible.length;
+            const done = loads.length;
+            const pct = scope ? Math.round(done / scope * 1000) / 10 : 0;
+            const joinedDuring = eligible.filter(a => {
+                const act = toISODate(a.activatedDate || '');
+                return act && act >= startISO && act <= endISO;
+            }).length;
+
+            // Day on which the cumulative count first reached p% of the eligible fleet.
+            const reach = p => {
+                const need = Math.ceil(scope * p / 100);
+                if (!need || done < need) return null;
+                const l = loads[need - 1];
+                return { day: l.day, iso: l.iso };
+            };
+            const daily = new Array(Math.max(days, loads.length ? loads[loads.length - 1].day : 0)).fill(0);
+            loads.forEach(l => { daily[l.day - 1]++; });
+            let peakDay = 0;
+            daily.forEach((n, i) => { if (n > daily[peakDay]) peakDay = i; });
+
+            const weeks = [];
+            let cum = 0;
+            for (let s = 1; s <= daily.length; s += 7) {
+                const e = Math.min(s + 6, daily.length);
+                const n = daily.slice(s - 1, e).reduce((x, y) => x + y, 0);
+                cum += n;
+                weeks.push({ no: weeks.length + 1, from: isoOfDay(s), to: isoOfDay(e), n, cum,
+                             pct: scope ? Math.round(cum / scope * 1000) / 10 : 0 });
+            }
+            const busiestWeek = weeks.reduce((b, x) => (x.n > (b ? b.n : -1) ? x : b), null);
+
+            const sortedDays = loads.map(l => l.day).sort((a, b) => a - b);
+            const median = sortedDays.length
+                ? (sortedDays.length % 2 ? sortedDays[(sortedDays.length - 1) / 2]
+                    : (sortedDays[sortedDays.length / 2 - 1] + sortedDays[sortedDays.length / 2]) / 2)
+                : null;
+
+            const types = {};
+            eligible.forEach(a => {
+                const k = TYPE_SHORT_LABEL[a.type] || a.type || '—';
+                (types[k] = types[k] || { type: k, scope: 0, done: 0, days: [] }).scope++;
+            });
+            loads.forEach(l => { if (types[l.type]) { types[l.type].done++; types[l.type].days.push(l.day); } });
+            const byType = Object.values(types).map(x => {
+                const s = x.days.sort((a, b) => a - b);
+                return { ...x, pct: x.scope ? Math.round(x.done / x.scope * 1000) / 10 : 0,
+                         median: s.length ? s[Math.floor((s.length - 1) / 2)] : null };
+            }).sort((a, b) => b.scope - a.scope);
+
+            const missing = eligible.filter(a => !first.has(a.id)).map(a => {
+                const m = a.media || {};
+                const now = m.mediaCycle ? cycleToDisplay(m.mediaCycle) : (m.loadedDateUTC ? 'No Media (default load)' : 'No media loaded');
+                return { tail: a.id, type: TYPE_SHORT_LABEL[a.type] || a.type || '—', now,
+                         activated: a.activatedDate || '' };
+            }).sort((a, b) => a.tail.localeCompare(b.tail));
+
+            const sizeGB = mlrSizeGB(cycle);
+            return {
+                cycle, label: cycleToDisplay(cycle), ref: mlrRef(cycle), size: mediaCycleSize(cycle),
+                start: w.start, end: w.end, startISO, endISO, days, loads, scope, done, pct, joinedDuring,
+                firstLoad: loads[0] || null, lastLoad: loads[loads.length - 1] || null,
+                firstWeek: daily.slice(0, 7).reduce((x, y) => x + y, 0),
+                t25: reach(25), t50: reach(50), t75: reach(75), t90: reach(90), t100: reach(100),
+                median, daily, peak: { day: peakDay + 1, iso: isoOfDay(peakDay + 1), n: daily[peakDay] || 0 },
+                weeks, busiestWeek, byType, missing, late: loads.filter(l => l.late).length,
+                deliveredTB: sizeGB ? Math.round(sizeGB * done / 100) / 10 : 0,
+                isoOfDay,
+            };
+        }
+
+        function mlrPrev(cycle) {
+            const p = previousCycle(cycle);
+            return p && MEDIA_CYCLES[p] ? mediaReportData(p) : null;
+        }
+
+        function mlrRating(d) {
+            if (d.pct >= MLR_TARGET_PCT) return { label: 'Target met', css: 'green' };
+            if (d.pct >= 85) return { label: 'Near target', css: 'blue' };
+            if (d.pct >= 70) return { label: 'Below target', css: 'amber' };
+            return { label: 'Well below target', css: 'red' };
+        }
+
+        const mlrPlural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
+
+        // The written read-out, one short paragraph per theme. Composed from the numbers
+        // by rule so every cycle gets the same structure and the same yardsticks.
+        function mediaReportNarrative(d, prev) {
+            const out = [];
+            const fd = iso => fmtDate(iso);
+            const r = mlrRating(d);
+            out.push({ k: 'Outcome', t:
+                `${d.label} media (${d.size || 'size not recorded'}) reached ${d.done} of ${d.scope} eligible aircraft — ${d.pct}% of the fleet — over a ${d.days}-day cycle from ${d.start} to ${d.end}. `
+                + (d.pct >= MLR_TARGET_PCT
+                    ? `That meets the ${MLR_TARGET_PCT}% completion target.`
+                    : `That is ${Math.round((MLR_TARGET_PCT - d.pct) * 10) / 10} points short of the ${MLR_TARGET_PCT}% completion target.`)
+                + (d.deliveredTB ? ` In total about ${d.deliveredTB} TB of content was delivered to the fleet.` : '') });
+
+            if (d.firstLoad) {
+                const lag = d.firstLoad.day - 1;
+                const share = d.scope ? Math.round(d.firstWeek / d.scope * 100) : 0;
+                const tone = share >= 40 ? 'a fast start' : share >= 20 ? 'a steady start' : 'a slow start';
+                out.push({ k: 'Start', t:
+                    `Loading began ${lag === 0 ? 'on the release day itself' : `${mlrPlural(lag, 'day')} after release`} (${fd(d.firstLoad.iso)}). `
+                    + `${mlrPlural(d.firstWeek, 'aircraft', 'aircraft')} (${share}% of the fleet) were loaded in the first seven days — ${tone}.` });
+            }
+
+            const pace = [];
+            if (d.t50) pace.push(`half the fleet was on the new media by day ${d.t50.day} (${fd(d.t50.iso)})`);
+            if (d.t90) pace.push(`90% by day ${d.t90.day} (${fd(d.t90.iso)})`);
+            if (pace.length || d.peak.n) {
+                out.push({ k: 'Pace', t:
+                    (pace.length ? pace.join(' and ').replace(/^./, c => c.toUpperCase()) + '. ' : '')
+                    + (d.median != null ? `The typical aircraft was loaded on day ${d.median} of the cycle. ` : '')
+                    + (d.peak.n ? `The busiest day was ${fd(d.peak.iso)} with ${mlrPlural(d.peak.n, 'aircraft', 'aircraft')}` : '')
+                    + (d.busiestWeek && d.busiestWeek.n ? `, and the busiest week was week ${d.busiestWeek.no} with ${d.busiestWeek.n}.` : '.') });
+            }
+
+            if (d.lastLoad) {
+                const tail = d.t90 ? d.lastLoad.day - d.t90.day : null;
+                const long = tail != null && tail > d.days / 3;
+                out.push({ k: 'Finish', t:
+                    `The last aircraft was loaded on ${fd(d.lastLoad.iso)} (day ${d.lastLoad.day}).`
+                    + (tail != null ? ` The final 10% took ${mlrPlural(tail, 'day')} — ${long ? 'a long tail relative to the cycle' : 'a short tail'}.` : '')
+                    + (d.late ? ` ${mlrPlural(d.late, 'load')} landed after the cycle closed and still count towards it.` : '') });
+            }
+
+            if (prev && prev.done) {
+                const dp = Math.round((d.pct - prev.pct) * 10) / 10;
+                const bits = [`completion ${dp >= 0 ? 'up' : 'down'} ${Math.abs(dp)} points (${prev.pct}% → ${d.pct}%)`];
+                if (d.t50 && prev.t50) {
+                    const dd = d.t50.day - prev.t50.day;
+                    bits.push(dd === 0 ? '50% reached on the same day of the cycle'
+                        : `50% reached ${mlrPlural(Math.abs(dd), 'day')} ${dd < 0 ? 'sooner' : 'later'}`);
+                }
+                if (d.t90 && prev.t90) {
+                    const dd = d.t90.day - prev.t90.day;
+                    bits.push(dd === 0 ? '90% on the same day' : `90% ${mlrPlural(Math.abs(dd), 'day')} ${dd < 0 ? 'sooner' : 'later'}`);
+                }
+                out.push({ k: `vs ${prev.label}`, t: `Compared with ${prev.label}: ${bits.join(', ')}.` });
+            }
+
+            if (d.missing.length) {
+                out.push({ k: 'Not loaded', t:
+                    `${mlrPlural(d.missing.length, 'aircraft', 'aircraft')} did not take this media: ${d.missing.map(m => m.tail).join(', ')}. `
+                    + `See the "Not loaded" table for the media ${d.missing.length === 1 ? 'it carries' : 'they carry'} now.` });
+            } else {
+                out.push({ k: 'Not loaded', t: 'Every eligible aircraft took this media.' });
+            }
+            out.push({ k: 'Assessment', t: `${r.label}.` + (d.joinedDuring ? ` ${mlrPlural(d.joinedDuring, 'aircraft', 'aircraft')} entered service during the cycle and ${d.joinedDuring === 1 ? 'is' : 'are'} included in the fleet count.` : '') });
+            return out;
+        }
+
+        // Cumulative roll-out curve: share of the eligible fleet on the media, day by day.
+        // The previous cycle rides underneath as a dashed line for comparison. Pure SVG
+        // with inline attributes, so it prints and renders identically in the report and
+        // on the dashboard card.
+        function mlrCurveSVG(d, prev) {
+            const W = 720, H = 268, L = 40, R = 18, T = 34, B = 34;
+            const span = Math.max(d.daily.length, prev ? prev.daily.length : 0, 1);
+            const x = t => L + (t / span) * (W - L - R);
+            const y = p => T + (1 - p / 100) * (H - T - B);
+            const step = (dd, close) => {
+                let path = `M${x(0).toFixed(1)},${y(0).toFixed(1)}`;
+                dd.loads.forEach((l, i) => {
+                    const px = x(l.t).toFixed(1);
+                    path += ` L${px},${y(i / dd.scope * 100).toFixed(1)} L${px},${y((i + 1) / dd.scope * 100).toFixed(1)}`;
+                });
+                path += ` L${x(dd.daily.length).toFixed(1)},${y(dd.scope ? dd.done / dd.scope * 100 : 0).toFixed(1)}`;
+                if (close) path += ` L${x(dd.daily.length).toFixed(1)},${y(0).toFixed(1)} Z`;
+                return path;
+            };
+            let g = '';
+            [0, 25, 50, 75, 100].forEach(p => {
+                g += `<line x1="${L}" x2="${W - R}" y1="${y(p)}" y2="${y(p)}" stroke="#e6ebf0" stroke-width="1"/>`
+                   + `<text x="${L - 6}" y="${y(p) + 3.5}" text-anchor="end" font-size="10" fill="#8a96a1">${p}%</text>`;
+            });
+            g += `<line x1="${L}" x2="${W - R}" y1="${y(MLR_TARGET_PCT)}" y2="${y(MLR_TARGET_PCT)}" stroke="#c47f1c" stroke-width="1" stroke-dasharray="4 3"/>`
+               + `<text x="${L + 6}" y="${y(MLR_TARGET_PCT) - 4}" text-anchor="start" font-size="9.5" font-weight="700" fill="#8a5312">Target ${MLR_TARGET_PCT}%</text>`;
+            for (let dday = 0; dday <= span; dday += 7) {
+                const lx = x(dday);
+                g += `<line x1="${lx}" x2="${lx}" y1="${H - B}" y2="${H - B + 4}" stroke="#b8c1ca"/>`
+                   + `<text x="${lx}" y="${H - B + 15}" text-anchor="middle" font-size="10" fill="#6b7883">Day ${dday + 1}</text>`
+                   + `<text x="${lx}" y="${H - B + 27}" text-anchor="middle" font-size="9" fill="#9aa5af">${escAttr(fmtDateShort(fmtDate(d.isoOfDay(dday + 1))).slice(0, 6))}</text>`;
+            }
+            if (prev && prev.loads.length) {
+                g += `<path d="${step(prev, false)}" fill="none" stroke="#9aa5af" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+            }
+            g += `<path d="${step(d, true)}" fill="#0b7a3b" fill-opacity="0.10" stroke="none"/>`
+               + `<path d="${step(d, false)}" fill="none" stroke="#0b7a3b" stroke-width="2.4" stroke-linejoin="round"/>`;
+            [['50%', d.t50, 50], ['90%', d.t90, 90]].forEach(([lab, m, p]) => {
+                if (!m) return;
+                const need = Math.ceil(d.scope * p / 100);
+                const l = d.loads[need - 1];
+                const cx = x(l.t), cy = y(need / d.scope * 100);
+                g += `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#fff" stroke="#0b1f3a" stroke-width="2"/>`
+                   + `<text x="${cx + 8}" y="${cy + 12}" font-size="10.5" font-weight="800" fill="#0b1f3a">${lab} · day ${m.day}</text>`;
+            });
+            const legend = `<g font-size="10.5" fill="#44525e">
+                <line x1="${L + 8}" x2="${L + 30}" y1="10" y2="10" stroke="#0b7a3b" stroke-width="2.4"/><text x="${L + 35}" y="13.5" font-weight="700">${escAttr(d.label)}</text>
+                ${prev && prev.loads.length ? `<line x1="${L + 140}" x2="${L + 162}" y1="10" y2="10" stroke="#9aa5af" stroke-width="1.6" stroke-dasharray="5 4"/><text x="${L + 167}" y="13.5">${escAttr(prev.label)}</text>` : ''}
+            </g>`;
+            return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Cumulative share of the fleet loaded with ${escAttr(d.label)} media, by day of the cycle" style="display:block; max-width:100%; height:auto;">${g}${legend}</svg>`;
+        }
+
+        // Daily loads as bars — shows the rhythm: the opening burst, the lulls, the tail.
+        function mlrDailySVG(d) {
+            const W = 720, H = 130, L = 40, R = 18, T = 12, B = 22;
+            const n = d.daily.length || 1;
+            const max = Math.max(1, ...d.daily);
+            const bw = (W - L - R) / n;
+            const y = v => T + (1 - v / max) * (H - T - B);
+            let g = `<line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" stroke="#d5dbe1"/>`;
+            const tick = max <= 4 ? 1 : Math.ceil(max / 4);
+            for (let v = tick; v <= max; v += tick) {
+                g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#eef2f6"/>`
+                   + `<text x="${L - 6}" y="${y(v) + 3.5}" text-anchor="end" font-size="10" fill="#8a96a1">${v}</text>`;
+            }
+            d.daily.forEach((v, i) => {
+                if (!v) return;
+                const peak = i + 1 === d.peak.day;
+                g += `<rect x="${(L + i * bw + bw * 0.15).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${(H - B - y(v)).toFixed(1)}" rx="1.5" fill="${peak ? '#0b1f3a' : '#3f8f63'}"/>`;
+            });
+            for (let dday = 0; dday < n; dday += 7) {
+                g += `<text x="${(L + dday * bw + bw / 2).toFixed(1)}" y="${H - B + 14}" text-anchor="middle" font-size="10" fill="#6b7883">Day ${dday + 1}</text>`;
+            }
+            return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Aircraft loaded per day" style="display:block; max-width:100%; height:auto;">${g}</svg>`;
+        }
+
+        // KPI tiles shared by the card and the document: [label, value, sub].
+        function mlrKpis(d) {
+            const dayLab = m => (m ? `Day ${m.day}` : 'Not reached');
+            return [
+                ['Fleet loaded', `${d.done}/${d.scope}`, `${d.pct}% · target ${MLR_TARGET_PCT}%`],
+                ['Cycle window', `${d.days} days`, `${fmtDateShort(d.start)} → ${fmtDateShort(d.end)}`],
+                ['First aircraft', d.firstLoad ? `Day ${d.firstLoad.day}` : '—', d.firstLoad ? fmtDate(d.firstLoad.iso) : ''],
+                ['50% of fleet', dayLab(d.t50), d.t50 ? fmtDate(d.t50.iso) : ''],
+                ['90% of fleet', dayLab(d.t90), d.t90 ? fmtDate(d.t90.iso) : ''],
+                ['Data delivered', d.deliveredTB ? `${d.deliveredTB} TB` : '—', d.size ? `${d.size} × ${d.done}` : ''],
+            ];
+        }
+
+        // ----- Reports feed card -----
+        function mlrHaystack(d) {
+            return `media loading report ${d.label} ${d.cycle} ${d.ref} ${d.size}`.toLowerCase();
+        }
+
+        // The media reports the feed should show under the current filters. They carry no
+        // aircraft, engagement mode or draft state, so a Mode or Type filter hides them and
+        // they read as Published.
+        function mlrVisibleList() {
+            const q = (fbQuery['maintenance'] || '').trim().toLowerCase();
+            if (!fbMatch('maintenance', 'status', 'published')) return [];
+            if (!fbMatch('maintenance', 'mode', '') || !fbMatch('maintenance', 'type', '')) return [];
+            return mediaClosedCycles().map(mediaReportData).filter(Boolean)
+                .filter(d => !q || q.split(/\s+/).every(w => mlrHaystack(d).includes(w)));
+        }
+
+        function renderMlrCard(d) {
+            const id = 'mlr-' + d.cycle;
+            const open = avrExpanded.has(id);
+            const r = mlrRating(d);
+            const head = `<div class="avr-head" onclick="avrToggle('${id}')">
+                <span class="avr-caret">▶</span>
+                <span class="avr-reg">📊 ${escAttr(d.label)}</span>
+                <span class="avr-rtype avr-rtype-media" title="Media Loading Report">MEDIA</span>
+                <span class="avr-dates">${escAttr(d.start)} → ${escAttr(d.end)}</span>
+                <span class="mlr-rating mlr-rating-${r.css}">${escAttr(r.label)}</span>
+                <span class="avr-summary-line"><span class="avr-taskcount">${d.done} of ${d.scope} aircraft · ${d.pct}%</span> · <span class="avr-ref">${escAttr(d.ref)}</span></span>
+                <div class="avr-head-actions">
+                    <button class="avr-headbtn" onclick="event.stopPropagation();printMediaReport('${d.cycle}')">🖨️ Print / PDF</button>
+                </div>
+            </div>`;
+            if (!open) return `<div class="avr-card mlr-card" id="avrCard-${id}">${head}</div>`;
+            const prev = mlrPrev(d.cycle);
+            const body = `<div class="avr-body">
+                <div class="mlr-kpis">${mlrKpis(d).map(([k, v, s]) => `<div class="mlr-kpi"><div class="mlr-kpi-k">${escAttr(k)}</div><div class="mlr-kpi-v">${escAttr(v)}</div><div class="mlr-kpi-s">${escAttr(s)}</div></div>`).join('')}</div>
+                <div class="avr-section-label">Roll-out curve — share of fleet loaded</div>
+                <div class="mlr-chart">${mlrCurveSVG(d, prev)}</div>
+                <div class="avr-section-label">Executive summary</div>
+                <div class="mlr-narr">${mediaReportNarrative(d, prev).map(p => `<p><b>${escAttr(p.k)}.</b> ${escAttr(p.t)}</p>`).join('')}</div>
+                <div class="mlr-foot">Generated automatically from the media load log. The full report adds daily loads, a week-by-week breakdown, results by aircraft type, the aircraft not loaded and the complete load log. Use <b>Print / PDF</b> to open it.</div>
+            </div>`;
+            return `<div class="avr-card mlr-card is-open" id="avrCard-${id}">${head}${body}</div>`;
+        }
+
+        // ----- The printable document -----
+        function buildMediaReportDoc(cycle) {
+            const d = mediaReportData(cycle);
+            if (!d) return null;
+            const prev = mlrPrev(cycle);
+            const r = mlrRating(d);
+            const stamp = `${fmtDate(new Date().toISOString().slice(0, 10))} ${new Date().toISOString().slice(11, 16)} UTC`;
+            const pctBar = p => `<span class="bar"><i style="width:${Math.min(100, p)}%"></i></span>`;
+            const kpis = mlrKpis(d).map(([k, v, s]) => `<div class="kpi"><div class="kpi-k">${escAttr(k)}</div><div class="kpi-v">${escAttr(v)}</div><div class="kpi-s">${escAttr(s)}</div></div>`).join('');
+            const narr = mediaReportNarrative(d, prev).map(p => `<div class="nr"><div class="nr-k">${escAttr(p.k)}</div><div class="nr-t">${escAttr(p.t)}</div></div>`).join('');
+            const weekRows = d.weeks.map(w => `<tr><td>Week ${w.no}</td><td class="nowrap">${escAttr(fmtDateShort(fmtDate(w.from)))} → ${escAttr(fmtDateShort(fmtDate(w.to)))}</td><td class="num">${w.n}</td><td class="num">${w.cum}</td><td class="num">${w.pct}%</td><td>${pctBar(w.pct)}</td></tr>`).join('');
+            const typeRows = d.byType.map(t => `<tr><td><b>${escAttr(t.type)}</b></td><td class="num">${t.scope}</td><td class="num">${t.done}</td><td class="num">${t.pct}%</td><td>${pctBar(t.pct)}</td><td class="num">${t.median != null ? 'Day ' + t.median : '—'}</td></tr>`).join('');
+            const missRows = d.missing.length
+                ? d.missing.map(m => `<tr><td><b>${escAttr(m.tail)}</b></td><td>${escAttr(m.type)}</td><td>${escAttr(m.now)}</td><td class="nowrap">${escAttr(m.activated || '—')}</td></tr>`).join('')
+                : '<tr><td colspan="4">None — every eligible aircraft took this media.</td></tr>';
+            const logRows = d.loads.map((l, i) => `<tr><td class="num">${i + 1}</td><td><b>${escAttr(l.tail)}</b></td><td>${escAttr(l.type)}</td><td class="nowrap">${escAttr(mlrStamp(l.at))}</td><td class="num">${l.day}</td><td class="mono">${escAttr(l.source)}</td><td>${l.late ? '<span class="pill pill-amber">Late</span>' : ''}</td></tr>`).join('');
+            const cmp = prev && prev.done ? `<table class="tbl"><thead><tr><th>Measure</th><th class="num">${escAttr(prev.label)}</th><th class="num">${escAttr(d.label)}</th></tr></thead><tbody>
+                <tr><td>Fleet loaded</td><td class="num">${prev.done}/${prev.scope} · ${prev.pct}%</td><td class="num"><b>${d.done}/${d.scope} · ${d.pct}%</b></td></tr>
+                <tr><td>Cycle length</td><td class="num">${prev.days} days</td><td class="num"><b>${d.days} days</b></td></tr>
+                <tr><td>Loaded in first 7 days</td><td class="num">${prev.firstWeek}</td><td class="num"><b>${d.firstWeek}</b></td></tr>
+                <tr><td>Day 50% reached</td><td class="num">${prev.t50 ? prev.t50.day : '—'}</td><td class="num"><b>${d.t50 ? d.t50.day : '—'}</b></td></tr>
+                <tr><td>Day 90% reached</td><td class="num">${prev.t90 ? prev.t90.day : '—'}</td><td class="num"><b>${d.t90 ? d.t90.day : '—'}</b></td></tr>
+                <tr><td>Typical (median) load day</td><td class="num">${prev.median != null ? prev.median : '—'}</td><td class="num"><b>${d.median != null ? d.median : '—'}</b></td></tr>
+                <tr><td>Media size</td><td class="num">${escAttr(prev.size || '—')}</td><td class="num"><b>${escAttr(d.size || '—')}</b></td></tr>
+            </tbody></table>` : '';
+
+            return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escAttr(d.ref)} — ${escAttr(d.label)} Media Loading Report</title>
+<style>
+  :root { --green:#006936; --navy:#0b1f3a; --ink:#1f2a33; --muted:#7c8894; --line:#e3e8ee; --soft:#f6f8fa; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; }
+  html { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  body { background:#eef1f4; color:var(--ink); font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .toolbar { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:14px; background:#fff; border-bottom:1px solid var(--line); padding:10px 16px; }
+  .toolbar .sp { flex:1 1 auto; }
+  .toolbar .stamp { color:var(--muted); font-size:12px; }
+  .btn { border:1px solid var(--green); background:var(--green); color:#fff; border-radius:8px; font-size:13px; font-weight:700; padding:8px 16px; cursor:pointer; }
+  .sheet { background:#fff; max-width:820px; margin:20px auto; padding:34px 40px 30px; box-shadow:0 2px 14px rgba(20,40,60,.10); }
+  .rpt-header { display:flex; align-items:center; justify-content:space-between; gap:18px; border-bottom:3px solid var(--green); padding-bottom:14px; }
+  .rpt-header img { height:52px; width:auto; }
+  .mast { margin:14px 0 6px; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .mast-top { display:flex; align-items:center; justify-content:space-between; gap:18px; background:var(--navy); padding:14px 20px 15px; }
+  .mast-kicker { font-size:9.5px; font-weight:800; letter-spacing:1.3px; text-transform:uppercase; color:#9fb0c4; }
+  .mast-title { font-size:21px; font-weight:800; color:#fff; line-height:1.2; margin-top:3px; }
+  .mast-ref { text-align:right; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.06); border-radius:7px; padding:6px 12px 7px; }
+  .mast-ref-k { display:block; font-size:8.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#9fb0c4; }
+  .mast-ref-v { display:block; font-size:14.5px; font-weight:800; color:#fff; letter-spacing:.6px; white-space:nowrap; }
+  .mast-lead { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:12px 20px; flex-wrap:wrap; }
+  .ml { display:flex; flex-direction:column; }
+  .ml-k { font-size:9px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:var(--muted); }
+  .ml-v { font-size:16px; font-weight:800; color:var(--navy); white-space:nowrap; }
+  .verdict { display:inline-block; font-size:10.5px; font-weight:800; padding:2px 9px; border-radius:99px; vertical-align:2px; margin-left:4px; }
+  .v-green { background:#e9f5ee; color:#0b7a3b; border:1px solid #bfe3cd; }
+  .v-blue { background:#eaf2fb; color:#2f5f8a; border:1px solid #c4dcf2; }
+  .v-amber { background:#fdf1e3; color:#8a5312; border:1px solid #f1d9b6; }
+  .v-red { background:#fdecee; color:#a52834; border:1px solid #f3c2c8; }
+  .sec { font-size:12px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--navy); margin:18px 0 8px; padding-bottom:4px; border-bottom:1px solid var(--line); }
+  .kpis { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin:8px 0; }
+  .kpi { border:1px solid var(--line); border-radius:8px; padding:8px 12px; background:var(--soft); }
+  .kpi-k { font-size:9.5px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); }
+  .kpi-v { font-size:20px; font-weight:800; color:var(--navy); line-height:1.25; }
+  .kpi-s { font-size:11px; color:var(--muted); font-weight:600; }
+  .nr { display:grid; grid-template-columns:110px 1fr; gap:12px; padding:6px 0; border-bottom:1px solid #eef2f6; }
+  .nr:last-child { border-bottom:none; }
+  .nr-k { font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--green); padding-top:2px; }
+  .nr-t { font-size:12.5px; }
+  .chart { border:1px solid var(--line); border-radius:8px; padding:10px 8px 4px; }
+  .cap { font-size:11px; color:var(--muted); margin:4px 2px 0; }
+  table.tbl { width:100%; border-collapse:collapse; font-size:12px; }
+  table.tbl th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); background:var(--soft); border-bottom:1px solid var(--line); padding:6px 8px; }
+  table.tbl td { border-bottom:1px solid #eef2f6; padding:5px 8px; vertical-align:middle; }
+  table.tbl tbody tr:nth-child(even) td { background:#fafbfc; }
+  .num { text-align:right !important; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .nowrap { white-space:nowrap; }
+  .mono { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:11px; }
+  .bar { display:inline-block; width:100%; min-width:80px; height:7px; background:#eef1f4; border-radius:99px; overflow:hidden; vertical-align:middle; }
+  .bar i { display:block; height:100%; background:#3f8f63; border-radius:99px; }
+  .tbl-card { border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:8px 0; }
+  .pill { display:inline-block; font-size:10px; font-weight:800; padding:1px 8px; border-radius:99px; }
+  .pill-amber { background:#fdf1e3; color:#8a5312; border:1px solid #f1d9b6; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .method { font-size:11px; color:var(--muted); line-height:1.5; }
+  .method b { color:var(--ink); }
+  .rpt-footer { display:flex; justify-content:space-between; gap:12px; color:var(--muted); font-size:10.5px; border-top:1px solid var(--line); margin-top:22px; padding-top:10px; }
+  @media screen and (max-width:640px) { .kpis { grid-template-columns:1fr 1fr; } .two { grid-template-columns:1fr; } .sheet { padding:20px 16px; } .nr { grid-template-columns:1fr; gap:2px; } }
+  @media print {
+    body { background:#fff; }
+    .toolbar { display:none; }
+    .sheet { box-shadow:none; margin:0; max-width:none; padding:0; }
+    @page { size:A4; margin:14mm 13mm 14mm; }
+    thead { display:table-header-group; }
+    tr { break-inside:avoid; }
+    .rpt-header, .mast, .kpis, .chart, .nr, .two > div { break-inside:avoid; }
+    .sec { break-after:avoid; }
+    .tbl-card { overflow:visible; }
+  }
+</style></head>
+<body>
+  <div class="toolbar">
+    <button class="btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    <span class="sp"></span>
+    <span class="stamp">Generated ${escAttr(stamp)}</span>
+  </div>
+  <div class="sheet">
+    <div class="rpt-header">
+      <img src="${saudiaReportLogo()}" alt="Saudia">
+      <img src="${NSG_REPORT_LOGO}" alt="NSG — Neo Space Group">
+    </div>
+    <div class="mast">
+      <div class="mast-top">
+        <div>
+          <div class="mast-kicker">Saudia Connectivity · Wireless IFE · Monthly Media</div>
+          <div class="mast-title">Media Loading Report — ${escAttr(d.label)}</div>
+        </div>
+        <div class="mast-ref"><span class="mast-ref-k">Report Reference</span><span class="mast-ref-v">${escAttr(d.ref)}</span></div>
+      </div>
+      <div class="mast-lead">
+        <div class="ml"><span class="ml-k">Media cycle</span><span class="ml-v">${escAttr(d.label)}${d.size ? ` · ${escAttr(d.size)}` : ''}</span></div>
+        <div class="ml"><span class="ml-k">Cycle window</span><span class="ml-v">${escAttr(d.start)} → ${escAttr(d.end)}</span></div>
+        <div class="ml"><span class="ml-k">Fleet loaded</span><span class="ml-v">${d.done} / ${d.scope} · ${d.pct}% <span class="verdict v-${r.css}">${escAttr(r.label)}</span></span></div>
+      </div>
+    </div>
+
+    <div class="sec">Key figures</div>
+    <div class="kpis">${kpis}</div>
+
+    <div class="sec">Executive summary</div>
+    ${narr}
+
+    <div class="sec">Roll-out curve</div>
+    <div class="chart">${mlrCurveSVG(d, prev)}
+      <div class="cap">Share of the eligible fleet carrying ${escAttr(d.label)} media, by day of the cycle (day 1 = release, ${escAttr(d.start)}).${prev && prev.loads.length ? ` Dashed: ${escAttr(prev.label)} for comparison.` : ''}</div>
+    </div>
+
+    <div class="sec">Daily loads</div>
+    <div class="chart">${mlrDailySVG(d)}
+      <div class="cap">Aircraft loaded each day. The darker bar marks the busiest day (${escAttr(fmtDate(d.peak.iso))}, ${d.peak.n}).</div>
+    </div>
+
+    <div class="sec">Week by week</div>
+    <div class="tbl-card"><table class="tbl">
+      <thead><tr><th>Week</th><th>Dates</th><th class="num">Loaded</th><th class="num">Cumulative</th><th class="num">% fleet</th><th style="width:30%;">Progress</th></tr></thead>
+      <tbody>${weekRows}</tbody>
+    </table></div>
+
+    <div class="two">
+      <div>
+        <div class="sec">By aircraft type</div>
+        <div class="tbl-card"><table class="tbl">
+          <thead><tr><th>Type</th><th class="num">Fleet</th><th class="num">Loaded</th><th class="num">%</th><th style="width:28%;"></th><th class="num">Median</th></tr></thead>
+          <tbody>${typeRows}</tbody>
+        </table></div>
+      </div>
+      <div>
+        ${cmp ? `<div class="sec">Compared with ${escAttr(prev.label)}</div><div class="tbl-card">${cmp}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="sec">Not loaded — ${d.missing.length}</div>
+    <div class="tbl-card"><table class="tbl">
+      <thead><tr><th>Aircraft</th><th>Type</th><th>Media carried now</th><th>In service since</th></tr></thead>
+      <tbody>${missRows}</tbody>
+    </table></div>
+
+    <div class="sec">Load log — ${d.loads.length} aircraft</div>
+    <div class="tbl-card"><table class="tbl">
+      <thead><tr><th class="num">#</th><th>Aircraft</th><th>Type</th><th>Loaded</th><th class="num">Day</th><th>Media part number</th><th></th></tr></thead>
+      <tbody>${logRows || '<tr><td colspan="7">No loads recorded.</td></tr>'}</tbody>
+    </table></div>
+
+    <div class="sec">Method</div>
+    <div class="method">
+      <b>Source.</b> The dashboard's media load log — one record per load, time-stamped in UTC. An aircraft that loaded the same media twice counts once, at its first load.
+      <b>Fleet.</b> The wireless IFE programme fleet, less any aircraft that entered service after the cycle closed (they could not have taken it).
+      <b>Days.</b> Day 1 is the release date; the cycle closes on ${escAttr(d.end)}. A load after the close still counts towards the cycle and is marked Late.
+      <b>Target.</b> ${MLR_TARGET_PCT}% of the eligible fleet within the cycle window.
+      This report is generated automatically and reflects the data at the time it was opened.
+    </div>
+
+    <div class="rpt-footer">
+      <span>${escAttr(d.ref)} · Media Loading Report · ${escAttr(d.label)}</span>
+      <span>Generated ${escAttr(stamp)}</span>
+    </div>
+  </div>
+</body></html>`;
+        }
+
+        function printMediaReport(cycle) {
+            const doc = buildMediaReportDoc(cycle);
+            if (!doc) return;
+            const w = window.open('', '_blank');
+            if (!w) { setSyncStatus('🔴 Pop-up blocked — allow pop-ups to open the report', '#dc3545'); return; }
+            w.document.open();
+            w.document.write(doc);
+            w.document.close();
+            w.focus();
+        }
+
+        // #mlr=<cycle> deep link — renders that report into this tab, like #avr=<id>.
+        function openMlrFromHash() {
+            const m = (location.hash || '').match(/^#mlr=(\d{4})$/);
+            if (!m || !Object.keys(mediaLoadsLive || {}).length) return;
+            const doc = buildMediaReportDoc(m[1]);
+            if (!doc) return;
+            reportTookOver = true;
+            document.open();
+            document.write(doc);
+            document.close();
+        }
+        window.addEventListener('hashchange', openMlrFromHash);
 
         // Counts come from committed data, so these read the same as the global card:
         // a staged, unsaved flag colours its own row and moves nothing else until Save.
