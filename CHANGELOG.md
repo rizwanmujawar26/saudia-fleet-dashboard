@@ -13,6 +13,23 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.179.0 — AVR report: compact spec sheet + milestone strip (2026-09-24)
+User-requested redesign of the four boxed spec sections on the AVR PDF (`buildAvrReportDoc`),
+which spent ~50px per fact in 3/4-across label-over-value cells. They are now ONE section,
+**Aircraft & Configuration**:
+- a **milestone strip**: IFC system / fit pills + install site (red when abroad; never for a
+  linefit's factory) + last heartbeat / previous IFC as chips, over a dot-to-dot track
+  Mod start ━ *window* ━ Mod end ┄ *N days to service* ┄ ◉ Activated (date · site). Ongoing
+  retrofit draws an amber dashed "Xd so far" to an open node; retrofit ended but not active
+  draws a grey "Activation · Pending"; a lone milestone (linefit SBC config) is a chip, not a track.
+- a **2 × 2 grid of label ⟷ value cards**: Airframe · MODMAN & Commissioning · Software ·
+  Media & Connectivity. Serials/MSN in mono; IPHO becomes a green/red pill. Stacks to one
+  column under 600px.
+The section is ~25% shorter for AS61 and reads as a spec sheet. `rptPanel`/`dossierGrid` and the
+`.rpt-panel`/`.rpt-grid` CSS were removed (no other users). The whole report now prints with
+`print-color-adjust:exact`, so pills, header fills and the milestone dots survive in the PDF.
+`avrDossierRows()` is unchanged — the on-screen dossier is untouched.
+
 ### v2.178.0 — AVR report: Work Carried Out table carded too (2026-09-24)
 User-requested. The **Work Carried Out** table now gets the same `.tbl-card` shell as the
 equipment tables (rounded border, soft-fill header), so every block on the report reads as a

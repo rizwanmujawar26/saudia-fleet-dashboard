@@ -7661,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.178.0';
-        const APP_BUILD    = '2026.09.24.04';
+        const APP_VERSION  = '2.179.0';
+        const APP_BUILD    = '2026.09.24.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14269,39 +14269,22 @@
             const { aircraftRows, hardwareRows, softwareRows } = avrDossierRows(v.aircraft, v.lastHeartbeat);
             const { spec: dspec, equip, modman, a: acRec } = avrDossierData(v.aircraft);
             const acConfig = (acRec && acRec.config) || '';
-            // A dossier cell: small caps label above the value. The optional third tuple
-            // element is a render hint — 'alert'/'accent' colour the value, 'pill-red'/
-            // 'pill-green' render it as a status pill (used for a Hidden/Public SSID).
-            const dossierGrid = rows => rows.map(([k, val, hint]) => {
-                const text = escAttr(val) || '—';
-                const valHtml = (hint && hint.indexOf('pill-') === 0)
-                    ? (val ? `<span class="pill ${hint}">${text}</span>` : '<span class="dv">—</span>')
-                    : `<span class="dv${hint ? ' dv-' + hint : ''}">${text}</span>`;
-                return `<div class="di"><span class="k">${escAttr(k)}</span>${valHtml}</div>`;
-            }).join('');
-            // A bordered spec panel — the same enclosed shell as the identity band and the
-            // Engagement box, so every section reads as a designed card rather than a loose
-            // 3-column stack (user, 2026-09-24). White cells sit on a 1px hairline grid; the
-            // last row is padded with blank cells so the gridlines stay clean with no
-            // coloured gap. `tailCells` carries a pre-built spanning cell (the Aircraft seat
-            // LOPA) and `tailSpan` its column width, so the fill maths still lands.
-            const rptPanel = (rows, cols, tailCells = '', tailSpan = 0) => {
-                const used = rows.length + tailSpan;
-                const fill = (cols - (used % cols)) % cols;
-                const fillers = '<div class="di di-fill"></div>'.repeat(fill);
-                return `<div class="rpt-panel${cols === 4 ? ' cols-4' : ''}">${dossierGrid(rows)}${tailCells}${fillers}</div>`;
+            // COMPACT SPEC SHEET (v2.179, user 2026-09-24): the old 3/4-across boxed cell grids
+            // (label above value, one fact per ~50px box) are replaced by label ⟷ value rows
+            // in two-up cards — about 20px a fact instead of 50 — and the retrofit dates become
+            // a milestone strip. A row is a [label, value, hint] tuple from avrDossierRows();
+            // hint 'alert'/'accent' colours the value, 'pill-*' renders it as a status pill,
+            // 'mono' sets it in the serial face. An empty value reads as a muted dash.
+            const kvRow = ([k, val, hint]) => {
+                const text = escAttr(val);
+                const valHtml = !text ? '<span class="vv vv-nil">—</span>'
+                    : (hint && hint.indexOf('pill-') === 0) ? `<span class="vv"><span class="pill ${hint}">${text}</span></span>`
+                    : `<span class="vv${hint ? ' vv-' + hint : ''}">${text}</span>`;
+                return `<div class="kv"><span class="kk">${escAttr(k)}</span>${valHtml}</div>`;
             };
-
-            // Aircraft section: Type/MSN/Delivery on row 1; IFE system then the seat
-            // configuration (LOPA) on row 2, the seat cell given the width of the rest of
-            // the row (span 2) with a seat glyph so it reads on one line, never wrapped.
-            const acSeatIdx = aircraftRows.findIndex(r => r[0] === 'Seat configuration');
-            const acSeatVal = acSeatIdx >= 0 ? aircraftRows[acSeatIdx][1] : '';
-            const acHeadRows = aircraftRows.filter((r, i) => i !== acSeatIdx);
-            const acSeatCell = acSeatVal
-                ? `<div class="di di-span2"><span class="k">Seat configuration</span><span class="dv dv-seat"><span class="seat-ico">\u{1F4BA}</span>${escAttr(acSeatVal)}</span></div>`
-                : '';
-            const aircraftSection = `<div class="sec">Aircraft</div>${rptPanel(acHeadRows, 3, acSeatCell, acSeatCell ? 2 : 0)}`;
+            const specCard = (title, rows) => rows.length
+                ? `<div class="spec-card"><div class="spec-head">${title}</div>${rows.map(kvRow).join('')}</div>` : '';
+            const rowOf = (rows, label) => rows.find(r => r[0] === label);
 
             // Equipment, split into two concise tables — what is fitted now, and what has
             // been removed — each with dates and a day count. (user, 2026-09-14; moved to
@@ -14367,14 +14350,95 @@
                 // Taurus MG/TID · Hughes Chassis.
                 const taurusMg = modman.taurusNewMgId || modman.taurusOldMgId || '';
                 const taurusTid = modman.taurusNewTid || modman.taurusOldTid || '';
+                const ipho = modman.ipho !== 'na' ? (modman.ipho || '') : '';
                 const mrows = [
-                    ['Kontron S/N', modman.kontronSn], [snLabel, snVal], ['ESN', modman.hnsEsn],
-                    ['IPHO', modman.ipho !== 'na' ? modman.ipho : ''],
-                    ['Taurus MG / TID', [taurusMg, taurusTid].filter(Boolean).join(' / ')],
-                    ['Hughes Chassis ID', modman.hnsChassisId],
+                    ['Kontron S/N', modman.kontronSn, 'mono'], [snLabel, snVal, 'mono'], ['ESN', modman.hnsEsn, 'mono'],
+                    ['Hughes chassis ID', modman.hnsChassisId, 'mono'],
+                    ['Taurus MG / TID', [taurusMg, taurusTid].filter(Boolean).join(' / '), 'mono'],
+                    ['IPHO', ipho ? ipho.charAt(0).toUpperCase() + ipho.slice(1) : '',
+                        ipho === 'enabled' ? 'pill-green' : (ipho === 'disabled' ? 'pill-red' : 'pill-grey')],
                 ].filter(r => r[1]);
-                modmanPrint = mrows.length ? `<div class="sec">MODMAN &amp; Commissioning</div>${rptPanel(mrows, 3)}` : '';
+                modmanPrint = specCard('MODMAN &amp; Commissioning', mrows);
             }
+
+            // Airframe card — the identity band already carries type + cabin config, so this
+            // is the reference detail. Seat LOPA reads "Business 20 · Economy 145 · Total 165".
+            const airframeCard = specCard('Airframe', aircraftRows
+                .filter(r => r[1])
+                .map(r => r[0] === 'MSN' ? [r[0], r[1], 'mono'] : (r[0] === 'Seat configuration' ? ['Seats', r[1]] : r)));
+            // Software & Media split into two short cards so the four spec cards pair up
+            // 2 × 2: what is LOADED (middleware + OTA patches) and what the passenger SEES.
+            const swLabels = ['Middleware', 'Middleware loaded', 'OTA Patch #2', 'OTA Patch #3'];
+            const softwareCard = specCard('Software', softwareRows.filter(r => swLabels.includes(r[0])));
+            const mediaCard = specCard('Media &amp; Connectivity', softwareRows.filter(r => !swLabels.includes(r[0])));
+
+            // Connectivity milestone strip — the retrofit window and entry into service drawn
+            // as a track (start ●━━ window ━━● end ┄┄ gap ┄┄◉ activated) instead of five boxed
+            // cells, with the system / fit / install site as chips on the line above. Every
+            // node and chip is dropped when its data is blank, so a linefit or an in-retrofit
+            // tail draws only what it has.
+            // A linefit's install site is the factory (Toulouse/Hamburg) by definition, so it
+            // is not flagged red the way an out-of-base retrofit is.
+            const cfgChip = (label, row) => row && row[1]
+                ? `<span class="cfg-kv">${label} <b class="${row[2] === 'alert' && !rowOf(hardwareRows, 'SBC config') ? 'is-alert' : ''}">${escAttr(row[1])}</b></span>` : '';
+            const sysRow = rowOf(hardwareRows, 'IFC system'), fitRow = rowOf(hardwareRows, 'Fit');
+            const chipsLeft = [
+                sysRow ? `<span class="pill pill-navy">${escAttr(sysRow[1])}</span>` : '',
+                fitRow ? `<span class="pill pill-grey">${escAttr(fitRow[1])}</span>` : '',
+                cfgChip('Install site', rowOf(hardwareRows, 'Install site')),
+            ].filter(Boolean).join('');
+            const chipsRight = [
+                cfgChip('Last heartbeat', rowOf(hardwareRows, 'Last heartbeat')),
+                cfgChip('Previous IFC', rowOf(hardwareRows, 'Previous IFC')),
+            ].filter(Boolean).join('');
+            const msNodes = [], msLinks = [];
+            const ar = acRec || {};
+            const isLinefitAc = !!rowOf(hardwareRows, 'SBC config');
+            if (ar.retrofitStart) msNodes.push({ k: 'Mod start', v: ar.retrofitStart, cls: 'done' });
+            if (ar.retrofitStart) {
+                msNodes.push(ar.retrofitEnd
+                    ? { k: 'Mod end', v: ar.retrofitEnd, cls: 'done' }
+                    : { k: 'Mod end', v: 'Ongoing', cls: 'open' });
+                const win = (rowOf(hardwareRows, 'Mod window') || [])[1] || '';
+                // An open window counts to today, so say so ("23d so far").
+                msLinks.push({ label: win && !ar.retrofitEnd ? `${win} so far` : win, cls: ar.retrofitEnd ? 'solid' : 'dash open' });
+            }
+            if (isLinefitAc) {
+                const sbc = rowOf(hardwareRows, 'SBC config')[1];
+                msNodes.push({ k: 'SBC config', v: sbc, cls: sbc === 'Done' ? 'live' : 'pending' });
+            } else if (ar.activatedDate) {
+                if (msNodes.length) {
+                    const gap = daysBetween(ar.retrofitEnd, ar.activatedDate);
+                    msLinks.push({ label: gap != null ? `${gap} ${gap === 1 ? 'day' : 'days'} to service` : '', cls: 'dash' });
+                }
+                msNodes.push({ k: 'Activated', v: ar.activatedDate, sub: activationLocationOf(ar), cls: 'live' });
+            } else if (ar.retrofitEnd) {
+                msLinks.push({ label: '', cls: 'dash' });
+                msNodes.push({ k: 'Activation', v: 'Pending', cls: 'pending' });
+            }
+            // Grid: dot · line · dot · line · dot — each node's caption hangs beneath its dot
+            // (first left-aligned, last right-aligned, middle centred) so the lines run
+            // dot-to-dot, and each line's duration label sits above its midpoint.
+            // A lone milestone (a linefit's SBC config) is no track — it rides as a chip.
+            const loneMs = msNodes.length === 1
+                ? `<span class="cfg-kv">${escAttr(msNodes[0].k)} <b class="${msNodes[0].cls === 'live' ? 'is-ok' : ''}">${escAttr([msNodes[0].v, msNodes[0].sub].filter(Boolean).join(' · '))}</b></span>` : '';
+            const msTrack = msNodes.length > 1 ? `<div class="ms-track" style="grid-template-columns:${msNodes.map(() => '13px').join(' 1fr ')};">${
+                msNodes.map((n, i) => {
+                    const pos = msNodes.length === 1 || i === 0 ? 'first' : (i === msNodes.length - 1 ? 'last' : 'mid');
+                    const node = `<div class="ms-node ${n.cls}"><span class="ms-dot"></span><span class="ms-cap ms-${pos}"><span class="ms-k">${escAttr(n.k)}</span><span class="ms-v">${escAttr(n.v)}</span>${n.sub ? `<span class="ms-sub">${escAttr(n.sub)}</span>` : ''}</span></div>`;
+                    const link = i < msNodes.length - 1 ? `<div class="ms-line ${(msLinks[i] || {}).cls || 'dash'}">${(msLinks[i] || {}).label ? `<span>${escAttr(msLinks[i].label)}</span>` : ''}</div>` : '';
+                    return node + link;
+                }).join('')}</div>` : '';
+            const chipsEnd = loneMs + chipsRight;
+            const cfgStrip = (chipsLeft || chipsEnd || msTrack) ? `<div class="cfg-strip">
+                ${chipsLeft || chipsEnd ? `<div class="cfg-top">${chipsLeft}<span class="sp"></span>${chipsEnd}</div>` : ''}
+                ${msTrack}
+            </div>` : '';
+            const specCards = [airframeCard, modmanPrint, softwareCard, mediaCard].filter(Boolean);
+            const configSection = `<div class="sec">Aircraft &amp; Configuration</div>
+                ${cfgStrip}
+                ${ifcNotePrint}
+                ${specCards.length ? `<div class="spec-grid">${specCards.join('')}</div>` : ''}`;
 
             // Download stamp — day-first date + time, captured the moment the report opens
             // (re-open to refresh). Never US month-first.
@@ -14426,6 +14490,8 @@
   :root { --green:#006936; --navy:#0b1f3a; --ink:#1f2a33; --muted:#7c8894; --line:#e3e8ee; --soft:#f6f8fa; }
   * { box-sizing: border-box; }
   html, body { margin:0; padding:0; }
+  /* Print the pills, fills and milestone dots as designed, not stripped to white. */
+  html { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   body { background:#eef1f4; color:var(--ink); font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
   a { color: var(--green); }
   .toolbar { position: sticky; top:0; z-index:5; display:flex; align-items:center; gap:14px;
@@ -14452,31 +14518,55 @@
   .rpt-ref { font-size:14px; font-weight:800; color:var(--green); letter-spacing:.5px; white-space:nowrap; }
   .draft-flag { display:inline-block; margin-left:8px; background:#fff3cd; color:#8a6d00;
     font-size:10px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; padding:2px 7px; border-radius:5px; vertical-align:2px; }
-  .rpt-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px 22px; margin:10px 0 4px; font-size:12.5px; }
-  .rpt-grid-4 { grid-template-columns:repeat(4,1fr); }
-  .rpt-grid .k, .k { display:block; font-size:9.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); margin-bottom:1px; }
-  .rpt-grid .di { line-height:1.35; }
-  .rpt-grid .di.di-span2 { grid-column:span 2; }
-  .rpt-grid .dv { color:var(--ink); font-weight:600; }
-  .rpt-grid .dv-alert { color:#a52834; font-weight:800; }
-  .rpt-grid .dv-accent { color:var(--green); font-weight:800; }
-  .rpt-grid .dv-seat { white-space:nowrap; }
-  .rpt-grid .dv-seat .seat-ico { margin-right:6px; }
-  /* Bordered spec panel (v2.177) — the enclosed shell the identity band and Engagement box
-     use, applied to Aircraft / Specifications / MODMAN / Software so each section reads as a
-     card. White cells on a 1px hairline grid: gap:1px reveals the line-coloured container,
-     and the last row is padded with .di-fill blanks so no coloured gap shows. */
-  .rpt-panel { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line);
-    border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:8px 0 10px; }
-  .rpt-panel.cols-4 { grid-template-columns:repeat(4,1fr); }
-  .rpt-panel .di { background:#fff; padding:9px 14px 10px; line-height:1.35; min-width:0; }
-  .rpt-panel .di.di-span2 { grid-column:span 2; }
-  .rpt-panel .di.di-fill { background:#fff; }
-  .rpt-panel .dv { color:var(--ink); font-weight:600; font-size:12.5px; overflow-wrap:anywhere; }
-  .rpt-panel .dv-alert { color:#a52834; font-weight:800; }
-  .rpt-panel .dv-accent { color:var(--green); font-weight:800; }
-  .rpt-panel .dv-seat { white-space:nowrap; }
-  .rpt-panel .dv-seat .seat-ico { margin-right:6px; }
+  /* COMPACT SPEC SHEET (v2.179) — label ⟷ value rows in two-up cards replace the old boxed
+     3/4-across cell grids: a fact costs one ~20px row, not a ~50px box. */
+  .spec-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:8px 0 10px; }
+  .spec-card { border:1px solid var(--line); border-radius:8px; overflow:hidden; min-width:0; }
+  .spec-head { background:var(--soft); border-bottom:1px solid var(--line); padding:5px 12px;
+    font-size:9.5px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--navy); }
+  .kv { display:flex; align-items:baseline; justify-content:space-between; gap:14px; padding:4px 12px;
+    font-size:12px; line-height:1.4; }
+  .kv + .kv { border-top:1px solid #eef2f6; }
+  .kv .kk { color:var(--muted); white-space:nowrap; flex:0 0 auto; }
+  .kv .vv { color:var(--ink); font-weight:700; text-align:right; min-width:0; overflow-wrap:anywhere; }
+  .kv .vv-nil { color:#c3cad1; font-weight:600; }
+  .kv .vv-mono { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; font-weight:600; letter-spacing:.2px; }
+  .kv .vv-alert { color:#a52834; }
+  .kv .vv-accent { color:var(--green); }
+  /* Connectivity milestone strip: chips on top, then a dot-to-dot track of the retrofit
+     window and entry into service. Lines and dots are drawn with borders so they print. */
+  .cfg-strip { border:1px solid var(--line); border-radius:8px; background:var(--soft); padding:10px 16px 12px; margin:8px 0 10px; }
+  .cfg-top { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; }
+  .cfg-top .sp { flex:1 1 auto; }
+  .cfg-kv { font-size:11.5px; color:var(--muted); white-space:nowrap; }
+  .cfg-kv b { color:var(--ink); font-weight:700; margin-left:2px; }
+  .cfg-kv b.is-alert { color:#a52834; font-weight:800; }
+  .cfg-kv b.is-ok { color:var(--green); font-weight:800; }
+  .ms-track { display:grid; align-items:center; margin:24px 4px 38px; }
+  .ms-node { position:relative; height:13px; }
+  .ms-dot { display:block; width:13px; height:13px; border-radius:50%; background:#fff; border:3px solid var(--navy); }
+  .ms-node.done .ms-dot { border-width:6.5px; }
+  .ms-node.live .ms-dot { border:6.5px solid var(--green); box-shadow:0 0 0 3px #d4ecdd; }
+  .ms-node.open .ms-dot { border-color:#c47f1c; }
+  .ms-node.pending .ms-dot { border-color:#b8c1ca; }
+  .ms-cap { position:absolute; top:19px; white-space:nowrap; line-height:1.25; }
+  .ms-cap.ms-first { left:0; text-align:left; }
+  .ms-cap.ms-mid { left:50%; transform:translateX(-50%); text-align:center; }
+  .ms-cap.ms-last { right:0; text-align:right; }
+  .ms-k { display:block; font-size:9.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); }
+  .ms-v { font-size:12.5px; font-weight:800; color:var(--navy); }
+  .ms-node.live .ms-v { color:var(--green); }
+  .ms-node.open .ms-v { color:#8a5312; }
+  .ms-node.pending .ms-v { color:var(--muted); }
+  .ms-sub { font-size:11.5px; font-weight:600; color:var(--muted); margin-left:5px; }
+  .ms-line { position:relative; height:0; border-top:2.5px solid var(--navy); margin:0 3px; }
+  .ms-line.dash { border-top:2px dashed #aab4be; }
+  .ms-line.open { border-top-color:#c47f1c; }
+  .ms-line span { position:absolute; bottom:6px; left:50%; transform:translateX(-50%); white-space:nowrap;
+    font-size:10.5px; font-weight:800; color:var(--navy); }
+  .ms-line.dash span { color:var(--muted); font-weight:700; }
+  .pill-navy { background:var(--navy); color:#fff; border:1px solid var(--navy); }
+  @media screen and (max-width:600px) { .spec-grid { grid-template-columns:1fr; } }
   /* Equipment tables enclosed in the same card shell, header on a soft fill. */
   .tbl-card { border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:8px 0 10px; }
   .tbl-card table.tbl { font-size:12px; }
@@ -14564,7 +14654,7 @@
        split across pages, so a big Report fills page 1 and continues on page 2 instead of
        being pushed wholesale to the next page and leaving a gap. A section title stays with
        the block that follows it. */
-    .rpt-header, .rpt-meta, .rpt-grid, .rpt-panel, .ep-box { break-inside: avoid; }
+    .rpt-header, .rpt-meta, .cfg-strip, .spec-card, .ep-box { break-inside: avoid; }
     .sec { break-after: avoid; }
     /* A carded table (equipment, Work Carried Out) must FLOW across pages — overflow:hidden,
        used for rounded corners on screen, would otherwise suppress fragmentation and clip
@@ -14597,12 +14687,7 @@
     ${v.detailedReport ? `<div class="sec">Report</div><div class="note">${escAttr(v.detailedReport)}</div>` : ''}
     ${v.followUp ? `<div class="sec">Follow Up</div><div class="note">${escAttr(v.followUp)}</div>` : ''}
     ${engagementPeople}
-    ${aircraftSection}
-    <div class="sec">Specifications</div>
-    ${rptPanel(hardwareRows, 3)}
-    ${ifcNotePrint}
-    ${modmanPrint}
-    ${softwareRows.length ? `<div class="sec">Software &amp; Media</div>${rptPanel(softwareRows, 4)}` : ''}
+    ${configSection}
     ${equipPrint}
     <div class="sec">Work Carried Out — ${members.length} ${members.length === 1 ? 'entry' : 'entries'}</div>
     <div class="tbl-card"><table class="tbl">
