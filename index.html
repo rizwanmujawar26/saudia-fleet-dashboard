@@ -7661,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.181.0';
-        const APP_BUILD    = '2026.09.24.07';
+        const APP_VERSION  = '2.181.1';
+        const APP_BUILD    = '2026.09.24.08';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14479,7 +14479,7 @@
                     <div class="ms-bar-live" style="left:calc((100% - 13px) * ${f.toFixed(4)} + 6.5px);"></div>
                     <div class="ms-node done ms-at" style="left:0;"><span class="ms-dot"></span><span class="ms-cap ms-first">${cap('Mod start', ar.retrofitStart)}</span></div>
                     <div class="ms-node live ms-at" style="left:calc((100% - 13px) * ${f.toFixed(4)});"><span class="ms-dot"></span><span class="ms-cap ms-up ${align}">${cap('Activated' + note, ar.activatedDate, activationLocationOf(ar))}</span></div>
-                    <div class="ms-node ${open ? 'open' : 'done'} ms-at" style="left:calc(100% - 13px);"><span class="ms-dot"></span><span class="ms-cap ms-last">${cap(open ? 'Mod end' : 'Mod end · back in service', open ? 'Ongoing' : ar.retrofitEnd)}</span></div>
+                    <div class="ms-node ${open ? 'open' : 'done'} ms-at" style="left:calc(100% - 13px);"><span class="ms-dot"></span><span class="ms-cap ms-last">${cap('Mod end', open ? 'Ongoing' : ar.retrofitEnd)}</span></div>
                     ${win ? `<span class="ms-win">${escAttr(open ? win + ' so far' : win)} mod window</span>` : ''}
                 </div>`;
             }

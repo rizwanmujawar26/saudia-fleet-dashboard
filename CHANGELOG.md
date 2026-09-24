@@ -13,6 +13,10 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.181.1 — AVR report: plain "Mod end" caption (2026-09-24)
+User-requested: the in-window track's end caption is just **Mod end** (the "· back in service"
+helper text removed) — Mod start / Mod end are label + date only, in every AVR.
+
 ### v2.181.0 — AVR report: activation pinned inside the mod window (2026-09-24)
 User-reported: the official **Mod end is the return to commercial service**, so most aircraft
 (20 of the fleet today — AQA, AQB, AQJ, AS55…) are **activated a few days BEFORE mod end**. The
