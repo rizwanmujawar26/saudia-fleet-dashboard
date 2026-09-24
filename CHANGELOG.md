@@ -13,6 +13,13 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.184.0 — AVR report: one-line Engagement & People bar (2026-09-24)
+User-requested: the Engagement & People box (mode strip + group header + two-line person cards,
+~130px) is now a single ~40px bar (`.ep-bar`): the engagement mode as a coloured pill (On-site
+green, Remote blue, OTA navy, Monitoring amber), then each group as a small-caps caption
+("ON AIRCRAFT · 2", "REMOTE · 1") followed by one-line chips "**Name** Company · Role"; the two
+groups split by a hairline. Wraps only for long attendee lists. Old `.ep-box` CSS removed.
+
 ### v2.183.0 — AVR report: three leading facts under the masthead (2026-09-24)
 User rejected v2.182's five equal columns: **Registration, Visit Date and Location** are the
 three leading facts; Type and Config are supporting detail of the registration, not peers. The

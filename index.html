@@ -7661,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.183.0';
-        const APP_BUILD    = '2026.09.24.11';
+        const APP_VERSION  = '2.184.0';
+        const APP_BUILD    = '2026.09.24.12';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14563,22 +14563,27 @@
             // loose stack of labels. Engagement mode is the header strip; the attendees sit
             // below as person cards, grouped On aircraft / Remote. Only non-empty groups
             // render, and a lone group spans the full width (no half-empty column).
+            // ENGAGEMENT BAR (v2.184, user 2026-09-24) — was a three-tier box (mode strip, group
+            // header, two-line person cards, ~130px). Now ONE line: the engagement mode as a
+            // coloured pill, then each attendee group as a small-caps caption followed by
+            // single-line person chips "Name · Company · Role". Wraps only when the list is
+            // long. On aircraft and Remote groups sit side by side, split by a hairline.
+            const EP_MODE_PILL = { on_site: 'pill-green', remote: 'pill-blue', ota: 'pill-navy', monitoring: 'pill-amber' };
+            const epMode = avrMode(v.mode);
             const epGroup = (label, mode) => {
                 const list = people.filter(p => attMode(p.mode).value === mode);
                 if (!list.length) return '';
                 const chips = list.map(p => {
                     const meta = [p.company, p.role].filter(Boolean).map(escAttr).join(' · ');
-                    return `<div class="ep-chip"><span class="ep-name">${escAttr(p.name || '—')}</span>${meta ? `<span class="ep-meta">${meta}</span>` : ''}</div>`;
+                    return `<span class="ep-chip"><b>${escAttr(p.name || '—')}</b>${meta ? `<span>${meta}</span>` : ''}</span>`;
                 }).join('');
-                return `<div class="ep-group"><div class="ep-group-head">${escAttr(label)} · ${list.length}</div><div class="ep-chips">${chips}</div></div>`;
+                return `<div class="ep-grp"><span class="ep-gk">${escAttr(label)} · ${list.length}</span>${chips}</div>`;
             };
             const epGroups = [epGroup('On aircraft', 'present'), epGroup('Remote', 'remote')].filter(Boolean);
             const engagementPeople = `<div class="sec">Engagement &amp; People</div>
-                <div class="ep-box">
-                    <div class="ep-mode"><span class="ep-mode-label">Engagement mode</span><span class="ep-mode-val">${escAttr(avrMode(v.mode).label)}</span></div>
-                    ${epGroups.length
-                        ? `<div class="ep-people ep-cols-${epGroups.length}">${epGroups.join('')}</div>`
-                        : '<div class="ep-empty">No attendees recorded.</div>'}
+                <div class="ep-bar">
+                    <span class="pill ${EP_MODE_PILL[epMode.value] || 'pill-grey'} ep-mode-pill">${escAttr(epMode.label)}</span>
+                    ${epGroups.length ? epGroups.join('') : '<span class="ep-empty">No attendees recorded.</span>'}
                 </div>`;
 
             const doc = `<!doctype html><html lang="en"><head><meta charset="utf-8">
@@ -14745,22 +14750,18 @@
   table.tbl td .d-title { font-weight:400; }
   table.tbl td .d-sub { display:block; margin-top:2px; color:#6b7883; }
   table.tbl tbody tr:nth-child(even) td { background:#fafbfc; }
-  /* Engagement & People — an enclosed panel (matches the identity band's shell). */
-  .ep-box { background:var(--soft); border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:12px 0 4px; }
-  .ep-mode { display:flex; align-items:baseline; gap:10px; padding:9px 16px; background:#fff; border-bottom:1px solid var(--line); }
-  .ep-mode-label { font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); }
-  .ep-mode-val { font-size:14px; font-weight:800; color:var(--navy); }
-  .ep-people { display:grid; gap:0; }
-  .ep-cols-1 { grid-template-columns:1fr; }
-  .ep-cols-2 { grid-template-columns:1fr 1fr; }
-  .ep-group { padding:11px 16px; border-left:1px solid var(--line); min-width:0; }
-  .ep-group:first-child { border-left:none; }
-  .ep-group-head { font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
-  .ep-chips { display:flex; flex-wrap:wrap; gap:6px; }
-  .ep-chip { background:#fff; border:1px solid var(--line); border-radius:6px; padding:5px 10px; min-width:0; }
-  .ep-name { display:block; font-weight:800; color:var(--ink); font-size:12.5px; }
-  .ep-meta { display:block; font-size:10.5px; color:var(--muted); margin-top:1px; }
-  .ep-empty { padding:11px 16px; color:var(--muted); font-size:12.5px; }
+  /* Engagement bar (v2.184) — mode pill + attendee groups of one-line chips, in one row. */
+  .ep-bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; border:1px solid var(--line);
+    border-radius:8px; padding:8px 12px; margin:8px 0 4px; }
+  .ep-mode-pill { font-size:11px; padding:2px 11px; }
+  .ep-grp { display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; }
+  .ep-grp + .ep-grp { border-left:1px solid var(--line); padding-left:14px; }
+  .ep-gk { font-size:9px; font-weight:800; letter-spacing:.7px; text-transform:uppercase; color:var(--muted); white-space:nowrap; margin-right:2px; }
+  .ep-chip { display:inline-flex; align-items:baseline; gap:6px; background:var(--soft); border:1px solid var(--line);
+    border-radius:99px; padding:2px 10px; font-size:12px; line-height:1.4; white-space:nowrap; }
+  .ep-chip b { font-weight:800; color:var(--ink); }
+  .ep-chip span { font-size:11px; color:var(--muted); }
+  .ep-empty { color:var(--muted); font-size:12px; }
   .rpt-footer { display:flex; justify-content:space-between; gap:12px; color:var(--muted); font-size:10.5px;
     border-top:1px solid var(--line); margin-top:22px; padding-top:10px; }
   @media print {
@@ -14782,7 +14783,7 @@
        split across pages, so a big Report fills page 1 and continues on page 2 instead of
        being pushed wholesale to the next page and leaving a gap. A section title stays with
        the block that follows it. */
-    .rpt-header, .mast, .cfg-strip, .spec-card, .ep-box { break-inside: avoid; }
+    .rpt-header, .mast, .cfg-strip, .spec-card, .ep-bar { break-inside: avoid; }
     .sec { break-after: avoid; }
     /* A carded table (equipment, Work Carried Out) must FLOW across pages — overflow:hidden,
        used for rounded corners on screen, would otherwise suppress fragmentation and clip
