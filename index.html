@@ -4547,17 +4547,9 @@
         .avr-rtype-other  { background: #eef1f4; color: #566573; border-color: #dbe2e8; }
         .avr-rtype-media  { background: #e6f5ee; color: #0a5c34; border-color: #c4e7d4; }
 
-        /* Media Loading Report card (v2.188.0) — derived, one per closed media cycle */
-        .mlr-rating { font-size: 10.5px; font-weight: 800; padding: 2px 9px; border-radius: 99px; border: 1px solid transparent; white-space: nowrap; }
-        .mlr-rating-green { background: #e9f5ee; color: #0b7a3b; border-color: #bfe3cd; }
-        .mlr-rating-blue  { background: #eaf2fb; color: #2f5f8a; border-color: #c4dcf2; }
-        .mlr-rating-amber { background: #fdf1e3; color: #8a5312; border-color: #f1d9b6; }
-        .mlr-rating-red   { background: #fdecee; color: #a52834; border-color: #f3c2c8; }
-        .mlr-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 4px 0 12px; }
-        .mlr-kpi { border: 1px solid #e3e8ee; border-radius: 8px; padding: 8px 12px; background: #f8fafb; min-width: 0; }
-        .mlr-kpi-k { font-size: 9.5px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: #7c8894; }
-        .mlr-kpi-v { font-size: 19px; font-weight: 800; color: #0b1f3a; line-height: 1.25; }
-        .mlr-kpi-s { font-size: 11px; font-weight: 600; color: #7c8894; }
+        /* Media Loading Report card (v2.188.0) — the top fragment's styles are MLR_CSS,
+           injected at start-up and shared with the printed report. */
+        .mc-hint { font-size: 11px; color: #8a96a1; margin-top: 3px; }
         .mlr-chart { border: 1px solid #e3e8ee; border-radius: 8px; padding: 10px 8px 4px; margin-bottom: 10px; }
         .mlr-narr p { margin: 0 0 7px; font-size: 13px; line-height: 1.5; color: #2c3a45; }
         .mlr-narr p b { color: #0a5c34; }
@@ -6327,6 +6319,26 @@
         </div>
     </div>
 
+    <!-- Media Cycle form (v2.189.0): create next month's cycle or edit any cycle's dates.
+         Body built by openMediaCycleEditor(). No backdrop close, like the other modals. -->
+    <div id="mcOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1001; align-items:center; justify-content:center;">
+        <div class="ac-edit-panel">
+            <div class="ac-edit-head">
+                <div>
+                    <h3 style="margin:0; color:#0a5c34; font-size:17px;" id="mcEditTitle">Media Cycle</h3>
+                    <p id="mcEditSub" class="ac-edit-sub"></p>
+                </div>
+                <button class="ac-edit-x" title="Close" aria-label="Close" onclick="closeMediaCycleEditor()">✕</button>
+            </div>
+            <div id="mcEditBody" class="ac-edit-body"></div>
+            <div id="mcEditError" class="ac-edit-error" style="display:none;"></div>
+            <div class="ac-edit-foot">
+                <button class="ac-edit-btn-secondary" onclick="closeMediaCycleEditor()">Cancel</button>
+                <button id="mcEditSave" class="ac-edit-btn-primary" onclick="saveMediaCycle()">Save cycle</button>
+            </div>
+        </div>
+    </div>
+
     <div id="addActOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
         <div class="act-modal">
             <h3 style="color:#0a5c34; margin-bottom:6px;" id="addActHeading">Add New Activity</h3>
@@ -7583,6 +7595,7 @@
         // Polled rather than streamed: a browser allows about six connections per
         // origin and the page already holds three streams. See the connection budget.
         let mediaLoadsLive = {};
+        let mediaCyclesLive = {};   // /mediaCycles — the monthly cycles (v2.189.0), polled
         // /fleetSpecs/{tail} — airframe reference data (delivery date, engine, seating,
         // MSN…). Low-traffic; polled with the other reference nodes, not streamed. Read
         // by the Fleet page's Aircraft Age column and its age sort.
@@ -7713,8 +7726,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.188.0';
-        const APP_BUILD    = '2026.09.25.02';
+        const APP_VERSION  = '2.189.0';
+        const APP_BUILD    = '2026.09.25.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -7949,9 +7962,9 @@
             // to LOW_TRAFFIC_POLL_MS late, and since the Media widgets are built from
             // it, every monthly card was missing for the first 25 seconds of each page
             // load — the strip looked broken.
-            Promise.all(['hardware', 'units', 'activities', 'issues', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr', 'configs', 'assets'].map(n =>
+            Promise.all(['hardware', 'units', 'activities', 'issues', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr', 'configs', 'assets', 'mediaCycles'].map(n =>
                 fetch(`${FIREBASE_DB_URL}/${n}.json`).then(r => r.json()).catch(() => null)
-            )).then(([hw, un, ac, is, ml, mm, fs, av, cf, as]) => {
+            )).then(([hw, un, ac, is, ml, mm, fs, av, cf, as, mc]) => {
                 hardwareLive   = hw || {};
                 unitsLive      = un || {};
                 activitiesLive = ac || {};
@@ -7962,6 +7975,8 @@
                 avrLive        = av || {};
                 configsLive    = cf || {};
                 assetsLive     = as || {};
+                mediaCyclesLive = mc || {};
+                rebuildMediaCycles();      // the Media widgets and reports read MEDIA_CYCLES
                 markDataSync();
                 rebuildAircraftData();     // current media is derived from the log
                 renderHardwarePage();      // fitment is derived from units
@@ -8017,8 +8032,10 @@
                 avr:        d => { avrLive = d || {}; },
                 configs:    d => { configsLive = d || {}; },
                 assets:     d => { assetsLive = d || {}; },
+                mediaCycles: d => { mediaCyclesLive = d || {}; rebuildMediaCycles(); cyclesMoved = true; },
             };
             let changed = false;
+            let cyclesMoved = false;
 
             for (const [node, assign] of Object.entries(nodes)) {
                 try {
@@ -8040,6 +8057,7 @@
                 if (!satcomEditMode) renderSatcomPage();  // MODMAN register reads /modmans
                 if (!fleetEditMode) populateFleetTable();  // Aircraft Age reads /fleetSpecs
                 updateMetrics();          // the Timeline reads activities
+                if (cyclesMoved && !mediaEditMode) populateMediaTable();  // widgets read /mediaCycles
             }
         }
 
@@ -8057,6 +8075,7 @@
                 avr:        JSON.stringify(Object.keys(avrLive).length ? avrLive : null),
                 configs:    JSON.stringify(Object.keys(configsLive).length ? configsLive : null),
                 assets:     JSON.stringify(Object.keys(assetsLive).length ? assetsLive : null),
+                mediaCycles: JSON.stringify(Object.keys(mediaCyclesLive).length ? mediaCyclesLive : null),
             };
             setInterval(pollLowTrafficNodes, LOW_TRAFFIC_POLL_MS);
         }
@@ -12235,13 +12254,27 @@
         // editor UI that would own it. A cycle listed here also gets a widget before any
         // aircraft carries it, which is how next month's load shows at 0/40 while it is
         // being deployed.
-        const MEDIA_CYCLES = {
+        //
+        // ⚠️ v2.189.0: the cycles now LIVE in /mediaCycles/{MMYY}, created and edited from
+        // the Media Cycle form (Activity › ＋ Add › Media Cycle, or ✏️ Edit cycle on a
+        // Media Loading Report). MEDIA_CYCLES is rebuilt in place from that node by
+        // rebuildMediaCycles(), so every reader keeps reading one object. The seed below
+        // is only the fallback while the node is unreachable; a cycle present in the node
+        // replaces its seed entry whole (so clearing a date in the form really clears it).
+        const MEDIA_CYCLES_SEED = {
             '0826': { size: '791 GB', start: '26-Jul-2026', end: '20-Aug-2026' },
             '0926': { size: '884 GB', start: '25-Aug-2026', end: '19-Sep-2026' },
-            // October: declared with its size (799.7 GB) ahead of release, so its widget
-            // shows greyed out (upcoming) until the first aircraft takes it. No start yet.
-            '1026': { size: '800 GB' },
+            '1026': { size: '799.7 GB' },
         };
+        const MEDIA_CYCLES = {};
+        function rebuildMediaCycles() {
+            Object.keys(MEDIA_CYCLES).forEach(k => { delete MEDIA_CYCLES[k]; });
+            Object.assign(MEDIA_CYCLES, JSON.parse(JSON.stringify(MEDIA_CYCLES_SEED)));
+            Object.entries(mediaCyclesLive || {}).forEach(([k, v]) => {
+                if (/^(0[1-9]|1[0-2])\d{2}$/.test(k) && v && typeof v === 'object') MEDIA_CYCLES[k] = { ...v };
+            });
+        }
+        rebuildMediaCycles();
 
         // The oldest monthly widget the strip shows. Cycles before it (July 2026 and
         // earlier) keep their loads, counts and rows but are dropped from the widget
@@ -12249,8 +12282,13 @@
         // months, and are not governed by this.
         const MEDIA_WIDGET_MIN_CYCLE = '0826';
 
+        // The size for the widget pill — ROUNDED (user, 2026-09-25: 799.7 GB shows as
+        // 800 GB). The report prints the exact figure from MEDIA_CYCLES[c].size.
         function mediaCycleSize(cycle) {
-            return (MEDIA_CYCLES[cycle] || {}).size || '';
+            const raw = (MEDIA_CYCLES[cycle] || {}).size || '';
+            const m = raw.match(/^([\d.]+)\s*(GB|TB)$/i);
+            if (!m || m[2].toUpperCase() !== 'GB') return raw;
+            return `${Math.round(parseFloat(m[1]))} GB`;
         }
 
         // The window a cycle owns: its own release date, to the day before the next
@@ -12970,7 +13008,7 @@
             if (tv) {
                 tv.classList.toggle('active', avrView === 'visits');
                 const n = avrEntries().filter(v => canEdit() || v.status === 'published').length
-                    + (typeof mediaClosedCycles === 'function' ? mediaClosedCycles().length : 0);
+                    + (typeof mediaReportCycles === 'function' ? mediaReportCycles().length : 0);
                 tv.innerHTML = `📋 Reports${n ? ` <span class="avr-vt-badge">${n}</span>` : ''}`;
             }
             if (ti) {
@@ -14945,34 +14983,59 @@
             return true;
         }
 
-        // ===== Media Loading Report (MLR) — one per CLOSED media cycle (v2.188.0) =====
-        // An executive read-out of how a monthly media roll-out went: how many aircraft
-        // took it, how fast it started, when it crossed 50% / 90%, how long the tail was,
-        // and how it compared with the cycle before. DERIVED, never stored — like the
-        // Timeline's cycle-closed row, it is rebuilt from /mediaLoads + MEDIA_CYCLES every
-        // time it is opened, so a corrected load date corrects the report. A cycle gets a
-        // report the moment it has an end date (an explicit `end`, or the next cycle's
-        // start). The written summary is composed from the figures by rule — no AI service
-        // is called (the page is static, with no backend and no keys).
+        // ===== Media Loading Report (MLR) — one per media cycle (v2.188.0, redesigned v2.189.0) =====
+        // An executive read-out of how a monthly media roll-out went. DERIVED, never stored:
+        // rebuilt from /mediaLoads + /mediaCycles + the Media Disk assets every time it is
+        // opened, so a corrected date corrects the report. A cycle gets a report once it has
+        // a release (start) date; until it has a close date it reads "In progress". The
+        // written summary is composed from the figures by rule — no AI service is called.
         //
         // ⚠️ The fleet a cycle is measured against is the CURRENT programme scope
         // (mediaFleet) minus aircraft that entered service after the cycle closed — they
         // could never have taken it. An aircraft that took the media is always counted.
         const MLR_TARGET_PCT = 95;   // share of the eligible fleet a cycle should reach
 
+        // The media journey, content to cabin. The first four are dates on /mediaCycles,
+        // entered in the Media Cycle form; the last two are derived from the load log.
+        const MEDIA_JOURNEY = [
+            { key: 'contentDelivered', label: 'Content delivered', icon: '📦' },
+            { key: 'downloaded',       label: 'Downloaded',        icon: '⬇️' },
+            { key: 'disksDuplicated',  label: 'Disks duplicated',  icon: '💽' },
+            { key: 'disksToTeam',      label: 'Disks to team',     icon: '🤝' },
+        ];
+
         function mlrRef(cycle) { return `MLR-20${cycle.slice(2)}-${cycle.slice(0, 2)}`; }
 
-        // Every cycle with a start AND an end — the ones a report can be written for.
-        function mediaClosedCycles() {
+        // Every cycle that has been released — the ones a report can be written for.
+        function mediaReportCycles() {
             return Object.keys(MEDIA_CYCLES)
-                .filter(c => { const w = mediaCycleWindow(c); return w.start && w.end; })
+                .filter(c => (MEDIA_CYCLES[c] || {}).start && !isLightMediaCycle(c))
                 .sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
         }
 
-        function mlrSizeGB(cycle) {
-            const m = String(mediaCycleSize(cycle)).match(/([\d.]+)\s*(TB|GB)/i);
-            if (!m) return 0;
-            return parseFloat(m[1]) * (m[2].toUpperCase() === 'TB' ? 1000 : 1);
+        // The media part number: as entered on the cycle, else the one the loads carried,
+        // else the programme's naming pattern.
+        function mediaCyclePartNumber(cycle) {
+            const set = (MEDIA_CYCLES[cycle] || {}).partNumber;
+            if (set) return set;
+            const n = {};
+            cycleLoads(cycle).forEach(l => { if (l.source) n[l.source] = (n[l.source] || 0) + 1; });
+            const top = Object.keys(n).sort((a, b) => n[b] - n[a])[0];
+            return top || `ME-SVA-UGO-${cycle}`;
+        }
+
+        // Media Disks (Hardware › Assets) tagged with this cycle's content — "Media Sep 2026",
+        // "September 2026", the part number or the cycle code all match.
+        function mediaDisksForCycle(cycle) {
+            const mm = parseInt(cycle.slice(0, 2), 10), yy = cycle.slice(2);
+            if (!(mm >= 1 && mm <= 12)) return [];
+            const pn = mediaCyclePartNumber(cycle).toLowerCase();
+            const re = new RegExp(`\\b(${MONTH_NAMES[mm - 1]}|${MONTH_FULL[mm - 1]})\\s*(20)?${yy}\\b`, 'i');
+            return Object.entries(assetsLive || {})
+                .map(([id, a]) => ({ id, ...a }))
+                .filter(a => a.category === 'media_disk' && a.content
+                    && (re.test(a.content) || a.content.toLowerCase().includes(pn) || new RegExp(`\\b${cycle}\\b`).test(a.content)))
+                .sort((a, b) => String(a.nsgSerial || a.id).localeCompare(String(b.nsgSerial || b.id), undefined, { numeric: true }));
         }
 
         function mlrStamp(iso) {
@@ -14980,15 +15043,20 @@
             return `${fmtDate(iso.slice(0, 10))} ${iso.slice(11, 16)} UTC`;
         }
 
+        const mlrDaysBetween = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5);
+
         // All the figures for one cycle. Day 1 is the release day; `t` is the exact
-        // fractional day a load landed on, used to draw the curve.
+        // fractional day a load landed on, used to draw the curve. An open cycle is
+        // measured up to today.
         function mediaReportData(cycle) {
+            const mc = MEDIA_CYCLES[cycle] || {};
             const w = mediaCycleWindow(cycle);
-            if (!w.start || !w.end) return null;
-            const startISO = toISODate(w.start), endISO = toISODate(w.end);
+            if (!w.start) return null;
+            const open = !w.end;
+            const todayISO = new Date().toISOString().slice(0, 10);
+            const startISO = toISODate(w.start), endISO = open ? todayISO : toISODate(w.end);
             const t0 = Date.parse(startISO + 'T00:00:00Z');
-            const tEnd = Date.parse(endISO + 'T00:00:00Z');
-            const days = Math.round((tEnd - t0) / 864e5) + 1;
+            const days = Math.max(1, mlrDaysBetween(startISO, endISO) + 1);
             const dayOf = iso => Math.max(1, Math.floor((Date.parse(iso) - t0) / 864e5) + 1);
             const isoOfDay = n => new Date(t0 + (n - 1) * 864e5).toISOString().slice(0, 10);
 
@@ -15008,10 +15076,10 @@
                     return { tail: l.aircraft, type: TYPE_SHORT_LABEL[a.type] || a.type || '—',
                              at: l.loadedAt, iso: l.loadedAt.slice(0, 10), day: dayOf(l.loadedAt),
                              t: Math.max(0, (Date.parse(l.loadedAt) - t0) / 864e5),
-                             source: l.source || '', late: l.loadedAt.slice(0, 10) > endISO };
+                             source: l.source || '', late: !open && l.loadedAt.slice(0, 10) > endISO };
                 });
 
-            // Eligible = in service by the close date, or took the media anyway.
+            // Eligible = in service by the close date (today, while open), or took it anyway.
             const eligible = fleet.filter(a => {
                 if (first.has(a.id)) return true;
                 const act = toISODate(a.activatedDate || '');
@@ -15030,7 +15098,7 @@
                 const need = Math.ceil(scope * p / 100);
                 if (!need || done < need) return null;
                 const l = loads[need - 1];
-                return { day: l.day, iso: l.iso };
+                return { day: l.day, iso: l.iso, t: l.t };
             };
             const daily = new Array(Math.max(days, loads.length ? loads[loads.length - 1].day : 0)).fill(0);
             loads.forEach(l => { daily[l.day - 1]++; });
@@ -15073,30 +15141,41 @@
                          activated: a.activatedDate || '' };
             }).sort((a, b) => a.tail.localeCompare(b.tail));
 
-            const sizeGB = mlrSizeGB(cycle);
+            // The journey: entered dates, then the first and last aircraft.
+            const journey = MEDIA_JOURNEY.map(j => ({ ...j, date: mc[j.key] || '' }));
+            const firstLoad = loads[0] || null, lastLoad = loads[loads.length - 1] || null;
+            const iso = k => (mc[k] ? toISODate(mc[k]) : '');
+            const span = (a, b) => (a && b ? mlrDaysBetween(a, b) : null);
+            const durations = {
+                ground: span(iso('contentDelivered'), iso('disksToTeam')),
+                rollout: firstLoad && lastLoad ? mlrDaysBetween(firstLoad.iso, lastLoad.iso) + 1 : null,
+                endToEnd: span(iso('contentDelivered'), lastLoad && !open ? lastLoad.iso : ''),
+            };
+
             return {
-                cycle, label: cycleToDisplay(cycle), ref: mlrRef(cycle), size: mediaCycleSize(cycle),
-                start: w.start, end: w.end, startISO, endISO, days, loads, scope, done, pct, joinedDuring,
-                firstLoad: loads[0] || null, lastLoad: loads[loads.length - 1] || null,
+                cycle, label: cycleToDisplay(cycle), ref: mlrRef(cycle), size: mc.size || '',
+                partNumber: mediaCyclePartNumber(cycle), notes: mc.notes || '',
+                open, start: w.start, end: w.end, startISO, endISO, days, loads, scope, done, pct, joinedDuring,
+                firstLoad, lastLoad,
                 firstWeek: daily.slice(0, 7).reduce((x, y) => x + y, 0),
-                t25: reach(25), t50: reach(50), t75: reach(75), t90: reach(90), t100: reach(100),
+                t50: reach(50), t90: reach(90), t100: reach(100),
                 median, daily, peak: { day: peakDay + 1, iso: isoOfDay(peakDay + 1), n: daily[peakDay] || 0 },
                 weeks, busiestWeek, byType, missing, late: loads.filter(l => l.late).length,
-                deliveredTB: sizeGB ? Math.round(sizeGB * done / 100) / 10 : 0,
+                journey, durations, disks: mediaDisksForCycle(cycle),
                 isoOfDay,
             };
         }
 
         function mlrPrev(cycle) {
             const p = previousCycle(cycle);
-            return p && MEDIA_CYCLES[p] ? mediaReportData(p) : null;
+            return p && MEDIA_CYCLES[p] && MEDIA_CYCLES[p].start ? mediaReportData(p) : null;
         }
 
         function mlrRating(d) {
+            if (d.open) return { label: 'In progress', css: 'blue' };
             if (d.pct >= MLR_TARGET_PCT) return { label: 'Target met', css: 'green' };
-            if (d.pct >= 85) return { label: 'Near target', css: 'blue' };
-            if (d.pct >= 70) return { label: 'Below target', css: 'amber' };
-            return { label: 'Well below target', css: 'red' };
+            if (d.pct >= 85) return { label: 'Near target', css: 'amber' };
+            return { label: 'Below target', css: 'red' };
         }
 
         const mlrPlural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
@@ -15107,12 +15186,20 @@
             const out = [];
             const fd = iso => fmtDate(iso);
             const r = mlrRating(d);
-            out.push({ k: 'Outcome', t:
-                `${d.label} media (${d.size || 'size not recorded'}) reached ${d.done} of ${d.scope} eligible aircraft — ${d.pct}% of the fleet — over a ${d.days}-day cycle from ${d.start} to ${d.end}. `
-                + (d.pct >= MLR_TARGET_PCT
+            out.push({ k: 'Outcome', t: d.open
+                ? `${d.label} media${d.size ? ` (${d.size})` : ''} has reached ${d.done} of ${d.scope} eligible aircraft so far — ${d.pct}% of the fleet — ${mlrPlural(d.days, 'day')} after its release on ${d.start}. The cycle is still open.`
+                : `${d.label} media${d.size ? ` (${d.size})` : ''} reached ${d.done} of ${d.scope} eligible aircraft — ${d.pct}% of the fleet — over a ${d.days}-day cycle from ${d.start} to ${d.end}. `
+                  + (d.pct >= MLR_TARGET_PCT
                     ? `That meets the ${MLR_TARGET_PCT}% completion target.`
-                    : `That is ${Math.round((MLR_TARGET_PCT - d.pct) * 10) / 10} points short of the ${MLR_TARGET_PCT}% completion target.`)
-                + (d.deliveredTB ? ` In total about ${d.deliveredTB} TB of content was delivered to the fleet.` : '') });
+                    : `That is ${Math.round((MLR_TARGET_PCT - d.pct) * 10) / 10} points short of the ${MLR_TARGET_PCT}% completion target.`) });
+
+            const jd = d.journey.filter(j => j.date);
+            if (jd.length) {
+                out.push({ k: 'Journey', t:
+                    jd.map(j => `${j.label.toLowerCase().replace(/^./, c => c.toUpperCase())} ${j.date}`).join('; ') + '.'
+                    + (d.durations.ground != null ? ` Ground lead time from content to disks in the team's hands was ${mlrPlural(d.durations.ground, 'day')}.` : '')
+                    + (d.durations.endToEnd != null ? ` From content delivery to the last aircraft took ${mlrPlural(d.durations.endToEnd, 'day')}.` : '') });
+            }
 
             if (d.firstLoad) {
                 const lag = d.firstLoad.day - 1;
@@ -15120,7 +15207,7 @@
                 const tone = share >= 40 ? 'a fast start' : share >= 20 ? 'a steady start' : 'a slow start';
                 out.push({ k: 'Start', t:
                     `Loading began ${lag === 0 ? 'on the release day itself' : `${mlrPlural(lag, 'day')} after release`} (${fd(d.firstLoad.iso)}). `
-                    + `${mlrPlural(d.firstWeek, 'aircraft', 'aircraft')} (${share}% of the fleet) were loaded in the first seven days — ${tone}.` });
+                    + (d.days >= 7 ? `${mlrPlural(d.firstWeek, 'aircraft', 'aircraft')} (${share}% of the fleet) were loaded in the first seven days — ${tone}.` : '') });
             }
 
             const pace = [];
@@ -15134,7 +15221,7 @@
                     + (d.busiestWeek && d.busiestWeek.n ? `, and the busiest week was week ${d.busiestWeek.no} with ${d.busiestWeek.n}.` : '.') });
             }
 
-            if (d.lastLoad) {
+            if (d.lastLoad && !d.open) {
                 const tail = d.t90 ? d.lastLoad.day - d.t90.day : null;
                 const long = tail != null && tail > d.days / 3;
                 out.push({ k: 'Finish', t:
@@ -15143,7 +15230,7 @@
                     + (d.late ? ` ${mlrPlural(d.late, 'load')} landed after the cycle closed and still count towards it.` : '') });
             }
 
-            if (prev && prev.done) {
+            if (prev && prev.done && !d.open) {
                 const dp = Math.round((d.pct - prev.pct) * 10) / 10;
                 const bits = [`completion ${dp >= 0 ? 'up' : 'down'} ${Math.abs(dp)} points (${prev.pct}% → ${d.pct}%)`];
                 if (d.t50 && prev.t50) {
@@ -15159,10 +15246,9 @@
             }
 
             if (d.missing.length) {
-                out.push({ k: 'Not loaded', t:
-                    `${mlrPlural(d.missing.length, 'aircraft', 'aircraft')} did not take this media: ${d.missing.map(m => m.tail).join(', ')}. `
-                    + `See the "Not loaded" table for the media ${d.missing.length === 1 ? 'it carries' : 'they carry'} now.` });
-            } else {
+                out.push({ k: d.open ? 'Still to load' : 'Not loaded', t:
+                    `${mlrPlural(d.missing.length, 'aircraft', 'aircraft')} ${d.open ? 'still to take' : 'did not take'} this media${d.missing.length > 10 ? ' — listed in the table' : `: ${d.missing.map(m => m.tail).join(', ')}`}.` });
+            } else if (d.done) {
                 out.push({ k: 'Not loaded', t: 'Every eligible aircraft took this media.' });
             }
             out.push({ k: 'Assessment', t: `${r.label}.` + (d.joinedDuring ? ` ${mlrPlural(d.joinedDuring, 'aircraft', 'aircraft')} entered service during the cycle and ${d.joinedDuring === 1 ? 'is' : 'are'} included in the fleet count.` : '') });
@@ -15209,8 +15295,7 @@
             [['50%', d.t50, 50], ['90%', d.t90, 90]].forEach(([lab, m, p]) => {
                 if (!m) return;
                 const need = Math.ceil(d.scope * p / 100);
-                const l = d.loads[need - 1];
-                const cx = x(l.t), cy = y(need / d.scope * 100);
+                const cx = x(m.t), cy = y(need / d.scope * 100);
                 g += `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#fff" stroke="#0b1f3a" stroke-width="2"/>`
                    + `<text x="${cx + 8}" y="${cy + 12}" font-size="10.5" font-weight="800" fill="#0b1f3a">${lab} · day ${m.day}</text>`;
             });
@@ -15245,22 +15330,133 @@
             return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Aircraft loaded per day" style="display:block; max-width:100%; height:auto;">${g}</svg>`;
         }
 
-        // KPI tiles shared by the card and the document: [label, value, sub].
-        function mlrKpis(d) {
-            const dayLab = m => (m ? `Day ${m.day}` : 'Not reached');
-            return [
-                ['Fleet loaded', `${d.done}/${d.scope}`, `${d.pct}% · target ${MLR_TARGET_PCT}%`],
-                ['Cycle window', `${d.days} days`, `${fmtDateShort(d.start)} → ${fmtDateShort(d.end)}`],
-                ['First aircraft', d.firstLoad ? `Day ${d.firstLoad.day}` : '—', d.firstLoad ? fmtDate(d.firstLoad.iso) : ''],
-                ['50% of fleet', dayLab(d.t50), d.t50 ? fmtDate(d.t50.iso) : ''],
-                ['90% of fleet', dayLab(d.t90), d.t90 ? fmtDate(d.t90.iso) : ''],
-                ['Data delivered', d.deliveredTB ? `${d.deliveredTB} TB` : '—', d.size ? `${d.size} × ${d.done}` : ''],
-            ];
+        // ----- The report's top: identity row, fleet progress, media journey -----
+        // One fragment shared by the dashboard card and the printed document, styled by
+        // MLR_CSS (injected into both) so the two can never drift.
+        const MLR_CSS = `
+  .mlr-id { display:grid; grid-template-columns:1.25fr 1fr 1.3fr; border:1px solid #e3e8ee; border-radius:10px; overflow:hidden; background:#fff; }
+  .mlr-id > div { padding:12px 16px; min-width:0; }
+  .mlr-id > div + div { border-left:1px solid #e3e8ee; }
+  .mlr-k { font-size:9.5px; font-weight:800; letter-spacing:.7px; text-transform:uppercase; color:#7c8894; }
+  .mlr-big { font-size:25px; font-weight:800; color:#0b1f3a; line-height:1.2; margin-top:2px; white-space:nowrap; }
+  .mlr-pn { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:16px; font-weight:700; color:#0b1f3a; margin-top:7px; letter-spacing:.3px; overflow-wrap:anywhere; }
+  .mlr-sub { font-size:11px; color:#8a96a1; font-weight:600; margin-top:2px; }
+  .mlr-prog { border:1px solid #e3e8ee; border-radius:10px; padding:12px 16px 6px; margin-top:10px; background:#fff; }
+  .mlr-prog-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .mlr-prog-fig { font-size:22px; font-weight:800; color:#0b1f3a; }
+  .mlr-prog-pct { font-size:16px; font-weight:800; color:#0b7a3b; }
+  .mlr-verdict { margin-left:auto; font-size:11px; font-weight:800; padding:2px 10px; border-radius:99px; border:1px solid transparent; white-space:nowrap; }
+  .mlr-v-green { background:#e9f5ee; color:#0b7a3b; border-color:#bfe3cd; }
+  .mlr-v-blue  { background:#eaf2fb; color:#2f5f8a; border-color:#c4dcf2; }
+  .mlr-v-amber { background:#fdf1e3; color:#8a5312; border-color:#f1d9b6; }
+  .mlr-v-red   { background:#fdecee; color:#a52834; border-color:#f3c2c8; }
+  .mlr-bar { position:relative; height:12px; background:#eef1f4; border-radius:99px; margin:9px 0 3px; }
+  .mlr-bar > i { display:block; height:100%; background:#1f8a52; border-radius:99px; }
+  .mlr-bar > b { position:absolute; top:-4px; bottom:-4px; border-left:1.5px dashed #c47f1c; }
+  .mlr-scale { position:relative; height:14px; font-size:10px; color:#8a96a1; font-weight:700; }
+  .mlr-scale span { position:absolute; transform:translateX(-50%); white-space:nowrap; }
+  .mlr-scale span.t { color:#8a5312; }
+  .mlr-ms { position:relative; height:66px; margin:24px 8px 0; }
+  .mlr-ms-line { position:absolute; left:0; right:0; top:25px; border-top:2px solid #d5dbe1; }
+  .mlr-ms-fill { position:absolute; left:0; top:25px; border-top:2.5px solid #1f8a52; }
+  .mlr-ms-n { position:absolute; top:19px; width:0; }
+  .mlr-ms-n > i { position:absolute; left:-6px; top:0; width:12px; height:12px; border-radius:50%; background:#1f8a52; box-sizing:border-box; }
+  .mlr-ms-n.end > i { background:#fff; border:2.5px solid #0b1f3a; }
+  .mlr-ms-n.open > i { background:#fff; border:2.5px dashed #2f5f8a; }
+  .mlr-ms-c { position:absolute; white-space:nowrap; line-height:1.2; }
+  .mlr-ms-c.dn { top:17px; }
+  .mlr-ms-c.up { bottom:9px; }
+  .mlr-ms-c.l { left:-6px; } .mlr-ms-c.m { left:0; transform:translateX(-50%); text-align:center; } .mlr-ms-c.r { right:-6px; text-align:right; }
+  .mlr-ms-c em { display:block; font-style:normal; font-size:9.5px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:#7c8894; }
+  .mlr-ms-c b { font-size:12px; font-weight:800; color:#0b1f3a; }
+  .mlr-facts { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:11.5px; color:#6b7883; border-top:1px solid #eef2f6; margin-top:6px; padding:7px 0 4px; }
+  .mlr-facts b { color:#0b1f3a; font-weight:800; }
+  .mlr-jr { border:1px solid #e3e8ee; border-radius:10px; padding:12px 16px 10px; margin-top:10px; background:#fff; }
+  .mlr-jr-steps { position:relative; display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:6px; margin-top:8px; }
+  .mlr-jr-s { position:relative; border:1px solid #d5dbe1; border-radius:8px; padding:7px 8px; background:#fff; min-width:0; }
+  .mlr-jr-s.miss { border-style:dashed; background:#fafbfc; }
+  .mlr-jr-s.load { background:#eef8f2; border-color:#bfe3cd; }
+  .mlr-jr-s .ic { font-size:14px; line-height:1; }
+  .mlr-jr-s .lb { font-size:10px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; color:#6b7883; margin-top:4px; line-height:1.2; }
+  .mlr-jr-s .dt { font-size:12px; font-weight:800; color:#0b1f3a; margin-top:2px; white-space:nowrap; }
+  .mlr-jr-s.miss .dt { color:#aab4be; font-weight:600; }
+  .mlr-jr-s.load .lb { color:#0b7a3b; }
+  .mlr-jr-dur { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:11.5px; color:#6b7883; margin-top:9px; }
+  .mlr-jr-dur b { color:#0b1f3a; font-weight:800; }
+  .mlr-jr-dur b.nil { color:#aab4be; font-weight:600; }
+  @media (max-width:640px) {
+    .mlr-id { grid-template-columns:1fr 1fr; }
+    .mlr-id > div:last-child { grid-column:1 / -1; border-left:none; border-top:1px solid #e3e8ee; }
+    .mlr-jr-steps { grid-template-columns:repeat(3, minmax(0,1fr)); }
+  }`;
+
+        function mlrTopHTML(d) {
+            const r = mlrRating(d);
+            const clamp = v => Math.max(0, Math.min(100, v));
+            const pos = t => clamp(t / Math.max(1, d.days) * 100);
+            // Milestone strip: Released (start) · 50% · 90% above the line · Closed / Today.
+            const nodes = [];
+            const cap = (cls, em, b) => `<span class="mlr-ms-c ${cls}"><em>${escAttr(em)}</em><b>${escAttr(b)}</b></span>`;
+            nodes.push(`<span class="mlr-ms-n" style="left:0%"><i></i>${cap('dn l', 'Released', fmtDateShort(d.start))}</span>`);
+            [['50%', d.t50], ['90%', d.t90]].forEach(([lab, m]) => {
+                if (m) nodes.push(`<span class="mlr-ms-n" style="left:${pos(m.t).toFixed(1)}%"><i></i>${cap('up m', `${lab} · day ${m.day}`, fmtDateShort(fmtDate(m.iso)))}</span>`);
+            });
+            nodes.push(d.open
+                ? `<span class="mlr-ms-n open" style="left:100%"><i></i>${cap('dn r', `Today · day ${d.days}`, fmtDateShort(fmtDate(d.endISO)))}</span>`
+                : `<span class="mlr-ms-n end" style="left:100%"><i></i>${cap('dn r', `Closed · day ${d.days}`, fmtDateShort(d.end))}</span>`);
+            const reachedTo = d.lastLoad ? pos(d.lastLoad.t) : 0;
+
+            const facts = [
+                d.firstLoad ? `First aircraft <b>day ${d.firstLoad.day}</b>` : '',
+                d.median != null ? `Typical load <b>day ${d.median}</b>` : '',
+                d.peak.n ? `Busiest day <b>${escAttr(fmtDateShort(fmtDate(d.peak.iso)))} · ${d.peak.n}</b>` : '',
+                d.late ? `Loaded late <b>${d.late}</b>` : '',
+                d.missing.length ? `${d.open ? 'Still to load' : 'Not loaded'} <b>${d.missing.length}</b>` : '',
+            ].filter(Boolean);
+
+            const step = (cls, ic, lb, dt) => `<div class="mlr-jr-s ${cls}"><div class="ic" aria-hidden="true">${ic}</div><div class="lb">${escAttr(lb)}</div><div class="dt">${escAttr(dt)}</div></div>`;
+            const steps = d.journey.map(j => step(j.date ? '' : 'miss', j.icon, j.label, j.date ? fmtDateShort(j.date) : 'Not recorded'))
+                .concat([
+                    step(d.firstLoad ? 'load' : 'miss', '✈️', 'First aircraft', d.firstLoad ? fmtDateShort(fmtDate(d.firstLoad.iso)) : 'Not yet'),
+                    step(d.lastLoad && !d.open ? 'load' : 'miss', '🏁', d.open ? 'Latest aircraft' : 'Last aircraft', d.lastLoad ? fmtDateShort(fmtDate(d.lastLoad.iso)) : 'Not yet'),
+                ]).join('');
+            const dur = (k, v) => `<span>${k} <b class="${v == null ? 'nil' : ''}">${v == null ? '—' : mlrPlural(v, 'day')}</b></span>`;
+
+            return `<div class="mlr-id">
+                <div><div class="mlr-k">Media cycle</div><div class="mlr-big">${escAttr(d.label)}</div><div class="mlr-sub">${escAttr(d.ref)}</div></div>
+                <div><div class="mlr-k">Media size</div><div class="mlr-big">${escAttr(d.size || '—')}</div><div class="mlr-sub">per aircraft load</div></div>
+                <div><div class="mlr-k">Media part number</div><div class="mlr-pn">${escAttr(d.partNumber)}</div><div class="mlr-sub">${d.disks.length ? `${mlrPlural(d.disks.length, 'media disk')} prepared` : 'Media disks not tagged yet'}</div></div>
+            </div>
+            <div class="mlr-prog">
+                <div class="mlr-prog-head">
+                    <span class="mlr-k">Fleet loaded</span>
+                    <span class="mlr-prog-fig">${d.done} / ${d.scope}</span>
+                    <span class="mlr-prog-pct">${d.pct}%</span>
+                    <span class="mlr-verdict mlr-v-${r.css}">${escAttr(r.label)}</span>
+                </div>
+                <div class="mlr-bar"><i style="width:${clamp(d.pct)}%"></i><b style="left:${MLR_TARGET_PCT}%"></b></div>
+                <div class="mlr-scale"><span style="left:0; transform:none;">0%</span><span class="t" style="left:${MLR_TARGET_PCT}%">Target ${MLR_TARGET_PCT}%</span></div>
+                <div class="mlr-ms"><div class="mlr-ms-line"></div><div class="mlr-ms-fill" style="width:${reachedTo.toFixed(1)}%"></div>${nodes.join('')}</div>
+                ${facts.length ? `<div class="mlr-facts">${facts.map(f => `<span>${f}</span>`).join('')}</div>` : ''}
+            </div>
+            <div class="mlr-jr">
+                <div class="mlr-k">Media journey — content to cabin</div>
+                <div class="mlr-jr-steps">${steps}</div>
+                <div class="mlr-jr-dur">${dur('Ground lead time', d.durations.ground)}${dur('Roll-out', d.durations.rollout)}${dur('Content to last aircraft', d.durations.endToEnd)}</div>
+            </div>`;
         }
+
+        // The shared styles reach the dashboard once, as a <style> element.
+        (function injectMlrCss() {
+            const s = document.createElement('style');
+            s.id = 'mlrCss';
+            s.textContent = MLR_CSS;
+            document.head.appendChild(s);
+        })();
 
         // ----- Reports feed card -----
         function mlrHaystack(d) {
-            return `media loading report ${d.label} ${d.cycle} ${d.ref} ${d.size}`.toLowerCase();
+            return `media loading report ${d.label} ${d.cycle} ${d.ref} ${d.size} ${d.partNumber}`.toLowerCase();
         }
 
         // The media reports the feed should show under the current filters. They carry no
@@ -15270,7 +15466,7 @@
             const q = (fbQuery['maintenance'] || '').trim().toLowerCase();
             if (!fbMatch('maintenance', 'status', 'published')) return [];
             if (!fbMatch('maintenance', 'mode', '') || !fbMatch('maintenance', 'type', '')) return [];
-            return mediaClosedCycles().map(mediaReportData).filter(Boolean)
+            return mediaReportCycles().map(mediaReportData).filter(Boolean)
                 .filter(d => !q || q.split(/\s+/).every(w => mlrHaystack(d).includes(w)));
         }
 
@@ -15278,47 +15474,52 @@
             const id = 'mlr-' + d.cycle;
             const open = avrExpanded.has(id);
             const r = mlrRating(d);
+            const editor = canEdit();
             const head = `<div class="avr-head" onclick="avrToggle('${id}')">
                 <span class="avr-caret">▶</span>
                 <span class="avr-reg">📊 ${escAttr(d.label)}</span>
                 <span class="avr-rtype avr-rtype-media" title="Media Loading Report">MEDIA</span>
-                <span class="avr-dates">${escAttr(d.start)} → ${escAttr(d.end)}</span>
-                <span class="mlr-rating mlr-rating-${r.css}">${escAttr(r.label)}</span>
+                <span class="avr-dates">${escAttr(d.start)} → ${escAttr(d.open ? 'open' : d.end)}</span>
+                <span class="mlr-verdict mlr-v-${r.css}" style="margin-left:0;">${escAttr(r.label)}</span>
                 <span class="avr-summary-line"><span class="avr-taskcount">${d.done} of ${d.scope} aircraft · ${d.pct}%</span> · <span class="avr-ref">${escAttr(d.ref)}</span></span>
                 <div class="avr-head-actions">
                     <button class="avr-headbtn" onclick="event.stopPropagation();printMediaReport('${d.cycle}')">🖨️ Print / PDF</button>
+                    ${editor ? `<button class="avr-headbtn" onclick="event.stopPropagation();openMediaCycleEditor('${d.cycle}')">✏️ Edit cycle</button>` : ''}
                 </div>
             </div>`;
             if (!open) return `<div class="avr-card mlr-card" id="avrCard-${id}">${head}</div>`;
             const prev = mlrPrev(d.cycle);
             const body = `<div class="avr-body">
-                <div class="mlr-kpis">${mlrKpis(d).map(([k, v, s]) => `<div class="mlr-kpi"><div class="mlr-kpi-k">${escAttr(k)}</div><div class="mlr-kpi-v">${escAttr(v)}</div><div class="mlr-kpi-s">${escAttr(s)}</div></div>`).join('')}</div>
+                ${mlrTopHTML(d)}
+                <div class="avr-section-label" style="margin-top:14px;">Executive summary</div>
+                <div class="mlr-narr">${mediaReportNarrative(d, prev).map(p => `<p><b>${escAttr(p.k)}.</b> ${escAttr(p.t)}</p>`).join('')}</div>
                 <div class="avr-section-label">Roll-out curve — share of fleet loaded</div>
                 <div class="mlr-chart">${mlrCurveSVG(d, prev)}</div>
-                <div class="avr-section-label">Executive summary</div>
-                <div class="mlr-narr">${mediaReportNarrative(d, prev).map(p => `<p><b>${escAttr(p.k)}.</b> ${escAttr(p.t)}</p>`).join('')}</div>
-                <div class="mlr-foot">Generated automatically from the media load log. The full report adds daily loads, a week-by-week breakdown, results by aircraft type, the aircraft not loaded and the complete load log. Use <b>Print / PDF</b> to open it.</div>
+                <div class="mlr-foot">Generated from the media load log, the cycle's dates and the Media Disks in Hardware › Assets. The printed report adds daily loads, a week-by-week breakdown, results by aircraft type, the disks used, the aircraft not loaded and the full load log.</div>
             </div>`;
             return `<div class="avr-card mlr-card is-open" id="avrCard-${id}">${head}${body}</div>`;
         }
 
         // ----- The printable document -----
+        // Page 1 is the executive one-pager (identity, progress, journey, summary, curve);
+        // page 2 onwards is the working detail.
         function buildMediaReportDoc(cycle) {
             const d = mediaReportData(cycle);
             if (!d) return null;
             const prev = mlrPrev(cycle);
-            const r = mlrRating(d);
             const stamp = `${fmtDate(new Date().toISOString().slice(0, 10))} ${new Date().toISOString().slice(11, 16)} UTC`;
             const pctBar = p => `<span class="bar"><i style="width:${Math.min(100, p)}%"></i></span>`;
-            const kpis = mlrKpis(d).map(([k, v, s]) => `<div class="kpi"><div class="kpi-k">${escAttr(k)}</div><div class="kpi-v">${escAttr(v)}</div><div class="kpi-s">${escAttr(s)}</div></div>`).join('');
             const narr = mediaReportNarrative(d, prev).map(p => `<div class="nr"><div class="nr-k">${escAttr(p.k)}</div><div class="nr-t">${escAttr(p.t)}</div></div>`).join('');
             const weekRows = d.weeks.map(w => `<tr><td>Week ${w.no}</td><td class="nowrap">${escAttr(fmtDateShort(fmtDate(w.from)))} → ${escAttr(fmtDateShort(fmtDate(w.to)))}</td><td class="num">${w.n}</td><td class="num">${w.cum}</td><td class="num">${w.pct}%</td><td>${pctBar(w.pct)}</td></tr>`).join('');
             const typeRows = d.byType.map(t => `<tr><td><b>${escAttr(t.type)}</b></td><td class="num">${t.scope}</td><td class="num">${t.done}</td><td class="num">${t.pct}%</td><td>${pctBar(t.pct)}</td><td class="num">${t.median != null ? 'Day ' + t.median : '—'}</td></tr>`).join('');
             const missRows = d.missing.length
                 ? d.missing.map(m => `<tr><td><b>${escAttr(m.tail)}</b></td><td>${escAttr(m.type)}</td><td>${escAttr(m.now)}</td><td class="nowrap">${escAttr(m.activated || '—')}</td></tr>`).join('')
                 : '<tr><td colspan="4">None — every eligible aircraft took this media.</td></tr>';
+            const diskRows = d.disks.length
+                ? d.disks.map(k => `<tr><td class="mono"><b>${escAttr(k.nsgSerial || k.id)}</b></td><td>${escAttr(k.type || '—')}</td><td>${escAttr(k.make || '—')}</td><td class="mono">${escAttr(k.mfrSerial || '—')}</td><td>${escAttr(k.totalSize || '—')}</td><td>${escAttr(k.location || '—')}</td><td>${escAttr(k.custodian || '—')}</td></tr>`).join('')
+                : `<tr><td colspan="7">No Media Disks are tagged with ${escAttr(d.label)} yet. Tag them in Hardware › Assets (content "Media ${escAttr(MONTH_NAMES[parseInt(d.cycle.slice(0, 2), 10) - 1])} 20${escAttr(d.cycle.slice(2))}").</td></tr>`;
             const logRows = d.loads.map((l, i) => `<tr><td class="num">${i + 1}</td><td><b>${escAttr(l.tail)}</b></td><td>${escAttr(l.type)}</td><td class="nowrap">${escAttr(mlrStamp(l.at))}</td><td class="num">${l.day}</td><td class="mono">${escAttr(l.source)}</td><td>${l.late ? '<span class="pill pill-amber">Late</span>' : ''}</td></tr>`).join('');
-            const cmp = prev && prev.done ? `<table class="tbl"><thead><tr><th>Measure</th><th class="num">${escAttr(prev.label)}</th><th class="num">${escAttr(d.label)}</th></tr></thead><tbody>
+            const cmp = prev && prev.done && !d.open ? `<table class="tbl"><thead><tr><th>Measure</th><th class="num">${escAttr(prev.label)}</th><th class="num">${escAttr(d.label)}</th></tr></thead><tbody>
                 <tr><td>Fleet loaded</td><td class="num">${prev.done}/${prev.scope} · ${prev.pct}%</td><td class="num"><b>${d.done}/${d.scope} · ${d.pct}%</b></td></tr>
                 <tr><td>Cycle length</td><td class="num">${prev.days} days</td><td class="num"><b>${d.days} days</b></td></tr>
                 <tr><td>Loaded in first 7 days</td><td class="num">${prev.firstWeek}</td><td class="num"><b>${d.firstWeek}</b></td></tr>
@@ -15344,32 +15545,18 @@
   .sheet { background:#fff; max-width:820px; margin:20px auto; padding:34px 40px 30px; box-shadow:0 2px 14px rgba(20,40,60,.10); }
   .rpt-header { display:flex; align-items:center; justify-content:space-between; gap:18px; border-bottom:3px solid var(--green); padding-bottom:14px; }
   .rpt-header img { height:52px; width:auto; }
-  .mast { margin:14px 0 6px; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
-  .mast-top { display:flex; align-items:center; justify-content:space-between; gap:18px; background:var(--navy); padding:14px 20px 15px; }
-  .mast-kicker { font-size:9.5px; font-weight:800; letter-spacing:1.3px; text-transform:uppercase; color:#9fb0c4; }
-  .mast-title { font-size:21px; font-weight:800; color:#fff; line-height:1.2; margin-top:3px; }
-  .mast-ref { text-align:right; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.06); border-radius:7px; padding:6px 12px 7px; }
-  .mast-ref-k { display:block; font-size:8.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#9fb0c4; }
-  .mast-ref-v { display:block; font-size:14.5px; font-weight:800; color:#fff; letter-spacing:.6px; white-space:nowrap; }
-  .mast-lead { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:12px 20px; flex-wrap:wrap; }
-  .ml { display:flex; flex-direction:column; }
-  .ml-k { font-size:9px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:var(--muted); }
-  .ml-v { font-size:16px; font-weight:800; color:var(--navy); white-space:nowrap; }
-  .verdict { display:inline-block; font-size:10.5px; font-weight:800; padding:2px 9px; border-radius:99px; vertical-align:2px; margin-left:4px; }
-  .v-green { background:#e9f5ee; color:#0b7a3b; border:1px solid #bfe3cd; }
-  .v-blue { background:#eaf2fb; color:#2f5f8a; border:1px solid #c4dcf2; }
-  .v-amber { background:#fdf1e3; color:#8a5312; border:1px solid #f1d9b6; }
-  .v-red { background:#fdecee; color:#a52834; border:1px solid #f3c2c8; }
-  .sec { font-size:12px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--navy); margin:18px 0 8px; padding-bottom:4px; border-bottom:1px solid var(--line); }
-  .kpis { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin:8px 0; }
-  .kpi { border:1px solid var(--line); border-radius:8px; padding:8px 12px; background:var(--soft); }
-  .kpi-k { font-size:9.5px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); }
-  .kpi-v { font-size:20px; font-weight:800; color:var(--navy); line-height:1.25; }
-  .kpi-s { font-size:11px; color:var(--muted); font-weight:600; }
-  .nr { display:grid; grid-template-columns:110px 1fr; gap:12px; padding:6px 0; border-bottom:1px solid #eef2f6; }
+  .band { display:flex; align-items:center; justify-content:space-between; gap:18px; background:var(--navy); border-radius:10px; padding:13px 20px; margin:14px 0 10px; }
+  .band-kicker { font-size:9.5px; font-weight:800; letter-spacing:1.3px; text-transform:uppercase; color:#9fb0c4; }
+  .band-title { font-size:20px; font-weight:800; color:#fff; line-height:1.2; margin-top:3px; }
+  .band-ref { text-align:right; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.06); border-radius:7px; padding:6px 12px 7px; }
+  .band-ref span { display:block; font-size:8.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#9fb0c4; }
+  .band-ref b { display:block; font-size:14.5px; font-weight:800; color:#fff; letter-spacing:.6px; white-space:nowrap; }
+  .sec { font-size:12px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--navy); margin:16px 0 8px; padding-bottom:4px; border-bottom:1px solid var(--line); }
+  .nr { display:grid; grid-template-columns:110px 1fr; gap:12px; padding:5px 0; border-bottom:1px solid #eef2f6; }
   .nr:last-child { border-bottom:none; }
   .nr-k { font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--green); padding-top:2px; }
   .nr-t { font-size:12.5px; }
+  .note { background:var(--soft); border:1px solid var(--line); border-left:3px solid var(--green); border-radius:6px; padding:9px 12px; font-size:12.5px; white-space:pre-wrap; margin-top:8px; }
   .chart { border:1px solid var(--line); border-radius:8px; padding:10px 8px 4px; }
   .cap { font-size:11px; color:var(--muted); margin:4px 2px 0; }
   table.tbl { width:100%; border-collapse:collapse; font-size:12px; }
@@ -15388,17 +15575,20 @@
   .method { font-size:11px; color:var(--muted); line-height:1.5; }
   .method b { color:var(--ink); }
   .rpt-footer { display:flex; justify-content:space-between; gap:12px; color:var(--muted); font-size:10.5px; border-top:1px solid var(--line); margin-top:22px; padding-top:10px; }
-  @media screen and (max-width:640px) { .kpis { grid-template-columns:1fr 1fr; } .two { grid-template-columns:1fr; } .sheet { padding:20px 16px; } .nr { grid-template-columns:1fr; gap:2px; } }
+  .page2 { margin-top:26px; }
+  ${MLR_CSS}
+  @media screen and (max-width:640px) { .two { grid-template-columns:1fr; } .sheet { padding:20px 16px; } .nr { grid-template-columns:1fr; gap:2px; } .band { flex-wrap:wrap; } }
   @media print {
     body { background:#fff; }
     .toolbar { display:none; }
     .sheet { box-shadow:none; margin:0; max-width:none; padding:0; }
-    @page { size:A4; margin:14mm 13mm 14mm; }
+    @page { size:A4; margin:12mm 12mm 13mm; }
     thead { display:table-header-group; }
     tr { break-inside:avoid; }
-    .rpt-header, .mast, .kpis, .chart, .nr, .two > div { break-inside:avoid; }
+    .rpt-header, .band, .mlr-id, .mlr-prog, .mlr-jr, .chart, .nr, .two > div { break-inside:avoid; }
     .sec { break-after:avoid; }
     .tbl-card { overflow:visible; }
+    .page2 { break-before:page; margin-top:0; }
   }
 </style></head>
 <body>
@@ -15412,35 +15602,29 @@
       <img src="${saudiaReportLogo()}" alt="Saudia">
       <img src="${NSG_REPORT_LOGO}" alt="NSG — Neo Space Group">
     </div>
-    <div class="mast">
-      <div class="mast-top">
-        <div>
-          <div class="mast-kicker">Saudia Connectivity · Wireless IFE · Monthly Media</div>
-          <div class="mast-title">Media Loading Report — ${escAttr(d.label)}</div>
-        </div>
-        <div class="mast-ref"><span class="mast-ref-k">Report Reference</span><span class="mast-ref-v">${escAttr(d.ref)}</span></div>
+    <div class="band">
+      <div>
+        <div class="band-kicker">Saudia Connectivity · Wireless IFE · Monthly Media</div>
+        <div class="band-title">Media Loading Report${d.open ? ' · In progress' : ''}</div>
       </div>
-      <div class="mast-lead">
-        <div class="ml"><span class="ml-k">Media cycle</span><span class="ml-v">${escAttr(d.label)}${d.size ? ` · ${escAttr(d.size)}` : ''}</span></div>
-        <div class="ml"><span class="ml-k">Cycle window</span><span class="ml-v">${escAttr(d.start)} → ${escAttr(d.end)}</span></div>
-        <div class="ml"><span class="ml-k">Fleet loaded</span><span class="ml-v">${d.done} / ${d.scope} · ${d.pct}% <span class="verdict v-${r.css}">${escAttr(r.label)}</span></span></div>
-      </div>
+      <div class="band-ref"><span>Report Reference</span><b>${escAttr(d.ref)}</b></div>
     </div>
 
-    <div class="sec">Key figures</div>
-    <div class="kpis">${kpis}</div>
+    ${mlrTopHTML(d)}
 
     <div class="sec">Executive summary</div>
     ${narr}
+    ${d.notes ? `<div class="note">${escAttr(d.notes)}</div>` : ''}
 
     <div class="sec">Roll-out curve</div>
     <div class="chart">${mlrCurveSVG(d, prev)}
       <div class="cap">Share of the eligible fleet carrying ${escAttr(d.label)} media, by day of the cycle (day 1 = release, ${escAttr(d.start)}).${prev && prev.loads.length ? ` Dashed: ${escAttr(prev.label)} for comparison.` : ''}</div>
     </div>
 
+    <div class="page2">
     <div class="sec">Daily loads</div>
     <div class="chart">${mlrDailySVG(d)}
-      <div class="cap">Aircraft loaded each day. The darker bar marks the busiest day (${escAttr(fmtDate(d.peak.iso))}, ${d.peak.n}).</div>
+      <div class="cap">Aircraft loaded each day. The darker bar marks the busiest day${d.peak.n ? ` (${escAttr(fmtDate(d.peak.iso))}, ${d.peak.n})` : ''}.</div>
     </div>
 
     <div class="sec">Week by week</div>
@@ -15462,7 +15646,13 @@
       </div>
     </div>
 
-    <div class="sec">Not loaded — ${d.missing.length}</div>
+    <div class="sec">Media disks — ${d.disks.length}</div>
+    <div class="tbl-card"><table class="tbl">
+      <thead><tr><th>NSG serial</th><th>Type</th><th>Make</th><th>Mfr serial</th><th>Size</th><th>Location</th><th>Custodian</th></tr></thead>
+      <tbody>${diskRows}</tbody>
+    </table></div>
+
+    <div class="sec">${d.open ? 'Still to load' : 'Not loaded'} — ${d.missing.length}</div>
     <div class="tbl-card"><table class="tbl">
       <thead><tr><th>Aircraft</th><th>Type</th><th>Media carried now</th><th>In service since</th></tr></thead>
       <tbody>${missRows}</tbody>
@@ -15476,11 +15666,12 @@
 
     <div class="sec">Method</div>
     <div class="method">
-      <b>Source.</b> The dashboard's media load log — one record per load, time-stamped in UTC. An aircraft that loaded the same media twice counts once, at its first load.
+      <b>Source.</b> The dashboard's media load log (one record per load, UTC), the cycle's dates from the Media Cycle form, and the Media Disks tagged with this media in Hardware › Assets. An aircraft that loaded the same media twice counts once, at its first load.
       <b>Fleet.</b> The wireless IFE programme fleet, less any aircraft that entered service after the cycle closed (they could not have taken it).
-      <b>Days.</b> Day 1 is the release date; the cycle closes on ${escAttr(d.end)}. A load after the close still counts towards the cycle and is marked Late.
+      <b>Days.</b> Day 1 is the release date${d.open ? '; the cycle is still open, so figures run to today' : `; the cycle closed on ${escAttr(d.end)}. A load after the close still counts towards the cycle and is marked Late`}.
       <b>Target.</b> ${MLR_TARGET_PCT}% of the eligible fleet within the cycle window.
       This report is generated automatically and reflects the data at the time it was opened.
+    </div>
     </div>
 
     <div class="rpt-footer">
@@ -15514,6 +15705,145 @@
             document.close();
         }
         window.addEventListener('hashchange', openMlrFromHash);
+
+        // ===== Media Cycle form (v2.189.0) — create a new month or edit any cycle =====
+        // One form for both: pick an existing cycle to edit, or "New cycle" to declare the
+        // next month. It writes /mediaCycles/{MMYY} as a whole record (PUT). The release
+        // date opens the loading window, the close date ends it (and makes the report
+        // final), and the four journey dates feed the report's Media journey strip.
+        let mcEditingCycle = null;
+
+        const MC_DATE_FIELDS = [
+            ['contentDelivered', 'Content delivered',    'Media content received from the provider'],
+            ['downloaded',       'Downloaded',           'Content downloaded by NSG'],
+            ['disksDuplicated',  'Disks duplicated',     'Media copied onto the loading disks'],
+            ['disksToTeam',      'Disks to team',        'Disks handed to the loading team'],
+            ['start',            'Released / loading start *', 'Opens the cycle — day 1 of the report'],
+            ['end',              'Cycle closed',         'Leave empty while loading continues'],
+        ];
+
+        function mcNextCycleCode() {
+            const all = Object.keys(MEDIA_CYCLES).filter(c => !isLightMediaCycle(c)).sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
+            if (!all.length) {
+                const d = new Date();
+                return String(d.getUTCMonth() + 1).padStart(2, '0') + String(d.getUTCFullYear()).slice(2);
+            }
+            const mm = parseInt(all[0].slice(0, 2), 10), yy = parseInt(all[0].slice(2), 10);
+            return mm === 12 ? `01${String(yy + 1).padStart(2, '0')}` : `${String(mm + 1).padStart(2, '0')}${String(yy).padStart(2, '0')}`;
+        }
+
+        function openMediaCycleEditor(cycle) {
+            if (!canEdit()) { requireSignIn(); return; }
+            const list = Object.keys(MEDIA_CYCLES).filter(c => !isLightMediaCycle(c)).sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
+            const sel = cycle && MEDIA_CYCLES[cycle] ? cycle : '__new';
+            const opts = `<option value="__new" ${sel === '__new' ? 'selected' : ''}>＋ New cycle…</option>`
+                + list.map(c => `<option value="${c}" ${c === sel ? 'selected' : ''}>${escAttr(cycleToDisplay(c))}${MEDIA_CYCLES[c].end ? ' · closed' : MEDIA_CYCLES[c].start ? ' · loading' : ' · not released'}</option>`).join('');
+            document.getElementById('mcEditBody').innerHTML = `
+                <div class="ac-edit-grid">
+                    <div class="ac-edit-field" style="grid-column:1 / -1;">
+                        <label>Media cycle</label>
+                        <select id="mcPick" onchange="mcFillForm(this.value)">${opts}</select>
+                    </div>
+                </div>
+                <div id="mcFields"></div>`;
+            document.getElementById('mcEditError').style.display = 'none';
+            document.getElementById('mcOverlay').style.display = 'flex';
+            mcFillForm(sel);
+        }
+
+        function mcFillForm(pick) {
+            const isNew = pick === '__new';
+            const code = isNew ? mcNextCycleCode() : pick;
+            mcEditingCycle = isNew ? null : pick;
+            const v = isNew ? {} : (MEDIA_CYCLES[pick] || {});
+            const mm = parseInt(code.slice(0, 2), 10), yy = 2000 + parseInt(code.slice(2), 10);
+            const nowY = new Date().getUTCFullYear();
+            const years = [nowY - 1, nowY, nowY + 1, nowY + 2].filter((y, i, a) => a.indexOf(y) === i);
+            if (!years.includes(yy)) years.push(yy);
+            const dateField = ([k, lab, hint]) => `<div class="ac-edit-field">
+                    <label>${escAttr(lab)}</label>
+                    <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="mc_${k}" value="${escAttr(v[k] ? toDMY(v[k]) : '')}">
+                    <div class="mc-hint">${escAttr(hint)}</div>
+                </div>`;
+            document.getElementById('mcEditTitle').textContent = isNew ? 'New Media Cycle' : `Edit ${cycleToDisplay(pick)}`;
+            document.getElementById('mcEditSub').textContent = isNew
+                ? 'Declare next month\'s media. It shows greyed out on the Media page until the first aircraft takes it.'
+                : 'Dates feed the Media Loading Report; the release and close dates set the loading window.';
+            document.getElementById('mcFields').innerHTML = `
+                ${isNew ? `<div class="ac-edit-grid">
+                    <div class="ac-edit-field"><label>Month *</label><select id="mcMonth">${MONTH_FULL.map((m, i) => `<option value="${i + 1}" ${i + 1 === mm ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+                    <div class="ac-edit-field"><label>Year *</label><select id="mcYear">${years.sort().map(y => `<option value="${y}" ${y === yy ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
+                </div>` : ''}
+                <div class="ac-edit-section-title">Media</div>
+                <div class="ac-edit-grid">
+                    <div class="ac-edit-field"><label>Media size *</label><input type="text" id="mcSize" maxlength="20" placeholder="884 GB" value="${escAttr(v.size || '')}"><div class="mc-hint">Exact size; the Media widget rounds it</div></div>
+                    <div class="ac-edit-field"><label>Media part number</label><input type="text" id="mcPart" maxlength="40" placeholder="ME-SVA-UGO-${escAttr(code)}" value="${escAttr(v.partNumber || '')}"><div class="mc-hint">Leave empty to use the loads' part number</div></div>
+                </div>
+                <div class="ac-edit-section-title">Media journey</div>
+                <div class="ac-edit-grid">${MC_DATE_FIELDS.slice(0, 4).map(dateField).join('')}</div>
+                <div class="ac-edit-section-title">Loading window</div>
+                <div class="ac-edit-grid">${MC_DATE_FIELDS.slice(4).map(dateField).join('')}</div>
+                <div class="ac-edit-section-title">Notes</div>
+                <div class="ac-edit-grid"><div class="ac-edit-field" style="grid-column:1 / -1;"><textarea id="mcNotes" rows="3" maxlength="1000" placeholder="Anything the report should say about this cycle — shown under the executive summary">${escAttr(v.notes || '')}</textarea></div></div>`;
+            document.getElementById('mcEditError').style.display = 'none';
+        }
+
+        function closeMediaCycleEditor() {
+            document.getElementById('mcOverlay').style.display = 'none';
+            mcEditingCycle = null;
+        }
+
+        async function saveMediaCycle() {
+            const err = document.getElementById('mcEditError');
+            const show = m => { err.textContent = m; err.style.display = 'block'; };
+            err.style.display = 'none';
+            let code = mcEditingCycle;
+            if (!code) {
+                const mm = parseInt(document.getElementById('mcMonth').value, 10);
+                const yy = parseInt(document.getElementById('mcYear').value, 10);
+                code = String(mm).padStart(2, '0') + String(yy).slice(2);
+                if (mediaCyclesLive[code]) return show(`${cycleToDisplay(code)} already exists — pick it from the list to edit it.`);
+            }
+            const size = document.getElementById('mcSize').value.trim();
+            if (!size) return show('Enter the media size, e.g. 884 GB.');
+            if (!/^\d+(\.\d+)?\s*(GB|TB)$/i.test(size)) return show('Media size must look like 884 GB or 1.2 TB.');
+            const entry = { size: size.replace(/\s*(gb|tb)$/i, m => ' ' + m.trim().toUpperCase()) };
+            const part = document.getElementById('mcPart').value.trim();
+            if (part) entry.partNumber = part;
+            for (const [k, lab] of MC_DATE_FIELDS) {
+                const v = readDateField(document.getElementById('mc_' + k));
+                if (v === false) return show(`${lab.replace(' *', '')}: enter a date as dd-mm-yyyy.`);
+                if (v) entry[k] = v;
+            }
+            if (entry.end && !entry.start) return show('A cycle cannot be closed before it has a release date.');
+            if (entry.end && toISODate(entry.end) < toISODate(entry.start)) return show('The close date is before the release date.');
+            const notes = document.getElementById('mcNotes').value.trim();
+            if (notes) entry.notes = notes;
+            entry.updatedAt = new Date().toISOString().slice(0, 19) + 'Z';
+
+            const token = await getIdToken();
+            if (!token) return;
+            const btn = document.getElementById('mcEditSave');
+            btn.disabled = true; btn.textContent = 'Saving…';
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/mediaCycles/${code}.json?auth=${token}`, {
+                    method: 'PUT', body: JSON.stringify(entry),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                mediaCyclesLive[code] = entry;   // polled node — mirror locally so it shows at once
+                rebuildMediaCycles();
+                closeMediaCycleEditor();
+                if (!mediaEditMode) populateMediaTable();
+                renderMaintenancePage();
+                updateMetrics();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (e) {
+                show(`Could not save the cycle — ${e.message}`);
+            } finally {
+                btn.disabled = false; btn.textContent = 'Save cycle';
+            }
+        }
 
         // Counts come from committed data, so these read the same as the global card:
         // a staged, unsaved flag colours its own row and moves nothing else until Save.
@@ -15579,7 +15909,8 @@
             menu.innerHTML =
                 `<button class="avr-assign-item" onclick="closeAssignMenu(); openAddActivity()">🗂️ Add Activity</button>` +
                 `<button class="avr-assign-item" onclick="closeAssignMenu(); openAvrEditor('__new')">📋 Add Visit Report</button>` +
-                `<button class="avr-assign-item" onclick="closeAssignMenu(); openIssueEditor('__new')">🔧 Add Maintenance Issue</button>`;
+                `<button class="avr-assign-item" onclick="closeAssignMenu(); openIssueEditor('__new')">🔧 Add Maintenance Issue</button>` +
+                `<button class="avr-assign-item" onclick="closeAssignMenu(); openMediaCycleEditor()">🎬 Add / Edit Media Cycle</button>`;
             document.body.appendChild(menu);
             const r = btn.getBoundingClientRect();
             const w = 224;

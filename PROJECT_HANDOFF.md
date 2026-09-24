@@ -1259,6 +1259,19 @@ Polled with the other low-traffic nodes; saves are one PATCH of leaf paths to
 `/modmans.json` and are **mirrored locally** (the node is polled, not streamed).
 Registered in all four node lists (rules + backup/restore/verify).
 
+### `/mediaCycles/{MMYY}` — the monthly media cycles (v2.189.0)
+
+`size` (required, exact, `^[0-9.]+ (GB|TB)$`), `partNumber`, `start` (release = day 1), `end`
+(close), `contentDelivered`, `downloaded`, `disksDuplicated`, `disksToTeam`, `notes`, `updatedAt`.
+Written only by the **Media Cycle form** (`openMediaCycleEditor` / `saveMediaCycle`, a whole-record PUT).
+`MEDIA_CYCLES` is rebuilt **in place** from it by `rebuildMediaCycles()`, so every older reader
+(`Object.keys(MEDIA_CYCLES)`, `mediaCycleWindow`, widgets, Cycle view, Timeline close rows) is
+unchanged. `MEDIA_CYCLES_SEED` in code is only the offline fallback. ⚠️ An explicit `end` wins over
+the derived "day before next start". A cycle with no `start` is **upcoming**: a greyed widget, no
+report. With a `start` and no `end` it gets an **In progress** report. Polled, and in the initial fetch.
+The Media Loading Report (derived, never stored) reads this node, `/mediaLoads`, and the
+`/assets` Media Disks whose `content` names the month.
+
 ### `/mediaLoads/{id}` — every media load ever, one record per load
 
 `aircraft`, `cycle` (MMYY, absent on a DEV load), `loadedAt` (ISO), `source`, `loggedAt`.

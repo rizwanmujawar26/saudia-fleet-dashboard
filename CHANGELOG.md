@@ -13,6 +13,27 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.189.0 — Media Cycle form + /mediaCycles; Media Loading Report redesign (2026-09-25)
+At the user's instruction. **New node `/mediaCycles/{MMYY}`**: `size` (exact, e.g. `799.7 GB`),
+`partNumber` (optional), `start`, `end`, `contentDelivered`, `downloaded`, `disksDuplicated`,
+`disksToTeam` (all DD-Mon-YYYY), `notes`, `updatedAt`. Four edits made (rules, backup, restore,
+verify). Seeded with Aug/Sep/Oct. `MEDIA_CYCLES` is now rebuilt IN PLACE from it
+(`rebuildMediaCycles()`), with the code seed as the offline fallback. A cycle in the node
+replaces its seed entry whole. Polled, in the initial fetch.
+**Media Cycle form** (Activity › ＋ Add › Add / Edit Media Cycle, or ✏️ Edit cycle on a report)
+creates a new month (defaults to the one after the newest) or edits any cycle, and saves with a
+whole-record PUT. The widget pill rounds the size (799.7 → 800 GB).
+**Report redesign**: identity row (cycle · size · part number), a fleet progress bar with the
+target marker plus a proportional milestone strip, and a media journey (4 entered dates +
+first/last aircraft, with ground lead / roll-out / end-to-end durations). Page 1 is the
+executive one-pager; page 2 onwards is the detail, which gains a **Media disks** table (Hardware ›
+Assets `media_disk` whose `content` names the month, e.g. "Media Sep 2026"). "Data delivered"
+was removed at the user's request. A released-but-open cycle now gets an "In progress" report.
+
+### v2.188.0 — October 2026 widget, cycle close dates, Media Loading Reports (2026-09-25)
+Explicit cycle `end` (Aug 20-Aug, Sep 19-Sep) and October declared as upcoming. Derived Media Loading
+Report per cycle in the Reports feed (MLR-YYYY-MM, `#mlr=MMYY`), rule-generated summary, 95% target.
+
 ### v2.187.0 — Menu reshuffle: Hardware public, Satcom → Hardware > MODEM (2026-09-24)
 User-requested (agreed in chat before building). Main menu is now Home · Software · Hardware ·
 Media · Maintenance · Fleet. **4G SIM and Satcom left the menu**:
