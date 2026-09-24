@@ -7661,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.184.0';
-        const APP_BUILD    = '2026.09.24.12';
+        const APP_VERSION  = '2.185.0';
+        const APP_BUILD    = '2026.09.24.13';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -7735,15 +7735,17 @@
         //                 carry no media and have their own hardware. They are tracked
         //                 by SBC configuration, never mixed into the retrofit figures.
         //
-        // So: 44 in the programme, 41 Active, of which 39 retrofit + 2 linefit.
+        // So the programme = Active (retrofit + linefit) + In Retrofit.
         //
         // The roster ALSO holds aircraft in scope but not yet in the WiFi programme —
-        // added with no `fit` status, currently flying without WiFi. programmeFleet()
-        // is the WiFi-programme population (a fit on record); projectScope counts it,
-        // so every scope figure ignores the not-yet-started airframes until one enters
-        // retrofit and gets a fit. The full roster (all airframes) lives on the Fleet
-        // page, which lists everything.
-        function programmeFleet()  { return fleetRoster.filter(a => a.fit); }
+        // no WiFi status, currently flying without WiFi. programmeFleet() is the WiFi-
+        // programme population, decided by fleetStatus ALONE (Active or In Retrofit) —
+        // the same test as the IFC Fleet widget and hwAircraftFleet(). ⚠️ It used to be
+        // "has a `fit`", and two In-Retrofit tails (ASAA, AS73) with no fit on record made
+        // the nav Fleet badge read 47 while the IFC Fleet widget read 49 (v2.185.0).
+        // The full roster (all airframes) lives on the Fleet page, which lists everything.
+        function inProgramme(a)    { const s = fleetStatusOf(a); return s === 'Active' || s === 'In Retrofit'; }
+        function programmeFleet()  { return fleetRoster.filter(inProgramme); }
         function projectScope()    { return programmeFleet().length; }
         function hbcScope()        { return hbcFleet().length; }
         function middlewareScope() { return swFleet().length; }
@@ -11562,7 +11564,7 @@
             // Active + In Retrofit are two halves of one composition, so they read as one
             // split widget (like SSID below) rather than two tiles: the programme total is
             // the bullet, and the bar draws the two shares against each other.
-            const progTotal = activeCount + retrofitCount;
+            const progTotal = projectScope();   // = Active + In Retrofit, same as the nav badge
             const actPct = progTotal ? (activeCount / progTotal) * 100 : 0;
             // Name the tails still In Retrofit under the bar — the smaller, incomplete
             // share — rather than leaving the count to speak for itself.
@@ -22073,10 +22075,7 @@
         // the airframes being fitted carry equipment too, so the register must show them.
         // This is 46 today (44 Active + 2 In Retrofit), vs activeFleet()'s 44.
         function hwAircraftFleet() {
-            return aircraftData.filter(a => {
-                const s = fleetStatusOf(a);
-                return s === 'Active' || s === 'In Retrofit';
-            });
+            return aircraftData.filter(inProgramme);
         }
 
         function updateMetrics() {

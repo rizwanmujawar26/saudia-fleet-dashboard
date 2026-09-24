@@ -13,6 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.185.0 — Fleet count: one programme definition (2026-09-24)
+User-reported: the nav Fleet badge read 47 while the IFC Fleet widget read 49 (45 Active + 4 In
+Retrofit). Cause: `programmeFleet()` counted aircraft with a `fit` on record, and two In-Retrofit
+tails (ASAA, AS73) have no `fit`; the widget counted `fleetStatus` instead. Now one helper,
+`inProgramme(a)` = fleetStatus Active or In Retrofit, drives `programmeFleet()`/`projectScope()`
+(nav badge, status-bar count, Watchlist "of N", Aircraft in Scope), the IFC Fleet widget total
+and `hwAircraftFleet()`. Active = retrofit 42 + linefit 3; programme = 49.
+
 ### v2.184.0 — AVR report: one-line Engagement & People bar (2026-09-24)
 User-requested: the Engagement & People box (mode strip + group header + two-line person cards,
 ~130px) is now a single ~40px bar (`.ep-bar`): the engagement mode as a coloured pill (On-site
