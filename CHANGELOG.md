@@ -13,6 +13,19 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.181.0 — AVR report: activation pinned inside the mod window (2026-09-24)
+User-reported: the official **Mod end is the return to commercial service**, so most aircraft
+(20 of the fleet today — AQA, AQB, AQJ, AS55…) are **activated a few days BEFORE mod end**. The
+milestone strip drew Activated after Mod end regardless, out of date order. Now, when
+`activatedDate` falls inside [retrofitStart, retrofitEnd) the strip draws a **proportional
+track** (`.ms-prop`): Mod start left, **Mod end · back in service** right, and the activation
+dot pinned at its real date position, the bar turning green from activation onward. The
+activation caption rides ABOVE the bar ("Activated · 3 days before mod end", aligned
+left/centre/right by position) so it never collides with the Mod end caption; the window
+length ("30 days mod window") sits centred beneath. An activation during a still-open window
+uses today as the end (amber, "so far"). Activation after mod end keeps the three-node
+"N days to service" layout.
+
 ### v2.180.0 — AVR report: identity band redesign + spec-card refinements (2026-09-24)
 User-requested follow-up to v2.179.
 - **Identity band** rebuilt: the Aircraft cell is a navy registration plate (HZ-AS61) with type +

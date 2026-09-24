@@ -7661,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.180.0';
-        const APP_BUILD    = '2026.09.24.06';
+        const APP_VERSION  = '2.181.0';
+        const APP_BUILD    = '2026.09.24.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14451,10 +14451,42 @@
                     const link = i < msNodes.length - 1 ? `<div class="ms-line ${(msLinks[i] || {}).cls || 'dash'}">${(msLinks[i] || {}).label ? `<span>${escAttr(msLinks[i].label)}</span>` : ''}</div>` : '';
                     return node + link;
                 }).join('')}</div>` : '';
+            // ACTIVATED INSIDE THE MOD WINDOW (user, 2026-09-24). The official Mod end is the
+            // return to normal commercial service, so the system is often activated a few days
+            // BEFORE it (e.g. activated 27-Dec, mod end 30-Dec). Then the milestones must read
+            // in true date order — Mod start → Activated → Mod end — so the track becomes one
+            // proportional bar with Mod end on the right, and the activation pinned at its real
+            // position inside the window. Its caption rides ABOVE the bar (start/end captions
+            // hang below), so it can never collide with Mod end however close the dates are;
+            // the window length moves beneath the bar, centred. The bar turns green from
+            // activation onward — the system live while the mod closes out. Also covers an
+            // activation during a still-open window (end = today, amber).
+            const actIso = toISODate(ar.activatedDate || ''), startIso = toISODate(ar.retrofitStart || '');
+            const endIso = ar.retrofitEnd ? toISODate(ar.retrofitEnd) : (ar.retrofitStart ? todayIso : '');
+            let inWindowTrack = '';
+            if (!isLinefitAc && actIso && startIso && endIso && actIso >= startIso && actIso < endIso) {
+                const span = daysBetween(ar.retrofitStart, endIso) || 1;
+                const into = daysBetween(ar.retrofitStart, ar.activatedDate) || 0;
+                const f = Math.min(1, Math.max(0, into / span));
+                const before = daysBetween(ar.activatedDate, endIso);
+                const align = f > 0.72 ? 'ms-up-r' : (f < 0.28 ? 'ms-up-l' : 'ms-up-c');
+                const win = (rowOf(hardwareRows, 'Mod window') || [])[1] || '';
+                const open = !ar.retrofitEnd;
+                const note = open ? '' : (before != null ? ` · ${before} ${before === 1 ? 'day' : 'days'} before mod end` : '');
+                const cap = (k, v, sub) => `<span class="ms-k">${escAttr(k)}</span><span class="ms-v">${escAttr(v)}</span>${sub ? `<span class="ms-sub">${escAttr(sub)}</span>` : ''}`;
+                inWindowTrack = `<div class="ms-track ms-prop">
+                    <div class="ms-bar${open ? ' open' : ''}"></div>
+                    <div class="ms-bar-live" style="left:calc((100% - 13px) * ${f.toFixed(4)} + 6.5px);"></div>
+                    <div class="ms-node done ms-at" style="left:0;"><span class="ms-dot"></span><span class="ms-cap ms-first">${cap('Mod start', ar.retrofitStart)}</span></div>
+                    <div class="ms-node live ms-at" style="left:calc((100% - 13px) * ${f.toFixed(4)});"><span class="ms-dot"></span><span class="ms-cap ms-up ${align}">${cap('Activated' + note, ar.activatedDate, activationLocationOf(ar))}</span></div>
+                    <div class="ms-node ${open ? 'open' : 'done'} ms-at" style="left:calc(100% - 13px);"><span class="ms-dot"></span><span class="ms-cap ms-last">${cap(open ? 'Mod end' : 'Mod end · back in service', open ? 'Ongoing' : ar.retrofitEnd)}</span></div>
+                    ${win ? `<span class="ms-win">${escAttr(open ? win + ' so far' : win)} mod window</span>` : ''}
+                </div>`;
+            }
             const chipsEnd = loneMs + chipsRight;
             const cfgStrip = (chipsLeft || chipsEnd || msTrack) ? `<div class="cfg-strip">
                 ${chipsLeft || chipsEnd ? `<div class="cfg-top">${chipsLeft}<span class="sp"></span>${chipsEnd}</div>` : ''}
-                ${msTrack}
+                ${inWindowTrack || msTrack}
             </div>` : '';
             const specCards = [airframeCard, modmanPrint, softwareCard, mediaCard].filter(Boolean);
             const configSection = `<div class="sec">Aircraft &amp; Configuration</div>
@@ -14602,6 +14634,19 @@
     font-size:10.5px; font-weight:800; color:var(--navy); }
   .ms-line.dash span { color:var(--muted); font-weight:700; }
   .pill-navy { background:var(--navy); color:#fff; border:1px solid var(--navy); }
+  /* Proportional track — activation inside the mod window (v2.181). Dots sit at their real
+     date position; the activation caption rides above the bar, start/end below. */
+  .ms-track.ms-prop { display:block; position:relative; height:13px; margin:44px 4px 40px; }
+  .ms-prop .ms-bar { position:absolute; left:6.5px; right:6.5px; top:5px; border-top:2.5px solid var(--navy); }
+  .ms-prop .ms-bar.open { border-top:2px dashed #c47f1c; }
+  .ms-prop .ms-bar-live { position:absolute; right:6.5px; top:5px; border-top:2.5px solid var(--green); }
+  .ms-prop .ms-at { position:absolute; top:0; width:13px; }
+  .ms-cap.ms-up { top:auto; bottom:19px; }
+  .ms-cap.ms-up-l { left:0; text-align:left; }
+  .ms-cap.ms-up-c { left:50%; transform:translateX(-50%); text-align:center; }
+  .ms-cap.ms-up-r { right:0; text-align:right; }
+  .ms-prop .ms-win { position:absolute; top:19px; left:50%; transform:translateX(-50%); white-space:nowrap;
+    font-size:10.5px; font-weight:800; color:var(--navy); line-height:1.25; }
   .pill-sn { margin-left:6px; font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; letter-spacing:.2px; }
   .pill-site { margin-left:4px; }
   .pill-total { margin-left:6px; }
