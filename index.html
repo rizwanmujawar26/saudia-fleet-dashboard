@@ -7661,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.182.0';
-        const APP_BUILD    = '2026.09.24.10';
+        const APP_VERSION  = '2.183.0';
+        const APP_BUILD    = '2026.09.24.11';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14524,18 +14524,25 @@
             //   • a navy top band: programme kicker + report title on the left, the reference as
             //     a labelled block on the right (it is the document's ID, so it is framed, not
             //     floated in green on the page);
-            //   • a white facts row on a single grid: Registration · Aircraft Type · Config
-            //     · Visit Date · Location. Every cell is the same shape — small-caps
-            //     label, value, optional muted sub-line — with the values bottom-aligned on one
-            //     baseline; only the registration is set larger, as the lead fact. No pills:
-            //     uniform typography does the grouping.
+            //   • beneath it the three leading facts (see below).
             // A long cross-month range splits: start as the value, "→ end · N days" beneath.
             const dateLbl = avrDateLabel(v);
             const crossRange = multiDay && dateLbl.indexOf('→') >= 0;
             const dateVal = crossRange ? (v.dateStart || '—') : (dateLbl || '—');
             const dateSubFull = crossRange ? `→ ${v.dateEnd} · ${dateSub}` : dateSub;
             const titleText = /report/i.test(rt.label) ? rt.label : `${rt.label} Report`;
-            const fact = (k, val, sub, cls = '') => `<div class="mf${cls ? ' ' + cls : ''}"><span class="mf-k">${k}</span><span class="mf-v">${escAttr(val || '—')}</span>${sub ? `<span class="mf-s">${escAttr(sub)}</span>` : ''}</div>`;
+            // THREE LEADING FACTS (v2.183, user 2026-09-24): Registration, Visit Date and Location
+            // lead the report — not five equal columns. They sit free on one line, spread
+            // edge to edge with no boxes or dividers, each an icon + label / large value /
+            // supporting line. The registration is the largest; its supporting line is the
+            // aircraft Type and Config as small labelled pills, attached directly beneath it.
+            const ICO = {
+                reg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>',
+                date: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M16 3v4M8 3v4M3.5 10h17"/></svg>',
+                loc: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 21.5s7-6.2 7-11.5a7 7 0 1 0-14 0c0 5.3 7 11.5 7 11.5z"/><circle cx="12" cy="10" r="2.6"/></svg>',
+            };
+            const lead = (ico, k, valHtml, subHtml, cls = '') => `<div class="lf${cls ? ' ' + cls : ''}"><span class="lf-ico">${ICO[ico]}</span><div class="lf-body"><span class="lf-k">${k}</span><span class="lf-v">${valHtml}</span><span class="lf-s">${subHtml || '&nbsp;'}</span></div></div>`;
+            const idPill = (k, val) => val ? `<span class="idp"><i>${k}</i>${escAttr(val)}</span>` : '';
             const metaGrid = `<div class="mast">
                 <div class="mast-top">
                     <div class="mast-id">
@@ -14544,12 +14551,10 @@
                     </div>
                     ${v.ref ? `<div class="mast-ref"><span class="mast-ref-k">Report Reference</span><span class="mast-ref-v">${escAttr(v.ref)}</span></div>` : ''}
                 </div>
-                <div class="mast-facts">
-                    ${fact('Registration', 'HZ-' + v.aircraft, '', 'mf-lead')}
-                    ${fact('Aircraft Type', type)}
-                    ${fact('Config', acConfig)}
-                    ${fact(multiDay ? 'Visit Dates' : 'Visit Date', dateVal, dateSubFull)}
-                    ${fact('Location', v.location, placeDetail)}
+                <div class="mast-lead">
+                    ${lead('reg', 'Registration', 'HZ-' + escAttr(v.aircraft), idPill('Type', type) + idPill('Config', acConfig), 'lf-reg')}
+                    ${lead('date', multiDay ? 'Visit Dates' : 'Visit Date', escAttr(dateVal), escAttr(dateSubFull))}
+                    ${lead('loc', 'Location', escAttr(v.location || '—'), escAttr(placeDetail))}
                 </div>
             </div>`;
 
@@ -14707,19 +14712,25 @@
   .mast-ref-k { display:block; font-size:8.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#9fb0c4; }
   .mast-ref-v { display:block; font-size:14.5px; font-weight:800; color:#fff; letter-spacing:.6px; margin-top:1px;
     font-variant-numeric:tabular-nums; white-space:nowrap; }
-  .mast-facts { display:grid; grid-template-columns:1.2fr 1fr .75fr 1.2fr 1.2fr; background:#fff; }
-  .mf { display:flex; flex-direction:column; padding:11px 16px 12px; border-left:1px solid var(--line); min-width:0; }
-  .mf:first-child { border-left:none; padding-left:20px; }
-  .mf-k { font-size:9px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:var(--muted); white-space:nowrap; }
-  .mf-v { display:flex; align-items:flex-end; height:27px; font-size:15px; font-weight:700; color:var(--navy);
-    line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .mf-lead .mf-v { font-size:21px; font-weight:800; letter-spacing:.6px; }
-  .mf-s { font-size:11px; font-weight:600; color:var(--muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* Three leading facts (v2.183): free-standing on one line, spread edge to edge — no boxes,
+     no dividers. Icon + label / value / supporting line; values share one baseline. */
+  .mast-lead { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; background:#fff; padding:14px 22px 14px 20px; }
+  .lf { display:flex; align-items:flex-start; gap:11px; min-width:0; }
+  .lf-ico { flex:0 0 auto; width:32px; height:32px; border-radius:50%; background:#eef2f7; color:var(--navy);
+    display:flex; align-items:center; justify-content:center; margin-top:2px; }
+  .lf-ico svg { width:17px; height:17px; }
+  .lf-reg .lf-ico { background:var(--navy); color:#fff; }
+  .lf-body { display:flex; flex-direction:column; min-width:0; }
+  .lf-k { font-size:9px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:var(--muted); white-space:nowrap; }
+  .lf-v { display:flex; align-items:flex-end; height:28px; font-size:17px; font-weight:800; color:var(--navy); line-height:1.1; white-space:nowrap; }
+  .lf-reg .lf-v { font-size:25px; letter-spacing:.8px; }
+  .lf-s { display:flex; align-items:center; gap:5px; margin-top:4px; min-height:18px; font-size:11.5px; font-weight:600; color:var(--muted); white-space:nowrap; }
+  .idp { display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:800; color:var(--navy);
+    background:#eef2f7; border:1px solid #d7dee7; border-radius:99px; padding:0 8px; line-height:17px; letter-spacing:.2px; }
+  .idp i { font-style:normal; font-size:8.5px; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); }
   @media screen and (max-width:640px) {
-    .mast-facts { grid-template-columns:1fr 1fr; }
-    .mf { border-top:1px solid var(--line); }
-    .mf:first-child { grid-column:1 / -1; border-top:none; }
-    .mf:nth-child(2n) { border-left:none; padding-left:20px; }
+    .mast-lead { flex-wrap:wrap; }
+    .lf-reg { flex:1 0 100%; }
   }
   .muted { color:var(--muted); }
   .sec { font-size:12px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--navy);

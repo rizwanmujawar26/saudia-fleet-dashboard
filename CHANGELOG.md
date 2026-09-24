@@ -13,6 +13,15 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.183.0 — AVR report: three leading facts under the masthead (2026-09-24)
+User rejected v2.182's five equal columns: **Registration, Visit Date and Location** are the
+three leading facts; Type and Config are supporting detail of the registration, not peers. The
+white row under the navy band is now three free-standing items spread edge to edge — no boxes,
+no dividers — each an icon (plane / calendar / pin) + label / large value / supporting line.
+The registration is largest (25px, navy icon) with **Type** and **Config** as small labelled
+pills attached directly beneath it; the date carries its weekday (or span), the location its
+Line/Hangar bay. Navy title band + framed Report Reference unchanged.
+
 ### v2.182.0 — AVR report: masthead redesign (2026-09-24)
 User-requested full redesign of the title + identity band ("unorganised and chaotic"). The loose
 kicker/title row, the floating green reference and the mixed-style band (navy plate + light cells
