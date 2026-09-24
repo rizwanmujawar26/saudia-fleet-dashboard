@@ -6334,6 +6334,7 @@
                     <div>
                         <label class="add-sched-label">Removed S/N <span style="text-transform:none; font-weight:400;">(blank on a first fit)</span></label>
                         <input id="addActOldPart" class="add-sched-input" maxlength="60" autocomplete="off">
+                        <div id="addActRemovedHint" style="display:none; font-size:11px; line-height:1.3; color:#8a8f98; margin-top:4px; text-transform:none; font-weight:400;"></div>
                     </div>
                     <div>
                         <label class="add-sched-label">Fitted S/N</label>
@@ -7660,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.174.0';
-        const APP_BUILD    = '2026.09.22.02';
+        const APP_VERSION  = '2.175.0';
+        const APP_BUILD    = '2026.09.24.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14759,6 +14760,70 @@
             modem_commissioning: 'actExtraModem',
         };
 
+        // The box (if any) CURRENTLY on wing for this LRU on this aircraft (+position).
+        // A removal takes off whatever is fitted now — so this is what the "Removed S/N"
+        // field should hold. It guides the field, prefills it, and catches a removal typed
+        // against the wrong box: the AS61 KANDU mix-up logged 710342 (long since removed)
+        // as coming off on 23-Sep, when 710350 was the box actually on wing.
+        function onWingUnitFor(lruId, tail, pos) {
+            if (!lruId || !tail) return null;
+            let hit = null;
+            unitEntries().forEach(u => {
+                if (u.lruId !== lruId) return;
+                unitFitments(u).forEach(f => {
+                    if (fitmentIsOn(f) && f.aircraft === tail
+                        && (!pos || String(f.position || '') === String(pos))) hit = u;
+                });
+            });
+            return hit;
+        }
+
+        // Read the LRU / aircraft / position the Add-Activity form currently points at.
+        function actSwapContext() {
+            const cat = (document.getElementById('addActCategory') || {}).value || '';
+            const lruId = (document.getElementById('addActPart') || {}).value || '';
+            const tail = (document.getElementById('addActAircraft') || {}).value || '';
+            const posShown = (document.getElementById('addActPositionWrap') || {}).style
+                && document.getElementById('addActPositionWrap').style.display !== 'none';
+            const pos = posShown ? (document.getElementById('addActPosition') || {}).value || '' : '';
+            return { cat, lruId, tail, pos };
+        }
+
+        // A one-line hint under the Removed S/N field: what is on wing now, so the field is
+        // filled with the right serial rather than a guessed or stale one.
+        function syncActRemovedHint() {
+            const el = document.getElementById('addActRemovedHint');
+            if (!el) return;
+            const { cat, lruId, tail, pos } = actSwapContext();
+            if (cat !== 'hardware_rr' || !lruId || !tail) { el.style.display = 'none'; return; }
+            const label = (lruById(lruId) || {}).label || 'unit';
+            const u = onWingUnitFor(lruId, tail, pos);
+            if (!u) el.textContent = `Nothing on wing for ${label} on ${tail} — treat as a first fit and leave Removed S/N blank.`;
+            else if (!u.serial) el.textContent = `The ${label} on wing on ${tail} has no serial on record — set it on the Hardware tab first.`;
+            else el.textContent = `On wing now on ${tail}: ${label} S/N ${u.serial} — that is the box a removal takes off.`;
+            el.style.display = 'block';
+        }
+
+        // Default the Removed S/N to the box on wing (the choice the user made: prefill,
+        // then warn). Only on a NEW activity, and only into an empty field so it never
+        // clobbers what was typed; a first fit (nothing on wing) leaves it blank.
+        function prefillRemovedFromOnWing() {
+            if (addActEditingId) return;
+            const field = document.getElementById('addActOldPart');
+            if (!field || field.value.trim()) return;
+            const { cat, lruId, tail, pos } = actSwapContext();
+            if (cat !== 'hardware_rr' || !lruId || !tail) return;
+            const u = onWingUnitFor(lruId, tail, pos);
+            if (u && u.serial) field.value = u.serial;
+        }
+
+        // Part change: rebuild positions, then refresh the on-wing hint and prefill.
+        function onActPartChange() {
+            syncActPositions();
+            prefillRemovedFromOnWing();
+            syncActRemovedHint();
+        }
+
         // The part list follows the aircraft, because retrofit and linefit carry
         // different equipment. Rebuilt on open and whenever the aircraft changes, so a
         // part added on the Hardware tab shows up here with no further wiring.
@@ -14774,6 +14839,8 @@
                 lrus.map(l => `<option value="${escAttr(l.id)}">${escAttr(l.label)}</option>`).join('');
             if (lrus.some(l => l.id === previous)) sel.value = previous;
             syncActPositions();
+            prefillRemovedFromOnWing();
+            syncActRemovedHint();
         }
 
         // Only shown when the chosen part is fitted more than once on that aircraft.
@@ -14817,6 +14884,7 @@
             const h = document.getElementById('addActTitleHint');
             if (t) t.placeholder = ph;
             if (h) h.textContent = hint;
+            syncActRemovedHint();
         }
 
         // null when adding, the activity id when correcting an existing one. The
@@ -14844,7 +14912,8 @@
                 catSel.dataset.built = '1';
                 catSel.addEventListener('change', syncActExtras);
                 acSel.addEventListener('change', syncActParts);
-                document.getElementById('addActPart').addEventListener('change', syncActPositions);
+                document.getElementById('addActPart').addEventListener('change', onActPartChange);
+                document.getElementById('addActPosition').addEventListener('change', () => { prefillRemovedFromOnWing(); syncActRemovedHint(); });
             }
             const err = document.getElementById('addActError');
             err.textContent = ''; err.style.display = 'none';
@@ -15027,6 +15096,31 @@
                     err.textContent = 'Choose which part this was. Add it on the Hardware tab first if it is not listed.';
                     err.style.display = 'block';
                     return;
+                }
+
+                // Removed-serial sanity check (NEW hardware R&R only). A removal takes off
+                // the box on wing NOW; if the typed Removed S/N is not that box, warn before
+                // writing — this is exactly the AS61 KANDU mix-up (710342 logged as coming
+                // off when 710350 was fitted), which silently minted a stray fitment. Editing
+                // an existing activity keeps its own reconcile path and is left alone.
+                if (category === 'hardware_rr' && !addActEditingId) {
+                    const oldS = val('addActOldPart').trim();
+                    if (oldS) {
+                        const onWing = onWingUnitFor(details.lruId, entry.aircraft, details.position || '');
+                        const isOnWing = onWing && normSerialKey(onWing.serial) === normSerialKey(oldS);
+                        if (!isOnWing) {
+                            const label = (lruById(details.lruId) || {}).label || 'unit';
+                            const cur = onWing
+                                ? (onWing.serial ? `S/N ${onWing.serial}` : 'a unit with no serial on record')
+                                : `no ${label} on record as fitted here`;
+                            const ok = confirm(
+                                `Heads up — ${oldS} is not the ${label} on wing on ${entry.aircraft} right now.\n\n`
+                                + `On wing now: ${cur}.\n\n`
+                                + `Saving records ${oldS} as removed on ${entry.date} and attaches it to this aircraft, `
+                                + `which can create a stray fitment. Log the removal against ${oldS} anyway?`);
+                            if (!ok) return;   // abort — modal stays open, nothing written yet
+                        }
+                    }
                 }
 
                 const token = await getIdToken();

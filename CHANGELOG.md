@@ -13,6 +13,25 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.175.0 — Fix: KANDU serial mix-up + safer R&R serial entry (2026-09-24)
+User-reported: AS61's KANDU history was wrong — 710342 showed two fitments and the middle
+box **710350 was missing** (data corrected in the DB, not by code).
+
+- **Root cause** — the Add-Activity R&R form takes *Removed S/N* as free text and never
+  checked it against the box actually on wing. A swap logged 23-Sep-2026 typed the removed
+  serial as **710342** (already off since 14-Apr), so `unitWritesForActivity` attached the
+  removal to 710342 (a stray second fitment) and 710350 was never created; its earlier fit
+  had been logged with a blank serial, leaving a serial-less KANDU on wing.
+- **Data fix** — AS61 KANDU is now 710342 (29-Dec-2025→14-Apr-2026), 710350
+  (14-Apr→23-Sep-2026, "Modem unable to Transmit any data", linked to the R&R), 710335
+  (23-Sep-2026→on-wing). The phantom fitment was deleted and the blank unit became 710350.
+- **Prevention (better entry)** — the Removed S/N field now shows a live hint of what is on
+  wing (`onWingUnitFor`), **prefills** that serial on a new R&R, and a **pre-save guard**
+  warns (confirm) when the typed removed serial is not the box currently fitted on that
+  aircraft, before anything is written. Editing an existing activity keeps its own reconcile
+  path. New fns: `onWingUnitFor` / `actSwapContext` / `syncActRemovedHint` /
+  `prefillRemovedFromOnWing` / `onActPartChange`.
+
 ### v2.174.0 — Fix: LRU R&R double-listed on AVR reports (2026-09-22)
 User-reported: the ASAD report showed **KRFU fitted / KRFU removed twice** (10 entries, not 8).
 
