@@ -7726,8 +7726,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.189.0';
-        const APP_BUILD    = '2026.09.25.03';
+        const APP_VERSION  = '2.189.1';
+        const APP_BUILD    = '2026.09.25.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15373,12 +15373,12 @@
   .mlr-facts b { color:#0b1f3a; font-weight:800; }
   .mlr-jr { border:1px solid #e3e8ee; border-radius:10px; padding:12px 16px 10px; margin-top:10px; background:#fff; }
   .mlr-jr-steps { position:relative; display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:6px; margin-top:8px; }
-  .mlr-jr-s { position:relative; border:1px solid #d5dbe1; border-radius:8px; padding:7px 8px; background:#fff; min-width:0; }
+  .mlr-jr-s { position:relative; display:flex; flex-direction:column; border:1px solid #d5dbe1; border-radius:8px; padding:7px 8px; background:#fff; min-width:0; }
   .mlr-jr-s.miss { border-style:dashed; background:#fafbfc; }
   .mlr-jr-s.load { background:#eef8f2; border-color:#bfe3cd; }
   .mlr-jr-s .ic { font-size:14px; line-height:1; }
   .mlr-jr-s .lb { font-size:10px; font-weight:800; letter-spacing:.3px; text-transform:uppercase; color:#6b7883; margin-top:4px; line-height:1.2; }
-  .mlr-jr-s .dt { font-size:12px; font-weight:800; color:#0b1f3a; margin-top:2px; white-space:nowrap; }
+  .mlr-jr-s .dt { font-size:12px; font-weight:800; color:#0b1f3a; margin-top:auto; padding-top:3px; white-space:nowrap; }
   .mlr-jr-s.miss .dt { color:#aab4be; font-weight:600; }
   .mlr-jr-s.load .lb { color:#0b7a3b; }
   .mlr-jr-dur { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:11.5px; color:#6b7883; margin-top:9px; }
@@ -15423,8 +15423,8 @@
             const dur = (k, v) => `<span>${k} <b class="${v == null ? 'nil' : ''}">${v == null ? '—' : mlrPlural(v, 'day')}</b></span>`;
 
             return `<div class="mlr-id">
-                <div><div class="mlr-k">Media cycle</div><div class="mlr-big">${escAttr(d.label)}</div><div class="mlr-sub">${escAttr(d.ref)}</div></div>
-                <div><div class="mlr-k">Media size</div><div class="mlr-big">${escAttr(d.size || '—')}</div><div class="mlr-sub">per aircraft load</div></div>
+                <div><div class="mlr-k">Media cycle</div><div class="mlr-big">${escAttr(d.label)}</div></div>
+                <div><div class="mlr-k">Media size</div><div class="mlr-big">${escAttr(d.size || '—')}</div></div>
                 <div><div class="mlr-k">Media part number</div><div class="mlr-pn">${escAttr(d.partNumber)}</div><div class="mlr-sub">${d.disks.length ? `${mlrPlural(d.disks.length, 'media disk')} prepared` : 'Media disks not tagged yet'}</div></div>
             </div>
             <div class="mlr-prog">
@@ -15510,8 +15510,14 @@
             const stamp = `${fmtDate(new Date().toISOString().slice(0, 10))} ${new Date().toISOString().slice(11, 16)} UTC`;
             const pctBar = p => `<span class="bar"><i style="width:${Math.min(100, p)}%"></i></span>`;
             const narr = mediaReportNarrative(d, prev).map(p => `<div class="nr"><div class="nr-k">${escAttr(p.k)}</div><div class="nr-t">${escAttr(p.t)}</div></div>`).join('');
-            const weekRows = d.weeks.map(w => `<tr><td>Week ${w.no}</td><td class="nowrap">${escAttr(fmtDateShort(fmtDate(w.from)))} → ${escAttr(fmtDateShort(fmtDate(w.to)))}</td><td class="num">${w.n}</td><td class="num">${w.cum}</td><td class="num">${w.pct}%</td><td>${pctBar(w.pct)}</td></tr>`).join('');
-            const typeRows = d.byType.map(t => `<tr><td><b>${escAttr(t.type)}</b></td><td class="num">${t.scope}</td><td class="num">${t.done}</td><td class="num">${t.pct}%</td><td>${pctBar(t.pct)}</td><td class="num">${t.median != null ? 'Day ' + t.median : '—'}</td></tr>`).join('');
+            // Each week on its OWN — loads that week and their share of the fleet, no running
+            // total — so the most productive week stands out (its bar is darker).
+            const weekRows = d.weeks.map(w => {
+                const wp = d.scope ? Math.round(w.n / d.scope * 1000) / 10 : 0;
+                const top = d.busiestWeek && w.no === d.busiestWeek.no && w.n;
+                return `<tr${top ? ' class="top"' : ''}><td><b>W${w.no}</b></td><td class="nowrap">${escAttr(fmtDateShort(fmtDate(w.from)).slice(0, 6))} → ${escAttr(fmtDateShort(fmtDate(w.to)).slice(0, 6))}</td><td class="num">${w.n}</td><td class="num">${wp}%</td><td>${pctBar(wp)}</td></tr>`;
+            }).join('');
+            const typeRows = d.byType.map(t => `<tr><td><b>${escAttr(t.type)}</b></td><td class="num">${t.done}/${t.scope}</td><td class="num">${t.pct}%</td><td>${pctBar(t.pct)}</td></tr>`).join('');
             const missRows = d.missing.length
                 ? d.missing.map(m => `<tr><td><b>${escAttr(m.tail)}</b></td><td>${escAttr(m.type)}</td><td>${escAttr(m.now)}</td><td class="nowrap">${escAttr(m.activated || '—')}</td></tr>`).join('')
                 : '<tr><td colspan="4">None — every eligible aircraft took this media.</td></tr>';
@@ -15519,15 +15525,24 @@
                 ? d.disks.map(k => `<tr><td class="mono"><b>${escAttr(k.nsgSerial || k.id)}</b></td><td>${escAttr(k.type || '—')}</td><td>${escAttr(k.make || '—')}</td><td class="mono">${escAttr(k.mfrSerial || '—')}</td><td>${escAttr(k.totalSize || '—')}</td><td>${escAttr(k.location || '—')}</td><td>${escAttr(k.custodian || '—')}</td></tr>`).join('')
                 : `<tr><td colspan="7">No Media Disks are tagged with ${escAttr(d.label)} yet. Tag them in Hardware › Assets (content "Media ${escAttr(MONTH_NAMES[parseInt(d.cycle.slice(0, 2), 10) - 1])} 20${escAttr(d.cycle.slice(2))}").</td></tr>`;
             const logRows = d.loads.map((l, i) => `<tr><td class="num">${i + 1}</td><td><b>${escAttr(l.tail)}</b></td><td>${escAttr(l.type)}</td><td class="nowrap">${escAttr(mlrStamp(l.at))}</td><td class="num">${l.day}</td><td class="mono">${escAttr(l.source)}</td><td>${l.late ? '<span class="pill pill-amber">Late</span>' : ''}</td></tr>`).join('');
-            const cmp = prev && prev.done && !d.open ? `<table class="tbl"><thead><tr><th>Measure</th><th class="num">${escAttr(prev.label)}</th><th class="num">${escAttr(d.label)}</th></tr></thead><tbody>
-                <tr><td>Fleet loaded</td><td class="num">${prev.done}/${prev.scope} · ${prev.pct}%</td><td class="num"><b>${d.done}/${d.scope} · ${d.pct}%</b></td></tr>
-                <tr><td>Cycle length</td><td class="num">${prev.days} days</td><td class="num"><b>${d.days} days</b></td></tr>
-                <tr><td>Loaded in first 7 days</td><td class="num">${prev.firstWeek}</td><td class="num"><b>${d.firstWeek}</b></td></tr>
-                <tr><td>Day 50% reached</td><td class="num">${prev.t50 ? prev.t50.day : '—'}</td><td class="num"><b>${d.t50 ? d.t50.day : '—'}</b></td></tr>
-                <tr><td>Day 90% reached</td><td class="num">${prev.t90 ? prev.t90.day : '—'}</td><td class="num"><b>${d.t90 ? d.t90.day : '—'}</b></td></tr>
-                <tr><td>Typical (median) load day</td><td class="num">${prev.median != null ? prev.median : '—'}</td><td class="num"><b>${d.median != null ? d.median : '—'}</b></td></tr>
-                <tr><td>Media size</td><td class="num">${escAttr(prev.size || '—')}</td><td class="num"><b>${escAttr(d.size || '—')}</b></td></tr>
-            </tbody></table>` : '';
+            // Cycle comparison — ONE ROW PER CYCLE (newest first, up to six), so every new
+            // month simply adds a row. This cycle's row is highlighted.
+            const cmpCycles = Object.keys(MEDIA_CYCLES)
+                .filter(c => (MEDIA_CYCLES[c] || {}).start && !isLightMediaCycle(c) && cycleSortKey(c) <= cycleSortKey(cycle))
+                .sort((a, b) => cycleSortKey(b) - cycleSortKey(a)).slice(0, 6)
+                .map(c => (c === cycle ? d : mediaReportData(c))).filter(Boolean);
+            const cmpRows = cmpCycles.map(x => `<tr${x.cycle === cycle ? ' class="me"' : ''}>
+                <td class="nowrap"><b>${escAttr(x.label)}</b>${x.open ? ' <span class="pill pill-amber">Open</span>' : ''}</td>
+                <td class="num">${escAttr(x.size || '—')}</td>
+                <td class="num">${x.days}</td>
+                <td class="num">${x.done}/${x.scope}</td>
+                <td class="num"><b>${x.pct}%</b></td>
+                <td class="num">${x.firstWeek}</td>
+                <td class="num">${x.t50 ? 'Day ' + x.t50.day : '—'}</td>
+                <td class="num">${x.t90 ? 'Day ' + x.t90.day : '—'}</td>
+                <td class="num">${x.median != null ? 'Day ' + x.median : '—'}</td>
+            </tr>`).join('');
+            const cmp = cmpCycles.length > 1 ? `<table class="tbl"><thead><tr><th>Cycle</th><th class="num">Size</th><th class="num">Days</th><th class="num">Loaded</th><th class="num">%</th><th class="num">First 7 days</th><th class="num">50% by</th><th class="num">90% by</th><th class="num">Median</th></tr></thead><tbody>${cmpRows}</tbody></table>` : '';
 
             return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15568,6 +15583,9 @@
   .mono { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:11px; }
   .bar { display:inline-block; width:100%; min-width:80px; height:7px; background:#eef1f4; border-radius:99px; overflow:hidden; vertical-align:middle; }
   .bar i { display:block; height:100%; background:#3f8f63; border-radius:99px; }
+  tr.top .bar i { background:#0b1f3a; }
+  table.tbl tr.me td { background:#eef8f2 !important; }
+  .two .bar { min-width:50px; }
   .tbl-card { border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:8px 0; }
   .pill { display:inline-block; font-size:10px; font-weight:800; padding:1px 8px; border-radius:99px; }
   .pill-amber { background:#fdf1e3; color:#8a5312; border:1px solid #f1d9b6; }
@@ -15627,24 +15645,24 @@
       <div class="cap">Aircraft loaded each day. The darker bar marks the busiest day${d.peak.n ? ` (${escAttr(fmtDate(d.peak.iso))}, ${d.peak.n})` : ''}.</div>
     </div>
 
-    <div class="sec">Week by week</div>
-    <div class="tbl-card"><table class="tbl">
-      <thead><tr><th>Week</th><th>Dates</th><th class="num">Loaded</th><th class="num">Cumulative</th><th class="num">% fleet</th><th style="width:30%;">Progress</th></tr></thead>
-      <tbody>${weekRows}</tbody>
-    </table></div>
-
     <div class="two">
       <div>
-        <div class="sec">By aircraft type</div>
+        <div class="sec">Week by week</div>
         <div class="tbl-card"><table class="tbl">
-          <thead><tr><th>Type</th><th class="num">Fleet</th><th class="num">Loaded</th><th class="num">%</th><th style="width:28%;"></th><th class="num">Median</th></tr></thead>
-          <tbody>${typeRows}</tbody>
+          <thead><tr><th>Week</th><th>Dates</th><th class="num">Loaded</th><th class="num">%</th><th style="width:34%;">Progress</th></tr></thead>
+          <tbody>${weekRows}</tbody>
         </table></div>
       </div>
       <div>
-        ${cmp ? `<div class="sec">Compared with ${escAttr(prev.label)}</div><div class="tbl-card">${cmp}</div>` : ''}
+        <div class="sec">By aircraft type</div>
+        <div class="tbl-card"><table class="tbl">
+          <thead><tr><th>Type</th><th class="num">Loaded</th><th class="num">%</th><th style="width:40%;">Progress</th></tr></thead>
+          <tbody>${typeRows}</tbody>
+        </table></div>
       </div>
     </div>
+
+    ${cmp ? `<div class="sec">Cycle comparison</div><div class="tbl-card">${cmp}</div>` : ''}
 
     <div class="sec">Media disks — ${d.disks.length}</div>
     <div class="tbl-card"><table class="tbl">
