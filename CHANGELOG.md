@@ -13,6 +13,18 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.177.0 — AVR report: bordered spec panels + carded equipment tables (2026-09-24)
+User-requested visual pass on the AVR PDF (`buildAvrReportDoc`). The four spec sections —
+**Aircraft, Specifications, MODMAN & Commissioning, Software & Media** — that were loose
+3/4-column label stacks are now **bordered cards** matching the identity band and Engagement
+box: white cells on a 1px hairline grid, via a new `rptPanel(rows, cols, tailCells, tailSpan)`
+helper. The last row is padded with `.di-fill` blanks so the gridlines stay clean with no
+coloured gap; the Aircraft seat-config LOPA rides as a span-2 tail cell. Accents preserved
+(Install-site alert red, Activation green, WiFi/roaming pills). The **Installed / Removed
+Equipment** tables are wrapped in a matching `.tbl-card` (rounded border, soft header fill).
+Small panels get `break-inside: avoid` in print; the equipment cards flow so a long list
+still paginates. New CSS: `.rpt-panel` / `.rpt-panel.cols-4` / `.tbl-card`.
+
 ### v2.176.0 — AVR report: removed equipment sorted oldest-first (2026-09-24)
 User-requested. The **Removed Equipment** table in the AVR PDF report (`buildAvrReportDoc`)
 now reads as a chronological removals log — **oldest removal at the top, newest at the

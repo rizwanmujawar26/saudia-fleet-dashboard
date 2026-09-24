@@ -7661,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.176.0';
-        const APP_BUILD    = '2026.09.24.02';
+        const APP_VERSION  = '2.177.0';
+        const APP_BUILD    = '2026.09.24.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14279,6 +14279,18 @@
                     : `<span class="dv${hint ? ' dv-' + hint : ''}">${text}</span>`;
                 return `<div class="di"><span class="k">${escAttr(k)}</span>${valHtml}</div>`;
             }).join('');
+            // A bordered spec panel — the same enclosed shell as the identity band and the
+            // Engagement box, so every section reads as a designed card rather than a loose
+            // 3-column stack (user, 2026-09-24). White cells sit on a 1px hairline grid; the
+            // last row is padded with blank cells so the gridlines stay clean with no
+            // coloured gap. `tailCells` carries a pre-built spanning cell (the Aircraft seat
+            // LOPA) and `tailSpan` its column width, so the fill maths still lands.
+            const rptPanel = (rows, cols, tailCells = '', tailSpan = 0) => {
+                const used = rows.length + tailSpan;
+                const fill = (cols - (used % cols)) % cols;
+                const fillers = '<div class="di di-fill"></div>'.repeat(fill);
+                return `<div class="rpt-panel${cols === 4 ? ' cols-4' : ''}">${dossierGrid(rows)}${tailCells}${fillers}</div>`;
+            };
 
             // Aircraft section: Type/MSN/Delivery on row 1; IFE system then the seat
             // configuration (LOPA) on row 2, the seat cell given the width of the rest of
@@ -14286,10 +14298,10 @@
             const acSeatIdx = aircraftRows.findIndex(r => r[0] === 'Seat configuration');
             const acSeatVal = acSeatIdx >= 0 ? aircraftRows[acSeatIdx][1] : '';
             const acHeadRows = aircraftRows.filter((r, i) => i !== acSeatIdx);
-            const aircraftSection = `<div class="sec">Aircraft</div>
-                <div class="rpt-grid">${dossierGrid(acHeadRows)}${acSeatVal
-                    ? `<div class="di di-span2"><span class="k">Seat configuration</span><span class="dv dv-seat"><span class="seat-ico">\u{1F4BA}</span>${escAttr(acSeatVal)}</span></div>`
-                    : ''}</div>`;
+            const acSeatCell = acSeatVal
+                ? `<div class="di di-span2"><span class="k">Seat configuration</span><span class="dv dv-seat"><span class="seat-ico">\u{1F4BA}</span>${escAttr(acSeatVal)}</span></div>`
+                : '';
+            const aircraftSection = `<div class="sec">Aircraft</div>${rptPanel(acHeadRows, 3, acSeatCell, acSeatCell ? 2 : 0)}`;
 
             // Equipment, split into two concise tables — what is fitted now, and what has
             // been removed — each with dates and a day count. (user, 2026-09-14; moved to
@@ -14324,11 +14336,11 @@
             });
             const installedTable = equipInstalled.length ? `
                 <div class="sec">Installed Equipment</div>
-                <table class="tbl eqtbl"><thead><tr><th>Equipment</th><th>Serial</th><th>Installed</th><th class="num">On wing</th></tr></thead>
+                <div class="tbl-card"><table class="tbl eqtbl"><thead><tr><th>Equipment</th><th>Serial</th><th>Installed</th><th class="num">On wing</th></tr></thead>
                 <tbody>${equipInstalled.map(r => {
                     const days = r.daysOnWing != null ? r.daysOnWing : daysBetween(r.date, todayIso);
                     return `<tr><td>${escAttr(r.lru.label)}${eqPos(r)}</td><td class="mono">${eqSerial(r)}</td><td class="nowrap">${escAttr(r.date || '—')}</td><td class="num">${days != null ? days + 'd' : '—'}</td></tr>`;
-                }).join('')}</tbody></table>` : '';
+                }).join('')}</tbody></table></div>` : '';
             // Removed equipment carries a Shop Report status pill (Awaiting until the box
             // is booked in, then In Shop / Repaired / NFF / Scrapped), and — when the shop
             // finding is recorded — a second line beneath the row with the full finding.
@@ -14336,13 +14348,13 @@
             const shopPill = s => ({ pending: 'pill-amber', in_shop: 'pill-blue', repaired: 'pill-green', no_fault: 'pill-grey', scrap: 'pill-red' })[s] || 'pill-amber';
             const removedTable = equipRemoved.length ? `
                 <div class="sec">Removed Equipment</div>
-                <table class="tbl eqtbl"><thead><tr><th>Equipment</th><th>Serial</th><th>Installed</th><th>Removed</th><th>Shop&nbsp;Report</th><th class="num">In&nbsp;service</th></tr></thead>
+                <div class="tbl-card"><table class="tbl eqtbl"><thead><tr><th>Equipment</th><th>Serial</th><th>Installed</th><th>Removed</th><th>Shop&nbsp;Report</th><th class="num">In&nbsp;service</th></tr></thead>
                 ${equipRemoved.map(u => {
                     const days = daysBetween(u.fitted, u.removed);
                     const ss = u.shopStatus || 'pending';
                     const finding = (u.shopFinding || '').trim();
                     return `<tbody class="eq-grp"><tr><td>${escAttr(u.lru.label)}${eqPos(u)}</td><td class="mono">${eqSerial(u)}</td><td class="nowrap">${escAttr(u.fitted || '—')}</td><td class="nowrap">${escAttr(u.removed || '—')}</td><td><span class="pill ${shopPill(ss)}">${escAttr(shopShort(ss))}</span></td><td class="num">${days != null ? days + 'd' : '—'}</td></tr>${finding ? `<tr class="eq-finding-row"><td></td><td colspan="5" class="eq-finding"><b>Shop finding:</b> ${escAttr(finding)}</td></tr>` : ''}</tbody>`;
-                }).join('')}</table>` : '';
+                }).join('')}</table></div>` : '';
             const equipPrint = installedTable + removedTable;
             const ifcNotePrint = dspec.ifcNote ? `<div class="note" style="margin-top:6px;"><b>IFC mod:</b> ${escAttr(dspec.ifcNote)}</div>` : '';
             let modmanPrint = '';
@@ -14361,7 +14373,7 @@
                     ['Taurus MG / TID', [taurusMg, taurusTid].filter(Boolean).join(' / ')],
                     ['Hughes Chassis ID', modman.hnsChassisId],
                 ].filter(r => r[1]);
-                modmanPrint = mrows.length ? `<div class="sec">MODMAN &amp; Commissioning</div><div class="rpt-grid">${dossierGrid(mrows)}</div>` : '';
+                modmanPrint = mrows.length ? `<div class="sec">MODMAN &amp; Commissioning</div>${rptPanel(mrows, 3)}` : '';
             }
 
             // Download stamp — day-first date + time, captured the moment the report opens
@@ -14450,6 +14462,25 @@
   .rpt-grid .dv-accent { color:var(--green); font-weight:800; }
   .rpt-grid .dv-seat { white-space:nowrap; }
   .rpt-grid .dv-seat .seat-ico { margin-right:6px; }
+  /* Bordered spec panel (v2.177) — the enclosed shell the identity band and Engagement box
+     use, applied to Aircraft / Specifications / MODMAN / Software so each section reads as a
+     card. White cells on a 1px hairline grid: gap:1px reveals the line-coloured container,
+     and the last row is padded with .di-fill blanks so no coloured gap shows. */
+  .rpt-panel { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line);
+    border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:8px 0 10px; }
+  .rpt-panel.cols-4 { grid-template-columns:repeat(4,1fr); }
+  .rpt-panel .di { background:#fff; padding:9px 14px 10px; line-height:1.35; min-width:0; }
+  .rpt-panel .di.di-span2 { grid-column:span 2; }
+  .rpt-panel .di.di-fill { background:#fff; }
+  .rpt-panel .dv { color:var(--ink); font-weight:600; font-size:12.5px; overflow-wrap:anywhere; }
+  .rpt-panel .dv-alert { color:#a52834; font-weight:800; }
+  .rpt-panel .dv-accent { color:var(--green); font-weight:800; }
+  .rpt-panel .dv-seat { white-space:nowrap; }
+  .rpt-panel .dv-seat .seat-ico { margin-right:6px; }
+  /* Equipment tables enclosed in the same card shell, header on a soft fill. */
+  .tbl-card { border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:8px 0 10px; }
+  .tbl-card table.tbl { font-size:12px; }
+  .tbl-card .eqtbl th { background:var(--soft); border-bottom:1px solid var(--line); }
   .pill { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.3px; padding:1px 9px; border-radius:99px; }
   .pill-red { background:#fdecee; color:#a52834; border:1px solid #f3c2c8; }
   .pill-green { background:#e9f5ee; color:#0b7a3b; border:1px solid #bfe3cd; }
@@ -14533,7 +14564,7 @@
        split across pages, so a big Report fills page 1 and continues on page 2 instead of
        being pushed wholesale to the next page and leaving a gap. A section title stays with
        the block that follows it. */
-    .rpt-header, .rpt-meta, .rpt-grid { break-inside: avoid; }
+    .rpt-header, .rpt-meta, .rpt-grid, .rpt-panel, .ep-box { break-inside: avoid; }
     .sec { break-after: avoid; }
     .note { break-inside: auto; }
   }
@@ -14564,10 +14595,10 @@
     ${engagementPeople}
     ${aircraftSection}
     <div class="sec">Specifications</div>
-    <div class="rpt-grid">${dossierGrid(hardwareRows)}</div>
+    ${rptPanel(hardwareRows, 3)}
     ${ifcNotePrint}
     ${modmanPrint}
-    ${softwareRows.length ? `<div class="sec">Software &amp; Media</div><div class="rpt-grid rpt-grid-4">${dossierGrid(softwareRows)}</div>` : ''}
+    ${softwareRows.length ? `<div class="sec">Software &amp; Media</div>${rptPanel(softwareRows, 4)}` : ''}
     ${equipPrint}
     <div class="sec">Work Carried Out — ${members.length} ${members.length === 1 ? 'entry' : 'entries'}</div>
     <table class="tbl">
