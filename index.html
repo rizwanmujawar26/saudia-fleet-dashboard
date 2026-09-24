@@ -7661,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.175.0';
-        const APP_BUILD    = '2026.09.24.01';
+        const APP_VERSION  = '2.176.0';
+        const APP_BUILD    = '2026.09.24.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14309,6 +14309,19 @@
             const equipInstalled = equip.filter(r => r.serial && !r.vacant);
             const equipRemoved = [];
             equip.forEach(r => (r.removedUnits || []).forEach(u => equipRemoved.push(Object.assign({ lru: r.lru, position: r.position, qty: r.qty }, u))));
+            // Read the removals as a chronological log — oldest removal first, newest last —
+            // rather than grouped by equipment type, so the sequence of swaps runs top to
+            // bottom (user, 2026-09-24). Tie-break on install date, then serial; an undated
+            // removal sorts last.
+            equipRemoved.sort((a, b) => {
+                const ra = dateSortKey(toISODate(a.removed || '')) || '99999999';
+                const rb = dateSortKey(toISODate(b.removed || '')) || '99999999';
+                if (ra !== rb) return ra < rb ? -1 : 1;
+                const fa = dateSortKey(toISODate(a.fitted || '')) || '99999999';
+                const fb = dateSortKey(toISODate(b.fitted || '')) || '99999999';
+                if (fa !== fb) return fa < fb ? -1 : 1;
+                return String(a.serial || '').localeCompare(String(b.serial || ''));
+            });
             const installedTable = equipInstalled.length ? `
                 <div class="sec">Installed Equipment</div>
                 <table class="tbl eqtbl"><thead><tr><th>Equipment</th><th>Serial</th><th>Installed</th><th class="num">On wing</th></tr></thead>

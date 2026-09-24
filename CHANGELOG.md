@@ -13,6 +13,13 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.176.0 — AVR report: removed equipment sorted oldest-first (2026-09-24)
+User-requested. The **Removed Equipment** table in the AVR PDF report (`buildAvrReportDoc`)
+now reads as a chronological removals log — **oldest removal at the top, newest at the
+bottom** — instead of grouped by equipment type. `equipRemoved` is sorted by `removedDate`
+ascending (via `dateSortKey(toISODate(...))`), tie-broken on install date then serial;
+an undated removal sorts last. Installed Equipment and the on-screen card summary unchanged.
+
 ### v2.175.0 — Fix: KANDU serial mix-up + safer R&R serial entry (2026-09-24)
 User-reported: AS61's KANDU history was wrong — 710342 showed two fitments and the middle
 box **710350 was missing** (data corrected in the DB, not by code).
