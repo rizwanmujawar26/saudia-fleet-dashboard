@@ -13,6 +13,12 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.186.0 — Fleet HBC+ pill = Active only (2026-09-24)
+User-requested: the HBC+ quick pill counted and showed all 8 HBC+ aircraft, including the five
+FUTURE / In-Scope A321XLRs. It now shows Active HBC+ only (3 today: ASBA, ASBB, ASBE). New
+`fleetSystemPillValue(system, status)` feeds both the hidden `system` axis and
+`fleetSystemCount`, giving a non-Active HBC+ row a value no pill selects. Eclipse is unchanged.
+
 ### v2.185.0 — Fleet count: one programme definition (2026-09-24)
 User-reported: the nav Fleet badge read 47 while the IFC Fleet widget read 49 (45 Active + 4 In
 Retrofit). Cause: `programmeFleet()` counted aircraft with a `fit` on record, and two In-Retrofit

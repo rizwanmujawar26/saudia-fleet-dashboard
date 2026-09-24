@@ -7661,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.185.0';
-        const APP_BUILD    = '2026.09.24.13';
+        const APP_VERSION  = '2.186.0';
+        const APP_BUILD    = '2026.09.24.14';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -9713,8 +9713,10 @@
                     // trigger and out of the collapsed sheet (the opsout pattern). Matches
                     // the Connectivity System column, which is the stored `system` or the
                     // fit-derived default (Eclipse for retrofit, HBC+ for linefit).
+                    // HBC+ counts Active aircraft only (user, 2026-09-24) — see
+                    // fleetSystemPillValue.
                     { id: 'system', label: 'System', hidden: true,
-                      rowValue: row => row.dataset.system || '' },
+                      rowValue: row => fleetSystemPillValue(row.dataset.system || '', row.dataset.fstatus || '') },
                 ],
                 // The visible/total count now lives at the FOOT of the table (like the
                 // Satcom "90 of 90 MODMANs" line), not beside the search box — the number
@@ -10931,7 +10933,15 @@
         // the fit-derived default (Eclipse for retrofit, HBC+ for linefit). Drives the
         // Eclipse / HBC+ quick pills and their live counts.
         function fleetSystemOf(a) { return a.system || systemDefault(a.fit || ''); }
-        function fleetSystemCount(v) { return fleetRoster.filter(a => fleetSystemOf(a) === v).length; }
+        // The value a row carries on the hidden system axis behind the Eclipse / HBC+
+        // pills. HBC+ is Active-only (user, 2026-09-24): the linefit A321XLRs are listed
+        // long before delivery (FUTURE, In Scope), and the pill should read the HBC+
+        // aircraft actually flying — ASBA/ASBB/ASBE, not all eight. A not-yet-Active HBC+
+        // row gets a value no pill selects. Eclipse is unchanged (Active + In Retrofit).
+        function fleetSystemPillValue(system, status) {
+            return system === 'HBC+' && status !== 'Active' ? 'HBC+ (not active)' : system;
+        }
+        function fleetSystemCount(v) { return fleetRoster.filter(a => fleetSystemPillValue(fleetSystemOf(a), fleetStatusOf(a)) === v).length; }
         function fleetSystemPillOn(v) { return fbSel('fleet', 'system').has(v); }
         // Type options with a per-type roster count, so the dropdown reads "A330  31" and
         // the trigger reads "Type: A330 (31)" (fbTriggerText appends the count). Counts are
