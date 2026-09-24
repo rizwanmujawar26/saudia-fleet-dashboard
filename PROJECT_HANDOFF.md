@@ -6,7 +6,25 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.173.0–v2.184.0 (2026-09-24).** A fleet import (8 A321XLR), two data-integrity
+**Latest — v2.185.0–v2.187.0 (2026-09-24).** Counts made consistent, and the menu reshaped.
+
+- **Main menu is now Home · Software · Hardware · Media · Maintenance · Fleet (v2.187).**
+  - **Hardware is public** (`RESTRICTED_TABS = []`), read-only when signed out, ASSETS included.
+  - **4G SIM and Satcom left the menu.** `switchTab('sim'|'satcom')` redirects to Hardware > SIM /
+    Hardware > **MODEM**.
+  - **The Satcom page moved WHOLE into `#hwModem`** (MODEM sub-tab, after SIM) with the same ids,
+    so its render, filter and save code is unchanged. Hardware framing plus light colours come
+    from `.hw-modem-table`. See *Satcom* under Tabs.
+  - The `#sim` page is kept **dormant** (user: redirect, keep code), awaiting a retire decision.
+    Hardware > MODMAN (the /units serial view) is untouched.
+- **Programme = fleetStatus, not `fit` (v2.185).** `inProgramme(a)` (Active or In Retrofit)
+  now drives `programmeFleet()`/`projectScope()`, the IFC Fleet widget and `hwAircraftFleet()`.
+  ⚠️ ASAA/AS73 are In Retrofit with **no `fit`**. The old `a.fit` test made the nav read 47
+  against the widget's 49.
+- **Fleet HBC+ pill = Active only (v2.186)** via `fleetSystemPillValue()`, so the pill shows 3,
+  not 8, while the FUTURE A321XLRs stay out. Eclipse is unchanged (Active + In Retrofit).
+
+**Previous — v2.173.0–v2.184.0 (2026-09-24).** A fleet import (8 A321XLR), two data-integrity
 fixes, and a full redesign of the AVR report (`buildAvrReportDoc` only — the on-screen dossier
 and `avrDossierRows()` are unchanged).
 
@@ -544,7 +562,9 @@ a red new-AVR badge (`newAvrCount()`, last 14 days). `.header-clock` is `white-s
 **v2.129** — Fleet + shared button patterns. Fleet composition is **one split widget**
 ("IFC Fleet", `N aircraft` bullet, `44 Active`/`In Retrofit 2` on a green/amber bar —
 `.fleet-total`, reuses `.ssid-*`). Quick pills are **All / Eclipse / HBC+ / AOG** (Eclipse/
-HBC+ on a hidden `system` axis; row `data-system`); the "N aircraft" chip beside the search
+HBC+ on a hidden `system` axis; row `data-system`; ⚠️ since v2.186 **HBC+ is Active-only**:
+`fleetSystemPillValue()` gives a non-Active HBC+ row a value no pill selects, for both the
+axis and the count); the "N aircraft" chip beside the search
 box is gone. **Filter dropdown scroll fix** — the capture-phase `window` scroll handler
 ignores scrolls inside `.fb-pop`, so a long grouped dropdown scrolls instead of dismissing.
 **Filter badge counts OPTIONS not axes** (`fbGroupedCount`/`fbActiveCount` sum sizes).
@@ -1420,6 +1440,12 @@ Two axes decide who counts, and **both** matter:
 |---|---|
 | `fleetStatus` | only `Active` is operational. In Retrofit has no middleware and no media yet, so counting it drags every percentage down against work that has not started |
 | `fit` | the A321XLR linefit pair (ASBA/ASBB) run different software, carry no media and have their own hardware — tracked by SBC configuration, never mixed into retrofit figures |
+
+⚠️ **v2.185.0: the programme is decided by `fleetStatus` alone** — `inProgramme(a)` is
+Active or In Retrofit; `programmeFleet()`/`projectScope()`, the IFC Fleet widget and
+`hwAircraftFleet()` all use it. It used to be "has a `fit`", and two In-Retrofit tails
+with no fit (ASAA, AS73) split the nav badge (47) from the widget (49). The figures
+below are historical; read them live.
 
 ```
 projectScope()  44   whole programme  — Fleet page only
@@ -2422,7 +2448,12 @@ percentage at the right edge** (`margin-left: auto` on `.metric-pct`).
 
 ## Tabs (9)
 
-Public order: **Overview, Software, Media, Fleet, 4G SIM, Satcom**. Behind sign-in:
+⚠️ **Current menu (v2.187.0): Home · Software · Hardware · Media · Maintenance · Fleet — all
+public** (`RESTRICTED_TABS = []`). 4G SIM and Satcom are no longer menu items: Satcom lives
+at **Hardware > MODEM**, 4G SIM at **Hardware > SIM** (the `#sim` page is dormant), and
+`switchTab('sim'|'satcom')` redirects there. The paragraphs below are history.
+
+Public order (before v2.187): **Overview, Software, Media, Fleet, 4G SIM, Satcom**. Behind sign-in:
 **Activity, Hardware, Serials**.
 
 **Satcom went in public** (2026-08-31), like the 4G SIM register it is modelled on — it
@@ -2709,6 +2740,15 @@ private* in `DISASTER-RECOVERY.md`, which also has to deal with `connectLiveSync
 firing before authentication and with `backup.sh` losing anonymous access.
 
 ### Satcom — the MODMAN register
+
+⚠️ **Since v2.187.0 this is Hardware > MODEM**, not a menu tab. The markup moved whole into
+`#hwModem` inside `#hardware`, with the same ids (`satcomTable`, `satcomWidgets`, fb bar
+`satcom`). When `hwView === 'modem'`, `renderHwContent()` hides `#hwHead`/`#hwFilterBar`/
+`#hwContent` and shows it. It calls `populateSatcomTable()` **only when not in
+`satcomEditMode`**, because live polls repaint Hardware. The title is `MODEM` with an "N/M on
+wing" pill; the widget strip comes next, then a `hw-filterbar`. The head is recoloured by
+**class** `.hw-modem-table` (pale head, green-tint group row, `#e6ecf1` foot line), so the
+frozen-head copy inherits it. Everything below still describes the table itself.
 
 One row per **physical MODMAN box**, read from `/modmans` (see that node's data-model
 entry). Modelled on the 4G SIM register — on-wing, spare, faulty and removed boxes all
@@ -3171,6 +3211,10 @@ Mode + Status (visits) — no station filter (removed fleet-wide in v2.99).
 records; they read and write the `ops`/`opsLog` single source, so they cannot drift from
 the Fleet column or Timeline.
 ### 5. Hardware
+
+**v2.187.0: public** (read-only signed out), second in the menu. Sub-tabs: AIRCRAFT · ASSETS ·
+SIM · **MODEM** (the former Satcom page, see above) · MODMAN · SERVER · KANDU · KRFU · ANTENNA
+· CWAP. The paragraph below is the original v1 description.
 
 the LRU catalogue on the left in two fit groups, the selected unit
 on the right: profile, known issues, fitment, removed units. See *Hardware tab*
