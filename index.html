@@ -7661,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.181.1';
-        const APP_BUILD    = '2026.09.24.08';
+        const APP_VERSION  = '2.181.2';
+        const APP_BUILD    = '2026.09.24.09';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14521,7 +14521,7 @@
             const placeDetail = avrPlaceDetail(v);
             const metaGrid = `<div class="rpt-meta">
                 <div class="rpt-meta-cell rpt-plate"><span class="mk">Aircraft</span><span class="mv mv-lead">HZ-${escAttr(v.aircraft)}</span>
-                    <span class="msub">${type ? `<span>${escAttr(type)}</span>` : ''}${acConfig ? `<span class="cfg-tag">${escAttr(acConfig)}</span>` : ''}</span></div>
+                    <span class="msub">${type ? `<span class="plate-kv">Type <span class="cfg-tag">${escAttr(type)}</span></span>` : ''}${acConfig ? `<span class="plate-kv">Config <span class="cfg-tag">${escAttr(acConfig)}</span></span>` : ''}</span></div>
                 <div class="rpt-meta-cell"><span class="mk">${multiDay ? 'Visit Dates' : 'Visit Date'}</span><span class="mv">${escAttr(avrDateLabel(v))}</span>
                     <span class="msub">${escAttr(dateSub)}</span></div>
                 <div class="rpt-meta-cell"><span class="mk">Location</span><span class="mv">${escAttr(v.location || '—')}</span>
@@ -14690,6 +14690,11 @@
   .rpt-meta .rpt-plate .msub { color:#c9d4e0; }
   .rpt-meta .cfg-tag { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.4px;
     color:#fff; border:1px solid #5d7390; border-radius:99px; padding:0 8px; line-height:17px; }
+  /* Type / Config each a quiet caption + value pill on the plate (v2.181.2). */
+  .rpt-meta .plate-kv { display:inline-flex; align-items:center; gap:5px; font-size:9.5px; font-weight:800;
+    letter-spacing:.5px; text-transform:uppercase; color:#9fb0c4; }
+  .rpt-meta .plate-kv + .plate-kv { margin-left:6px; }
+  .rpt-meta .plate-kv .cfg-tag { text-transform:none; }
   .rpt-meta .loc-tag { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.3px;
     color:var(--green); background:#e9f5ee; border:1px solid #bfe3cd; border-radius:99px; padding:0 8px; line-height:17px; }
   .muted { color:var(--muted); }
