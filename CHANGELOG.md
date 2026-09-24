@@ -13,6 +13,20 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.180.0 — AVR report: identity band redesign + spec-card refinements (2026-09-24)
+User-requested follow-up to v2.179.
+- **Identity band** rebuilt: the Aircraft cell is a navy registration plate (HZ-AS61) with type +
+  cabin-config pill on a sub-line; **Visit Date** carries the weekday (or "N days" for a
+  multi-day visit); **Location** is the station with the Line/Hangar bay as a green pill.
+- **MODMAN S/N** is one row: Kontron serial + a blue `ECL 041` pill (`AST …` for Astronics), so
+  MODMAN and Airframe are both five rows and level.
+- Labels Title Case on the report only (via `RPT_LABEL`; `avrDossierRows` untouched):
+  Delivery / Age, IFE System, **Middleware Version**, Middleware Loaded, Media Cycle, WiFi
+  Visibility, SIM Roaming, Hughes Chassis ID, **Taurus IPHO Mode**.
+- **Seats**: "Business 12 · Economy 132" as text + a navy `144 seats` total pill.
+- **Install site**: "Installed at 📍 Qatar" as a pill — red when abroad, grey at base/linefit.
+- `kvRow` gained a `'raw'` hint for pre-escaped HTML values.
+
 ### v2.179.0 — AVR report: compact spec sheet + milestone strip (2026-09-24)
 User-requested redesign of the four boxed spec sections on the AVR PDF (`buildAvrReportDoc`),
 which spent ~50px per fact in 3/4-across label-over-value cells. They are now ONE section,
