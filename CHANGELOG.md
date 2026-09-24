@@ -13,6 +13,20 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.182.0 — AVR report: masthead redesign (2026-09-24)
+User-requested full redesign of the title + identity band ("unorganised and chaotic"). The loose
+kicker/title row, the floating green reference and the mixed-style band (navy plate + light cells
++ outlined/green pills) are replaced by ONE masthead card (`.mast`):
+- **Navy top band** — "Saudia Connectivity · IFEC Programme" kicker + the report title (e.g.
+  "Aircraft Visit Report"; "Report" appended unless the type already says it; Draft flag
+  beside it) on the left; the **Report Reference** as a framed, labelled block on the right.
+- **White facts row** on one 5-column grid — Registration · Aircraft Type · Config · Visit
+  Date · Location. Every cell: small-caps label / value / optional muted sub-line (weekday or
+  "N days"; the Line/Hangar bay). Values bottom-aligned to one baseline, registration alone
+  set larger. No pills — uniform typography carries the grouping. A cross-month range
+  shows the start date with "→ end · N days" beneath. Wraps to 2-up under 640px.
+Old `.rpt-titleband`/`.rpt-meta`/plate/pill CSS removed.
+
 ### v2.181.2 — AVR report: labelled Type / Config pills on the plate (2026-09-24)
 User-requested: the registration plate's sub-line now reads **TYPE** `A320-214` · **CONFIG** `32N` —
 each a small caption followed by its value in an outlined pill — so the values say what they are.

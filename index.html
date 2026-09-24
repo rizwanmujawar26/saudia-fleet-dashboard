@@ -7661,8 +7661,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.181.2';
-        const APP_BUILD    = '2026.09.24.09';
+        const APP_VERSION  = '2.182.0';
+        const APP_BUILD    = '2026.09.24.10';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14519,13 +14519,38 @@
                 ? (n => n != null ? `${n + 1} days` : '')(Math.round((new Date(dE + 'T00:00:00Z') - new Date(dS + 'T00:00:00Z')) / 86400000))
                 : (dS ? WEEKDAY[new Date(dS + 'T00:00:00Z').getUTCDay()] : '');
             const placeDetail = avrPlaceDetail(v);
-            const metaGrid = `<div class="rpt-meta">
-                <div class="rpt-meta-cell rpt-plate"><span class="mk">Aircraft</span><span class="mv mv-lead">HZ-${escAttr(v.aircraft)}</span>
-                    <span class="msub">${type ? `<span class="plate-kv">Type <span class="cfg-tag">${escAttr(type)}</span></span>` : ''}${acConfig ? `<span class="plate-kv">Config <span class="cfg-tag">${escAttr(acConfig)}</span></span>` : ''}</span></div>
-                <div class="rpt-meta-cell"><span class="mk">${multiDay ? 'Visit Dates' : 'Visit Date'}</span><span class="mv">${escAttr(avrDateLabel(v))}</span>
-                    <span class="msub">${escAttr(dateSub)}</span></div>
-                <div class="rpt-meta-cell"><span class="mk">Location</span><span class="mv">${escAttr(v.location || '—')}</span>
-                    <span class="msub">${placeDetail ? `<span class="loc-tag">${escAttr(placeDetail)}</span>` : ''}</span></div>
+            // MASTHEAD (v2.182, user 2026-09-24) — title, reference and the five identity facts
+            // in ONE card instead of a loose title row + a separate mixed-style band:
+            //   • a navy top band: programme kicker + report title on the left, the reference as
+            //     a labelled block on the right (it is the document's ID, so it is framed, not
+            //     floated in green on the page);
+            //   • a white facts row on a single grid: Registration · Aircraft Type · Config
+            //     · Visit Date · Location. Every cell is the same shape — small-caps
+            //     label, value, optional muted sub-line — with the values bottom-aligned on one
+            //     baseline; only the registration is set larger, as the lead fact. No pills:
+            //     uniform typography does the grouping.
+            // A long cross-month range splits: start as the value, "→ end · N days" beneath.
+            const dateLbl = avrDateLabel(v);
+            const crossRange = multiDay && dateLbl.indexOf('→') >= 0;
+            const dateVal = crossRange ? (v.dateStart || '—') : (dateLbl || '—');
+            const dateSubFull = crossRange ? `→ ${v.dateEnd} · ${dateSub}` : dateSub;
+            const titleText = /report/i.test(rt.label) ? rt.label : `${rt.label} Report`;
+            const fact = (k, val, sub, cls = '') => `<div class="mf${cls ? ' ' + cls : ''}"><span class="mf-k">${k}</span><span class="mf-v">${escAttr(val || '—')}</span>${sub ? `<span class="mf-s">${escAttr(sub)}</span>` : ''}</div>`;
+            const metaGrid = `<div class="mast">
+                <div class="mast-top">
+                    <div class="mast-id">
+                        <div class="mast-kicker">Saudia Connectivity · IFEC Programme</div>
+                        <div class="mast-title">${escAttr(titleText)}${isDraft ? '<span class="draft-flag">Draft</span>' : ''}</div>
+                    </div>
+                    ${v.ref ? `<div class="mast-ref"><span class="mast-ref-k">Report Reference</span><span class="mast-ref-v">${escAttr(v.ref)}</span></div>` : ''}
+                </div>
+                <div class="mast-facts">
+                    ${fact('Registration', 'HZ-' + v.aircraft, '', 'mf-lead')}
+                    ${fact('Aircraft Type', type)}
+                    ${fact('Config', acConfig)}
+                    ${fact(multiDay ? 'Visit Dates' : 'Visit Date', dateVal, dateSubFull)}
+                    ${fact('Location', v.location, placeDetail)}
+                </div>
             </div>`;
 
             // Engagement + People in one enclosed box (v2.151.3) — the same soft/bordered
@@ -14577,14 +14602,7 @@
   /* Stacked NSG mark (nsg_logo_v.png) — sized to the Saudia logo's height and kept
      right-aligned, its own proportions preserved. */
   .rpt-header img.nsg { height:52px; width:auto; }
-  .rpt-titleband { margin:14px 0 6px; }
-  .rpt-kicker { font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
-  /* Title and reference share one baseline-aligned row — the ref right-aligned — so the
-     identity band below rises a line. */
-  .rpt-titlerow { display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin-top:2px; }
-  .rpt-title { font-size:22px; font-weight:800; color:var(--navy); margin:0; }
-  .rpt-ref { font-size:14px; font-weight:800; color:var(--green); letter-spacing:.5px; white-space:nowrap; }
-  .draft-flag { display:inline-block; margin-left:8px; background:#fff3cd; color:#8a6d00;
+  .draft-flag { display:inline-block; margin-left:10px; background:#fff3cd; color:#8a6d00;
     font-size:10px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; padding:2px 7px; border-radius:5px; vertical-align:2px; }
   /* COMPACT SPEC SHEET (v2.179) — label ⟷ value rows in two-up cards replace the old boxed
      3/4-across cell grids: a fact costs one ~20px row, not a ~50px box. */
@@ -14675,28 +14693,34 @@
   /* The prominent identity band (aircraft / dates / location) — v2.133.2. */
   /* Aircraft gets the widest cell (registration · type · config on ONE line) and Dates the
      narrowest, so the config pill never wraps under the tail (user, 2026-09-19). */
-  /* Identity band (redesigned v2.180): a navy registration plate, then Visit Date and
-     Location — each a big value over a quiet sub-line (type + config / weekday / bay). */
-  .rpt-meta { display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:0; margin:10px 0 4px;
-    background:var(--soft); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
-  .rpt-meta-cell { padding:10px 16px 11px; border-left:1px solid var(--line); min-width:0; }
-  .rpt-meta-cell:first-child { border-left:none; }
-  .rpt-meta .mk { display:block; font-size:9.5px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); margin-bottom:2px; }
-  .rpt-meta .mv { display:block; font-size:16px; font-weight:800; color:var(--navy); line-height:1.25; white-space:nowrap; }
-  .rpt-meta .msub { display:flex; align-items:center; gap:7px; min-height:20px; margin-top:3px; font-size:11.5px; font-weight:600; color:var(--muted); white-space:nowrap; }
-  .rpt-meta .rpt-plate { background:var(--navy); border-left:none; }
-  .rpt-meta .rpt-plate .mk { color:#9fb0c4; }
-  .rpt-meta .rpt-plate .mv-lead { font-size:21px; letter-spacing:.8px; color:#fff; }
-  .rpt-meta .rpt-plate .msub { color:#c9d4e0; }
-  .rpt-meta .cfg-tag { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.4px;
-    color:#fff; border:1px solid #5d7390; border-radius:99px; padding:0 8px; line-height:17px; }
-  /* Type / Config each a quiet caption + value pill on the plate (v2.181.2). */
-  .rpt-meta .plate-kv { display:inline-flex; align-items:center; gap:5px; font-size:9.5px; font-weight:800;
-    letter-spacing:.5px; text-transform:uppercase; color:#9fb0c4; }
-  .rpt-meta .plate-kv + .plate-kv { margin-left:6px; }
-  .rpt-meta .plate-kv .cfg-tag { text-transform:none; }
-  .rpt-meta .loc-tag { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.3px;
-    color:var(--green); background:#e9f5ee; border:1px solid #bfe3cd; border-radius:99px; padding:0 8px; line-height:17px; }
+  /* MASTHEAD (v2.182) — one card: navy top band (kicker + title | framed reference) over a
+     white facts row on a single grid. Every fact is label / value / optional sub-line, the
+     values bottom-aligned to one baseline; the registration alone is set larger. */
+  .mast { margin:14px 0 6px; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .mast-top { display:flex; align-items:center; justify-content:space-between; gap:18px;
+    background:var(--navy); padding:14px 20px 15px; }
+  .mast-id { min-width:0; }
+  .mast-kicker { font-size:9.5px; font-weight:800; letter-spacing:1.3px; text-transform:uppercase; color:#9fb0c4; }
+  .mast-title { font-size:21px; font-weight:800; color:#fff; line-height:1.2; margin-top:3px; letter-spacing:.1px; }
+  .mast-ref { flex:0 0 auto; text-align:right; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.06);
+    border-radius:7px; padding:6px 12px 7px; }
+  .mast-ref-k { display:block; font-size:8.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#9fb0c4; }
+  .mast-ref-v { display:block; font-size:14.5px; font-weight:800; color:#fff; letter-spacing:.6px; margin-top:1px;
+    font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .mast-facts { display:grid; grid-template-columns:1.2fr 1fr .75fr 1.2fr 1.2fr; background:#fff; }
+  .mf { display:flex; flex-direction:column; padding:11px 16px 12px; border-left:1px solid var(--line); min-width:0; }
+  .mf:first-child { border-left:none; padding-left:20px; }
+  .mf-k { font-size:9px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:var(--muted); white-space:nowrap; }
+  .mf-v { display:flex; align-items:flex-end; height:27px; font-size:15px; font-weight:700; color:var(--navy);
+    line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mf-lead .mf-v { font-size:21px; font-weight:800; letter-spacing:.6px; }
+  .mf-s { font-size:11px; font-weight:600; color:var(--muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  @media screen and (max-width:640px) {
+    .mast-facts { grid-template-columns:1fr 1fr; }
+    .mf { border-top:1px solid var(--line); }
+    .mf:first-child { grid-column:1 / -1; border-top:none; }
+    .mf:nth-child(2n) { border-left:none; padding-left:20px; }
+  }
   .muted { color:var(--muted); }
   .sec { font-size:12px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--navy);
     margin:15px 0 7px; padding-bottom:4px; border-bottom:1px solid var(--line); }
@@ -14747,7 +14771,7 @@
        split across pages, so a big Report fills page 1 and continues on page 2 instead of
        being pushed wholesale to the next page and leaving a gap. A section title stays with
        the block that follows it. */
-    .rpt-header, .rpt-meta, .cfg-strip, .spec-card, .ep-box { break-inside: avoid; }
+    .rpt-header, .mast, .cfg-strip, .spec-card, .ep-box { break-inside: avoid; }
     .sec { break-after: avoid; }
     /* A carded table (equipment, Work Carried Out) must FLOW across pages — overflow:hidden,
        used for rounded corners on screen, would otherwise suppress fragmentation and clip
@@ -14767,13 +14791,6 @@
     <div class="rpt-header">
       <img class="saudia" src="${saudiaReportLogo()}" alt="Saudia">
       <img class="nsg" src="${NSG_REPORT_LOGO}" alt="NSG — Neo Space Group">
-    </div>
-    <div class="rpt-titleband">
-      <div class="rpt-kicker">Saudia Connectivity / IFEC Programme</div>
-      <div class="rpt-titlerow">
-        <div class="rpt-title">${escAttr(rt.label)}${isDraft ? '<span class="draft-flag">Draft</span>' : ''}</div>
-        <div class="rpt-ref">${escAttr(v.ref || '')}</div>
-      </div>
     </div>
     ${metaGrid}
     ${v.summary ? `<div class="sec">Summary</div><div class="note">${escAttr(v.summary)}</div>` : ''}
