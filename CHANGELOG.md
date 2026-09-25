@@ -13,6 +13,22 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.198.1 — Hardware menu icon 🗄️ (2026-09-25)
+User: the 🔧 wrench read as a tool and sat too close to Maintenance 🛠️. Tried 🖥️ in v2.198.0, then
+settled on 🗄️ (an equipment rack). The icon appears only on the menu button.
+
+### v2.197.0 — Media filter bar: Download menu of Media Loading Reports (2026-09-25)
+User: an always-present ⤓ Download button (inline SVG arrow-to-tray) left of ＋ Add, public. It opens a
+menu listing every released cycle's report (`mediaReportCycles()`, newest first; `MLR-YYYY-MM` pill,
+"running" tag while a cycle is open). Each item is an `<a target="_blank">` to `#mlr=MMYY`, the same
+soft-link mechanism as the timeline AVR pill. It replaces v2.196.0's pill, which only appeared while a
+released month was the Cycle view. ⚠️ The menu closes on a timeout (`closeAssignMenuSoon`): an anchor
+removed during its own click is disconnected and will not navigate.
+
+### v2.196.0 — Media filter bar: MLR link for the viewed cycle (2026-09-25)
+Superseded by v2.197.0 the same day: a green `MLR-YYYY-MM` pill shown only while a released month was
+the Cycle view.
+
 ### v2.195.0 — Media widgets: released months show the cycle result (2026-09-25)
 User: a released month's card shows loaded / eligible (the report's figures): Aug 35/39 · 89.7%, Sep
 41/42 · 97.6%. It used to show the live count against today's fleet (Aug 1/42 · 2.4%, which read as a

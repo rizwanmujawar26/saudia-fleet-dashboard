@@ -6,7 +6,21 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.187.1–v2.195.0 (2026-09-25).** Media cycles become data, and a Media Loading Report.
+**Latest — v2.196.0–v2.198.1 (2026-09-25).** Media report downloads, and a menu icon.
+
+- **Media filter bar ⤓ Download menu (v2.197).** Always present, left of ＋ Add, public. It lists
+  every `mediaReportCycles()` report (newest first) as real `<a>` soft links to `#mlr=MMYY` in a new
+  tab — the timeline AVR pill's mechanism, via the shared assign-menu popover
+  (`openMediaDownloadMenu`). It replaced v2.196's pill that only showed while a Cycle view was picked;
+  the Cycle filter is table-only again.
+  - ⚠️ An `<a>` removed during its own click is disconnected and **does not navigate** — the menu
+    closes via `closeAssignMenuSoon()` (a timeout), not `closeAssignMenu()`.
+  - ⚠️ `check.sh` treats any name in an inline handler as a page function — `setTimeout(...)` inline
+    FAILS it. Wrap it in a named function.
+  - ⚠️ Gate the deploy on `check.sh`'s exit code: `check.sh | tail && git push` pushed through a failure once.
+- **Hardware menu icon 🔧 → 🗄️ (v2.198.1)** — the wrench read as a tool, too close to Maintenance 🛠️.
+
+**Previous — v2.187.1–v2.195.0 (2026-09-25).** Media cycles become data, and a Media Loading Report.
 
 - **New node `/mediaCycles/{MMYY}` + `light` + `none` (v2.189).** Rules, backup, restore and verify all
   updated. `MEDIA_CYCLES` is rebuilt in place from it (seed = offline fallback). It holds size (exact;
