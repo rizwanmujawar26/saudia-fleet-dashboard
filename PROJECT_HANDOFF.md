@@ -1271,6 +1271,10 @@ the derived "day before next start". A cycle with no `start` is **upcoming**: a 
 report. With a `start` and no `end` it gets an **In progress** report. Polled, and in the initial fetch.
 The Media Loading Report (derived, never stored) reads this node, `/mediaLoads`, and the
 `/assets` Media Disks whose `content` names the month.
+⚠️ **Disks are LOCKED at cycle close (v2.191.0).** Once `end` has passed, `autoSnapshotClosedCycles()`
+copies the matching disks into `disks/{id}` + `disksSnapshotAt` (write-once in the rules) the next time a
+signed-in editor has the page open. After that the report reads only the copy: re-tagging a disk for the
+next month must never rewrite an old report. `disksSnapshotAt` with no `disks` = locked, none tagged.
 
 ### `/mediaLoads/{id}` — every media load ever, one record per load
 

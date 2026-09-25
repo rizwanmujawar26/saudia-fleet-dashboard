@@ -7726,8 +7726,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.190.1';
-        const APP_BUILD    = '2026.09.25.06';
+        const APP_VERSION  = '2.191.0';
+        const APP_BUILD    = '2026.09.25.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -7989,6 +7989,7 @@
                 startLowTrafficPoll();
                 openAvrFromHash();         // a #avr=<id> deep link opens that report now data is in
                 openMlrFromHash();         // …and #mlr=<cycle> a Media Loading Report
+                autoSnapshotClosedCycles();   // lock the disks of any cycle whose close date has passed
             });
         }
 
@@ -8059,6 +8060,7 @@
                 updateMetrics();          // the Timeline reads activities
                 if (cyclesMoved && !mediaEditMode) populateMediaTable();  // widgets read /mediaCycles
             }
+            autoSnapshotClosedCycles();   // an editor may have signed in since the last poll
         }
 
         function startLowTrafficPoll() {
@@ -15026,7 +15028,28 @@
 
         // Media Disks (Hardware › Assets) tagged with this cycle's content — "Media Sep 2026",
         // "September 2026", the part number or the cycle code all match.
+        // ⚠️ DISKS ARE LOCKED AT CYCLE CLOSE (user, 2026-09-25). A disk's `content` is
+        // re-tagged when it is re-used for the next month, so reading /assets live after a
+        // cycle has closed would show the wrong disks. Once the close date has passed, the
+        // matching disks are copied ONCE into /mediaCycles/{c}/disks with disksSnapshotAt,
+        // and from then on the report reads only that copy — never /assets again.
+        // disksSnapshotAt alone (no disks) means "locked, none were tagged".
+        function mediaCycleDisksLocked(cycle) {
+            return !!(MEDIA_CYCLES[cycle] || {}).disksSnapshotAt;
+        }
+
         function mediaDisksForCycle(cycle) {
+            const mc = MEDIA_CYCLES[cycle] || {};
+            if (mc.disksSnapshotAt) {
+                return Object.entries(mc.disks || {}).map(([id, a]) => ({ id, ...a }))
+                    .sort((a, b) => String(a.nsgSerial || a.id).localeCompare(String(b.nsgSerial || b.id), undefined, { numeric: true }));
+            }
+            return mediaDisksLive(cycle);
+        }
+
+        // The live match against Hardware › Assets — only used while a cycle is open, and
+        // once to take the snapshot.
+        function mediaDisksLive(cycle) {
             const mm = parseInt(cycle.slice(0, 2), 10), yy = cycle.slice(2);
             if (!(mm >= 1 && mm <= 12)) return [];
             const pn = mediaCyclePartNumber(cycle).toLowerCase();
@@ -15036,6 +15059,55 @@
                 .filter(a => a.category === 'media_disk' && a.content
                     && (re.test(a.content) || a.content.toLowerCase().includes(pn) || new RegExp(`\\b${cycle}\\b`).test(a.content)))
                 .sort((a, b) => String(a.nsgSerial || a.id).localeCompare(String(b.nsgSerial || b.id), undefined, { numeric: true }));
+        }
+
+        const MC_DISK_FIELDS = ['nsgSerial', 'type', 'make', 'mfrSerial', 'totalSize', 'location', 'custodian', 'content'];
+
+        // The snapshot record: the live match, trimmed to the fields the report prints,
+        // keyed by a Firebase-safe version of the asset id.
+        function mediaDiskSnapshot(cycle) {
+            const out = {};
+            mediaDisksLive(cycle).forEach(a => {
+                const rec = {};
+                MC_DISK_FIELDS.forEach(f => { if (a[f]) rec[f] = String(a[f]).slice(0, 60); });
+                out[String(a.id).replace(/[.#$/\[\]'" ]/g, '_')] = rec;
+            });
+            return out;
+        }
+
+        // A cycle is due its snapshot once its close date has PASSED (the day after close).
+        function mediaCycleNeedsSnapshot(cycle) {
+            const mc = MEDIA_CYCLES[cycle] || {};
+            if (!mc.end || mc.disksSnapshotAt || !mediaCyclesLive[cycle]) return false;
+            return toISODate(mc.end) < new Date().toISOString().slice(0, 10);
+        }
+
+        // Runs after every data load/poll. Only an editor can write, so it waits quietly for
+        // a signed-in editor, then locks each closed cycle once. Tried once per session per
+        // cycle, so a refused write cannot loop.
+        const mcSnapshotTried = new Set();
+        async function autoSnapshotClosedCycles() {
+            if (typeof canEdit !== 'function' || !canEdit() || reportTookOver) return;
+            const due = Object.keys(MEDIA_CYCLES).filter(c => mediaCycleNeedsSnapshot(c) && !mcSnapshotTried.has(c));
+            if (!due.length) return;
+            const token = await getIdToken();
+            if (!token) return;
+            for (const c of due) {
+                mcSnapshotTried.add(c);
+                const patch = { disksSnapshotAt: new Date().toISOString().slice(0, 19) + 'Z' };
+                const disks = mediaDiskSnapshot(c);
+                if (Object.keys(disks).length) patch.disks = disks;
+                try {
+                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/mediaCycles/${c}.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(patch),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                    Object.assign(mediaCyclesLive[c], patch);   // polled node — mirror locally
+                    rebuildMediaCycles();
+                } catch (e) { console.warn('media disk snapshot failed for', c, e.message); }
+            }
+            if (avrView === 'visits') renderAvrFeed();
         }
 
         function mlrStamp(iso) {
@@ -15162,7 +15234,7 @@
                 t50: reach(50), t90: reach(90), t100: reach(100),
                 median, daily, peak: { day: peakDay + 1, iso: isoOfDay(peakDay + 1), n: daily[peakDay] || 0 },
                 weeks, busiestWeek, byType, missing, late: loads.filter(l => l.late).length,
-                journey, durations, disks: mediaDisksForCycle(cycle), disksISO: iso('disksToTeam'),
+                journey, durations, disks: mediaDisksForCycle(cycle), disksLocked: !!mc.disksSnapshotAt, disksSnapshotAt: mc.disksSnapshotAt || '', disksISO: iso('disksToTeam'),
                 isoOfDay,
             };
         }
@@ -15683,6 +15755,10 @@
     ${cmp ? `<div class="sec">Cycle comparison</div><div class="tbl-card">${cmp}</div>` : ''}
 
     <div class="sec">Media disks — ${d.disks.length}</div>
+    <div class="cap" style="margin:-2px 2px 6px;">${d.disksLocked
+        ? `Locked at cycle close — the disks as tagged in Hardware › Assets on ${escAttr(fmtDate(d.disksSnapshotAt.slice(0, 10)))}. Later re-tagging does not change this list.`
+        : (d.open ? 'Live from Hardware › Assets while loading continues; this list is locked the day after the cycle closes.'
+                  : 'Live from Hardware › Assets — this list is locked automatically the next time an editor opens the dashboard.')}</div>
     <div class="tbl-card"><table class="tbl">
       <thead><tr><th>NSG serial</th><th>Type</th><th>Make</th><th>Mfr serial</th><th>Size</th><th>Location</th><th>Custodian</th></tr></thead>
       <tbody>${diskRows}</tbody>
@@ -15855,6 +15931,12 @@
             const notes = document.getElementById('mcNotes').value.trim();
             if (notes) entry.notes = notes;
             entry.updatedAt = new Date().toISOString().slice(0, 19) + 'Z';
+            // The disk snapshot is locked — carry it forward untouched, or the PUT would drop it.
+            const prevRec = mediaCyclesLive[code] || {};
+            if (prevRec.disksSnapshotAt) {
+                entry.disksSnapshotAt = prevRec.disksSnapshotAt;
+                if (prevRec.disks) entry.disks = prevRec.disks;
+            }
 
             const token = await getIdToken();
             if (!token) return;

@@ -13,6 +13,16 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.191.0 — Media disks locked at cycle close (2026-09-25)
+User: a disk's `content` tag is changed when the disk is re-used next month, so a closed cycle must
+never read /assets live. `/mediaCycles/{c}` gains `disks/{id}` (nsgSerial, type, make, mfrSerial,
+totalSize, location, custodian, content) + `disksSnapshotAt`. `autoSnapshotClosedCycles()` runs after
+the initial load and every poll. For each cycle whose close date has PASSED (the day after `end`) and
+that has no snapshot, it PATCHes the live match once. Only an editor can write, so it waits for a
+signed-in editor. The rule makes `disksSnapshotAt` write-once. `saveMediaCycle` carries the snapshot
+forward (its whole-record PUT would otherwise drop it). The report reads the snapshot only and captions
+it "Locked at cycle close". Aug (4 disks) and Sep (6) were locked on 25-Sep-2026.
+
 ### v2.190.0 — Media report: no target, % on the bar, loading measured from disk delivery (2026-09-25)
 User: every mention of the 95% target is removed (constant, curve line, bar marker, narrative, method),
 and the verdict pill is now just Cycle closed / In progress. The fleet % rides at the end of the progress
