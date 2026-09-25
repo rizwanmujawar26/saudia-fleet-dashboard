@@ -4550,6 +4550,9 @@
         /* Media Loading Report card (v2.188.0) — the top fragment's styles are MLR_CSS,
            injected at start-up and shared with the printed report. */
         .mc-hint { font-size: 11px; color: #8a96a1; margin-top: 3px; }
+        .mc-fleet { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: #5a6b78; margin: 0 0 8px; }
+        .mc-fleet b { color: #0b1f3a; font-size: 16px; }
+        .mc-fleet-pct { font-weight: 800; color: #0b7a3b; }
         .mc-note { font-size: 12.5px; color: #5a6b78; margin: 2px 0 10px; line-height: 1.5; }
         /* Media Widgets & Cycles form — one row per widget: switch · name · state · size · edit */
         .mc-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
@@ -7754,8 +7757,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.193.0';
-        const APP_BUILD    = '2026.09.25.09';
+        const APP_VERSION  = '2.194.0';
+        const APP_BUILD    = '2026.09.25.10';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15218,13 +15221,24 @@
                              source: l.source || '', late: !open && l.loadedAt.slice(0, 10) > endISO };
                 });
 
-            // Eligible = in service by the close date (today, while open), or took it anyway.
+            // ELIGIBLE (user, 2026-09-25): only aircraft IN SERVICE by the cycle's close date
+            // (today, while open) could take the media. In service = the activation date, or
+            // the mod (retrofit) end date when no activation is recorded. An aircraft still in
+            // modification, or with no date at all, is NOT eligible — an aircraft modified in
+            // September never counts for August. One that took the media anyway is counted.
+            const inServiceISO = a => toISODate(a.activatedDate || '') || toISODate(a.retrofitEnd || '') || '';
             const eligible = fleet.filter(a => {
                 if (first.has(a.id)) return true;
-                const act = toISODate(a.activatedDate || '');
-                return !act || act <= endISO;
+                const d0 = inServiceISO(a);
+                return !!d0 && d0 <= endISO;
             });
-            const scope = eligible.length;
+            const excluded = fleet.filter(a => !eligible.includes(a))
+                .map(a => ({ tail: a.id, date: inServiceISO(a) }))
+                .sort((a, b) => (a.date || '9').localeCompare(b.date || '9'));
+            // A manual override from the Media Widgets & Cycles form wins over the count.
+            const scopeCalc = eligible.length;
+            const scopeSet = Number.isInteger(mc.eligible) && mc.eligible > 0 ? mc.eligible : null;
+            const scope = scopeSet != null ? scopeSet : scopeCalc;
             const done = loads.length;
             const pct = scope ? Math.round(done / scope * 1000) / 10 : 0;
             const joinedDuring = eligible.filter(a => {
@@ -15295,7 +15309,7 @@
             return {
                 cycle, label: cycleToDisplay(cycle), ref: mlrRef(cycle), size: mc.size || '',
                 partNumber: mediaCyclePartNumber(cycle), notes: mc.notes || '',
-                open, start: w.start, end: w.end, startISO, endISO, days, loads, scope, done, pct, joinedDuring,
+                open, start: w.start, end: w.end, startISO, endISO, days, loads, scope, scopeCalc, scopeSet, excluded, programme: fleet.length, done, pct, joinedDuring,
                 firstLoad, lastLoad,
                 firstWeek: daily.slice(0, 7).reduce((x, y) => x + y, 0),
                 t50: reach(50), t90: reach(90), t100: reach(100),
@@ -15394,7 +15408,13 @@
             } else if (d.done) {
                 out.push({ k: 'Not loaded', t: 'Every eligible aircraft took this media.' });
             }
-            if (d.joinedDuring) out.push({ k: 'Fleet', t: `${mlrPlural(d.joinedDuring, 'aircraft', 'aircraft')} entered service during the cycle and ${d.joinedDuring === 1 ? 'is' : 'are'} included in the fleet count.` });
+            {
+                const bits = [`${d.scopeCalc} of the ${d.programme} programme aircraft were in service by ${d.open ? 'today' : `the close on ${d.end}`} and eligible for this media.`];
+                if (d.excluded.length) bits.push(`${mlrPlural(d.excluded.length, 'aircraft', 'aircraft')} entered service later and ${d.excluded.length === 1 ? 'is' : 'are'} not counted: ${d.excluded.map(x => x.date ? `${x.tail} (${fmtDate(x.date)})` : x.tail).join(', ')}.`);
+                if (d.joinedDuring) bits.push(`${mlrPlural(d.joinedDuring, 'aircraft', 'aircraft')} entered service during the cycle and ${d.joinedDuring === 1 ? 'is' : 'are'} counted.`);
+                if (d.scopeSet != null && d.scopeSet !== d.scopeCalc) bits.push(`The eligible fleet was set to ${d.scopeSet} in the Media Cycle form.`);
+                out.push({ k: 'Fleet', t: bits.join(' ') });
+            }
             return out;
         }
 
@@ -15846,7 +15866,7 @@
     <div class="sec">Method</div>
     <div class="method">
       <b>Source.</b> The dashboard's media load log (one record per load, UTC), the cycle's dates from the Media Cycle form, and the Media Disks tagged with this media in Hardware › Assets. An aircraft that loaded the same media twice counts once, at its first load.
-      <b>Fleet.</b> The wireless IFE programme fleet, less any aircraft that entered service after the cycle closed (they could not have taken it).
+      <b>Fleet.</b> Eligible aircraft are the wireless IFE programme aircraft in service by the cycle's close date — the activation date, or the mod end date where no activation is recorded. Aircraft still in modification, or activated after the close, could not have taken the media and are not counted${d.scopeSet != null ? `; the eligible count was set to ${d.scopeSet} in the Media Cycle form (calculated ${d.scopeCalc})` : ''}.
       <b>Days.</b> Day 1 is the day the loading window opened${d.open ? '; the cycle is still open, so figures run to today' : `; the cycle closed on ${escAttr(d.end)}. A load after the close still counts towards the cycle and is marked Late`}.
       This report is generated automatically and reflects the data at the time it was opened.
     </div>
@@ -15939,7 +15959,12 @@
                 if (loaded.has(c)) return { t: 'Loaded', css: 'loading' };
                 return { t: 'Upcoming', css: 'upcoming' };
             };
-            return months.map(c => ({ key: c, kind: 'month', label: cycleToDisplay(c), st: status(c),
+            const tally = c => {
+                if (!(MEDIA_CYCLES[c] || {}).start) return '';
+                const d = mediaReportData(c);
+                return d ? `${d.done}/${d.scope} loaded` : '';
+            };
+            return months.map(c => ({ key: c, kind: 'month', label: cycleToDisplay(c), st: status(c), tally: tally(c),
                                       size: (MEDIA_CYCLES[c] || {}).size || '', hidden: !!(MEDIA_CYCLES[c] || {}).hidden }))
                 .concat([
                     { key: 'light', kind: 'light', label: MEDIA_LIGHT_LABEL, st: { t: 'Baseline', css: 'light' }, pn: lightMediaPartNumber(),
@@ -15975,6 +16000,7 @@
                         <span class="mc-st mc-st-${w.st.css}">${escAttr(w.st.t)}</span>
                         ${pill}
                         ${w.pn ? `<span class="mc-row-pn">${escAttr(w.pn)}</span>` : ''}
+                        ${w.tally ? `<span class="mc-row-pn">${escAttr(w.tally)}</span>` : ''}
                         <span class="mc-row-edit">${w.key === mcSelected ? 'Editing' : 'Edit ›'}</span>
                     </button>
                 </div>`;
@@ -16041,12 +16067,28 @@
                     <div class="ac-edit-field"><label>Media size *</label><input type="text" id="mcSize" maxlength="20" placeholder="884 GB" value="${escAttr(v.size || '')}"><div class="mc-hint">Exact size, e.g. 799.7 GB — the widget pill rounds it</div></div>
                     <div class="ac-edit-field"><label>Media part number</label><input type="text" id="mcPart" maxlength="40" placeholder="ME-SVA-UGO-${escAttr(code)}" value="${escAttr(v.partNumber || '')}"><div class="mc-hint">Leave empty to use the loads' part number</div></div>
                 </div>
+                ${mcFleetFieldHTML(isNew ? null : pick, v)}
                 <div class="ac-edit-section-title">Media journey</div>
                 <div class="ac-edit-grid">${MC_DATE_FIELDS.slice(0, 4).map(dateField).join('')}</div>
                 <div class="ac-edit-section-title">Loading window</div>
                 <div class="ac-edit-grid">${MC_DATE_FIELDS.slice(4).map(dateField).join('')}</div>
                 <div class="ac-edit-section-title">Notes</div>
                 <div class="ac-edit-grid"><div class="ac-edit-field" style="grid-column:1 / -1;"><textarea id="mcNotes" rows="3" maxlength="1000" placeholder="Anything the report should say about this cycle — shown under the executive summary">${escAttr(v.notes || '')}</textarea></div></div>`;
+        }
+
+        // The Fleet block on a month: loaded vs eligible, with the calculation spelled out,
+        // and an optional override of the eligible count.
+        function mcFleetFieldHTML(code, v) {
+            const d = code && (MEDIA_CYCLES[code] || {}).start ? mediaReportData(code) : null;
+            const calc = d
+                ? `Calculated: <b>${d.scopeCalc}</b> of ${d.programme} programme aircraft in service by ${d.open ? 'today' : d.end}${d.excluded.length ? ` — not counted: ${d.excluded.map(x => escAttr(x.tail)).join(', ')}` : ''}.`
+                : 'Calculated once the cycle has a loading start date: aircraft in service (activated) by the close date.';
+            return `<div class="ac-edit-section-title">Fleet</div>
+                ${d ? `<div class="mc-fleet"><span><b>${d.done}</b> loaded</span><span>of <b>${d.scope}</b> eligible${d.scopeSet != null ? ' (set)' : ''}</span><span class="mc-fleet-pct">${d.pct}%</span></div>` : ''}
+                <div class="ac-edit-grid">
+                    <div class="ac-edit-field"><label>Eligible aircraft</label><input type="text" inputmode="numeric" maxlength="3" id="mcEligible" placeholder="${d ? d.scopeCalc : 'auto'}" value="${Number.isInteger(v.eligible) ? v.eligible : ''}"><div class="mc-hint">Leave empty to use the calculated number.</div></div>
+                    <div class="ac-edit-field"><label>&nbsp;</label><div class="mc-hint" style="margin-top:6px;">${calc}</div></div>
+                </div>`;
         }
 
         function closeMediaCycleEditor() {
@@ -16107,6 +16149,11 @@
                 if (entry.end && toISODate(entry.end) < toISODate(entry.start)) return show('The close date is before the loading start date.');
                 const notes = document.getElementById('mcNotes').value.trim();
                 if (notes) entry.notes = notes;
+                const elig = document.getElementById('mcEligible').value.trim();
+                if (elig) {
+                    if (!/^\d{1,3}$/.test(elig) || +elig < 1) return show('Eligible aircraft must be a whole number, or empty to use the calculated one.');
+                    entry.eligible = +elig;
+                }
                 if (mcHidden[code]) entry.hidden = true;
                 entry.updatedAt = now;
                 // The disk snapshot is locked — carry it forward untouched, or the write would drop it.

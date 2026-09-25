@@ -13,6 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.194.0 — Eligible fleet per cycle: in service by close; editable override (2026-09-25)
+User: a cycle's eligible aircraft = programme aircraft IN SERVICE by the cycle's close date —
+`activatedDate`, else `retrofitEnd`. No date, or still in modification = NOT eligible (it used to count
+an undated aircraft). One that loaded anyway always counts. The report's Fleet paragraph and Method now
+name the aircraft left out (Aug: 39 of 42 — AQB 24-Aug, ASD 31-Aug, ASO 08-Sep; Sep: 42 of 42). New
+optional `eligible` (integer, rules-validated) on a month overrides the count. The form's new Fleet
+block shows loaded / eligible / % plus the calculation, and each month row shows "35/39 loaded".
+
 ### v2.193.0 — Light Media / No Media part numbers editable (2026-09-25)
 User: both part numbers were hard-coded (`0526`, `/DEV$/`). They are now `partNumber` on
 `/mediaCycles/light` and `/mediaCycles/none`, edited in the Media Widgets & Cycles form, with the
