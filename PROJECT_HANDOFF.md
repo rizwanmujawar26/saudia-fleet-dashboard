@@ -6,7 +6,30 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.185.0–v2.187.0 (2026-09-24).** Counts made consistent, and the menu reshaped.
+**Latest — v2.187.1–v2.195.0 (2026-09-25).** Media cycles become data, and a Media Loading Report.
+
+- **New node `/mediaCycles/{MMYY}` + `light` + `none` (v2.189).** Rules, backup, restore and verify all
+  updated. `MEDIA_CYCLES` is rebuilt in place from it (seed = offline fallback). It holds size (exact;
+  pills round), partNumber, start (= **Loading start**), end (close), the four journey dates
+  (contentDelivered, downloaded, disksDuplicated, disksToTeam = "Disks delivered"), notes, `hidden`,
+  `eligible` (override) and the locked `disks` + `disksSnapshotAt`. See *Data model*.
+- **Media page ＋ Add → "Media Widgets & Cycles" form (v2.192–v2.194).** It lists every widget with a
+  show/hide switch, adds the next month, and edits Light Media (part number + size) and No Media (part
+  number). One multi-path PATCH per save. Light/No Media part numbers are editable (`lightMediaCycle()`,
+  `isNoMediaSource()`; DEV always = No Media).
+- **Media Loading Report, derived (v2.188–v2.191).** One per released cycle in Activity › Reports
+  (`MLR-YYYY-MM`, `#mlr=MMYY`). Page 1 = executive (identity row, fleet bar + SVG loading timeline,
+  media journey, rule-written summary, roll-out curve). Page 2 = detail (daily loads, week / type side by
+  side, cycle comparison with one row per month, media disks, not loaded, load log).
+- ⚠️ User rules baked in: **no completion target** anywhere; **disks go to SV IFE Engineering, Saudia
+  Technic loads** — never "loading team"; Start is measured from Disks delivered; **disks are locked at
+  cycle close** (auto snapshot the day after `end`, once, by a signed-in editor); **eligible = in service
+  (activatedDate, else retrofitEnd) by the close date**.
+- **Media widgets (v2.195):** a released month shows loaded/eligible (Aug 35/39, Sep 41/42) plus
+  "N still on it" once superseded. Upcoming, Light and No Media show live / today's fleet.
+- Reports toggle count badge is neutral grey (v2.187.1); red is only for open Maintenance issues.
+
+**Previous — v2.185.0–v2.187.0 (2026-09-24).** Counts made consistent, and the menu reshaped.
 
 - **Main menu is now Home · Software · Hardware · Media · Maintenance · Fleet (v2.187).**
   - **Hardware is public** (`RESTRICTED_TABS = []`), read-only when signed out, ASSETS included.
