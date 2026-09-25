@@ -3643,6 +3643,29 @@
         }
 
         .hw-none { color: #b3bac0; }
+        /* Unit lifecycle (v2.199.0): a serial opens the box's whole history; the ↻ chip
+           says it has flown on more than one aircraft (returned from the shop). */
+        .hw-sn-link { background: none; border: none; padding: 0; cursor: pointer; color: inherit;
+            text-decoration: underline dotted #9aa5ad; text-underline-offset: 3px; }
+        .hw-sn-link:hover { color: #0a5c34; text-decoration-color: #0a5c34; }
+        .hw-life-chip { display: inline-block; margin-left: 6px; font-size: 10.5px; font-weight: 700;
+            background: #fdf3e3; color: #8a5a12; border: 1px solid #f0d9ae; border-radius: 999px;
+            padding: 0 7px; cursor: pointer; vertical-align: middle; white-space: nowrap; }
+        .hw-life-chip:hover { background: #f8e6c4; }
+        .uh-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .uh-state { font-size: 10.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; letter-spacing: 0.3px; }
+        .uh-state.on_wing { background: #e4f3ea; color: #0a5c34; }
+        .uh-state.serviceable { background: #e6f0fb; color: #1c5b96; }
+        .uh-state.in_shop { background: #fdf3e3; color: #8a5a12; }
+        .uh-state.scrapped { background: #fbe9eb; color: #a4232f; }
+        .uh-state.spare { background: #eef1f3; color: #55606a; }
+        .uh-list { list-style: none; margin: 12px 0 0; padding: 0; max-height: 60vh; overflow-y: auto; }
+        .uh-item { border-left: 3px solid #cfd6db; padding: 6px 0 10px 12px; margin-left: 4px; }
+        .uh-item.on { border-left-color: #0a5c34; }
+        .uh-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; font-size: 13px; }
+        .uh-dates { color: #55606a; font-variant-numeric: tabular-nums; }
+        .uh-field { font-size: 12.5px; color: #333; margin-top: 4px; white-space: pre-line; }
+        .uh-field b { display: inline-block; min-width: 86px; color: #6b7780; font-weight: 600; }
 
         /* ===== Serials tab ===== */
         .sr-state {
@@ -6726,6 +6749,17 @@
         </div>
     </div>
 
+    <!-- Unit History (v2.199.0): one physical box across every aircraft it has flown on. -->
+    <div id="unitHistOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="act-modal" style="max-width:560px;">
+            <h3 style="color:#0a5c34; margin-bottom:6px;">Unit History</h3>
+            <div id="unitHistBody"></div>
+            <div style="display:flex; gap:10px; margin-top:14px;">
+                <button onclick="closeUnitHistory()" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div id="addIssueOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
         <div class="act-modal">
             <h3 style="color:#0a5c34; margin-bottom:6px;" id="addIssueHeading">Add Known Issue</h3>
@@ -7748,6 +7782,84 @@
                 u.lruId === lruId && normSerialKey(u.serial) === k) || null;
         }
 
+        // ===== Unit lifecycle (v2.199.0) =====
+        // A serial is one physical box for life, not one installation. A box comes off an
+        // aircraft, goes to the shop, comes back serviceable and is fitted again —
+        // possibly to another tail — and that is the SAME /units record gaining another
+        // fitment, so its history (where it flew, why it failed, what the shop found)
+        // travels with it. Treating a returning serial as a "duplicate" is what forced
+        // "483220010 EX" onto ASL in Sep-2026. Only two states refuse a new install:
+        // on wing somewhere right now (one box cannot be in two places), and scrapped.
+        //   on_wing     — a fitment still on
+        //   in_shop     — last removal's shop report is Awaiting Shop / In Shop
+        //   serviceable — last removal came back Repaired / No Fault Found
+        //   scrapped    — last removal was scrapped by the shop
+        //   spare       — never fitted (a store item)
+        function unitLifecycle(u) {
+            const all = unitFitmentsSorted(u);
+            const on = all.find(fitmentIsOn);
+            if (on) return { state: 'on_wing', label: 'On wing', fitment: on };
+            const off = all.filter(f => !fitmentIsOn(f));
+            const last = off[off.length - 1];
+            if (!last) return { state: 'spare', label: 'Spare', fitment: null };
+            const ss = last.shopStatus || 'pending';
+            if (ss === 'scrap') return { state: 'scrapped', label: 'Scrapped', fitment: last };
+            if (ss === 'repaired' || ss === 'no_fault') return { state: 'serviceable', label: 'Serviceable', fitment: last };
+            return { state: 'in_shop', label: shopStatusLabel(ss), fitment: last };
+        }
+
+        // Can this serial go on wing now? Returns null for a box never seen before;
+        // otherwise { unit, life, block, warn }. `block` is a sentence to show and stop on;
+        // `warn` is a sentence to show after saving (the save still goes ahead).
+        // opts.historic = a completed past record (both dates) — only the alt serial is checked.
+        // opts.fitted = the new install date (DD-Mon-YYYY) to check it follows the last
+        // removal; opts.alt = an Eclipse / alt serial typed alongside; opts.except = a
+        // unit id to ignore (the record being renamed); opts.tail = the aircraft it is
+        // going on (on wing on THAT tail is the same fitment, not a clash).
+        function serialReuse(lruId, serial, opts) {
+            const o = opts || {};
+            const k = normSerialKey(serial);
+            if (!k) return null;
+            const unit = unitEntries().find(u => u.id !== o.except && u.lruId === lruId
+                && normSerialKey(u.serial) === k);
+            if (!unit) return null;
+            const life = unitLifecycle(unit);
+            const f = life.fitment || {};
+            const res = { unit, life, block: '', warn: '' };
+            // A completed past record (fitted AND removed, backfilled) is history, not an
+            // install now — the box's current state does not constrain it.
+            if (o.historic) {
+                if (o.alt && unit.altSerial && normSerialKey(o.alt) !== normSerialKey(unit.altSerial)) {
+                    res.block = `${unit.serial} carries ${unit.altSerial} as its second serial, not ${o.alt}.`;
+                }
+                return res;
+            }
+            if (life.state === 'on_wing' && f.aircraft !== o.tail) {
+                res.block = `${unit.serial} is on wing on ${f.aircraft || 'another aircraft'}`
+                    + `${f.fittedDate ? ' since ' + f.fittedDate : ''} — record its removal there first.`;
+            } else if (life.state === 'scrapped') {
+                res.block = `${unit.serial} was scrapped after its removal from ${f.aircraft || 'its last aircraft'}`
+                    + `${f.removedDate ? ' on ' + f.removedDate : ''} — correct its shop report before fitting it again.`;
+            } else if (toISODate(o.fitted || '') && toISODate(f.removedDate || '')
+                    && toISODate(o.fitted) < toISODate(f.removedDate)) {
+                res.block = `${unit.serial} came off ${f.aircraft || 'its last aircraft'} on ${f.removedDate} — `
+                    + `it cannot be fitted again on ${o.fitted}, before that.`;
+            } else if (o.alt && unit.altSerial && normSerialKey(o.alt) !== normSerialKey(unit.altSerial)) {
+                res.block = `${unit.serial} carries ${unit.altSerial} as its second serial, not ${o.alt} — `
+                    + `leave that box blank, or correct the unit's record first.`;
+            } else if (life.state === 'in_shop') {
+                res.warn = `${unit.serial}'s shop report from ${f.aircraft || 'its last removal'} still reads `
+                    + `"${life.label}" — update it to Repaired / No Fault Found.`;
+            }
+            return res;
+        }
+
+        // One line for the status bar when a returning box goes back on wing.
+        function reuseNote(r) {
+            const f = (r && r.life && r.life.fitment) || {};
+            return f.aircraft ? `returned to service — history carried over (last off ${f.aircraft}${f.removedDate ? ' ' + f.removedDate : ''})` : 'history carried over';
+        }
+
         function hardwareRecordOf(lruId) {
             const stored = hardwareLive[lruId] || {};
             const staged = pendingHw[lruId] || {};
@@ -7770,8 +7882,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.198.1';
-        const APP_BUILD    = '2026.09.25.16';
+        const APP_VERSION  = '2.199.0';
+        const APP_BUILD    = '2026.09.25.17';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -16793,6 +16905,19 @@
                     }
                 }
 
+                // Fitted S/N lifecycle check (v2.199.0): a serial already in the register is
+                // the same box returning from the shop and simply gains a fitment — but not
+                // while it is on wing on another aircraft, nor once it has been scrapped.
+                if (category === 'hardware_rr' && !addActEditingId) {
+                    const newS = val('addActNewPart').trim();
+                    const reuse = newS ? serialReuse(details.lruId, newS, { fitted: entry.date, tail: entry.aircraft }) : null;
+                    if (reuse && reuse.block) {
+                        err.textContent = reuse.block;
+                        err.style.display = 'block';
+                        return;
+                    }
+                }
+
                 const token = await getIdToken();
                 if (!token) return;
                 const btn = document.getElementById('addActSave');
@@ -19027,10 +19152,21 @@
             const d = eclipseSnDisplay(sn || '');
             return d ? `<span class="hw-ecl-pill tl-ecl-pill">ECL ${escAttr(d)}</span>` : '';
         }
+        // The ↻ chip: shown once a box has been on more than one aircraft (or on one twice)
+        // — i.e. it came back from the shop. Opens the Unit History either way.
+        function hwLifeChip(unit) {
+            const n = unit ? unitFitments(unit).length : 0;
+            if (n < 2) return '';
+            const tails = [...new Set(unitFitmentsSorted(unit).map(f => f.aircraft).filter(Boolean))].join(' → ');
+            return `<span class="hw-life-chip" title="Fitted ${n} times: ${escAttr(tails)} — open history" onclick="openUnitHistory('${escAttr(unit.id)}')">↻ ${n}</span>`;
+        }
         function hwSerialField(unit) {
-            if (!hwEditable()) return hwSerialSpan(unit && unit.serial);
+            if (!hwEditable()) {
+                if (!unit || !unit.serial || !unit.id) return hwSerialSpan(unit && unit.serial);
+                return `<button type="button" class="hw-serial hw-sn-link" title="Unit history" onclick="openUnitHistory('${escAttr(unit.id)}')">${escAttr(unit.serial)}</button>${hwLifeChip(unit)}`;
+            }
             return `<input type="text" maxlength="60" autocomplete="off" class="hw-sn-input" value="${escAttr(unit ? (unit.serial || '') : '')}"
-                placeholder="Serial" data-unit="${escAttr(unit.id)}" onchange="saveUnitSerial(this)">`;
+                placeholder="Serial" data-unit="${escAttr(unit.id)}" onchange="saveUnitSerial(this)">${hwLifeChip(unit)}`;
         }
         function hwAltField(unit, lru) {
             const label = (lru && lru.altSerialLabel) || 'Alt S/N';
@@ -21300,15 +21436,14 @@
             const u = unitsLive[unitId];
             if (!u) return;
             const value = el.value.trim();
-            if (value) {
-                const clash = unitEntries().find(x => x.id !== unitId && x.lruId === u.lruId
-                    && String(x.serial || '').trim().toLowerCase() === value.toLowerCase());
-                if (clash) {
-                    setSyncStatus(`🔴 ${value} is already on another ${(lruById(u.lruId) || {}).label || 'unit'} — serials are unique`, '#dc3545');
-                    el.value = u.serial || '';
-                    return;
-                }
-            }
+            // Renaming to a serial that already has a record means the two are the SAME
+            // box (unit lifecycle, v2.199.0) — e.g. "483220010 EX" typed to dodge the old
+            // duplicate block. Merge: this record's fitments join the existing box's
+            // history and this record goes. Refused if the combined history would put the
+            // box on wing twice, or if the second serials disagree.
+            const twin = value ? unitEntries().find(x => x.id !== unitId && x.lruId === u.lruId
+                && normSerialKey(x.serial) === normSerialKey(value)) : null;
+            if (twin) { await mergeUnitInto(el, unitId, twin); return; }
             const token = await getIdToken();
             if (!token) return;
             el.disabled = true;
@@ -21324,6 +21459,110 @@
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (ex) {
                 setSyncStatus(`🔴 Could not save serial — ${ex.message}`, '#dc3545');
+            } finally {
+                el.disabled = false;
+            }
+        }
+
+        // ===== Unit History (v2.199.0) =====
+        // One physical box, every fitment it has had, newest first: aircraft, dates, days
+        // on wing, why it came off, and what the shop found. Read-only and public — the
+        // shop report itself is still edited from the Removed queue.
+        function openUnitHistory(unitId) {
+            const u = unitsLive[unitId];
+            const ov = document.getElementById('unitHistOverlay');
+            if (!u || !ov) return;
+            const lru = lruById(u.lruId) || {};
+            const life = unitLifecycle(u);
+            const fits = unitFitmentsSorted(u).slice().reverse();
+            const total = unitDaysOnWing(u);
+            const removals = fits.filter(f => !fitmentIsOn(f)).length;
+            const fld = (k, v) => v ? `<div class="uh-field"><b>${k}</b>${escAttr(v)}</div>` : '';
+            const item = f => {
+                const on = fitmentIsOn(f);
+                const d = fitmentDaysOnWing(f);
+                const ss = f.shopStatus || (on ? '' : 'pending');
+                return `<li class="uh-item${on ? ' on' : ''}">
+                    <div class="uh-top">
+                        <strong>${escAttr(f.aircraft || '—')}</strong>${f.position ? ` <span class="hw-none">pos ${escAttr(f.position)}</span>` : ''}
+                        <span class="uh-dates">${escAttr(f.fittedDate || '?')} → ${on ? 'on wing' : escAttr(f.removedDate || '?')}${d == null ? '' : ` · ${d}d`}</span>
+                        ${on ? '<span class="uh-state on_wing">ON WING</span>'
+                             : `<span class="status-badge shop-badge shop-${escAttr(ss)}">${escAttr(shopStatusLabel(ss))}</span>`}
+                    </div>
+                    ${on ? '' : fld('Removed for', f.removalReason)}
+                    ${fld('Shop ref', f.shopRef)}
+                    ${fld('Shop finding', f.shopFinding)}
+                </li>`;
+            };
+            document.getElementById('unitHistBody').innerHTML = `
+                <div class="uh-head">
+                    <span class="hw-serial" style="font-size:15px;">${escAttr(u.serial || 'no serial')}</span>
+                    ${u.altSerial ? (/eclipse/i.test(lru.altSerialLabel || '') ? eclipsePill(u.altSerial) : `<span class="hw-serial">${escAttr(u.altSerial)}</span>`) : ''}
+                    <span class="uh-state ${escAttr(life.state)}">${escAttr(life.label.toUpperCase())}</span>
+                </div>
+                <p style="font-size:13px; color:#666; margin:0;">${escAttr(lru.label || u.lruId)} · fitted ${fits.length} time${fits.length === 1 ? '' : 's'}
+                    · ${removals} removal${removals === 1 ? '' : 's'}${total == null ? '' : ` · ${total} days on wing in total`}</p>
+                <ul class="uh-list">${fits.map(item).join('') || '<li class="hw-none">No fitments recorded.</li>'}</ul>`;
+            ov.style.display = 'flex';
+        }
+        function closeUnitHistory() {
+            const ov = document.getElementById('unitHistOverlay');
+            if (ov) ov.style.display = 'none';
+        }
+
+        // Fold unit `fromId` into `twin` (same physical box, two records). One multi-path
+        // PATCH: each fitment copied under the twin, the twin's missing fields filled, and
+        // the old record nulled — sibling paths only, never `x` and `x/field` together.
+        // Nothing else stores a unit id (activities/avr link by activityId on the
+        // fitment, which moves with it), so dropping the old id orphans nothing.
+        async function mergeUnitInto(el, fromId, twin) {
+            const u = unitsLive[fromId];
+            const restore = () => { el.value = u.serial || ''; };
+            const label = (lruById(u.lruId) || {}).label || 'unit';
+            const fromFits = unitFitments(u);
+            const onCount = fromFits.filter(fitmentIsOn).length + unitFitments(twin).filter(fitmentIsOn).length;
+            if (onCount > 1) {
+                const on = unitFitments(twin).find(fitmentIsOn) || {};
+                setSyncStatus(`🔴 ${twin.serial} is already on wing on ${on.aircraft || 'another aircraft'} — record its removal before merging`, '#dc3545');
+                restore(); return;
+            }
+            if (u.altSerial && twin.altSerial && normSerialKey(u.altSerial) !== normSerialKey(twin.altSerial)) {
+                setSyncStatus(`🔴 Cannot merge — ${twin.serial} carries ${twin.altSerial}, this record carries ${u.altSerial}`, '#dc3545');
+                restore(); return;
+            }
+            const past = unitFitmentsSorted(twin).map(f => `${f.aircraft || '?'} ${f.fittedDate || '?'} → ${fitmentIsOn(f) ? 'on wing' : (f.removedDate || '?')}`).join('\n  ');
+            if (!confirm(`${twin.serial} already has a history as a ${label}:\n  ${past}\n\n`
+                + `Merge this record into it? Its ${fromFits.length} fitment${fromFits.length === 1 ? '' : 's'} `
+                + `(${fromFits.map(f => f.aircraft).join(', ')}) become the next chapter of the same box, and this duplicate record is removed.`)) {
+                restore(); return;
+            }
+            const token = await getIdToken();
+            if (!token) { restore(); return; }
+            const payload = { [fromId]: null };
+            fromFits.forEach(f => { const { id, ...rest } = f; payload[`${twin.id}/fitments/${id}`] = rest; });
+            ['altSerial', 'partNumber', 'altPartNumber', 'revision', 'modDots', 'vendor', 'notes', 'roaming']
+                .forEach(k => { if (u[k] && !twin[k]) payload[`${twin.id}/${k}`] = u[k]; });
+            el.disabled = true;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                const t = unitsLive[twin.id];
+                t.fitments = t.fitments || {};
+                Object.entries(payload).forEach(([k, v]) => {
+                    const [id, a, b] = k.split('/');
+                    if (id !== twin.id) return;
+                    if (a === 'fitments') t.fitments[b] = v; else t[a] = v;
+                });
+                delete unitsLive[fromId];
+                renderHardwarePage();
+                renderMaintenancePage();
+                setSyncStatus(`🟢 Merged into ${twin.serial} — one box, one history — synced with your team`, '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not merge — ${ex.message}`, '#dc3545');
+                restore();
             } finally {
                 el.disabled = false;
             }
@@ -21386,18 +21625,17 @@
             const alt = eEl ? eEl.value.trim() : '';
             if (!serial && !alt) return;               // need a serial before dates mean anything
             const lruId = el.dataset.lru, tail = el.dataset.tail, position = el.dataset.position || '';
-            if (serial) {
-                const clash = unitEntries().find(x => x.lruId === lruId
-                    && String(x.serial || '').trim().toLowerCase() === serial.toLowerCase());
-                if (clash) {
-                    setSyncStatus(`🔴 ${serial} is already on another ${(lruById(lruId) || {}).label || 'unit'} — serials are unique`, '#dc3545');
-                    if (kEl) kEl.value = '';
-                    return;
-                }
-            }
             let fitted = '', removed = '';
             if (fEl && fEl.value.trim()) { const v = readDateField(fEl); if (v === false) { setSyncStatus('🔴 Fitted date must be dd-mm-yyyy', '#dc3545'); return; } fitted = v || ''; }
             if (rEl && rEl.value.trim()) { const v = readDateField(rEl); if (v === false) { setSyncStatus('🔴 Removed date must be dd-mm-yyyy', '#dc3545'); return; } removed = v || ''; }
+            // A serial already in the register is the same box coming back (unit
+            // lifecycle) — it gains a fitment on its existing record, keeping its history.
+            const reuse = serial ? serialReuse(lruId, serial, { fitted, alt, tail, historic: !!removed }) : null;
+            if (reuse && reuse.block) {
+                setSyncStatus(`🔴 ${reuse.block}`, '#dc3545');
+                if (kEl) kEl.value = '';
+                return;
+            }
             const roaming = roamEl ? roamEl.value : '';
             const token = await getIdToken();
             if (!token) return;
@@ -21413,16 +21651,31 @@
             const unit = { lruId, addedAt: stamp, fitments: { [fitId]: fitment } };
             if (serial) unit.serial = serial;
             if (alt) unit.altSerial = alt;
+            const payload = {};
+            if (reuse) {
+                payload[`${reuse.unit.id}/fitments/${fitId}`] = fitment;
+                if (alt && !reuse.unit.altSerial) payload[`${reuse.unit.id}/altSerial`] = alt;
+            } else {
+                payload[unitId] = unit;
+            }
             try {
                 const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units.json?auth=${token}`, {
-                    method: 'PATCH', body: JSON.stringify({ [unitId]: unit }),
+                    method: 'PATCH', body: JSON.stringify(payload),
                 });
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                unitsLive[unitId] = unit;
+                if (reuse) {
+                    const lu = unitsLive[reuse.unit.id];
+                    lu.fitments = lu.fitments || {};
+                    lu.fitments[fitId] = fitment;
+                    if (alt && !lu.altSerial) lu.altSerial = alt;
+                } else {
+                    unitsLive[unitId] = unit;
+                }
                 renderHardwarePage();
                 renderMaintenancePage();
-                setSyncStatus(`🟢 ${serial || alt} added on ${tail} — synced with your team`, '#28a745');
+                if (reuse && reuse.warn) setSyncStatus(`🟡 ${serial} fitted on ${tail} — ${reuse.warn}`, '#b8860b');
+                else setSyncStatus(`🟢 ${serial || alt} ${reuse ? reuseNote(reuse) + ',' : 'added'} on ${tail} — synced with your team`, '#28a745');
             } catch (ex) {
                 setSyncStatus(`🔴 Could not add serial — ${ex.message}`, '#dc3545');
                 [kEl, eEl, fEl, rEl, roamEl].forEach(x => { if (x) x.disabled = false; });
@@ -21570,12 +21823,14 @@
             // A dual box (Kontron + Eclipse) records with either serial or both — one may be
             // known before the other. A single box still needs its one serial.
             if (!serial && !alt) { fail(r.group.shape === 'dual' ? 'Enter the Kontron and/or Eclipse serial.' : 'Enter the new serial number.'); return; }
-            if (serial) {
-                const clash = unitEntries().find(u => u.lruId === r.lruId && String(u.serial || '').trim().toLowerCase() === serial.toLowerCase());
-                if (clash) { fail(`${serial} is already on another ${r.lru.label}. Serials are unique.`); return; }
-            }
             const fittedDate = readDateField(document.getElementById('hwAddFitted'));
             if (fittedDate === false) { fail('Installed date must be dd-mm-yyyy.'); return; }
+            // A serial already in the register is the same box coming back (unit lifecycle):
+            // it gains a fitment rather than a second record. Blocked only when it is on
+            // wing elsewhere, scrapped, or the dates run backwards.
+            const reuse = serial ? serialReuse(r.lruId, serial, { fitted: fittedDate, alt, tail: r.aircraft.id,
+                historic: !!document.getElementById('hwAddRemoved').value.trim() }) : null;
+            if (reuse && reuse.block) { fail(reuse.block); return; }
 
             // Optional: a box that was fitted AND already taken off is recorded complete,
             // in one go — the backfill of past equipment with no record yet. The reason
@@ -21616,7 +21871,13 @@
             const unit = { lruId: r.lruId, addedAt: stamp, fitments: { [fitId]: fitment } };
             if (serial) unit.serial = serial;
             if (alt) unit.altSerial = alt;
-            const payload = { [unitId]: unit };
+            const payload = {};
+            if (reuse) {
+                payload[`${reuse.unit.id}/fitments/${fitId}`] = fitment;
+                if (alt && !reuse.unit.altSerial) payload[`${reuse.unit.id}/altSerial`] = alt;
+            } else {
+                payload[unitId] = unit;
+            }
             if (replace) {
                 payload[`${current.unit.id}/fitments/${current.fitment.id}/removedDate`] = fittedDate;
                 payload[`${current.unit.id}/fitments/${current.fitment.id}/state`] = 'removed';
@@ -21629,7 +21890,14 @@
                 });
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                unitsLive[unitId] = unit;
+                if (reuse) {
+                    const lu = unitsLive[reuse.unit.id];
+                    lu.fitments = lu.fitments || {};
+                    lu.fitments[fitId] = fitment;
+                    if (alt && !lu.altSerial) lu.altSerial = alt;
+                } else {
+                    unitsLive[unitId] = unit;
+                }
                 if (replace) {
                     const cf = unitsLive[current.unit.id].fitments[current.fitment.id];
                     cf.removedDate = fittedDate; cf.state = 'removed';
@@ -21637,7 +21905,8 @@
                 closeHwAdd();
                 renderHardwarePage();
                 renderMaintenancePage();
-                setSyncStatus(`🟢 ${serial || alt} added on ${r.aircraft.id}${removedDate ? ' (fitted & removed record)' : (replace ? ' (swap recorded)' : '')} — synced with your team`, '#28a745');
+                if (reuse && reuse.warn) setSyncStatus(`🟡 ${serial} fitted on ${r.aircraft.id} — ${reuse.warn}`, '#b8860b');
+                else setSyncStatus(`🟢 ${serial || alt} ${reuse ? reuseNote(reuse) + ',' : 'added'} on ${r.aircraft.id}${removedDate ? ' (fitted & removed record)' : (replace ? ' (swap recorded)' : '')} — synced with your team`, '#28a745');
             } catch (ex) {
                 fail(`Could not save — ${ex.message}`);
             } finally {
