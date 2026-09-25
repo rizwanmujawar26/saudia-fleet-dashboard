@@ -4968,9 +4968,17 @@
         .avr-assign-menu.add-menu { width: auto; min-width: 180px; }
         .avr-assign-menu.add-menu .avr-assign-item { font-weight: 600; font-size: 13px; }
 
+        /* Report soft-link (Media filter bar, when a released cycle is viewed): a real
+           <a> to the #mlr=<cycle> deep link, opening in a new tab — the same mechanism as
+           the timeline's AVR pill, and styled as that green pill (user, 2026-09-25). */
+        .qf-btn.report-btn { text-decoration: none; color: #146c3a; background: #e7f4ec;
+            border-color: #bfe3cd; font-weight: 700; }
+        .qf-btn.report-btn:hover { background: #d5ecdf; border-color: #9fd3b4; color: #146c3a; }
+
         @media (max-width: 700px) {
             .reset-btn,
             .edit-btn.icon-btn,
+            .report-btn.icon-btn,
             .add-btn.icon-btn {
                 width: 32px;
                 height: 32px;
@@ -4981,6 +4989,7 @@
             }
             .reset-btn .ib-label,
             .edit-btn.icon-btn .ib-label,
+            .report-btn.icon-btn .ib-label,
             .add-btn.icon-btn .ib-label { display: none; }
         }
 
@@ -5969,6 +5978,7 @@
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="media"></div>
                     <div class="fb-actions">
+                        <a id="mediaMlrBtn" class="qf-btn icon-btn report-btn" style="display:none;" target="_blank" rel="noopener"><span class="ib-icon" aria-hidden="true">📊</span><span class="ib-label"></span></a>
                         <button id="mediaAddBtn" class="qf-btn add-btn icon-btn" style="display:none;" onclick="openMediaCycleEditor()" title="Add or edit media cycles and widgets" aria-label="Add or edit media cycles"><span class="ib-icon" aria-hidden="true">＋</span><span class="ib-label">Add</span></button>
                         <button id="mediaEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleMediaEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
                         <button id="mediaResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetOrTop(this, resetMediaTable)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
@@ -7757,8 +7767,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.195.0';
-        const APP_BUILD    = '2026.09.25.11';
+        const APP_VERSION  = '2.196.0';
+        const APP_BUILD    = '2026.09.25.12';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12157,6 +12167,7 @@
             const latest = latestMediaCycle();
             const cycleView = mediaCycleView();
             mediaViewRendered = cycleView;
+            updateMediaMlrLink(cycleView);
             // Editing is about the CURRENT load, so a past-cycle view is read-only —
             // otherwise a save would silently write a new load rather than correcting
             // the historical one being looked at.
@@ -12633,6 +12644,22 @@
             mediaEditMode = true;
             pendingMedia = {};
             populateMediaTable();
+        }
+
+        // The filter bar's report link: shown only while a RELEASED month is the Cycle
+        // view (Light / No Media and "All" have no report). A soft link to the #mlr=<cycle>
+        // deep link, like the timeline's AVR pill — new tab, middle-click works.
+        function updateMediaMlrLink(cycle) {
+            const a = document.getElementById('mediaMlrBtn');
+            if (!a) return;
+            const ok = cycle && mediaReportCycles().includes(cycle);
+            a.style.display = ok ? '' : 'none';
+            if (!ok) { a.removeAttribute('href'); return; }
+            const ref = mlrRef(cycle);
+            a.href = `${location.origin + location.pathname}#mlr=${encodeURIComponent(cycle)}`;
+            a.title = `Open the Media Loading Report for ${cycleViewLabel(cycle)} (${ref}) in a new tab`;
+            a.setAttribute('aria-label', a.title);
+            a.querySelector('.ib-label').textContent = ref;
         }
 
         function updateMediaEditUI() {
