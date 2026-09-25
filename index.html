@@ -7726,8 +7726,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.190.0';
-        const APP_BUILD    = '2026.09.25.05';
+        const APP_VERSION  = '2.190.1';
+        const APP_BUILD    = '2026.09.25.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15196,7 +15196,10 @@
                     + (d.durations.endToEnd != null ? ` From content delivery to the last aircraft took ${mlrPlural(d.durations.endToEnd, 'day')}.` : '') });
             }
 
-            // START — loading can only begin once the disks are in the loading team's hands,
+            // START — loading can only begin once the disks have been delivered. ⚠️ TERMS (user,
+            // 2026-09-25): disks are delivered to SV IFE ENGINEERING, who pass them to SAUDIA
+            // TECHNIC, who load the aircraft. Never write "loading team".
+            //
             // so the first load is measured from Disks delivered when that date is known
             // (user, 2026-09-25: disks reached Saudia Technic 23-Aug, loading began 25-Aug —
             // "began on the release day" was wrong). Without it, from the window's opening.
@@ -15205,7 +15208,7 @@
                 const tone = share >= 40 ? 'a fast start' : share >= 20 ? 'a steady start' : 'a slow start';
                 const dd = d.disksISO ? mlrDaysBetween(d.disksISO, d.firstLoad.iso) : null;
                 const lead = dd != null && dd >= 0
-                    ? `The media disks were delivered to the loading team on ${fd(d.disksISO)}, and the first aircraft was loaded ${dd === 0 ? 'the same day' : `${mlrPlural(dd, 'day')} later`} (${fd(d.firstLoad.iso)}). `
+                    ? `The media disks were delivered to SV IFE Engineering on ${fd(d.disksISO)}, and Saudia Technic loaded the first aircraft ${dd === 0 ? 'the same day' : `${mlrPlural(dd, 'day')} later`} (${fd(d.firstLoad.iso)}). `
                     : `The first aircraft was loaded on ${fd(d.firstLoad.iso)}${d.firstLoad.day > 1 ? `, ${mlrPlural(d.firstLoad.day - 1, 'day')} after the loading window opened` : ''}. `;
                 out.push({ k: 'Start', t: lead
                     + (d.days >= 7 ? `${mlrPlural(d.firstWeek, 'aircraft', 'aircraft')} (${share}% of the fleet) were loaded in the first seven days — ${tone}.` : '') });
@@ -15341,8 +15344,7 @@
   .mlr-pn { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:16px; font-weight:700; color:#0b1f3a; margin-top:7px; letter-spacing:.3px; overflow-wrap:anywhere; }
   .mlr-sub { font-size:11px; color:#8a96a1; font-weight:600; margin-top:2px; }
   .mlr-prog { border:1px solid #e3e8ee; border-radius:10px; padding:12px 16px 6px; margin-top:10px; background:#fff; }
-  .mlr-prog-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
-  .mlr-prog-fig { font-size:22px; font-weight:800; color:#0b1f3a; }
+  .mlr-prog-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .mlr-verdict { margin-left:auto; font-size:11px; font-weight:800; padding:2px 10px; border-radius:99px; border:1px solid transparent; white-space:nowrap; }
   .mlr-v-green { background:#e9f5ee; color:#0b7a3b; border-color:#bfe3cd; }
   .mlr-v-blue  { background:#eaf2fb; color:#2f5f8a; border-color:#c4dcf2; }
@@ -15352,22 +15354,10 @@
   .mlr-bar > i { position:relative; display:block; height:100%; min-width:4px; background:#1f8a52; border-radius:99px; }
   .mlr-bar > i > span { position:absolute; right:9px; top:50%; transform:translateY(-50%); font-size:11.5px; font-weight:800; color:#fff; white-space:nowrap; font-style:normal; }
   .mlr-bar > i > span.out { right:auto; left:100%; margin-left:7px; color:#0b7a3b; }
-  .mlr-scale { position:relative; height:14px; font-size:10px; color:#8a96a1; font-weight:700; }
-  .mlr-scale span { position:absolute; transform:translateX(-50%); white-space:nowrap; }
-  .mlr-scale span.t { color:#8a5312; }
-  .mlr-ms { position:relative; height:66px; margin:24px 8px 0; }
-  .mlr-ms-line { position:absolute; left:0; right:0; top:25px; border-top:2px solid #d5dbe1; }
-  .mlr-ms-fill { position:absolute; left:0; top:25px; border-top:2.5px solid #1f8a52; }
-  .mlr-ms-n { position:absolute; top:19px; width:0; }
-  .mlr-ms-n > i { position:absolute; left:-6px; top:0; width:12px; height:12px; border-radius:50%; background:#1f8a52; box-sizing:border-box; }
-  .mlr-ms-n.end > i { background:#fff; border:2.5px solid #0b1f3a; }
-  .mlr-ms-n.open > i { background:#fff; border:2.5px dashed #2f5f8a; }
-  .mlr-ms-c { position:absolute; white-space:nowrap; line-height:1.2; }
-  .mlr-ms-c.dn { top:17px; }
-  .mlr-ms-c.up { bottom:9px; }
-  .mlr-ms-c.l { left:-6px; } .mlr-ms-c.m { left:0; transform:translateX(-50%); text-align:center; } .mlr-ms-c.r { right:-6px; text-align:right; }
-  .mlr-ms-c em { display:block; font-style:normal; font-size:9.5px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:#7c8894; }
-  .mlr-ms-c b { font-size:12px; font-weight:800; color:#0b1f3a; }
+  .mlr-bar-foot { display:flex; justify-content:space-between; gap:12px; font-size:11.5px; color:#6b7883; font-weight:600; margin-top:5px; }
+  .mlr-bar-foot b { color:#0b1f3a; font-weight:800; }
+  .mlr-tl { border-top:1px solid #eef2f6; margin-top:14px; padding-top:11px; }
+  .mlr-tl svg { margin-top:4px; }
   .mlr-facts { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:11.5px; color:#6b7883; border-top:1px solid #eef2f6; margin-top:6px; padding:7px 0 4px; }
   .mlr-facts b { color:#0b1f3a; font-weight:800; }
   .mlr-jr { border:1px solid #e3e8ee; border-radius:10px; padding:12px 16px 10px; margin-top:10px; background:#fff; }
@@ -15389,28 +15379,56 @@
     .mlr-jr-steps { grid-template-columns:repeat(3, minmax(0,1fr)); }
   }`;
 
+        // Loading timeline: one SVG so the rail, the fill and every marker share a single
+        // coordinate system — each marker sits at its real day (fractional, from the load
+        // time-stamp). Milestones (50% / 90% of the fleet) are captioned ABOVE the rail on a
+        // stem; the window's two ends are captioned BELOW it.
+        function mlrTimelineSVG(d) {
+            const W = 700, H = 108, X0 = 14, X1 = 686, RY = 60;
+            const x = t => X0 + Math.max(0, Math.min(1, t / Math.max(1, d.days))) * (X1 - X0);
+            const reach = d.lastLoad ? x(Math.min(d.days, d.lastLoad.t)) : X0;
+            let g = `<line x1="${X0}" x2="${X1}" y1="${RY}" y2="${RY}" stroke="#e3e8ee" stroke-width="6" stroke-linecap="round"/>`;
+            if (d.lastLoad) g += `<line x1="${X0}" x2="${reach.toFixed(1)}" y1="${RY}" y2="${RY}" stroke="#1f8a52" stroke-width="6" stroke-linecap="round"/>`;
+            // weekly ticks under the rail, so the spacing reads as time
+            for (let day = 8; day < d.days; day += 7) {
+                const tx = x(day - 1);
+                g += `<line x1="${tx.toFixed(1)}" x2="${tx.toFixed(1)}" y1="${RY + 6}" y2="${RY + 10}" stroke="#c3cad1" stroke-width="1.2"/>`;
+            }
+            const ms = [['50% of fleet', d.t50], ['90% of fleet', d.t90]].filter(([, m]) => m).map(([lab, m]) => ({ lab, m, cx: x(m.t) }));
+            // anchor each caption so two close milestones never overlap
+            ms.forEach((o, i) => {
+                o.anchor = 'middle'; o.tx = o.cx;
+                const other = ms[1 - i];
+                if (other && Math.abs(other.cx - o.cx) < 130) { o.anchor = o.cx < other.cx ? 'end' : 'start'; o.tx = o.cx + (o.anchor === 'end' ? 4 : -4); }
+                if (o.cx < 70) { o.anchor = 'start'; o.tx = o.cx - 6; }
+                if (o.cx > W - 70) { o.anchor = 'end'; o.tx = o.cx + 6; }
+            });
+            ms.forEach(o => {
+                g += `<line x1="${o.cx.toFixed(1)}" x2="${o.cx.toFixed(1)}" y1="${RY - 30}" y2="${RY - 7}" stroke="#9aa5af" stroke-width="1"/>`
+                   + `<circle cx="${o.cx.toFixed(1)}" cy="${RY}" r="6.5" fill="#fff" stroke="#0b1f3a" stroke-width="2.5"/>`
+                   + `<text x="${o.tx.toFixed(1)}" y="${RY - 46}" text-anchor="${o.anchor}" font-size="9.5" font-weight="800" letter-spacing=".5" fill="#7c8894">${escAttr(o.lab.toUpperCase())}</text>`
+                   + `<text x="${o.tx.toFixed(1)}" y="${RY - 33}" text-anchor="${o.anchor}" font-size="12" font-weight="800" fill="#0b1f3a">Day ${o.m.day} · ${escAttr(fmtDateShort(fmtDate(o.m.iso)).slice(0, 6))}</text>`;
+            });
+            g += `<circle cx="${X0}" cy="${RY}" r="6.5" fill="#1f8a52" stroke="#fff" stroke-width="2"/>`;
+            g += d.open
+                ? `<circle cx="${X1}" cy="${RY}" r="6.5" fill="#fff" stroke="#2f5f8a" stroke-width="2.5" stroke-dasharray="3 2"/>`
+                : `<circle cx="${X1}" cy="${RY}" r="6.5" fill="#0b1f3a" stroke="#fff" stroke-width="2"/>`;
+            g += `<text x="${X0 - 6}" y="${RY + 26}" font-size="9.5" font-weight="800" letter-spacing=".5" fill="#7c8894">LOADING START · DAY 1</text>`
+               + `<text x="${X0 - 6}" y="${RY + 41}" font-size="12" font-weight="800" fill="#0b1f3a">${escAttr(fmtDateShort(d.start))}</text>`
+               + `<text x="${X1 + 6}" y="${RY + 26}" text-anchor="end" font-size="9.5" font-weight="800" letter-spacing=".5" fill="#7c8894">${d.open ? 'TODAY' : 'CLOSED'} · DAY ${d.days}</text>`
+               + `<text x="${X1 + 6}" y="${RY + 41}" text-anchor="end" font-size="12" font-weight="800" fill="#0b1f3a">${escAttr(d.open ? fmtDateShort(fmtDate(d.endISO)) : fmtDateShort(d.end))}</text>`;
+            return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Loading timeline: day 1 to day ${d.days}, with the days the fleet reached 50% and 90%" style="display:block; max-width:100%; height:auto; overflow:visible;">${g}</svg>`;
+        }
+
         function mlrTopHTML(d) {
             const r = mlrRating(d);
             const clamp = v => Math.max(0, Math.min(100, v));
-            const pos = t => clamp(t / Math.max(1, d.days) * 100);
-            // Milestone strip: Released (start) · 50% · 90% above the line · Closed / Today.
-            const nodes = [];
-            const cap = (cls, em, b) => `<span class="mlr-ms-c ${cls}"><em>${escAttr(em)}</em><b>${escAttr(b)}</b></span>`;
-            nodes.push(`<span class="mlr-ms-n" style="left:0%"><i></i>${cap('dn l', 'Loading start', fmtDateShort(d.start))}</span>`);
-            [['50%', d.t50], ['90%', d.t90]].forEach(([lab, m]) => {
-                if (m) nodes.push(`<span class="mlr-ms-n" style="left:${pos(m.t).toFixed(1)}%"><i></i>${cap('up m', `${lab} · day ${m.day}`, fmtDateShort(fmtDate(m.iso)))}</span>`);
-            });
-            nodes.push(d.open
-                ? `<span class="mlr-ms-n open" style="left:100%"><i></i>${cap('dn r', `Today · day ${d.days}`, fmtDateShort(fmtDate(d.endISO)))}</span>`
-                : `<span class="mlr-ms-n end" style="left:100%"><i></i>${cap('dn r', `Closed · day ${d.days}`, fmtDateShort(d.end))}</span>`);
-            const reachedTo = d.lastLoad ? pos(d.lastLoad.t) : 0;
 
             const facts = [
                 d.firstLoad ? `First aircraft <b>day ${d.firstLoad.day}</b>` : '',
                 d.median != null ? `Typical load <b>day ${d.median}</b>` : '',
                 d.peak.n ? `Busiest day <b>${escAttr(fmtDateShort(fmtDate(d.peak.iso)))} · ${d.peak.n}</b>` : '',
                 d.late ? `Loaded late <b>${d.late}</b>` : '',
-                d.missing.length ? `${d.open ? 'Still to load' : 'Not loaded'} <b>${d.missing.length}</b>` : '',
             ].filter(Boolean);
 
             const step = (cls, ic, lb, dt) => `<div class="mlr-jr-s ${cls}"><div class="ic" aria-hidden="true">${ic}</div><div class="lb">${escAttr(lb)}</div><div class="dt">${escAttr(dt)}</div></div>`;
@@ -15429,11 +15447,14 @@
             <div class="mlr-prog">
                 <div class="mlr-prog-head">
                     <span class="mlr-k">Fleet loaded</span>
-                    <span class="mlr-prog-fig">${d.done} / ${d.scope}</span>
                     <span class="mlr-verdict mlr-v-${r.css}">${escAttr(r.label)}</span>
                 </div>
                 <div class="mlr-bar"><i style="width:${clamp(d.pct)}%"><span class="${d.pct < 14 ? 'out' : ''}">${d.pct}%</span></i></div>
-                <div class="mlr-ms"><div class="mlr-ms-line"></div><div class="mlr-ms-fill" style="width:${reachedTo.toFixed(1)}%"></div>${nodes.join('')}</div>
+                <div class="mlr-bar-foot"><span><b>${d.done}</b> of ${d.scope} eligible aircraft loaded</span>${d.missing.length ? `<span><b>${d.missing.length}</b> ${d.open ? 'still to load' : 'not loaded'}</span>` : ''}</div>
+                <div class="mlr-tl">
+                    <div class="mlr-k">Loading timeline · ${mlrPlural(d.days, 'day')}${d.open ? ' so far' : ''}</div>
+                    ${mlrTimelineSVG(d)}
+                </div>
                 ${facts.length ? `<div class="mlr-facts">${facts.map(f => `<span>${f}</span>`).join('')}</div>` : ''}
             </div>
             <div class="mlr-jr">
@@ -15731,7 +15752,7 @@
             ['contentDelivered', 'Content delivered',    'Media content received from the provider'],
             ['downloaded',       'Media downloaded',     'Content downloaded by NSG'],
             ['disksDuplicated',  'Disks duplicated',     'Media copied onto the loading disks'],
-            ['disksToTeam',      'Disks delivered',      'Disks delivered to the loading team (Saudia Technic)'],
+            ['disksToTeam',      'Disks delivered',      'Disks delivered to SV IFE Engineering'],
             ['start',            'Loading start *',      'Opens the loading window — day 1 of the report'],
             ['end',              'Cycle closed',         'Leave empty while loading continues'],
         ];
