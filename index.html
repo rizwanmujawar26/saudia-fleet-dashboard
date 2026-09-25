@@ -7771,7 +7771,7 @@
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
         const APP_VERSION  = '2.197.0';
-        const APP_BUILD    = '2026.09.25.13';
+        const APP_BUILD    = '2026.09.25.14';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12653,6 +12653,8 @@
         // timeline AVR pill's mechanism). Public, and independent of the Cycle view.
         // Reuses the assign-menu popover and its one closer/backdrop. ⚠️ The menu closes on a
         // timeout: a link removed during its own click is disconnected and will not navigate.
+        function closeAssignMenuSoon() { setTimeout(closeAssignMenu); }
+
         function openMediaDownloadMenu() {
             closeAssignMenu();
             const btn = document.getElementById('mediaDownloadBtn');
@@ -12667,7 +12669,7 @@
             const base = location.origin + location.pathname;
             const items = mediaReportCycles().map(c => {
                 const open = !mediaCycleWindow(c).end;
-                return `<a class="avr-assign-item" role="menuitem" href="${escAttr(base + '#mlr=' + encodeURIComponent(c))}" target="_blank" rel="noopener" onclick="setTimeout(closeAssignMenu)" title="Open the Media Loading Report for ${escAttr(cycleViewLabel(c))} in a new tab">📊 ${escAttr(cycleViewLabel(c))}${open ? ' <span class="dl-item-open">running</span>' : ''}<span class="dl-item-ref">${escAttr(mlrRef(c))}</span></a>`;
+                return `<a class="avr-assign-item" role="menuitem" href="${escAttr(base + '#mlr=' + encodeURIComponent(c))}" target="_blank" rel="noopener" onclick="closeAssignMenuSoon()" title="Open the Media Loading Report for ${escAttr(cycleViewLabel(c))} in a new tab">📊 ${escAttr(cycleViewLabel(c))}${open ? ' <span class="dl-item-open">running</span>' : ''}<span class="dl-item-ref">${escAttr(mlrRef(c))}</span></a>`;
             }).join('');
             menu.innerHTML = `<div class="dl-menu-head">Media Loading Reports</div>` +
                 (items || '<div class="dl-menu-empty">No cycle has been released yet.</div>');
