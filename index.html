@@ -7757,8 +7757,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.194.0';
-        const APP_BUILD    = '2026.09.25.10';
+        const APP_VERSION  = '2.195.0';
+        const APP_BUILD    = '2026.09.25.11';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12526,10 +12526,29 @@
             // `hideTotal` drops the "N loaded" pill. No Media means no media was ever
             // loaded on those aircraft, so a loaded count there is meaningless (user,
             // 2026-09-03) — every dated cycle still carries its total.
+            // A RELEASED month (it has a loading start) reads as its CYCLE RESULT — aircraft
+            // that took it / aircraft eligible (in service by the close; today while open),
+            // the same figures as its Media Loading Report (user, 2026-09-25). Once closed,
+            // the few still carrying it show as a small "N still on it" pill. Upcoming
+            // months, Light Media and No Media keep the live count out of today's fleet —
+            // they are states the fleet is in right now, not results.
             const card = (label, key, type, size, hideTotal) => {
-                const count = key === MEDIA_DEV_VIEW ? none : (live[key] || 0);
+                const rd = key !== MEDIA_DEV_VIEW && !isLightMediaCycle(key) && (MEDIA_CYCLES[key] || {}).start
+                    ? mediaReportData(key) : null;
+                let count = key === MEDIA_DEV_VIEW ? none : (live[key] || 0);
+                let of = scope;
                 const total = totals[key] || 0;
-                const pct = Math.round((count / scope) * 1000) / 10;
+                let pct = Math.round((count / scope) * 1000) / 10;
+                let footPill = hideTotal ? '' : `<span class="cycle-total" title="Aircraft that have ever taken this media">${total} loaded</span>`;
+                if (rd) {
+                    const stillOn = live[key] || 0;
+                    count = rd.done; of = rd.scope; pct = rd.pct;
+                    // only once a newer month is the fleet's media — on the current one it would
+                    // just repeat the headline
+                    footPill = !rd.open && stillOn && key !== latest
+                        ? `<span class="cycle-total" title="Aircraft still carrying this media today">${stillOn} still on it</span>`
+                        : '';
+                }
                 const w = key === MEDIA_DEV_VIEW ? { start: '', end: '' } : mediaCycleWindow(key);
                 const win = w.start
                     ? (w.end ? `${fmtDateShort(w.start)} → ${fmtDateShort(w.end)}`
@@ -12540,11 +12559,11 @@
                         <span class="media-widget-label">${escAttr(label)}</span>
                         ${size ? `<span class="media-size-pill">${escAttr(size)}</span>` : ''}
                     </div>
-                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${scope}</span><span class="media-widget-pct">${pct}%</span></div>
+                    <div class="media-widget-figures"><span class="media-widget-count">${count}</span><span class="media-widget-of">/${of}</span><span class="media-widget-pct">${pct}%</span></div>
                     <div class="media-widget-track"><div class="media-widget-fill" style="width:${pct}%"></div></div>
                     <div class="cycle-foot">
                         <span class="cycle-window">${win}</span>
-                        ${hideTotal ? '' : `<span class="cycle-total" title="Aircraft that have ever taken this media">${total} loaded</span>`}
+                        ${footPill}
                     </div>
                 </div>`;
             };
@@ -12575,7 +12594,7 @@
             const light = mediaWidgetHidden('light') ? [] : cycles.filter(isLightMediaCycle);
 
             let html = dated.map(c => card(cycleToDisplay(c), c, typeOf(c), mediaCycleSize(c))).join('');
-            html += light.map(c => card(MEDIA_LIGHT_LABEL, c, 'light', mediaCycleSize(c))).join('');
+            html += light.map(c => card(MEDIA_LIGHT_LABEL, c, 'light', mediaCycleSize(c), true)).join('');
             if (!mediaWidgetHidden('none')) html += card('No Media', MEDIA_DEV_VIEW, 'no_media', '', true);
 
             grid.innerHTML = html || '<div class="media-widget media-widget-no_media"><div class="media-widget-head"><span class="media-widget-label">No Media Data</span></div></div>';

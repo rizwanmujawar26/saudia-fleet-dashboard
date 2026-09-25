@@ -13,6 +13,13 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.195.0 — Media widgets: released months show the cycle result (2026-09-25)
+User: a released month's card shows loaded / eligible (the report's figures): Aug 35/39 · 89.7%, Sep
+41/42 · 97.6%. It used to show the live count against today's fleet (Aug 1/42 · 2.4%, which read as a
+failure). Once a newer month is the fleet's media, a small "N still on it" pill carries the live count.
+Upcoming months, Light Media and No Media keep the live count / today's fleet, because they are current
+states, not results. Light Media lost its lifetime "N loaded" pill.
+
 ### v2.194.0 — Eligible fleet per cycle: in service by close; editable override (2026-09-25)
 User: a cycle's eligible aircraft = programme aircraft IN SERVICE by the cycle's close date —
 `activatedDate`, else `retrofitEnd`. No date, or still in modification = NOT eligible (it used to count
