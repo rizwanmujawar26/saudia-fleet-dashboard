@@ -1271,6 +1271,9 @@ the derived "day before next start". A cycle with no `start` is **upcoming**: a 
 report. With a `start` and no `end` it gets an **In progress** report. Polled, and in the initial fetch.
 The Media Loading Report (derived, never stored) reads this node, `/mediaLoads`, and the
 `/assets` Media Disks whose `content` names the month.
+Two non-month keys (v2.192.0): `light` (`size`, `hidden`) and `none` (`hidden`), the Light Media /
+No Media widget settings. Any record may carry `hidden: true` to drop its widget from the Media strip.
+All of it is edited in the Media page's ＋ Add form (Media Widgets & Cycles).
 ⚠️ **Disks are LOCKED at cycle close (v2.191.0).** Once `end` has passed, `autoSnapshotClosedCycles()`
 copies the matching disks into `disks/{id}` + `disksSnapshotAt` (write-once in the rules) the next time a
 signed-in editor has the page open. After that the report reads only the copy: re-tagging a disk for the

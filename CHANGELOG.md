@@ -13,6 +13,16 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.192.0 — Media page ＋ Add: Media Widgets & Cycles form (2026-09-25)
+User: a ＋ Add button on the Media page (shared add-btn/icon-btn, editor-only via updateMediaEditUI,
+so it follows updateAuthUI). It opens one form listing every widget on the page — each month, Light
+Media and No Media — with a Show/Hide switch and Edit. Months edit as before; Light Media edits its size
+only (`/mediaCycles/light`); No Media has visibility only (`/mediaCycles/none`). Hidden = `hidden: true`.
+Save is ONE multi-path PATCH on /mediaCycles: the selected record whole (disk snapshot carried) plus
+`<other>/hidden` for any other switch that moved (never `x` + `x/hidden`). Rules: `$cycle` also accepts
+`light`/`none` (no size required) and a boolean `hidden`. `rebuildMediaCycles()` ignores the two
+non-month keys. The size is stored exact and every pill rounds it via `roundedSizeLabel()`.
+
 ### v2.191.0 — Media disks locked at cycle close (2026-09-25)
 User: a disk's `content` tag is changed when the disk is re-used next month, so a closed cycle must
 never read /assets live. `/mediaCycles/{c}` gains `disks/{id}` (nsgSerial, type, make, mfrSerial,

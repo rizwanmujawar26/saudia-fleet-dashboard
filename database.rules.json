@@ -230,7 +230,8 @@
 
       "$cycle": {
         ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
-        ".validate": "$cycle.matches(/^(0[1-9]|1[0-2])[0-9]{2}$/) && newData.hasChild('size')",
+        ".validate": "($cycle.matches(/^(0[1-9]|1[0-2])[0-9]{2}$/) && newData.hasChild('size')) || $cycle === 'light' || $cycle === 'none'",
+        "hidden":           { ".validate": "newData.isBoolean()" },
 
         "size":             { ".validate": "newData.isString() && newData.val().matches(/^[0-9]+(\\.[0-9]+)? (GB|TB)$/)" },
         "partNumber":       { ".validate": "newData.isString() && newData.val().length <= 40" },

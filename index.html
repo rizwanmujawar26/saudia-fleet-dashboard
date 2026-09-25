@@ -4550,6 +4550,32 @@
         /* Media Loading Report card (v2.188.0) — the top fragment's styles are MLR_CSS,
            injected at start-up and shared with the printed report. */
         .mc-hint { font-size: 11px; color: #8a96a1; margin-top: 3px; }
+        .mc-note { font-size: 12.5px; color: #5a6b78; margin: 2px 0 10px; line-height: 1.5; }
+        /* Media Widgets & Cycles form — one row per widget: switch · name · state · size · edit */
+        .mc-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+        .mc-row { display: flex; align-items: center; gap: 10px; border: 1px solid #e3e8ee; border-radius: 10px; padding: 6px 10px; background: #fff; }
+        .mc-row.is-sel { border-color: #0a5c34; box-shadow: 0 0 0 1px #0a5c34 inset; background: #f4faf6; }
+        .mc-row.is-hidden .mc-row-name { color: #9aa5af; text-decoration: line-through; }
+        .mc-row-main { flex: 1 1 auto; display: flex; align-items: center; gap: 8px; min-width: 0; background: none; border: 0; padding: 4px 0; cursor: pointer; text-align: left; font: inherit; }
+        .mc-row-name { font-weight: 800; font-size: 13.5px; color: #0b1f3a; white-space: nowrap; }
+        .mc-row-edit { margin-left: auto; font-size: 12px; font-weight: 700; color: #0a5c34; white-space: nowrap; }
+        .mc-row.is-sel .mc-row-edit { color: #7c8894; }
+        .mc-st { font-size: 10px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; padding: 1px 7px; border-radius: 5px; border: 1px solid transparent; white-space: nowrap; }
+        .mc-st-closed   { background: #eef1f4; color: #55606a; border-color: #d5dbe1; }
+        .mc-st-loading  { background: #e9f5ee; color: #0b7a3b; border-color: #bfe3cd; }
+        .mc-st-upcoming { background: #f6f7f8; color: #7b858e; border-color: #e3e6e9; }
+        .mc-st-light    { background: #f0eefb; color: #4c3d9a; border-color: #d5cef1; }
+        .mc-st-none     { background: #f1f3f5; color: #5a6169; border-color: #dde1e5; }
+        .mc-switch { position: relative; flex: 0 0 auto; width: 34px; height: 20px; cursor: pointer; }
+        .mc-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+        .mc-switch span { position: absolute; inset: 0; background: #cfd6dd; border-radius: 99px; transition: background .15s; }
+        .mc-switch span::after { content: ''; position: absolute; left: 3px; top: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
+        .mc-switch input:checked + span { background: #1f8a52; }
+        .mc-switch input:checked + span::after { transform: translateX(14px); }
+        .mc-switch input:focus-visible + span { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #0a5c34; }
+        .mc-new { border: 1px dashed #b8c1ca; border-radius: 10px; background: #fafbfc; padding: 9px 12px; font: inherit; font-size: 13px; font-weight: 800; color: #0a5c34; cursor: pointer; text-align: left; }
+        .mc-new.is-sel { border-style: solid; border-color: #0a5c34; background: #f4faf6; }
+        @media (max-width: 520px) { .mc-row .media-size-pill { display: none; } }
         .mlr-chart { border: 1px solid #e3e8ee; border-radius: 8px; padding: 10px 8px 4px; margin-bottom: 10px; }
         .mlr-narr p { margin: 0 0 7px; font-size: 13px; line-height: 1.5; color: #2c3a45; }
         .mlr-narr p b { color: #0a5c34; }
@@ -5939,6 +5965,7 @@
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="media"></div>
                     <div class="fb-actions">
+                        <button id="mediaAddBtn" class="qf-btn add-btn icon-btn" style="display:none;" onclick="openMediaCycleEditor()" title="Add or edit media cycles and widgets" aria-label="Add or edit media cycles"><span class="ib-icon" aria-hidden="true">＋</span><span class="ib-label">Add</span></button>
                         <button id="mediaEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleMediaEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
                         <button id="mediaResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetOrTop(this, resetMediaTable)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
                     </div>
@@ -6334,7 +6361,7 @@
             <div id="mcEditError" class="ac-edit-error" style="display:none;"></div>
             <div class="ac-edit-foot">
                 <button class="ac-edit-btn-secondary" onclick="closeMediaCycleEditor()">Cancel</button>
-                <button id="mcEditSave" class="ac-edit-btn-primary" onclick="saveMediaCycle()">Save cycle</button>
+                <button id="mcEditSave" class="ac-edit-btn-primary" onclick="saveMediaCycle()">Save</button>
             </div>
         </div>
     </div>
@@ -7726,8 +7753,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.191.0';
-        const APP_BUILD    = '2026.09.25.07';
+        const APP_VERSION  = '2.192.0';
+        const APP_BUILD    = '2026.09.25.08';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12286,11 +12313,22 @@
 
         // The size for the widget pill — ROUNDED (user, 2026-09-25: 799.7 GB shows as
         // 800 GB). The report prints the exact figure from MEDIA_CYCLES[c].size.
+        function roundedSizeLabel(raw) {
+            const m = String(raw || '').match(/^([\d.]+)\s*(GB|TB)$/i);
+            if (!m) return raw || '';
+            const n = parseFloat(m[1]);
+            return m[2].toUpperCase() === 'GB' ? `${Math.round(n)} GB` : `${Math.round(n * 10) / 10} TB`;
+        }
         function mediaCycleSize(cycle) {
-            const raw = (MEDIA_CYCLES[cycle] || {}).size || '';
-            const m = raw.match(/^([\d.]+)\s*(GB|TB)$/i);
-            if (!m || m[2].toUpperCase() !== 'GB') return raw;
-            return `${Math.round(parseFloat(m[1]))} GB`;
+            // Light Media's size lives on /mediaCycles/light (v2.192.0), not on a month.
+            if (isLightMediaCycle(cycle)) return roundedSizeLabel((mediaCyclesLive.light || {}).size);
+            return roundedSizeLabel((MEDIA_CYCLES[cycle] || {}).size);
+        }
+
+        // A widget hidden from the Media page through the Media Widgets form.
+        function mediaWidgetHidden(key) {
+            if (key === 'light' || key === 'none') return !!(mediaCyclesLive[key] || {}).hidden;
+            return !!(MEDIA_CYCLES[key] || {}).hidden;
         }
 
         // The window a cycle owns: its own release date, to the day before the next
@@ -12502,13 +12540,14 @@
             // July and anything earlier are dropped from the STRIP. Their loads, counts
             // and rows all remain — this hides the widget only, and Light Media (0526) is
             // in its own bucket below, untouched.
+            // A widget hidden in the Media Widgets form (v2.192.0) is left out of the strip.
             const dated = cycles.filter(c => !isLightMediaCycle(c)
-                && cycleSortKey(c) >= cycleSortKey(MEDIA_WIDGET_MIN_CYCLE));
-            const light = cycles.filter(isLightMediaCycle);
+                && cycleSortKey(c) >= cycleSortKey(MEDIA_WIDGET_MIN_CYCLE) && !mediaWidgetHidden(c));
+            const light = mediaWidgetHidden('light') ? [] : cycles.filter(isLightMediaCycle);
 
             let html = dated.map(c => card(cycleToDisplay(c), c, typeOf(c), mediaCycleSize(c))).join('');
             html += light.map(c => card(MEDIA_LIGHT_LABEL, c, 'light', mediaCycleSize(c))).join('');
-            html += card('No Media', MEDIA_DEV_VIEW, 'no_media', '', true);
+            if (!mediaWidgetHidden('none')) html += card('No Media', MEDIA_DEV_VIEW, 'no_media', '', true);
 
             grid.innerHTML = html || '<div class="media-widget media-widget-no_media"><div class="media-widget-head"><span class="media-widget-label">No Media Data</span></div></div>';
         }
@@ -12549,6 +12588,8 @@
         }
 
         function updateMediaEditUI() {
+            const add = document.getElementById('mediaAddBtn');
+            if (add) add.style.display = canEdit() ? '' : 'none';
             applyEditButton('mediaEditBtn', mediaEditMode && canEdit(), 'Edit', '💾 Save');
         }
 
@@ -15822,7 +15863,6 @@
         // next month. It writes /mediaCycles/{MMYY} as a whole record (PUT). The release
         // date opens the loading window, the close date ends it (and makes the report
         // final), and the four journey dates feed the report's Media journey strip.
-        let mcEditingCycle = null;
 
         const MC_DATE_FIELDS = [
             ['contentDelivered', 'Content delivered',    'Media content received from the provider'],
@@ -15843,51 +15883,130 @@
             return mm === 12 ? `01${String(yy + 1).padStart(2, '0')}` : `${String(mm + 1).padStart(2, '0')}${String(yy).padStart(2, '0')}`;
         }
 
+        // ----- Media widgets & cycles form (v2.192.0) -----
+        // Opened from the Media page's ＋ Add button (and from the Activity Add menu / a
+        // report's ✏️ Edit cycle). The top lists EVERY widget the Media page can show —
+        // each month, Light Media and No Media — with a Show/Hide switch and an Edit link.
+        // The lower panel edits the selected one:
+        //   month      → size, part number, journey dates, loading window, notes (/mediaCycles/{MMYY})
+        //   Light Media→ size only                                           (/mediaCycles/light)
+        //   No Media   → nothing to edit; visibility only                    (/mediaCycles/none)
+        // Visibility is `hidden: true` on the record. One Save writes the selected record
+        // whole plus any other widget's hidden flag, in one multi-path PATCH (never `x` and
+        // `x/hidden` together — the edited record carries its own flag).
+        let mcSelected = null;     // a cycle code, 'light', 'none' or '__new'
+        let mcHidden = {};         // staged visibility, key → true (hidden) / false (shown)
+        let mcHiddenOrig = {};
+
+        // Every widget, in the Media strip's own order: months newest first, then Light
+        // Media, then No Media. Months are the declared cycles plus any loaded month the
+        // strip would show (August 2026 onward).
+        function mediaWidgetEntries() {
+            const loaded = new Set(mediaLoadEntries().map(l => l.cycle).filter(c => c && !isLightMediaCycle(c)));
+            const months = [...new Set(Object.keys(MEDIA_CYCLES).filter(c => !isLightMediaCycle(c)).concat([...loaded]))]
+                .filter(c => cycleSortKey(c) >= cycleSortKey(MEDIA_WIDGET_MIN_CYCLE))
+                .sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
+            const status = c => {
+                const mc = MEDIA_CYCLES[c] || {};
+                if (mc.end) return { t: 'Closed', css: 'closed' };
+                if (mc.start) return { t: 'Loading', css: 'loading' };
+                if (loaded.has(c)) return { t: 'Loaded', css: 'loading' };
+                return { t: 'Upcoming', css: 'upcoming' };
+            };
+            return months.map(c => ({ key: c, kind: 'month', label: cycleToDisplay(c), st: status(c),
+                                      size: (MEDIA_CYCLES[c] || {}).size || '', hidden: !!(MEDIA_CYCLES[c] || {}).hidden }))
+                .concat([
+                    { key: 'light', kind: 'light', label: MEDIA_LIGHT_LABEL, st: { t: 'Baseline', css: 'light' },
+                      size: (mediaCyclesLive.light || {}).size || '', hidden: !!(mediaCyclesLive.light || {}).hidden },
+                    { key: 'none', kind: 'none', label: 'No Media', st: { t: 'Default', css: 'none' },
+                      size: '', hidden: !!(mediaCyclesLive.none || {}).hidden },
+                ]);
+        }
+
         function openMediaCycleEditor(cycle) {
             if (!canEdit()) { requireSignIn(); return; }
-            const list = Object.keys(MEDIA_CYCLES).filter(c => !isLightMediaCycle(c)).sort((a, b) => cycleSortKey(b) - cycleSortKey(a));
-            const sel = cycle && MEDIA_CYCLES[cycle] ? cycle : '__new';
-            const opts = `<option value="__new" ${sel === '__new' ? 'selected' : ''}>＋ New cycle…</option>`
-                + list.map(c => `<option value="${c}" ${c === sel ? 'selected' : ''}>${escAttr(cycleToDisplay(c))}${MEDIA_CYCLES[c].end ? ' · closed' : MEDIA_CYCLES[c].start ? ' · loading' : ' · not started'}</option>`).join('');
-            document.getElementById('mcEditBody').innerHTML = `
-                <div class="ac-edit-grid">
-                    <div class="ac-edit-field" style="grid-column:1 / -1;">
-                        <label>Media cycle</label>
-                        <select id="mcPick" onchange="mcFillForm(this.value)">${opts}</select>
-                    </div>
-                </div>
-                <div id="mcFields"></div>`;
+            const list = mediaWidgetEntries();
+            mcHidden = {}; list.forEach(w => { mcHidden[w.key] = w.hidden; });
+            mcHiddenOrig = { ...mcHidden };
+            const months = list.filter(w => w.kind === 'month');
+            mcSelected = cycle && list.some(w => w.key === cycle) ? cycle
+                : ((months.find(w => w.st.css === 'loading') || months.find(w => w.st.css === 'closed') || months[0] || {}).key || '__new');
             document.getElementById('mcEditError').style.display = 'none';
             document.getElementById('mcOverlay').style.display = 'flex';
-            mcFillForm(sel);
+            mcRenderForm();
+        }
+
+        function mcRenderList() {
+            const rows = mediaWidgetEntries().map(w => {
+                const shown = !mcHidden[w.key];
+                const pill = w.size ? `<span class="media-size-pill">${escAttr(roundedSizeLabel(w.size))}</span>` : '';
+                return `<div class="mc-row${w.key === mcSelected ? ' is-sel' : ''}${shown ? '' : ' is-hidden'}">
+                    <label class="mc-switch" title="${shown ? 'Shown on the Media page — click to hide' : 'Hidden — click to show'}">
+                        <input type="checkbox" ${shown ? 'checked' : ''} onchange="mcToggleShown('${w.key}', this.checked)"><span></span>
+                    </label>
+                    <button type="button" class="mc-row-main" onclick="mcSelect('${w.key}')">
+                        <span class="mc-row-name">${escAttr(w.label)}</span>
+                        <span class="mc-st mc-st-${w.st.css}">${escAttr(w.st.t)}</span>
+                        ${pill}
+                        <span class="mc-row-edit">${w.key === mcSelected ? 'Editing' : 'Edit ›'}</span>
+                    </button>
+                </div>`;
+            }).join('');
+            document.getElementById('mcList').innerHTML = rows
+                + `<button type="button" class="mc-new${mcSelected === '__new' ? ' is-sel' : ''}" onclick="mcSelect('__new')">＋ New media cycle</button>`;
+        }
+
+        function mcToggleShown(key, shown) { mcHidden[key] = !shown; mcRenderList(); }
+        function mcSelect(key) { mcSelected = key; document.getElementById('mcEditError').style.display = 'none'; mcRenderForm(); }
+
+        function mcRenderForm() {
+            document.getElementById('mcEditTitle').textContent = 'Media Widgets & Cycles';
+            document.getElementById('mcEditSub').textContent = 'Show or hide each widget on the Media page, edit one, or add next month\'s media cycle.';
+            document.getElementById('mcEditBody').innerHTML = `
+                <div class="ac-edit-section-title">Widgets on the Media page</div>
+                <div id="mcList" class="mc-list"></div>
+                <div id="mcFields"></div>`;
+            mcRenderList();
+            mcFillForm(mcSelected);
         }
 
         function mcFillForm(pick) {
+            const host = document.getElementById('mcFields');
+            if (pick === 'none') {
+                host.innerHTML = `<div class="ac-edit-section-title">No Media</div>
+                    <p class="mc-note">Counts the aircraft carrying no monthly media (nothing loaded, or only the default ME-SVA-UGO-DEV load). It has no size or dates, so there is nothing to edit. Use the switch above to show or hide it.</p>`;
+                return;
+            }
+            if (pick === 'light') {
+                const v = mediaCyclesLive.light || {};
+                host.innerHTML = `<div class="ac-edit-section-title">Light Media</div>
+                    <p class="mc-note">The baseline package (cycle 0526) put on at installation, before an aircraft joins the monthly cycle. It has no loading window or report — only its size for the widget pill.</p>
+                    <div class="ac-edit-grid">
+                        <div class="ac-edit-field"><label>Media size</label><input type="text" id="mcSize" maxlength="20" placeholder="120 GB" value="${escAttr(v.size || '')}"><div class="mc-hint">Exact size; the widget pill rounds it. Leave empty for no pill.</div></div>
+                    </div>`;
+                return;
+            }
             const isNew = pick === '__new';
             const code = isNew ? mcNextCycleCode() : pick;
-            mcEditingCycle = isNew ? null : pick;
             const v = isNew ? {} : (MEDIA_CYCLES[pick] || {});
             const mm = parseInt(code.slice(0, 2), 10), yy = 2000 + parseInt(code.slice(2), 10);
             const nowY = new Date().getUTCFullYear();
-            const years = [nowY - 1, nowY, nowY + 1, nowY + 2].filter((y, i, a) => a.indexOf(y) === i);
+            const years = [nowY - 1, nowY, nowY + 1, nowY + 2];
             if (!years.includes(yy)) years.push(yy);
             const dateField = ([k, lab, hint]) => `<div class="ac-edit-field">
                     <label>${escAttr(lab)}</label>
                     <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="mc_${k}" value="${escAttr(v[k] ? toDMY(v[k]) : '')}">
                     <div class="mc-hint">${escAttr(hint)}</div>
                 </div>`;
-            document.getElementById('mcEditTitle').textContent = isNew ? 'New Media Cycle' : `Edit ${cycleToDisplay(pick)}`;
-            document.getElementById('mcEditSub').textContent = isNew
-                ? 'Declare next month\'s media. It shows greyed out on the Media page until the first aircraft takes it.'
-                : 'Dates feed the Media Loading Report; the loading start and close dates set the loading window.';
-            document.getElementById('mcFields').innerHTML = `
+            host.innerHTML = `
+                <div class="ac-edit-section-title">${isNew ? 'New media cycle' : escAttr(cycleToDisplay(pick))}</div>
                 ${isNew ? `<div class="ac-edit-grid">
                     <div class="ac-edit-field"><label>Month *</label><select id="mcMonth">${MONTH_FULL.map((m, i) => `<option value="${i + 1}" ${i + 1 === mm ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
                     <div class="ac-edit-field"><label>Year *</label><select id="mcYear">${years.sort().map(y => `<option value="${y}" ${y === yy ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
-                </div>` : ''}
-                <div class="ac-edit-section-title">Media</div>
+                </div>
+                <p class="mc-note">A new month shows greyed out on the Media page until the first aircraft takes it.</p>` : ''}
                 <div class="ac-edit-grid">
-                    <div class="ac-edit-field"><label>Media size *</label><input type="text" id="mcSize" maxlength="20" placeholder="884 GB" value="${escAttr(v.size || '')}"><div class="mc-hint">Exact size; the Media widget rounds it</div></div>
+                    <div class="ac-edit-field"><label>Media size *</label><input type="text" id="mcSize" maxlength="20" placeholder="884 GB" value="${escAttr(v.size || '')}"><div class="mc-hint">Exact size, e.g. 799.7 GB — the widget pill rounds it</div></div>
                     <div class="ac-edit-field"><label>Media part number</label><input type="text" id="mcPart" maxlength="40" placeholder="ME-SVA-UGO-${escAttr(code)}" value="${escAttr(v.partNumber || '')}"><div class="mc-hint">Leave empty to use the loads' part number</div></div>
                 </div>
                 <div class="ac-edit-section-title">Media journey</div>
@@ -15896,46 +16015,71 @@
                 <div class="ac-edit-grid">${MC_DATE_FIELDS.slice(4).map(dateField).join('')}</div>
                 <div class="ac-edit-section-title">Notes</div>
                 <div class="ac-edit-grid"><div class="ac-edit-field" style="grid-column:1 / -1;"><textarea id="mcNotes" rows="3" maxlength="1000" placeholder="Anything the report should say about this cycle — shown under the executive summary">${escAttr(v.notes || '')}</textarea></div></div>`;
-            document.getElementById('mcEditError').style.display = 'none';
         }
 
         function closeMediaCycleEditor() {
             document.getElementById('mcOverlay').style.display = 'none';
-            mcEditingCycle = null;
+            mcSelected = null;
         }
+
+        const normSize = sz => sz.replace(/\s*(gb|tb)$/i, m => ' ' + m.trim().toUpperCase());
 
         async function saveMediaCycle() {
             const err = document.getElementById('mcEditError');
             const show = m => { err.textContent = m; err.style.display = 'block'; };
             err.style.display = 'none';
-            let code = mcEditingCycle;
-            if (!code) {
-                const mm = parseInt(document.getElementById('mcMonth').value, 10);
-                const yy = parseInt(document.getElementById('mcYear').value, 10);
-                code = String(mm).padStart(2, '0') + String(yy).slice(2);
-                if (mediaCyclesLive[code]) return show(`${cycleToDisplay(code)} already exists — pick it from the list to edit it.`);
+            const now = new Date().toISOString().slice(0, 19) + 'Z';
+            const patch = {};
+            let code = mcSelected;
+
+            if (code === 'none') {
+                patch.none = { updatedAt: now };
+                if (mcHidden.none) patch.none.hidden = true;
+            } else if (code === 'light') {
+                const size = document.getElementById('mcSize').value.trim();
+                if (size && !/^\d+(\.\d+)?\s*(GB|TB)$/i.test(size)) return show('Media size must look like 120 GB or 1.2 TB.');
+                patch.light = { updatedAt: now };
+                if (size) patch.light.size = normSize(size);
+                if (mcHidden.light) patch.light.hidden = true;
+            } else {
+                if (code === '__new') {
+                    const mm = parseInt(document.getElementById('mcMonth').value, 10);
+                    const yy = parseInt(document.getElementById('mcYear').value, 10);
+                    code = String(mm).padStart(2, '0') + String(yy).slice(2);
+                    if (mediaCyclesLive[code]) return show(`${cycleToDisplay(code)} already exists — pick it from the list to edit it.`);
+                }
+                const size = document.getElementById('mcSize').value.trim();
+                if (!size) return show('Enter the media size, e.g. 884 GB.');
+                if (!/^\d+(\.\d+)?\s*(GB|TB)$/i.test(size)) return show('Media size must look like 884 GB or 1.2 TB.');
+                const entry = { size: normSize(size) };
+                const part = document.getElementById('mcPart').value.trim();
+                if (part) entry.partNumber = part;
+                for (const [k, lab] of MC_DATE_FIELDS) {
+                    const v = readDateField(document.getElementById('mc_' + k));
+                    if (v === false) return show(`${lab.replace(' *', '')}: enter a date as dd-mm-yyyy.`);
+                    if (v) entry[k] = v;
+                }
+                if (entry.end && !entry.start) return show('A cycle cannot be closed before it has a loading start date.');
+                if (entry.end && toISODate(entry.end) < toISODate(entry.start)) return show('The close date is before the loading start date.');
+                const notes = document.getElementById('mcNotes').value.trim();
+                if (notes) entry.notes = notes;
+                if (mcHidden[code]) entry.hidden = true;
+                entry.updatedAt = now;
+                // The disk snapshot is locked — carry it forward untouched, or the write would drop it.
+                const prevRec = mediaCyclesLive[code] || {};
+                if (prevRec.disksSnapshotAt) {
+                    entry.disksSnapshotAt = prevRec.disksSnapshotAt;
+                    if (prevRec.disks) entry.disks = prevRec.disks;
+                }
+                patch[code] = entry;
             }
-            const size = document.getElementById('mcSize').value.trim();
-            if (!size) return show('Enter the media size, e.g. 884 GB.');
-            if (!/^\d+(\.\d+)?\s*(GB|TB)$/i.test(size)) return show('Media size must look like 884 GB or 1.2 TB.');
-            const entry = { size: size.replace(/\s*(gb|tb)$/i, m => ' ' + m.trim().toUpperCase()) };
-            const part = document.getElementById('mcPart').value.trim();
-            if (part) entry.partNumber = part;
-            for (const [k, lab] of MC_DATE_FIELDS) {
-                const v = readDateField(document.getElementById('mc_' + k));
-                if (v === false) return show(`${lab.replace(' *', '')}: enter a date as dd-mm-yyyy.`);
-                if (v) entry[k] = v;
-            }
-            if (entry.end && !entry.start) return show('A cycle cannot be closed before it has a loading start date.');
-            if (entry.end && toISODate(entry.end) < toISODate(entry.start)) return show('The close date is before the loading start date.');
-            const notes = document.getElementById('mcNotes').value.trim();
-            if (notes) entry.notes = notes;
-            entry.updatedAt = new Date().toISOString().slice(0, 19) + 'Z';
-            // The disk snapshot is locked — carry it forward untouched, or the PUT would drop it.
-            const prevRec = mediaCyclesLive[code] || {};
-            if (prevRec.disksSnapshotAt) {
-                entry.disksSnapshotAt = prevRec.disksSnapshotAt;
-                if (prevRec.disks) entry.disks = prevRec.disks;
+
+            // Every OTHER widget whose Show/Hide switch moved: just its flag.
+            for (const key of Object.keys(mcHidden)) {
+                if (key === code || mcHidden[key] === mcHiddenOrig[key]) continue;
+                if (/^\d{4}$/.test(key) && !mediaCyclesLive[key])
+                    return show(`${cycleToDisplay(key)} has no saved details yet — open it with Edit, enter its size, then save.`);
+                patch[`${key}/hidden`] = mcHidden[key] ? true : null;
             }
 
             const token = await getIdToken();
@@ -15943,12 +16087,18 @@
             const btn = document.getElementById('mcEditSave');
             btn.disabled = true; btn.textContent = 'Saving…';
             try {
-                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/mediaCycles/${code}.json?auth=${token}`, {
-                    method: 'PUT', body: JSON.stringify(entry),
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/mediaCycles.json?auth=${token}`, {
+                    method: 'PATCH', body: JSON.stringify(patch),
                 });
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                mediaCyclesLive[code] = entry;   // polled node — mirror locally so it shows at once
+                // polled node — mirror locally so the page shows it at once
+                Object.entries(patch).forEach(([path, val]) => {
+                    const [k, f] = path.split('/');
+                    if (!f) { mediaCyclesLive[k] = val; return; }
+                    mediaCyclesLive[k] = mediaCyclesLive[k] || {};
+                    if (val === null) delete mediaCyclesLive[k][f]; else mediaCyclesLive[k][f] = val;
+                });
                 rebuildMediaCycles();
                 closeMediaCycleEditor();
                 if (!mediaEditMode) populateMediaTable();
@@ -15956,9 +16106,9 @@
                 updateMetrics();
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (e) {
-                show(`Could not save the cycle — ${e.message}`);
+                show(`Could not save — ${e.message}`);
             } finally {
-                btn.disabled = false; btn.textContent = 'Save cycle';
+                btn.disabled = false; btn.textContent = 'Save';
             }
         }
 
@@ -16027,7 +16177,7 @@
                 `<button class="avr-assign-item" onclick="closeAssignMenu(); openAddActivity()">🗂️ Add Activity</button>` +
                 `<button class="avr-assign-item" onclick="closeAssignMenu(); openAvrEditor('__new')">📋 Add Visit Report</button>` +
                 `<button class="avr-assign-item" onclick="closeAssignMenu(); openIssueEditor('__new')">🔧 Add Maintenance Issue</button>` +
-                `<button class="avr-assign-item" onclick="closeAssignMenu(); openMediaCycleEditor()">🎬 Add / Edit Media Cycle</button>`;
+                `<button class="avr-assign-item" onclick="closeAssignMenu(); openMediaCycleEditor()">🎬 Media Widgets &amp; Cycles</button>`;
             document.body.appendChild(menu);
             const r = btn.getBoundingClientRect();
             const w = 224;
