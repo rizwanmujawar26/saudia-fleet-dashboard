@@ -4968,17 +4968,20 @@
         .avr-assign-menu.add-menu { width: auto; min-width: 180px; }
         .avr-assign-menu.add-menu .avr-assign-item { font-weight: 600; font-size: 13px; }
 
-        /* Report soft-link (Media filter bar, when a released cycle is viewed): a real
-           <a> to the #mlr=<cycle> deep link, opening in a new tab — the same mechanism as
-           the timeline's AVR pill, and styled as that green pill (user, 2026-09-25). */
-        .qf-btn.report-btn { text-decoration: none; color: #146c3a; background: #e7f4ec;
-            border-color: #bfe3cd; font-weight: 700; }
-        .qf-btn.report-btn:hover { background: #d5ecdf; border-color: #9fd3b4; color: #146c3a; }
+        /* Download menu (Media filter bar): each item is a real <a> to the #mlr=<cycle>
+           deep link in a new tab — the timeline AVR pill's mechanism (user, 2026-09-25). */
+        .dl-btn .ib-icon svg { display: block; }
+        a.avr-assign-item { display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; box-sizing: border-box; }
+        .dl-item-ref { margin-left: auto; font-size: 10.5px; font-weight: 700; color: #146c3a; white-space: nowrap;
+            padding: 1px 7px; border-radius: 999px; background: #e7f4ec; border: 1px solid #bfe3cd; }
+        .dl-item-open { font-size: 10px; font-weight: 700; color: #8a6d00; text-transform: uppercase; letter-spacing: .03em; }
+        .dl-menu-head { padding: 6px 12px 4px; font-size: 10.5px; font-weight: 700; color: #6b7a72; text-transform: uppercase; letter-spacing: .05em; }
+        .dl-menu-empty { padding: 8px 12px; font-size: 12.5px; color: #6b7a72; }
 
         @media (max-width: 700px) {
             .reset-btn,
             .edit-btn.icon-btn,
-            .report-btn.icon-btn,
+            .dl-btn.icon-btn,
             .add-btn.icon-btn {
                 width: 32px;
                 height: 32px;
@@ -4989,7 +4992,7 @@
             }
             .reset-btn .ib-label,
             .edit-btn.icon-btn .ib-label,
-            .report-btn.icon-btn .ib-label,
+            .dl-btn.icon-btn .ib-label,
             .add-btn.icon-btn .ib-label { display: none; }
         }
 
@@ -5978,7 +5981,7 @@
                 <div class="filterbar">
                     <div class="fb-filters" data-bar="media"></div>
                     <div class="fb-actions">
-                        <a id="mediaMlrBtn" class="qf-btn icon-btn report-btn" style="display:none;" target="_blank" rel="noopener"><span class="ib-icon" aria-hidden="true">📊</span><span class="ib-label"></span></a>
+                        <button id="mediaDownloadBtn" class="qf-btn icon-btn dl-btn" onclick="openMediaDownloadMenu()" title="Download a Media Loading Report" aria-label="Download a Media Loading Report" aria-haspopup="menu"><span class="ib-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></span><span class="ib-label">Download</span></button>
                         <button id="mediaAddBtn" class="qf-btn add-btn icon-btn" style="display:none;" onclick="openMediaCycleEditor()" title="Add or edit media cycles and widgets" aria-label="Add or edit media cycles"><span class="ib-icon" aria-hidden="true">＋</span><span class="ib-label">Add</span></button>
                         <button id="mediaEditBtn" class="qf-btn edit-btn icon-btn" style="display:none;" onclick="toggleMediaEdit()"><span class="ib-icon" aria-hidden="true">✎</span><span class="ib-label">Edit</span></button>
                         <button id="mediaResetBtn" class="qf-btn icon-btn reset-btn" onclick="resetOrTop(this, resetMediaTable)" title="Reset filters" aria-label="Reset filters"><span class="ib-icon" aria-hidden="true">↺</span><span class="ib-label">Reset</span></button>
@@ -7767,8 +7770,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.196.0';
-        const APP_BUILD    = '2026.09.25.12';
+        const APP_VERSION  = '2.197.0';
+        const APP_BUILD    = '2026.09.25.13';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12167,7 +12170,6 @@
             const latest = latestMediaCycle();
             const cycleView = mediaCycleView();
             mediaViewRendered = cycleView;
-            updateMediaMlrLink(cycleView);
             // Editing is about the CURRENT load, so a past-cycle view is read-only —
             // otherwise a save would silently write a new load rather than correcting
             // the historical one being looked at.
@@ -12646,20 +12648,35 @@
             populateMediaTable();
         }
 
-        // The filter bar's report link: shown only while a RELEASED month is the Cycle
-        // view (Light / No Media and "All" have no report). A soft link to the #mlr=<cycle>
-        // deep link, like the timeline's AVR pill — new tab, middle-click works.
-        function updateMediaMlrLink(cycle) {
-            const a = document.getElementById('mediaMlrBtn');
-            if (!a) return;
-            const ok = cycle && mediaReportCycles().includes(cycle);
-            a.style.display = ok ? '' : 'none';
-            if (!ok) { a.removeAttribute('href'); return; }
-            const ref = mlrRef(cycle);
-            a.href = `${location.origin + location.pathname}#mlr=${encodeURIComponent(cycle)}`;
-            a.title = `Open the Media Loading Report for ${cycleViewLabel(cycle)} (${ref}) in a new tab`;
-            a.setAttribute('aria-label', a.title);
-            a.querySelector('.ib-label').textContent = ref;
+        // The filter bar's Download menu: every released cycle's Media Loading Report,
+        // newest first, each a soft link to its #mlr=<cycle> deep link in a new tab (the
+        // timeline AVR pill's mechanism). Public, and independent of the Cycle view.
+        // Reuses the assign-menu popover and its one closer/backdrop. ⚠️ The menu closes on a
+        // timeout: a link removed during its own click is disconnected and will not navigate.
+        function openMediaDownloadMenu() {
+            closeAssignMenu();
+            const btn = document.getElementById('mediaDownloadBtn');
+            if (!btn) return;
+            const backdrop = document.createElement('div');
+            backdrop.className = 'avr-assign-backdrop';
+            backdrop.onclick = closeAssignMenu;
+            document.body.appendChild(backdrop);
+            const menu = document.createElement('div');
+            menu.className = 'avr-assign-menu add-menu';
+            menu.setAttribute('role', 'menu');
+            const base = location.origin + location.pathname;
+            const items = mediaReportCycles().map(c => {
+                const open = !mediaCycleWindow(c).end;
+                return `<a class="avr-assign-item" role="menuitem" href="${escAttr(base + '#mlr=' + encodeURIComponent(c))}" target="_blank" rel="noopener" onclick="setTimeout(closeAssignMenu)" title="Open the Media Loading Report for ${escAttr(cycleViewLabel(c))} in a new tab">📊 ${escAttr(cycleViewLabel(c))}${open ? ' <span class="dl-item-open">running</span>' : ''}<span class="dl-item-ref">${escAttr(mlrRef(c))}</span></a>`;
+            }).join('');
+            menu.innerHTML = `<div class="dl-menu-head">Media Loading Reports</div>` +
+                (items || '<div class="dl-menu-empty">No cycle has been released yet.</div>');
+            document.body.appendChild(menu);
+            const r = btn.getBoundingClientRect();
+            const w = 260;
+            menu.style.width = w + 'px';
+            menu.style.top = (r.bottom + 6) + 'px';
+            menu.style.left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8)) + 'px';
         }
 
         function updateMediaEditUI() {
