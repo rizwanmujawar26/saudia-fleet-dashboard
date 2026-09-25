@@ -4261,10 +4261,6 @@ live.
   two copies of one fact start to drift. The user said they would edit these later
   (2026-08-30), so they were left alone. `reason` is `Grounded` on both, also a
   placeholder the user intends to replace.
-- **Media cycle release dates.** `MEDIA_CYCLES` has August (26-Jul-2026) and September
-  (25-Aug-2026). Earlier months have none, so they show a widget and a count but no
-  window, no cycle-closed Timeline row, and no entry in the Cycle view. Each new month
-  is one line, alongside the load size the user already supplies.
 - **Whether the Kontron serial should be the unit's primary serial.** MODMAN writes
   Kontron to `/units.serial` and Eclipse to `altSerial`, so AQB now reads `484569029`
   on the Serials and Hardware tabs where it used to read `44`. A one-line swap if the
