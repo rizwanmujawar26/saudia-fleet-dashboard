@@ -13,6 +13,15 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.193.0 — Light Media / No Media part numbers editable (2026-09-25)
+User: both part numbers were hard-coded (`0526`, `/DEV$/`). They are now `partNumber` on
+`/mediaCycles/light` and `/mediaCycles/none`, edited in the Media Widgets & Cycles form, with the
+constants as defaults. Light Media's cycle = the trailing MMYY of its part number (`lightMediaCycle()`,
+read by `isLightMediaCycle()`). The form refuses a code that is already a monthly cycle, or one that
+counts as No Media. No Media = a source equal to its configured part number (`isNoMediaSource()`, used
+by `parseMediaEntry` and `loadIsDev`). ⚠️ A source ending in DEV ALWAYS stays No Media, so older loads
+never change meaning. The form list shows each one's part number.
+
 ### v2.192.0 — Media page ＋ Add: Media Widgets & Cycles form (2026-09-25)
 User: a ＋ Add button on the Media page (shared add-btn/icon-btn, editor-only via updateMediaEditUI,
 so it follows updateAuthUI). It opens one form listing every widget on the page — each month, Light
