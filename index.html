@@ -4333,6 +4333,9 @@
         }
         .ac-edit-btn-danger:hover { background: #fdecec; }
         @media (max-width: 560px) { .ac-edit-grid { grid-template-columns: 1fr; } }
+        .avr-hbc-grid { grid-template-columns: repeat(3, 1fr); }
+        @media (max-width: 560px) { .avr-hbc-grid { grid-template-columns: 1fr; } }
+        .avr-hbc-now { font-size: 11px; color: #8a97a3; margin-top: 4px; }
 
         /* ===== Maintenance Issues — service-availability axis ===== */
         /* The Fleet Connectivity Status sub-badge (under ACTIVE): a service outage on a
@@ -7882,8 +7885,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.200.0';
-        const APP_BUILD    = '2026.09.25.18';
+        const APP_VERSION  = '2.201.0';
+        const APP_BUILD    = '2026.09.27.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -10590,6 +10593,13 @@
                     { node: 'ac', key: 'iphoStatus',     label: 'IPHO', kind: 'select', opts: [['', '— none —'], ['completed', 'Completed']] },
                     { node: 'ac', key: 'mg101Status',    label: 'MG101 Provisioning', kind: 'select', opts: [['', '— none —'], ['provisioned', 'Provisioned'], ['done', 'Done']] },
                     { node: 'ac', key: 'beamcfgStatus',  label: 'SBC / Beam Config', kind: 'select', opts: [['', '— none —'], ['pending', 'Pending'], ['done', 'Done']] },
+                    // HBC+ software (v2.201.0) — normally updated from the report form.
+                    { node: 'ac', key: 'fls6Version',     label: 'FLS6 Software (HBC+)', kind: 'text', max: 40 },
+                    { node: 'ac', key: 'fls6Date',        label: 'FLS6 Loaded', kind: 'date' },
+                    { node: 'ac', key: 'sbcConfig',       label: 'SBC Config (HBC+)', kind: 'text', max: 40 },
+                    { node: 'ac', key: 'sbcConfigDate',   label: 'SBC Config Loaded', kind: 'date' },
+                    { node: 'ac', key: 'localConfig',     label: 'Local Config (HBC+)', kind: 'text', max: 40 },
+                    { node: 'ac', key: 'localConfigDate', label: 'Local Config Loaded', kind: 'date' },
                     { node: 'ac', key: 'otaPatchUTC',    label: 'OTA Patch (UTC)', kind: 'isodt', hint: 'YYYY-MM-DDThh:mm:ssZ' },
                     { node: 'ac', key: 'note',           label: 'Note', kind: 'textarea', max: 500, full: true },
                 ]},
@@ -10910,6 +10920,21 @@
         // Linefit aircraft (the HBC+ pair) are out of scope for middleware, media and
         // the completion maths. `fit` on the fleet roster is the only thing that says so.
         function isLinefit(a) { return a.fit === 'linefit'; }
+        // HBC+ (the linefit pair): its software is FLS6 + SBC config + Local config, and
+        // Middleware / OTA patches / Media / UGO-Tiles / SIM do not apply (v2.201.0).
+        function isHbcAircraft(a) {
+            return !!a && (isLinefit(a) || (a.system || systemDefault(fitOf(a))) === 'HBC+');
+        }
+        // "A.13 · 25-Sep-2026" — a loaded version with the date it went on. SBC config falls
+        // back to the older beamcfgStatus flag (Done / Pending) until a version is recorded.
+        function hbcSoftwareRows(a) {
+            const verDate = (v, d) => v ? [v, d].filter(Boolean).join(' · ') : '';
+            return [
+                ['FLS6', verDate(a.fls6Version, a.fls6Date)],
+                ['SBC config', verDate(a.sbcConfig, a.sbcConfigDate) || (a.beamcfgStatus === 'done' ? 'Done' : 'Pending')],
+                ['Local config', verDate(a.localConfig, a.localConfigDate)],
+            ];
+        }
 
         function latestSwVersion() { return SW_VERSIONS[SW_VERSIONS.length - 1]; }
 
@@ -13882,10 +13907,11 @@
                 ['Mod end', a.retrofitEnd || (a.retrofitStart ? 'Ongoing' : '')],
                 ['Mod window', retro && retroSpan ? retroSpan : ''],
                 // Activation is a key milestone, so its value is accented.
-                [linefit ? 'SBC config' : 'Activation', linefit
-                    ? (a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
-                    : (a.activatedDate ? [activationLocationOf(a), a.activatedDate].filter(Boolean).join(' · ') : ''),
-                    linefit ? '' : (a.activatedDate ? 'accent' : '')],
+                // A linefit / HBC+ aircraft has no activation milestone here — its SBC
+                // config moved to the Software rows (v2.201.0).
+                [linefit ? '' : 'Activation',
+                    a.activatedDate ? [activationLocationOf(a), a.activatedDate].filter(Boolean).join(' · ') : '',
+                    a.activatedDate ? 'accent' : ''],
                 // Last heartbeat is a per-REPORT field (v.lastHeartbeat), threaded in from
                 // the caller — the last time the system phoned home, which fixes the point
                 // the current outage is measured from. It sits in the vacant slot next to
@@ -13900,15 +13926,18 @@
             // Specifications); Middleware LOADED shows completionLocation + completionDate —
             // the one-off middleware software-load station, which belongs here, not on the
             // airframe. WiFi visibility carries a pill hint: Hidden reads red, Public green.
-            const softwareRows = [
+            const wifiRow = ['WiFi visibility', a.wifiVisibility ? a.wifiVisibility.charAt(0).toUpperCase() + a.wifiVisibility.slice(1) : '',
+                a.wifiVisibility === 'hidden' ? 'pill-red' : (a.wifiVisibility === 'public' ? 'pill-green' : '')];
+            // HBC+: FLS6 · SBC config · Local config, then WiFi visibility — nothing else of
+            // the retrofit software/media stack applies to it.
+            const softwareRows = isHbcAircraft(a) ? hbcSoftwareRows(a).concat([wifiRow]) : [
                 [linefit ? '' : 'Middleware', linefit ? '' : (a.swVersion || '')],
                 [linefit ? '' : 'Middleware loaded', linefit ? '' : [a.completionLocation, a.completionDate].filter(Boolean).join(' · ')],
                 ['OTA Patch #2', ota ? (fmtDate(ota) || ota) : ''],
                 ['OTA Patch #3', ota3 ? (fmtDate(ota3) || ota3) : ''],
                 ['Media cycle', media.mediaCycle ? cycleToDisplay(media.mediaCycle) : ''],
                 ['UGO / Tiles', [a.ugoVersion && `UGO ${a.ugoVersion}`, a.tilesVersion && `Tiles ${a.tilesVersion}`].filter(Boolean).join(' · ')],
-                ['WiFi visibility', a.wifiVisibility ? a.wifiVisibility.charAt(0).toUpperCase() + a.wifiVisibility.slice(1) : '',
-                    a.wifiVisibility === 'hidden' ? 'pill-red' : (a.wifiVisibility === 'public' ? 'pill-green' : '')],
+                wifiRow,
                 // Roaming PLAN (Global/Local) from the fitted SIM, as a pill — not the
                 // active/inactive toggle. Global reads blue, Local grey.
                 ['SIM roaming', (rm => rm ? (rm === 'global' ? 'Global' : 'Local') : '')(simRoamingOf(tail)),
@@ -14281,6 +14310,16 @@
                     </div>
                 </div>
 
+                <div id="avrHbcWrap" style="display:none;">
+                    <div class="ac-edit-section-title">HBC+ Software <span style="font-weight:400;color:#aaa;">(updates the aircraft — optional)</span></div>
+                    <div class="fld-hint" style="font-size:11px;color:#8a97a3;margin-bottom:6px;">Prefilled with what is on record. Change a version to record a new load, dated this visit's end date.</div>
+                    <div class="ac-edit-grid avr-hbc-grid">
+                        <div class="ac-edit-field"><label>FLS6 Software</label><input id="avrHbcFls6" class="edit-text" maxlength="40" autocomplete="off" placeholder="e.g. 6.2.1"><div class="avr-hbc-now" id="avrHbcFls6Now"></div></div>
+                        <div class="ac-edit-field"><label>SBC Config</label><input id="avrHbcSbc" class="edit-text" maxlength="40" autocomplete="off" placeholder="e.g. BEAMCFG_MOD3_NSG_A.13"><div class="avr-hbc-now" id="avrHbcSbcNow"></div></div>
+                        <div class="ac-edit-field"><label>Local Config</label><input id="avrHbcLocal" class="edit-text" maxlength="40" autocomplete="off" placeholder="Local config version"><div class="avr-hbc-now" id="avrHbcLocalNow"></div></div>
+                    </div>
+                </div>
+
                 <div class="ac-edit-section-title">Activities in this visit</div>
                 <div class="fld-hint" style="font-size:11px;color:#8a97a3;margin-bottom:6px;">Tick the Timeline activities this visit covers. Ones dated inside the visit window are suggested automatically.</div>
                 <div id="avrLinkList" class="avr-linklist"></div>`;
@@ -14288,6 +14327,7 @@
             document.getElementById('avrEditError').style.display = 'none';
             const overlay = document.getElementById('avrOverlay');
             overlay.style.display = 'flex';
+            setTimeout(avrSyncHbc, 0);   // after any prefill below has set the aircraft
 
             // Prefill from "New visit with this activity": seed aircraft + dates from the
             // activity so its row is auto-suggested (and force-ticked) in the link list.
@@ -14322,6 +14362,33 @@
                 locEl.value = a.completionLocation || a.retrofitLocation || '';
             }
             avrRefreshLinkList();
+            avrSyncHbc();
+        }
+
+        // HBC+ Software block of the report form (v2.201.0): shown only for an HBC+ tail,
+        // prefilled from /aircraft (FLS6 · SBC config · Local config). Refilled only when
+        // the aircraft changes, so typed values survive other edits in the form.
+        const AVR_HBC_FIELDS = [
+            { el: 'avrHbcFls6',  key: 'fls6Version', date: 'fls6Date' },
+            { el: 'avrHbcSbc',   key: 'sbcConfig',   date: 'sbcConfigDate' },
+            { el: 'avrHbcLocal', key: 'localConfig', date: 'localConfigDate' },
+        ];
+        function avrSyncHbc() {
+            const wrap = document.getElementById('avrHbcWrap');
+            if (!wrap) return;
+            const tail = (document.getElementById('avrAircraft') || {}).value || '';
+            const a = aircraftData.find(x => x.id === tail);
+            const on = isHbcAircraft(a);
+            wrap.style.display = on ? '' : 'none';
+            if (!on || wrap.dataset.tail === tail) return;
+            wrap.dataset.tail = tail;
+            AVR_HBC_FIELDS.forEach(f => {
+                const inp = document.getElementById(f.el), now = document.getElementById(f.el + 'Now');
+                if (inp) inp.value = a[f.key] || '';
+                if (now) now.textContent = a[f.key]
+                    ? `On record: ${a[f.key]}${a[f.date] ? ' · loaded ' + a[f.date] : ''}`
+                    : (f.key === 'sbcConfig' ? `Not recorded — status ${a.beamcfgStatus === 'done' ? 'Done' : 'Pending'}` : 'Not recorded yet');
+            });
         }
 
         // Show the Old/New selector only for a Hangar, and steer the stand/bay placeholder.
@@ -14459,6 +14526,22 @@
             if (lastHeartbeat) entry.lastHeartbeat = lastHeartbeat;
             if (Object.keys(attendees).length) entry.attendees = attendees;
 
+            // HBC+ software versions → /aircraft/{tail} (not the report): only fields that
+            // CHANGED are written, each dated this visit's end date. A recorded SBC config
+            // also closes the older beamcfgStatus flag (the home SBC widget reads it).
+            const hbcPatch = {};
+            const acNow = aircraftData.find(x => x.id === aircraft);
+            if (isHbcAircraft(acNow)) {
+                const when = dateEnd || dateStart;
+                AVR_HBC_FIELDS.forEach(f => {
+                    const val = ((document.getElementById(f.el) || {}).value || '').trim();
+                    if (val === (acNow[f.key] || '')) return;
+                    hbcPatch[f.key] = val || null;
+                    hbcPatch[f.date] = val ? when : null;
+                    if (f.key === 'sbcConfig' && val) hbcPatch.beamcfgStatus = 'done';
+                });
+            }
+
             // Carry forward any pinned derived rows (a whole-record PUT would otherwise drop
             // them), and add the one this report was created around, if any.
             const pins = Object.assign({}, existing.pins || {});
@@ -14484,6 +14567,19 @@
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 avrLive[id] = entry;   // polled node — mirror locally so the card shows at once
+
+                if (Object.keys(hbcPatch).length) {
+                    const hres = await fetchWithTimeout(`${FIREBASE_DB_URL}/aircraft/${aircraft}.json?auth=${token}`, {
+                        method: 'PATCH', body: JSON.stringify(hbcPatch),
+                    });
+                    const hdata = await hres.json();
+                    if (!hres.ok || (hdata && hdata.error))
+                        throw new Error('report saved, but the HBC+ software versions were not — ' + ((hdata && hdata.error) || 'write failed'));
+                    const live = aircraftLive[aircraft] = aircraftLive[aircraft] || {};
+                    Object.entries(hbcPatch).forEach(([k, val]) => { if (val === null) delete live[k]; else live[k] = val; });
+                    rebuildAircraftData();
+                    if (typeof updateMetrics === 'function') updateMetrics();
+                }
 
                 if (Object.keys(actPatch).length) {
                     const ares = await fetchWithTimeout(`${FIREBASE_DB_URL}/activities.json?auth=${token}`, {
@@ -14646,6 +14742,7 @@
             // installed serials and MODMAN under Hardware.
             const { aircraftRows, hardwareRows, softwareRows } = avrDossierRows(v.aircraft, v.lastHeartbeat);
             const { spec: dspec, equip, modman, a: acRec } = avrDossierData(v.aircraft);
+            const isHbcAc = isHbcAircraft(acRec);
             const acConfig = (acRec && acRec.config) || '';
             // COMPACT SPEC SHEET (v2.179, user 2026-09-24): the old 3/4-across boxed cell grids
             // (label above value, one fact per ~50px box) are replaced by label ⟷ value rows
@@ -14659,6 +14756,7 @@
                 'Delivery / age': 'Delivery / Age', 'IFE system': 'IFE System',
                 'Middleware': 'Middleware Version', 'Middleware loaded': 'Middleware Loaded',
                 'Media cycle': 'Media Cycle', 'WiFi visibility': 'WiFi Visibility', 'SIM roaming': 'SIM Roaming',
+                'FLS6': 'FLS6 Software', 'SBC config': 'SBC Config', 'Local config': 'Local Config',
             };
             // hint 'raw': the value is already-escaped HTML (serial + ECL pill, seats + total pill).
             const kvRow = ([k, val, hint]) => {
@@ -14787,8 +14885,26 @@
             // Software & Media split into two short cards so the four spec cards pair up
             // 2 × 2: what is LOADED (middleware + OTA patches) and what the passenger SEES.
             const swLabels = ['Middleware', 'Middleware loaded', 'OTA Patch #2', 'OTA Patch #3'];
-            const softwareCard = specCard('Software', softwareRows.filter(r => swLabels.includes(r[0])));
-            const mediaCard = specCard('Media &amp; Connectivity', softwareRows.filter(r => !swLabels.includes(r[0])));
+            let softwareCard = specCard('Software', softwareRows.filter(r => swLabels.includes(r[0])));
+            let mediaCard = specCard('Media &amp; Connectivity', softwareRows.filter(r => !swLabels.includes(r[0])));
+            // HBC+ (v2.201.0): one full-width "Software & Connectivity" card, its four facts
+            // two-up — FLS6 · SBC config / Local config · WiFi visibility. Each version reads
+            // in mono with its load date muted beside it; an SBC config not yet recorded is
+            // an amber Pending pill (a green Done pill from the older status flag).
+            if (isHbcAc) {
+                const ar0 = acRec || {};
+                const ver = (vv, dd) => vv ? `<span class="vv-ver">${escAttr(vv)}</span>${dd ? `<span class="vv-date">${escAttr(dd)}</span>` : ''}` : '';
+                const sbcHtml = ver(ar0.sbcConfig, ar0.sbcConfigDate)
+                    || (ar0.beamcfgStatus === 'done' ? '<span class="pill pill-green">Done</span>' : '<span class="pill pill-amber">Pending</span>');
+                const rows = [
+                    ['FLS6', ver(ar0.fls6Version, ar0.fls6Date), 'raw'],
+                    ['SBC config', sbcHtml, 'raw'],
+                    ['Local config', ver(ar0.localConfig, ar0.localConfigDate), 'raw'],
+                    rowOf(softwareRows, 'WiFi visibility') || ['WiFi visibility', ''],
+                ];
+                softwareCard = `<div class="spec-card spec-wide"><div class="spec-head">Software &amp; Connectivity</div><div class="kv-grid">${rows.map(kvRow).join('')}</div></div>`;
+                mediaCard = '';
+            }
 
             // Connectivity milestone strip — the retrofit window and entry into service drawn
             // as a track (start ●━━ window ━━● end ┄┄ gap ┄┄◉ activated) instead of five boxed
@@ -14798,12 +14914,12 @@
             // A linefit's install site is the factory (Toulouse/Hamburg) by definition, so it
             // is not flagged red the way an out-of-base retrofit is.
             const cfgChip = (label, row) => row && row[1]
-                ? `<span class="cfg-kv">${label} <b class="${row[2] === 'alert' && !rowOf(hardwareRows, 'SBC config') ? 'is-alert' : ''}">${escAttr(row[1])}</b></span>` : '';
+                ? `<span class="cfg-kv">${label} <b class="${row[2] === 'alert' && !isHbcAc ? 'is-alert' : ''}">${escAttr(row[1])}</b></span>` : '';
             const sysRow = rowOf(hardwareRows, 'IFC system'), fitRow = rowOf(hardwareRows, 'Fit');
             const chipsLeft = [
                 sysRow ? `<span class="pill pill-navy">${escAttr(sysRow[1])}</span>` : '',
                 fitRow ? `<span class="pill pill-grey">${escAttr(fitRow[1])}</span>` : '',
-                (site => site && site[1] ? `<span class="cfg-kv">Installed at <span class="pill ${site[2] === 'alert' && !rowOf(hardwareRows, 'SBC config') ? 'pill-red' : 'pill-grey'} pill-site">\u{1F4CD} ${escAttr(site[1])}</span></span>` : '')(rowOf(hardwareRows, 'Install site')),
+                (site => site && site[1] ? `<span class="cfg-kv">Installed at <span class="pill ${site[2] === 'alert' && !isHbcAc ? 'pill-red' : 'pill-grey'} pill-site">\u{1F4CD} ${escAttr(site[1])}</span></span>` : '')(rowOf(hardwareRows, 'Install site')),
             ].filter(Boolean).join('');
             const chipsRight = [
                 cfgChip('Last heartbeat', rowOf(hardwareRows, 'Last heartbeat')),
@@ -14811,7 +14927,7 @@
             ].filter(Boolean).join('');
             const msNodes = [], msLinks = [];
             const ar = acRec || {};
-            const isLinefitAc = !!rowOf(hardwareRows, 'SBC config');
+            const isLinefitAc = isHbcAc;
             if (ar.retrofitStart) msNodes.push({ k: 'Mod start', v: ar.retrofitStart, cls: 'done' });
             if (ar.retrofitStart) {
                 msNodes.push(ar.retrofitEnd
@@ -14821,9 +14937,9 @@
                 // An open window counts to today, so say so ("23d so far").
                 msLinks.push({ label: win && !ar.retrofitEnd ? `${win} so far` : win, cls: ar.retrofitEnd ? 'solid' : 'dash open' });
             }
+            // HBC+ draws no milestone here: its SBC config is a Software row (v2.201.0).
             if (isLinefitAc) {
-                const sbc = rowOf(hardwareRows, 'SBC config')[1];
-                msNodes.push({ k: 'SBC config', v: sbc, cls: sbc === 'Done' ? 'live' : 'pending' });
+                /* nothing */
             } else if (ar.activatedDate) {
                 if (msNodes.length) {
                     const gap = daysBetween(ar.retrofitEnd, ar.activatedDate);
@@ -15025,6 +15141,16 @@
   .kv .vv-mono { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; font-weight:600; letter-spacing:.2px; }
   .kv .vv-alert { color:#a52834; }
   .kv .vv-accent { color:var(--green); }
+  /* HBC+ Software & Connectivity (v2.201.0): a full-width card, facts two-up. */
+  .spec-card.spec-wide { grid-column:1 / -1; }
+  .kv-grid { display:grid; grid-template-columns:1fr 1fr; }
+  .kv-grid .kv { border-top:1px solid #eef2f6; }
+  .kv-grid .kv:nth-child(-n+2) { border-top:none; }
+  .kv-grid .kv:nth-child(odd) { border-right:1px solid #eef2f6; }
+  .kv .vv-ver { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; font-weight:700; letter-spacing:.2px; }
+  .kv .vv-date { color:var(--muted); font-weight:600; margin-left:8px; font-size:11.5px; }
+  .kv .vv-date::before { content:"· "; }
+  @media screen and (max-width:600px) { .kv-grid { grid-template-columns:1fr; } .kv-grid .kv:nth-child(2) { border-top:1px solid #eef2f6; } .kv-grid .kv:nth-child(odd) { border-right:none; } }
   /* Connectivity milestone strip: chips on top, then a dot-to-dot track of the retrofit
      window and entry into service. Lines and dots are drawn with borders so they print. */
   .cfg-strip { border:1px solid var(--line); border-radius:8px; background:var(--soft); padding:10px 16px 12px; margin:8px 0 10px; }

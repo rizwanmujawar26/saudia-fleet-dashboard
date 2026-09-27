@@ -29,6 +29,12 @@
 
         "ugoVersion":         { ".validate": "newData.isString() && newData.val().matches(/^[0-9A-Za-z][0-9A-Za-z.-]{0,19}$/)" },
         "tilesVersion":       { ".validate": "newData.isString() && newData.val().matches(/^[0-9A-Za-z][0-9A-Za-z.-]{0,19}$/)" },
+        "fls6Version":        { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 40" },
+        "fls6Date":           { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
+        "sbcConfig":          { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 40" },
+        "sbcConfigDate":      { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
+        "localConfig":        { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 40" },
+        "localConfigDate":    { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
 
         "ops": {
           "state":          { ".validate": "newData.isString() && newData.val().matches(/^(aog|a_check|c_check|scheduled_maint|storage|painting|cabin_mod)$/)" },
