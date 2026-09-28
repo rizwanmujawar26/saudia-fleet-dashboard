@@ -2776,6 +2776,12 @@
             color: #96545c; background: #fff5f6;
         }
         .tl-pin-group-sep { border-top: 1px solid #f4dfe2; }
+        /* AOG (unplanned) reads hotter; planned ground time calmer (v2.206). */
+        .tl-pin-group-aog { color: #a52834; background: #fdecee; }
+        .tl-pin-group-aog .tl-pin-group-n { color: #fff; background: #dc3545; }
+        .tl-pin-group-plan { color: #55408f; background: #f7f4fc; }
+        .tl-pin-group-plan .tl-pin-group-n { color: #55408f; background: rgba(85, 64, 143, 0.12); }
+        .tl-pin-group-plan .tl-pin-group-note { color: #8f84ad; }
         .tl-pin-group-ico { font-size: 12px; }
         .tl-pin-group-n {
             font-weight: 800; color: #a52834; background: rgba(165, 40, 52, 0.10);
@@ -7895,8 +7901,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.205.0';
-        const APP_BUILD    = '2026.09.29.04';
+        const APP_VERSION  = '2.206.0';
+        const APP_BUILD    = '2026.09.29.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -24169,19 +24175,22 @@
                         </li>`;
                     };
 
-                    let itemsHtml = '';
-                    if (grounded.length) {
-                        itemsHtml += `<li class="tl-pin-group"><span class="tl-pin-group-ico" aria-hidden="true">🛬</span>Grounded`
-                            + `<span class="tl-pin-group-n">${grounded.length}</span>`
-                            + `<span class="tl-pin-group-note">on the ground — not flying</span></li>`
-                            + grounded.map(groundedRow).join('');
-                    }
-                    if (maint.length) {
-                        itemsHtml += `<li class="tl-pin-group${grounded.length ? ' tl-pin-group-sep' : ''}"><span class="tl-pin-group-ico" aria-hidden="true">🔧</span>Maintenance`
-                            + `<span class="tl-pin-group-n">${maint.length}</span>`
-                            + `<span class="tl-pin-group-note">flying — IFC/W-IFE service affected</span></li>`
-                            + maint.map(maintRow).join('');
-                    }
+                    // Grounded splits in two (user, 2026-09-29): UNPLANNED — AOG, a fault
+                    // grounded it — first, as the urgent one; then PLANNED ground time
+                    // (checks, connectivity/cabin mods, storage, painting). Maintenance
+                    // (flying, service affected) stays the third group.
+                    const aog = grounded.filter(g => g.o.state === 'aog');
+                    const planned = grounded.filter(g => g.o.state !== 'aog');
+                    const groups = [
+                        { ico: '🚨', label: 'AOG — Unplanned', cls: 'tl-pin-group-aog', note: 'grounded by a fault — not flying', rows: aog.map(groundedRow) },
+                        { ico: '🛬', label: 'Planned ground time', cls: 'tl-pin-group-plan', note: 'checks & mods — not flying', rows: planned.map(groundedRow) },
+                        { ico: '🔧', label: 'Maintenance', cls: '', note: 'flying — IFC/W-IFE service affected', rows: maint.map(maintRow) },
+                    ].filter(g => g.rows.length);
+                    const itemsHtml = groups.map((g, i) =>
+                        `<li class="tl-pin-group ${g.cls}${i ? ' tl-pin-group-sep' : ''}"><span class="tl-pin-group-ico" aria-hidden="true">${g.ico}</span>${g.label}`
+                        + `<span class="tl-pin-group-n">${g.rows.length}</span>`
+                        + `<span class="tl-pin-group-note">${g.note}</span></li>`
+                        + g.rows.join('')).join('');
 
                     pinnedEl.innerHTML = `
                         <div class="tl-pinned-head" onclick="toggleTimelinePinned()" role="button" tabindex="0"
