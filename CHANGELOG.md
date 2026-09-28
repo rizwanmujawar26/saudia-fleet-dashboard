@@ -13,6 +13,26 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.201.0 — HBC+ software: FLS6 / SBC config / Local config (2026-09-27)
+New `/aircraft` fields `fls6Version`, `sbcConfig`, `localConfig` (+ `*Date`), rules added. AVR report for
+HBC+: "SBC config Pending" dropped from the config strip; one full-width **Software & Connectivity** card,
+two-up (FLS6 · SBC Config / Local Config · WiFi Visibility), version mono + load date, SBC falling back to a
+Done/Pending pill from `beamcfgStatus`; no OTA/Media/UGO/SIM rows. AVR form gains an HBC+ Software block
+(HBC+ only) that writes changed versions to the aircraft dated the visit end; SBC recorded → `beamcfgStatus
+= done`. Fleet ✎ editor has the fields. Retrofit reports unchanged.
+
+### v2.200.0 — AVR: swapped-this-visit tags + Reason for removal (2026-09-25)
+Equipment fitted inside the report's own `dateStart → dateEnd` gets a green **INSTALLED** tag + faint green
+row/edge; removed inside it, a red **REMOVED** tag + faint red row/edge and a **Reason for removal** line
+(shop finding added if any). Earlier removals keep Shop finding, falling back to the reason. `removedUnits`
+now carry `reason`. Derived from report dates, so every past/future AVR gets it.
+
+### v2.199.0 — Unit lifecycle: a returning serial re-fits the same box (2026-09-25)
+A repaired / NFF box fitted again gains a fitment on its existing `/units` record instead of being blocked
+as a duplicate. `serialReuse` gate on every install path (blocks only on-wing-elsewhere, scrapped, dates
+backwards, alt mismatch); merge-on-rename; Unit History modal + ↻ chip. Data: "483220010 EX / 050 EX" (ASL)
+merged into 483220010 / ECL 050 (ex-AS61). Backup `2026-09-25-pre-serial-merge`.
+
 ### v2.198.1 — Hardware menu icon 🗄️ (2026-09-25)
 User: the 🔧 wrench read as a tool and sat too close to Maintenance 🛠️. Tried 🖥️ in v2.198.0, then
 settled on 🗄️ (an equipment rack). The icon appears only on the menu button.

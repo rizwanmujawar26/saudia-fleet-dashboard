@@ -6,7 +6,24 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.196.0–v2.198.1 (2026-09-25).** Media report downloads, and a menu icon.
+**Latest — v2.199.0–v2.201.0 (2026-09-25 → 09-27).** Unit lifecycle, AVR swap tags, HBC+ software.
+
+- **Unit lifecycle (v2.199).** A serial is one box for life: a repaired/NFF box fitted again gains a
+  fitment on its existing `/units` record (history carried), never a "duplicate". `serialReuse()` gates
+  every install path; rename-to-existing offers a merge; Unit History modal + ↻ chip on Hardware tables.
+  See *`/units/{unitId}`*. ⚠️ Any new path that creates a fitment must call `serialReuse`, not a raw
+  serial-exists check. ASL's "483220010 EX" workaround merged into 483220010 / ECL 050.
+- **AVR swap tags (v2.200).** Equipment fitted/removed inside the report's `dateStart → dateEnd` gets
+  green INSTALLED / red REMOVED tags + row tint; fresh removals show **Reason for removal** (older ones
+  Shop finding). Derived from report dates — applies to every AVR.
+- **HBC+ software (v2.201).** New `/aircraft` fields FLS6 / SBC config / Local config (+ dates), set from
+  the AVR form's HBC+ block (or Fleet ✎). HBC+ reports show one wide Software & Connectivity card; no
+  OTA/Media/UGO/SIM; the "SBC config Pending" chip is gone. See *`/aircraft/{tail}`*.
+- **Open (user):** ASBE's FLS6/SBC/Local versions not yet entered (still reads Pending). ASL's newest
+  media load (25-Sep, `ME-SVA-UGO-DEV`, no cycle) makes its Media Cycle read "—" — confirm intended.
+- `.claude/launch.json` has `dashboard-alt` on :8766 for when another chat holds :8765.
+
+**Previous — v2.196.0–v2.198.1 (2026-09-25).** Media report downloads, and a menu icon.
 
 - **Media filter bar ⤓ Download menu (v2.197).** Always present, left of ＋ Add, public. It lists
   every `mediaReportCycles()` report (newest first) as real `<a>` soft links to `#mlr=MMYY` in a new
@@ -1039,7 +1056,10 @@ the "curl the node before trusting a doc figure" rule in the flesh.
 | `otaPatchUTC` | full ISO stamp, `2026-08-17T14:56:00Z`. When the over-the-air patch that follows the middleware load reached the aircraft. **Absent = not patched** |
 | `iphoStatus` | `completed` |
 | `mg101Status` | `provisioned` \| `done` |
-| `beamcfgStatus` | `pending` \| `done` (linefit pair only) |
+| `beamcfgStatus` | `pending` \| `done` (linefit pair only). Set to `done` automatically when an `sbcConfig` is recorded from the report form |
+| `fls6Version` / `fls6Date` | HBC+ only (v2.201.0) — FLS6 software version (≤40) + `DD-Mon-YYYY` loaded |
+| `sbcConfig` / `sbcConfigDate` | HBC+ only — SBC config version (e.g. `BEAMCFG_MOD3_NSG_A.13`) + date |
+| `localConfig` / `localConfigDate` | HBC+ only — Local config version + date |
 | `note` | Software-page comment |
 | `media` | `{ mediaCycle, mediaDisplay, mediaSource, loadedDateUTC, comments }` |
 | `maintenance` | `{ open, reason, flaggedAt }` — see the Maintenance tab |
@@ -1091,6 +1111,12 @@ to mean the same thing operationally, collapse them — do not keep both in sync
 
 `media.comments` is deliberately separate from `note` so editing one cannot
 clobber the other.
+
+**HBC+ software (v2.201.0).** For an HBC+ / linefit tail (`isHbcAircraft`) Middleware,
+OTA patches, Media, UGO/Tiles and SIM do not apply. Its software is FLS6 + SBC config +
+Local config, normally set from the **AVR form's HBC+ Software block** (`#avrHbcWrap`,
+`AVR_HBC_FIELDS`): prefilled from `/aircraft`, only CHANGED values are PATCHed, dated the
+visit end. The Fleet ✎ editor carries the same six fields for corrections.
 
 ### `/editors/{uid}` — allowlist, readable only by that uid, never client-writable
 
@@ -1212,6 +1238,24 @@ individual box.
 A **fitment** is one box, on one aircraft, for one period. A unit fitted twice has
 two fitments, which is what makes total time on wing and change counts add up
 across airframes.
+
+**Unit lifecycle (v2.199.0) — a serial is one box for life, not one installation.**
+A box removed → shop → returned serviceable → fitted again (any tail) gains a NEW
+fitment on its EXISTING record; it is never a "duplicate". `unitLifecycle(u)` derives
+`on_wing` · `in_shop` (last shopStatus pending/in_shop) · `serviceable` (repaired /
+no_fault) · `scrapped` · `spare`. **`serialReuse(lruId, serial, opts)` is the one gate**
+every install path calls (Hardware ＋Add, inline blank row, Maintenance R&R): it blocks
+only *on wing on another tail*, *scrapped*, *fitted before its last removal*, or an
+*alt-serial mismatch*; `historic` (both dates = backfill) skips the state checks; an
+in-shop box saves with a 🟡 "update the shop report" warning. Renaming a serial to one
+already on record offers **`mergeUnitInto`** (one PATCH: fitments moved, old unit
+nulled — no other node stores a unit id). The **Unit History** modal
+(`openUnitHistory`, click any serial on the Hardware tables; `↻ N` chip when fitted
+≥2×) shows every fitment with removal reason + shop ref/finding. The bulk backfill
+grids (Record Installed, bulk removal) deliberately keep the strict check.
+⚠️ Worked case: IFE server **483220010 / ECL 050** — off AS61 14-Apr-2026 (RMA
+300084790, COMe replaced, repaired), fitted ASL 25-Sep-2026; the "483220010 EX / 050
+EX" workaround record was merged into it.
 
 **The worked example is SIM `899660 117003 092859`** (2026-08-25) — the only unit in
 the register with more than one fitment, and the only one fitted to more than one
