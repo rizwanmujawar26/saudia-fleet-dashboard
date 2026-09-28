@@ -4469,6 +4469,8 @@
         .avr-quick-chip:hover { background: #f5f9ff; border-color: #bcd; color: #2350b8; }
         .avr-quick-chip .qc-co { font-weight: 400; color: #8a97a6; margin-left: 4px; }
         .avr-quick-chip[hidden] { display: none; }
+        .avr-station-picks { display: flex; gap: 6px; margin-top: 6px; }
+        .avr-station-picks .avr-quick-chip { padding: 3px 10px; font-size: 11.5px; }
 
         /* Activity-link tick list */
         .avr-linklist { border: 1px solid #e3e8ee; border-radius: 8px; max-height: 180px; overflow-y: auto; }
@@ -7893,8 +7895,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.202.2';
-        const APP_BUILD    = '2026.09.28.04';
+        const APP_VERSION  = '2.203.0';
+        const APP_BUILD    = '2026.09.28.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14297,7 +14299,7 @@
                 <div class="ac-edit-grid">
                     <div class="ac-edit-field">
                         <label>Report type</label>
-                        <select id="avrReportType">${REPORT_TYPES.filter(t => !t.hidden || t.value === v.reportType).map(t => `<option value="${t.value}" ${t.value === (v.reportType || 'visit') ? 'selected' : ''}>${t.label}</option>`).join('')}</select>
+                        <select id="avrReportType" onchange="avrOnTypeChange()">${REPORT_TYPES.filter(t => !t.hidden || t.value === v.reportType).map(t => `<option value="${t.value}" ${t.value === (v.reportType || 'visit') ? 'selected' : ''}>${t.label}</option>`).join('')}</select>
                     </div>
                     <div class="ac-edit-field">
                         <label>Aircraft *</label>
@@ -14324,7 +14326,8 @@
                 <div class="ac-edit-grid">
                     <div class="ac-edit-field">
                         <label>Airport / station</label>
-                        <input id="avrLocation" class="edit-text" maxlength="60" placeholder="e.g. Jeddah" value="${escAttr(v.location || '')}">
+                        <input id="avrLocation" class="edit-text" maxlength="60" placeholder="e.g. Jeddah" value="${escAttr(isNew ? avrDefaultStation(v.reportType || 'visit') : (v.location || ''))}" data-auto="${isNew ? '1' : ''}" oninput="this.dataset.auto = ''">
+                        <div class="avr-station-picks">${AVR_STATION_PICKS.map(st => `<button type="button" class="avr-quick-chip" onclick="avrPickStation('${escAttr(st)}')">${escAttr(st)}</button>`).join('')}</div>
                     </div>
                     <div class="ac-edit-field">
                         <label>Area</label>
@@ -14437,14 +14440,29 @@
             avrEditingId = null;
         }
 
-        function avrOnAircraftChange() {
-            // Convenience: fill an empty location from the aircraft's known site.
-            const ac = document.getElementById('avrAircraft').value;
+        // Airport / station default (v2.203.0). A NEW Aircraft Visit is a fresh
+        // troubleshooting visit at the home base, so it starts at Jeddah — never the
+        // aircraft's install site (an A321XLR built in Toulouse does not fly back there
+        // for a visit; the old aircraft-change fill did exactly that). Other report
+        // types start blank. Riyadh is one tap away. An untouched default follows the
+        // report type; once typed or picked, the value is left alone. Editing an
+        // existing report never changes its stored location.
+        const AVR_HOME_STATION = 'Jeddah';
+        const AVR_STATION_PICKS = ['Jeddah', 'Riyadh'];
+        function avrDefaultStation(type) { return type === 'visit' ? AVR_HOME_STATION : ''; }
+        function avrOnTypeChange() {
             const locEl = document.getElementById('avrLocation');
-            if (locEl && !locEl.value.trim() && ac) {
-                const a = aircraftData.find(x => x.id === ac) || {};
-                locEl.value = a.completionLocation || a.retrofitLocation || '';
-            }
+            const type = (document.getElementById('avrReportType') || {}).value;
+            if (locEl && locEl.dataset.auto === '1') locEl.value = avrDefaultStation(type);
+        }
+        function avrPickStation(st) {
+            const locEl = document.getElementById('avrLocation');
+            if (!locEl) return;
+            locEl.value = st;
+            locEl.dataset.auto = '';
+        }
+
+        function avrOnAircraftChange() {
             avrRefreshLinkList();
             avrSyncHbc();
         }
