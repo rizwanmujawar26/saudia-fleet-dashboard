@@ -7895,8 +7895,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.204.1';
-        const APP_BUILD    = '2026.09.29.02';
+        const APP_VERSION  = '2.204.2';
+        const APP_BUILD    = '2026.09.29.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -18715,7 +18715,10 @@
                 // aircraft and reads N/A. A staged edit (pendingSatcom) is read first so the
                 // pill updates before Save, like the status/commissioning cells.
                 const iphoApplies = !notApplicable && !!ac
-                    && (ac.fit === 'retrofit' || isAstronics);
+                    // fitOf(), not the raw /fleet fit field: a tail put In Retrofit can
+                    // carry no stored fit (ASAA, AS73 — 2026-09-29), which left its IPHO
+                    // locked at N/A. fitOf reads anything not linefit as retrofit.
+                    && (fitOf(ac) === 'retrofit' || isAstronics);
                 const iphoRaw = staged.iphoStatus !== undefined
                     ? staged.iphoStatus : (ac ? (ac.iphoStatus || '') : '');
                 const ipho = !iphoApplies ? 'na' : (iphoRaw === 'completed' ? 'enabled' : 'disabled');
