@@ -7895,8 +7895,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.204.2';
-        const APP_BUILD    = '2026.09.29.03';
+        const APP_VERSION  = '2.205.0';
+        const APP_BUILD    = '2026.09.29.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -20025,14 +20025,31 @@
             // carries a tail). These live at unit level and were invisible on the old
             // per-aircraft grid; the Hardware page is the master, so they belong here.
             // "~" sorts spares after every real tail when sorting by TAIL.
+            // ASSIGN A SPARE (v2.205.0): in edit mode the TAIL cell is a picker of the
+            // aircraft whose slot for this unit's LRU is EMPTY (an occupied slot needs its
+            // removal recorded first), and Fitted takes the install date. Once both are set,
+            // hwAssignSpare adds the fitment to THIS unit — same box, its history kept.
+            const openSlots = editable ? groupSlots(group).filter(sl =>
+                !unitsAtSlot(sl.lruId, sl.aircraft.id, sl.position).some(h => fitmentIsOn(h.fitment))) : [];
+            const spareTail = u => {
+                if (!editable) return '<span class="hw-none">spare</span>';
+                const opts = openSlots.filter(sl => sl.lruId === u.lruId && !sl.position)
+                    .map(sl => sl.aircraft.id).sort()
+                    .map(t => `<option value="${escAttr(t)}">${escAttr(t)}</option>`).join('');
+                return `<select class="edit-select hw-spare-tail" data-unit="${escAttr(u.id)}" title="Assign this spare to an aircraft with no ${escAttr(baseLru.label || 'unit')} on wing, then enter the Fitted date" onchange="hwAssignSpare(this)">
+                    <option value="">${opts ? 'spare — assign to…' : 'spare — no aircraft free'}</option>${opts}</select>`;
+            };
+            const spareFitted = u => editable
+                ? `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="hw-date-input hw-spare-date" data-unit="${escAttr(u.id)}" onchange="hwAssignSpare(this)">`
+                : dash;
             const spareRow = u => `<tr class="hw-row-spare">
                 ${numTd}
-                <td${ds('~spare')}><span class="hw-none">spare</span></td>
+                <td${ds('~spare')}>${spareTail(u)}</td>
                 ${hasPos ? `<td${ds('99')}>${dash}</td>` : ''}
                 <td${ds((u.serial || '').toLowerCase())}>${hwSerialField(u)}</td>
                 ${dual ? `<td${ds((u.altSerial || '').toLowerCase())}>${hwAltField(u, baseLru)}</td>` : ''}
                 ${isSim ? `<td${ds(u.roaming || '')}>${roamCell(u, null)}</td>` : ''}
-                <td${ds('00000000')}>${dash}</td><td${ds('00000000')}>${dash}</td>
+                <td${ds('00000000')}>${spareFitted(u)}</td><td${ds('00000000')}>${dash}</td>
                 <td${ds(2)}><span class="sr-state">SPARE</span></td>
                 <td class="sr-days"${ds(-1)}>${dash}</td>
                 ${isSim ? `<td class="hw-note-col"${ds((u.notes || '').toLowerCase())}>${notesCell(u, null)}</td>` : ''}
@@ -21690,6 +21707,52 @@
         // the 4G SIM tab commits to (see commitSimChanges): the fitment's roaming for a
         // fitted card, the unit's roaming for a spare — so both views read one value. Blank
         // clears it (null).
+        // Fit a spare unit (no fitment on any aircraft) to an aircraft: one new on-wing
+        // fitment on the spare's OWN record, carrying its roaming plan into the period of
+        // service. Needs both the tail and a dd-mm-yyyy Fitted date from the spare row.
+        async function hwAssignSpare(el) {
+            const row = el.closest('tr');
+            const unitId = el.dataset.unit;
+            const u = unitsLive[unitId];
+            if (!row || !u) return;
+            const tailEl = row.querySelector('.hw-spare-tail'), dateEl = row.querySelector('.hw-spare-date');
+            const tail = tailEl ? tailEl.value : '';
+            const fitted = dateEl && dateEl.value.trim() ? readDateField(dateEl) : '';
+            if (fitted === false) { setSyncStatus('🔴 Fitted date must be dd-mm-yyyy', '#dc3545'); return; }
+            if (!tail || !fitted) {
+                setSyncStatus(tail ? `🟡 Enter the Fitted date to assign ${u.serial} to ${tail}` : '🟡 Pick the aircraft to assign this spare to', '#b8860b');
+                return;
+            }
+            if (Object.values(u.fitments || {}).some(f => f.aircraft)) { setSyncStatus(`🔴 ${u.serial} is no longer a spare`, '#dc3545'); return; }
+            const onWing = unitsAtSlot(u.lruId, tail, undefined).find(h => fitmentIsOn(h.fitment));
+            if (onWing) {
+                setSyncStatus(`🔴 ${tail} already has ${onWing.unit.serial} on wing — record its removal first`, '#dc3545');
+                return;
+            }
+            const token = await getIdToken();
+            if (!token) return;
+            [tailEl, dateEl].forEach(x => { if (x) x.disabled = true; });
+            const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+            const fitId = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            const fitment = { aircraft: tail, state: 'on_wing', fittedDate: fitted, loggedAt: stamp };
+            if (u.roaming) fitment.roaming = u.roaming;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units/${unitId}/fitments/${fitId}.json?auth=${token}`, {
+                    method: 'PUT', body: JSON.stringify(fitment),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                u.fitments = u.fitments || {};
+                u.fitments[fitId] = fitment;
+                renderHardwarePage();
+                renderMaintenancePage();
+                setSyncStatus(`🟢 ${u.serial} fitted on ${tail} from ${fitted} — synced with your team`, '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not assign ${u.serial} — ${ex.message}`, '#dc3545');
+                [tailEl, dateEl].forEach(x => { if (x) x.disabled = false; });
+            }
+        }
+
         async function saveHwRoaming(el) {
             const unitId = el.dataset.unit, fitmentId = el.dataset.fitment || '';
             const u = unitsLive[unitId];
@@ -22052,7 +22115,8 @@
                 if (kEl) kEl.value = '';
                 return;
             }
-            const roaming = roamEl ? roamEl.value : '';
+            // A returning/spare SIM keeps its plan when none is picked in the row.
+            const roaming = (roamEl ? roamEl.value : '') || (reuse && reuse.unit.roaming) || '';
             const token = await getIdToken();
             if (!token) return;
             [kEl, eEl, fEl, rEl, roamEl].forEach(x => { if (x) x.disabled = true; });
