@@ -4461,6 +4461,14 @@
         .avr-att-add { border: 1px dashed #bcd; background: #f5f9ff; color: #2350b8; border-radius: 8px;
             cursor: pointer; padding: 6px 12px; font-size: 12.5px; font-weight: 700; }
         @media (max-width: 560px) { .avr-att-row { grid-template-columns: 1fr 1fr; } }
+        /* Quick-add people (v2.202) — one-tap chips beside ➕ Add person */
+        .avr-att-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+        .avr-quick-people { display: contents; }
+        .avr-quick-chip { border: 1px solid #d5dde8; background: #fff; color: #33475b; border-radius: 999px;
+            cursor: pointer; padding: 5px 11px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+        .avr-quick-chip:hover { background: #f5f9ff; border-color: #bcd; color: #2350b8; }
+        .avr-quick-chip .qc-co { font-weight: 400; color: #8a97a6; margin-left: 4px; }
+        .avr-quick-chip[hidden] { display: none; }
 
         /* Activity-link tick list */
         .avr-linklist { border: 1px solid #e3e8ee; border-radius: 8px; max-height: 180px; overflow-y: auto; }
@@ -7885,8 +7893,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.201.1';
-        const APP_BUILD    = '2026.09.28.01';
+        const APP_VERSION  = '2.202.0';
+        const APP_BUILD    = '2026.09.28.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14189,12 +14197,84 @@
                 <input class="edit-text" maxlength="80" placeholder="Company" value="${escAttr(p.company || '')}">
                 <input class="edit-text" maxlength="60" placeholder="Role" value="${escAttr(p.role || '')}">
                 <select class="edit-select avr-att-mode" title="Physically on the aircraft, or supporting remotely">${modeOpts}</select>
-                <button type="button" class="avr-att-del" title="Remove" onclick="this.closest('.avr-att-row').remove()">✕</button>
+                <button type="button" class="avr-att-del" title="Remove" onclick="this.closest('.avr-att-row').remove(); avrSyncQuickPeople()">✕</button>
             </div>`;
         }
         function avrAddAttendee() {
             const box = document.getElementById('avrAttList');
             if (box) box.insertAdjacentHTML('beforeend', avrAttRowHTML({}));
+        }
+
+        // Quick-add people (v2.202). Suggestions are DERIVED from every report's
+        // attendees — no stored list — so anyone added often enough starts appearing
+        // on their own. The three regulars are pinned first; the rest follow by how
+        // often they have attended. Each chip carries that person's usual company,
+        // role and mode (on aircraft / remote); a chip hides once that person is in
+        // the list, and comes back if the row is removed.
+        const AVR_PEOPLE_PINNED = [
+            { name: 'Technician', company: 'Saudia Technic' },
+            { name: 'Murtuza',    company: 'NSG' },
+            { name: 'Rizwan',     company: 'NSG' },
+        ];
+        const AVR_QUICK_MAX = 8;       // chips shown, pinned included
+        const AVR_QUICK_MIN_USES = 2;  // a one-off attendee is not a regular
+        let avrQuickList = [];
+        const avrPersonKey = p => ((p.name || '').trim() + '|' + (p.company || '').trim()).toLowerCase();
+        function avrFrequentPeople() {
+            const tally = {};
+            Object.values(avrLive || {}).forEach(v => avrAttendees(v).forEach(p => {
+                if (!(p.name || '').trim()) return;
+                const k = avrPersonKey(p);
+                const t = tally[k] || (tally[k] = { name: p.name.trim(), company: (p.company || '').trim(), n: 0, modes: {}, roles: {} });
+                t.n++;
+                const m = p.mode || 'present';
+                t.modes[m] = (t.modes[m] || 0) + 1;
+                if ((p.role || '').trim()) t.roles[p.role.trim()] = (t.roles[p.role.trim()] || 0) + 1;
+            }));
+            const top = o => Object.entries(o).sort((a, b) => b[1] - a[1])[0];
+            // Ties go to 'present' — the default a new row starts with.
+            const finish = t => {
+                const mode = t.modes.remote > (t.modes.present || 0) ? 'remote' : 'present';
+                const role = top(t.roles);
+                return { name: t.name, company: t.company, role: role ? role[0] : '', mode };
+            };
+            const pinned = AVR_PEOPLE_PINNED.map(p => {
+                const t = tally[avrPersonKey(p)];
+                return t ? finish(t) : { ...p, role: '', mode: 'present' };
+            });
+            const pinnedKeys = new Set(pinned.map(avrPersonKey));
+            const rest = Object.entries(tally)
+                .filter(([k, t]) => !pinnedKeys.has(k) && t.n >= AVR_QUICK_MIN_USES)
+                .sort((a, b) => b[1].n - a[1].n || a[1].name.localeCompare(b[1].name))
+                .map(([, t]) => finish(t));
+            return pinned.concat(rest).slice(0, AVR_QUICK_MAX);
+        }
+        function avrQuickPeopleHTML() {
+            avrQuickList = avrFrequentPeople();
+            return avrQuickList.map((p, i) =>
+                `<button type="button" class="avr-quick-chip" data-qk="${escAttr(avrPersonKey(p))}" title="Add ${escAttr(p.name)}${p.company ? ' (' + escAttr(p.company) + ')' : ''}${p.mode === 'remote' ? ' — remote' : ''}" onclick="avrQuickAdd(${i})">＋ ${escAttr(p.name)}${p.company ? `<span class="qc-co">${escAttr(p.company)}</span>` : ''}</button>`
+            ).join('');
+        }
+        function avrAttRowPerson(row) {
+            const [n, c] = row.querySelectorAll('input');
+            return { name: n.value, company: c.value };
+        }
+        function avrQuickAdd(i) {
+            const p = avrQuickList[i];
+            const box = document.getElementById('avrAttList');
+            if (!p || !box) return;
+            // Fill the blank starter row rather than leaving it empty above the new one.
+            const blank = [...box.querySelectorAll('.avr-att-row')]
+                .find(r => [...r.querySelectorAll('input')].every(x => !x.value.trim()));
+            const html = avrAttRowHTML(p);
+            if (blank) blank.outerHTML = html; else box.insertAdjacentHTML('beforeend', html);
+            avrSyncQuickPeople();
+        }
+        function avrSyncQuickPeople() {
+            const box = document.getElementById('avrAttList');
+            if (!box) return;
+            const listed = new Set([...box.querySelectorAll('.avr-att-row')].map(r => avrPersonKey(avrAttRowPerson(r))));
+            document.querySelectorAll('#avrQuickPeople .avr-quick-chip').forEach(b => { b.hidden = listed.has(b.dataset.qk); });
         }
 
         function openAvrEditor(id, prefill) {
@@ -14276,8 +14356,11 @@
                 </div>
 
                 <div class="ac-edit-section-title">People — name, company, role (all optional)</div>
-                <div id="avrAttList">${rows}</div>
-                <button type="button" class="avr-att-add" onclick="avrAddAttendee()">➕ Add person</button>
+                <div id="avrAttList" oninput="avrSyncQuickPeople()">${rows}</div>
+                <div class="avr-att-actions">
+                    <button type="button" class="avr-att-add" onclick="avrAddAttendee()">➕ Add person</button>
+                    <span id="avrQuickPeople" class="avr-quick-people">${avrQuickPeopleHTML()}</span>
+                </div>
 
                 <div class="ac-edit-section-title">Summary <span style="font-weight:400;color:#aaa;">(optional)</span>
                     <button type="button" class="avr-att-add" style="margin-left:8px;padding:3px 10px;" onclick="avrGenerateSummary()">✨ Generate from activities</button>
@@ -14327,6 +14410,7 @@
             document.getElementById('avrEditError').style.display = 'none';
             const overlay = document.getElementById('avrOverlay');
             overlay.style.display = 'flex';
+            avrSyncQuickPeople();        // hide chips for people already on the report
             setTimeout(avrSyncHbc, 0);   // after any prefill below has set the aircraft
 
             // Prefill from "New visit with this activity": seed aircraft + dates from the
