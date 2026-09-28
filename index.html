@@ -7893,8 +7893,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.202.1';
-        const APP_BUILD    = '2026.09.28.03';
+        const APP_VERSION  = '2.202.2';
+        const APP_BUILD    = '2026.09.28.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14905,9 +14905,9 @@
                 }).join('')}</tbody></table></div>` : '';
             // Removed equipment carries a Shop Report status pill (Awaiting until the box
             // is booked in, then In Shop / Repaired / NFF / Scrapped), and a second line
-            // beneath the row. A box removed THIS visit has not reached the shop yet, so
-            // that line is the Reason for removal (plus a finding, should one exist); an
-            // earlier removal shows its Shop finding, falling back to the reason.
+            // beneath the row: the Reason for removal, then the Shop finding — each when
+            // recorded, both when both are (v2.202.2; earlier removals used to show only
+            // one of the two).
             const shopShort = s => ({ pending: 'Awaiting', in_shop: 'In Shop', repaired: 'Repaired', no_fault: 'NFF', scrap: 'Scrapped' })[s] || 'Awaiting';
             const shopPill = s => ({ pending: 'pill-amber', in_shop: 'pill-blue', repaired: 'pill-green', no_fault: 'pill-grey', scrap: 'pill-red' })[s] || 'pill-amber';
             const removedTable = equipRemoved.length ? `
@@ -14920,9 +14920,7 @@
                     const reason = (u.reason || '').trim();
                     const out = inVisit(u.removed);
                     const line = (k, t) => `<tr class="eq-finding-row"><td></td><td colspan="5" class="eq-finding"><b>${k}:</b> ${escAttr(t)}</td></tr>`;
-                    const detail = out
-                        ? (reason ? line('Reason for removal', reason) : '') + (finding ? line('Shop finding', finding) : '')
-                        : (finding ? line('Shop finding', finding) : (reason ? line('Reason for removal', reason) : ''));
+                    const detail = (reason ? line('Reason for removal', reason) : '') + (finding ? line('Shop finding', finding) : '');
                     return `<tbody class="eq-grp${out ? ' eq-out' : ''}"><tr><td>${escAttr(u.lru.label)}${eqPos(u)}</td><td class="mono">${eqSerial(u)}${out ? swapTag('pill-red', 'Removed') : ''}</td><td class="nowrap">${escAttr(u.fitted || '—')}</td><td class="nowrap">${escAttr(u.removed || '—')}</td><td><span class="pill ${shopPill(ss)}">${escAttr(shopShort(ss))}</span></td><td class="num">${days != null ? days + 'd' : '—'}</td></tr>${detail}</tbody>`;
                 }).join('')}</table></div>` : '';
             const equipPrint = installedTable + removedTable;
@@ -20404,9 +20402,12 @@
                     ? `<button type="button" class="hw-shop-cell-btn" ${openAttr} title="Open shop report">${pill}</button>`
                     : pill;
             };
-            const findingRow = (finding, cont) => finding
-                ? `<tr class="hw-row-off hw-shop-finding-row${cont ? ' hw-hist-row' : ''}"><td class="hw-finding-pad"></td><td colspan="5" class="hw-finding-cell">↳ <b>Shop finding:</b> ${escAttr(finding)}</td></tr>`
-                : '';
+            // Beneath a removed row: why it came off, then what the shop found — each
+            // line only when recorded, both when both are (v2.202.2).
+            const findingRow = (reason, finding, cont) => [['Reason for removal', reason], ['Shop finding', finding]]
+                .filter(([, t]) => (t || '').trim())
+                .map(([k, t]) => `<tr class="hw-row-off hw-shop-finding-row${cont ? ' hw-hist-row' : ''}"><td class="hw-finding-pad"></td><td colspan="5" class="hw-finding-cell">↳ <b>${k}:</b> ${escAttr(t.trim())}</td></tr>`)
+                .join('');
 
             const blocks = fleet.map(a => {
                 const fit = fitOf(a);
@@ -20461,7 +20462,7 @@
                                     <td>${shopCell(`onclick="openShopReportMm('${escAttr(r.id)}')"`, r.shopStatus)}</td>
                                     ${daysCell}
                                 </tr>`);
-                                offRows.push(findingRow(r.shopFinding, cont));
+                                offRows.push(findingRow(r.removalReason, r.shopFinding, cont));
                             } else {
                                 onRows.push(`<tr class="${cont ? 'hw-hist-row' : ''}">
                                     <td>${label}</td>
@@ -20546,7 +20547,7 @@
                                         <td>${shopCell(`onclick="openShopReport('${escAttr(hit.unit.id)}','${escAttr(hit.fitment.id)}')"`, hit.fitment.shopStatus)}</td>
                                         ${daysCell}
                                     </tr>`);
-                                    offRows.push(findingRow(hit.fitment.shopFinding, cont));
+                                    offRows.push(findingRow(hit.fitment.removalReason, hit.fitment.shopFinding, cont));
                                 } else {
                                     onRows.push(`<tr class="${cont ? 'hw-hist-row' : ''}">
                                         <td>${labelCell}</td>
