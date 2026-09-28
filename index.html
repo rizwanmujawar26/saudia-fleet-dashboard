@@ -7885,8 +7885,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.201.0';
-        const APP_BUILD    = '2026.09.27.01';
+        const APP_VERSION  = '2.201.1';
+        const APP_BUILD    = '2026.09.28.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -18577,6 +18577,9 @@
                     taurusNewMgId: pick('taurusNewMgId'), taurusNewTid: pick('taurusNewTid'),
                     hnsChassisId: pick('hnsChassisId'), hnsEsn: pick('hnsEsn'), hnsMac: pick('hnsMac'),
                     installDate: pick('installDate'), removalDate,
+                    // Reason for removal lives on the /modmans record (saveModmanField) —
+                    // the AVR removed-equipment table reads it from here.
+                    removalReason: pick('removalReason'),
                     notes: pick('notes'),
                     // Shop report lives on the /modmans record itself (openShopReportMm),
                     // so the by-aircraft view and the AVR dossier can show a removed box's
