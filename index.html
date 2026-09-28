@@ -7895,8 +7895,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.204.0';
-        const APP_BUILD    = '2026.09.29.01';
+        const APP_VERSION  = '2.204.1';
+        const APP_BUILD    = '2026.09.29.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -13993,7 +13993,7 @@
                 const taurusMg = modman.taurusNewMgId || modman.taurusOldMgId || '';
                 const taurusTid = modman.taurusNewTid || modman.taurusOldTid || '';
                 const rows = [
-                    ['Kontron S/N', modman.kontronSn], [snLabel, snVal],
+                    ['Kontron S/N', modman.isAstronics ? '' : modman.kontronSn], [snLabel, snVal],
                     // Taurus modem — MG ID, TID and IPHO together.
                     ['Taurus MG ID', taurusMg], ['Taurus TID', taurusTid], ['IPHO', modman.ipho !== 'na' ? modman.ipho : ''],
                     // Hughes modem — Chassis ID, MAC, ESN.
@@ -14957,8 +14957,13 @@
                 // Both box identities on ONE line (user, 2026-09-24): the Kontron serial, then
                 // the Eclipse (or Astronics) serial as a blue pill — "483705007 (ECL 041)" —
                 // which also brings the MODMAN card level with Airframe at five rows.
-                const boxPill = snVal ? `<span class="pill pill-blue pill-sn">${modman.isAstronics ? 'AST' : 'ECL'} ${escAttr(snVal)}</span>` : '';
-                const modmanSn = [modman.kontronSn ? `<span class="vv-mono">${escAttr(modman.kontronSn)}</span>` : '', boxPill].filter(Boolean).join(' ');
+                // An Airbus HBC+ box has ONE identity, the Astronics S/N (user, 2026-09-29):
+                // "ASTRONICS" in text + the bare number in the pill. Any Kontron value on
+                // such a record is a placeholder ('0' / 'N/A') and is never shown.
+                const boxPill = snVal ? `<span class="pill pill-blue pill-sn">${modman.isAstronics ? '' : 'ECL '}${escAttr(snVal)}</span>` : '';
+                const modmanSn = modman.isAstronics
+                    ? (snVal ? `<span class="vv-mono">ASTRONICS</span> ${boxPill}` : '')
+                    : [modman.kontronSn ? `<span class="vv-mono">${escAttr(modman.kontronSn)}</span>` : '', boxPill].filter(Boolean).join(' ');
                 const mrows = [
                     ['MODMAN S/N', modmanSn, 'raw'], ['ESN', modman.hnsEsn, 'mono'],
                     ['Hughes Chassis ID', modman.hnsChassisId, 'mono'],
@@ -21799,7 +21804,6 @@
                 : depDate;
             const durTxt = `${Math.floor(dur / 60)}h ${p2(dur % 60)}m`;
             const km = +f.distanceKm || 0;
-            const nm = km ? Math.round(km / 1.852) : 0;
             const kmh = km && dur ? Math.round(km / (dur / 60)) : 0;
             const n = x => x.toLocaleString('en-GB');
             const url = fr24Url(tail) + (f.fr24Id ? '#' + f.fr24Id : '');
@@ -21836,7 +21840,7 @@
                         ${plane}
                         <div class="dlv-stats">
                             <span class="dlv-dur">${durTxt}</span>
-                            <span class="dlv-sub">${[km ? `${n(km)} km · ${n(nm)} nm` : '', kmh ? `avg ${n(kmh)} km/h` : ''].filter(Boolean).join(' · ')}</span>
+                            <span class="dlv-sub">${[km ? `${n(km)} km` : '', kmh ? `avg ${n(kmh)} km/h` : ''].filter(Boolean).join(' · ')}</span>
                         </div>
                     </div>
                     ${end('arr', 'Arrived', f.toIata, f.to, arrTime, arrDate, plusDays)}
