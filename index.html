@@ -7893,8 +7893,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.202.0';
-        const APP_BUILD    = '2026.09.28.02';
+        const APP_VERSION  = '2.202.1';
+        const APP_BUILD    = '2026.09.28.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -19399,6 +19399,12 @@
             const tails = [...new Set(unitFitmentsSorted(unit).map(f => f.aircraft).filter(Boolean))].join(' → ');
             return `<span class="hw-life-chip" title="Fitted ${n} times: ${escAttr(tails)} — open history" onclick="openUnitHistory('${escAttr(unit.id)}')">↻ ${n}</span>`;
         }
+        // The MODMAN equivalent of hwSerialField's read-only link (+ ↻ chip once refitted).
+        function hwModmanSnLink(r) {
+            const u = modmanUnit(r.id);
+            const sn = r.isAstronics ? r.astronicsSn : r.kontronSn;
+            return `<button type="button" class="hw-serial hw-sn-link" title="Unit history" onclick="openUnitHistory('mm:${escAttr(r.id)}')">${escAttr(sn)}</button>${hwLifeChip(u)}`;
+        }
         function hwSerialField(unit) {
             if (!hwEditable()) {
                 if (!unit || !unit.serial || !unit.id) return hwSerialSpan(unit && unit.serial);
@@ -20324,7 +20330,7 @@
                 const fld = r.isAstronics ? 'astronicsSn' : 'kontronSn';
                 const val = r.isAstronics ? r.astronicsSn : r.kontronSn;
                 const note = r.isAstronics ? ' <span class="hw-slot-label">Astronics</span>' : '';
-                if (!editable) return val ? `<span class="hw-serial">${escAttr(val)}</span>${note}` : '<span class="hw-none">—</span>';
+                if (!editable) return val ? `${hwModmanSnLink(r)}${note}` : '<span class="hw-none">—</span>';
                 return `<input class="hw-sn-input" maxlength="60" autocomplete="off" value="${escAttr(val)}" placeholder="${r.isAstronics ? 'Astronics S/N' : 'Kontron S/N'}" data-mm="${escAttr(r.id)}" data-field="${fld}" onchange="saveModmanField(this)">${note}`;
             };
             const dateCell = (r, fld) => {
@@ -20440,7 +20446,7 @@
                             const note = r.isAstronics ? ' <span class="hw-slot-label">Astronics</span>' : '';
                             const serialCell = editable
                                 ? `<input class="hw-sn-input" maxlength="60" autocomplete="off" value="${escAttr(primaryVal)}" placeholder="${r.isAstronics ? 'Astronics S/N' : 'Kontron S/N'}" data-mm="${escAttr(r.id)}" data-field="${primaryFld}" onchange="saveModmanField(this)">${note}${r.isAstronics ? '' : ` <input class="hw-sn-input hw-sn-alt" maxlength="60" autocomplete="off" value="${escAttr(r.eclipseSn || '')}" placeholder="Eclipse S/N" data-mm="${escAttr(r.id)}" data-field="eclipseSn" onchange="saveModmanField(this)">`}`
-                                : `<span class="hw-serial">${escAttr(primaryVal || '—')}</span>${note}${eclipseVal ? ' ' + eclipsePill(r.eclipseSn) : ''}`;
+                                : `${primaryVal ? hwModmanSnLink(r) : '<span class="hw-serial">—</span>'}${note}${eclipseVal ? ' ' + eclipsePill(r.eclipseSn) : ''}`;
                             const dateInput = fld => editable
                                 ? `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="hw-date-input" value="${escAttr(toDMY(r[fld] || ''))}" data-mm="${escAttr(r.id)}" data-field="${fld}" onchange="saveModmanField(this)">`
                                 : (r[fld] ? escAttr(r[fld]) : '<span class="hw-none">—</span>');
@@ -21707,11 +21713,39 @@
         // One physical box, every fitment it has had, newest first: aircraft, dates, days
         // on wing, why it came off, and what the shop found. Read-only and public — the
         // shop report itself is still edited from the Removed queue.
+        // A MODMAN lives on /modmans, not /units — one record per fitment, so the same
+        // box refitted after a shop visit is a second record with the same primary
+        // serial. modmanUnit() folds every record sharing that serial into a unit-shaped
+        // object (id 'mm:<recordId>') so the Unit History modal and ↻ chip read it
+        // exactly like a /units box. Read-only: nothing is written back.
+        function modmanUnit(mmId) {
+            const rows = satcomRows();
+            const me = rows.find(r => r.id === mmId);
+            if (!me) return null;
+            const snOf = r => (r.isAstronics ? r.astronicsSn : r.kontronSn) || '';
+            const key = normSerialKey(snOf(me));
+            const same = key ? rows.filter(r => normSerialKey(snOf(r)) === key) : [me];
+            const fitments = {};
+            same.filter(r => r.aircraft).forEach(r => {
+                const off = r.status === 'removed';
+                fitments[r.id] = {
+                    aircraft: r.aircraft, fittedDate: r.installDate || '', removedDate: r.removalDate || '',
+                    state: off ? 'removed' : 'on_wing',
+                    removalReason: r.removalReason || '', shopStatus: r.shopStatus || '',
+                    shopRef: r.shopRef || '', shopFinding: r.shopFinding || '',
+                };
+            });
+            return {
+                id: 'mm:' + mmId, lruId: 'modman', serial: snOf(me),
+                altSerial: me.isAstronics ? '' : (me.eclipseSn || ''), fitments,
+            };
+        }
         function openUnitHistory(unitId) {
-            const u = unitsLive[unitId];
+            const isMm = String(unitId).startsWith('mm:');
+            const u = isMm ? modmanUnit(unitId.slice(3)) : unitsLive[unitId];
             const ov = document.getElementById('unitHistOverlay');
             if (!u || !ov) return;
-            const lru = lruById(u.lruId) || {};
+            const lru = lruById(u.lruId) || (isMm ? { label: 'MODMAN', altSerialLabel: 'Eclipse' } : {});
             const life = unitLifecycle(u);
             const fits = unitFitmentsSorted(u).slice().reverse();
             const total = unitDaysOnWing(u);
