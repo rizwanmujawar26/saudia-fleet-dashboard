@@ -7895,8 +7895,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.203.0';
-        const APP_BUILD    = '2026.09.28.05';
+        const APP_VERSION  = '2.204.0';
+        const APP_BUILD    = '2026.09.29.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -10783,7 +10783,7 @@
         }
         const AC_MOVE_FLEET = ['type', 'fit', 'scope', 'system', 'fleetStatus', 'comments', 'delivered'];
         const AC_MOVE_AC = ['completionDate', 'otaPatchUTC', 'otaPatch3UTC', 'completionLocation', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'note', 'swVersion', 'retrofitLocation', 'retrofitStart', 'retrofitEnd', 'wifiVisibility', 'activatedDate', 'activationLocation', 'simRoaming', 'ugoVersion', 'tilesVersion', 'ops', 'opsLog', 'maintenance', 'modem', 'media'];
-        const AC_MOVE_SPEC = ['manufacturer', 'family', 'variant', 'engineMfr', 'engineModel', 'engineQty', 'seatConfig', 'seatBusiness', 'seatEconomy', 'seatTotal', 'deliveryDate', 'msn', 'remark', 'ifcPrevious', 'ifcNote'];
+        const AC_MOVE_SPEC = ['manufacturer', 'family', 'variant', 'engineMfr', 'engineModel', 'engineQty', 'seatConfig', 'seatBusiness', 'seatEconomy', 'seatTotal', 'deliveryDate', 'msn', 'remark', 'ifcPrevious', 'ifcNote', 'deliveryFlight'];
 
         async function acPatch(path, body, token) {
             if (!Object.keys(body).length) return;
@@ -15096,9 +15096,11 @@
                 </div>`;
             }
             const chipsEnd = loneMs + chipsRight;
-            const cfgStrip = (chipsLeft || chipsEnd || msTrack) ? `<div class="cfg-strip">
+            // A linefit draws its delivery flight where a retrofit draws its mod window.
+            const dlvFlight = isLinefitAc ? deliveryFlightHTML(v.aircraft, dspec, ar) : '';
+            const cfgStrip = (chipsLeft || chipsEnd || msTrack || dlvFlight) ? `<div class="cfg-strip">
                 ${chipsLeft || chipsEnd ? `<div class="cfg-top">${chipsLeft}<span class="sp"></span>${chipsEnd}</div>` : ''}
-                ${inWindowTrack || msTrack}
+                ${dlvFlight || inWindowTrack || msTrack}
             </div>` : '';
             const specCards = [airframeCard, modmanPrint, softwareCard, mediaCard].filter(Boolean);
             const configSection = `<div class="sec">Aircraft &amp; Configuration</div>
@@ -15284,6 +15286,50 @@
     font-size:10.5px; font-weight:800; color:var(--navy); }
   .ms-line.dash span { color:var(--muted); font-weight:700; }
   .pill-navy { background:var(--navy); color:#fff; border:1px solid var(--navy); }
+  /* Delivery flight (v2.204) — a linefit's ferry flight drawn in the milestone strip:
+     departure ⟶ arc with the aircraft at its apex ⟶ arrival, all times UTC. */
+  .dlv { margin-top:10px; }
+  .dlv-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .dlv-head .sp { flex:1 1 auto; }
+  .dlv-tag { font-size:9.5px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); }
+  .dlv-fn { font-size:13px; font-weight:800; color:var(--navy); letter-spacing:.3px; }
+  .dlv-cs { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:11px; color:var(--muted); }
+  .dlv-fr24 { font-size:11px; font-weight:700; color:#2f5f8a; text-decoration:none; border:1px solid #c4dcf2;
+    background:#eaf2fb; border-radius:99px; padding:1px 10px; white-space:nowrap; }
+  .dlv-fr24:hover { background:#dcebfa; }
+  .dlv-route { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:14px; margin-top:6px; }
+  .dlv-end { display:flex; flex-direction:column; line-height:1.2; min-width:0; }
+  .dlv-arr { text-align:right; align-items:flex-end; }
+  .dlv-k { font-size:9.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); }
+  .dlv-iata { font-size:24px; font-weight:800; color:var(--navy); letter-spacing:.5px; line-height:1.1; }
+  .dlv-city { font-size:11.5px; font-weight:600; color:var(--muted); }
+  .dlv-time { font-size:14px; font-weight:800; color:var(--ink); margin-top:4px; font-variant-numeric:tabular-nums; }
+  .dlv-time small { font-size:9.5px; font-weight:700; color:var(--muted); margin-left:3px; letter-spacing:.3px; }
+  .dlv-time sup { font-size:9.5px; font-weight:800; color:#8a5312; margin-left:2px; }
+  .dlv-date { font-size:11px; font-weight:600; color:var(--muted); }
+  .dlv-path { position:relative; height:100px; min-width:120px; }
+  .dlv-arc { position:absolute; left:0; right:0; top:4px; width:100%; height:64px; overflow:visible; }
+  .dlv-arc path { fill:none; stroke:var(--navy); stroke-width:2; stroke-dasharray:5 5; stroke-linecap:round; }
+  .dlv-pin { position:absolute; top:57.5px; width:9px; height:9px; border-radius:50%; background:var(--navy); }
+  .dlv-pin-l { left:calc(4 / 300 * 100% - 4.5px); }
+  .dlv-pin-r { right:calc(4 / 300 * 100% - 4.5px); background:var(--green); box-shadow:0 0 0 3px #d4ecdd; }
+  .dlv-plane { position:absolute; left:50%; top:30px; width:26px; height:26px; transform:translate(-50%, -50%);
+    fill:var(--navy); background:#fff; border-radius:50%; padding:3px; box-shadow:0 0 0 1px var(--line); }
+  .dlv-stats { position:absolute; left:50%; top:50px; transform:translateX(-50%); text-align:center; white-space:nowrap; line-height:1.25; }
+  .dlv-dur { display:block; font-size:15px; font-weight:800; color:var(--navy); font-variant-numeric:tabular-nums; }
+  .dlv-sub { display:block; font-size:10.5px; font-weight:600; color:var(--muted); }
+  .dlv-foot { margin-top:4px; padding-top:7px; border-top:1px dashed var(--line); font-size:11.5px; color:var(--muted); }
+  .dlv-foot b { color:var(--green); font-weight:800; }
+  .dlv-time, .dlv-date { white-space:nowrap; }
+  @media screen and (max-width:600px) {
+    .dlv-route { gap:8px; align-items:start; }
+    .dlv-iata { font-size:20px; }
+    .dlv-time { font-size:13px; }
+    .dlv-path { height:auto; min-width:0; padding-top:74px; }
+    .dlv-stats { position:static; transform:none; white-space:normal; }
+    .dlv-dur { font-size:14px; }
+    .dlv-sub { font-size:10px; }
+  }
   /* Proportional track — activation inside the mod window (v2.181). Dots sit at their real
      date position; the activation caption rides above the bar, start/end below. */
   .ms-track.ms-prop { display:block; position:relative; height:13px; margin:44px 4px 40px; }
@@ -21726,6 +21772,77 @@
             } finally {
                 el.disabled = false;
             }
+        }
+
+        // ===== Delivery flight (v2.204.0) =====
+        // A linefit / HBC+ aircraft has no retrofit window, so the AVR's Aircraft &
+        // Configuration strip draws its FERRY FLIGHT from the factory instead:
+        // /fleetSpecs/{tail}/deliveryFlight = { flight, callsign, date (DD-Mon-YYYY, the
+        // departure day in UTC), dep (HH:MM UTC — FR24 playback's first track point),
+        // durMin (FR24 "actual flight time"), from/fromIata, to/toIata, distanceKm
+        // (great circle), fr24Id (the playback hash) }. Arrival is DERIVED (dep + durMin,
+        // rolling to the next day past midnight UTC) — never stored, so it cannot drift.
+        // Returns '' when the tail has no record, so the strip falls back to its chips.
+        function deliveryFlightHTML(tail, spec, ac) {
+            const f = (spec || {}).deliveryFlight;
+            if (!f || !f.flight || !f.dep) return '';
+            const p2 = n => String(n).padStart(2, '0');
+            const [h, m] = f.dep.split(':').map(Number);
+            const dur = +f.durMin || 0;
+            const arrAbs = h * 60 + m + dur;
+            const arrTime = `${p2(Math.floor(arrAbs / 60) % 24)}:${p2(arrAbs % 60)}`;
+            const depDate = f.date || spec.deliveryDate || '';
+            const depIso = toISODate(depDate);
+            const plusDays = Math.floor(arrAbs / 1440);
+            const arrDate = depIso && plusDays
+                ? fmtDate(new Date(Date.parse(depIso + 'T00:00:00Z') + plusDays * 86400000).toISOString().slice(0, 10))
+                : depDate;
+            const durTxt = `${Math.floor(dur / 60)}h ${p2(dur % 60)}m`;
+            const km = +f.distanceKm || 0;
+            const nm = km ? Math.round(km / 1.852) : 0;
+            const kmh = km && dur ? Math.round(km / (dur / 60)) : 0;
+            const n = x => x.toLocaleString('en-GB');
+            const url = fr24Url(tail) + (f.fr24Id ? '#' + f.fr24Id : '');
+            // Days from arrival to entry into service — the linefit's "gap to service".
+            const toSvc = (() => {
+                const a = toISODate(arrDate), b = toISODate((ac || {}).activatedDate || '');
+                if (!a || !b) return null;
+                const d = Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+                return d >= 0 ? d : null;
+            })();
+            const end = (side, k, iata, city, time, date, plus) => `<div class="dlv-end dlv-${side}">
+                    <span class="dlv-k">${k}</span>
+                    <span class="dlv-iata">${escAttr(iata || '—')}</span>
+                    <span class="dlv-city">${escAttr(city || '')}</span>
+                    <span class="dlv-time">${escAttr(time)}<small>UTC</small>${plus ? `<sup>+${plus}</sup>` : ''}</span>
+                    <span class="dlv-date">${escAttr(date || '')}</span>
+                </div>`;
+            // Material "flight" glyph (Apache-2.0), drawn pointing right along the arc.
+            const plane = '<svg class="dlv-plane" viewBox="0 0 24 24" aria-hidden="true"><path transform="rotate(90 12 12)" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>';
+            return `<div class="dlv">
+                <div class="dlv-head">
+                    <span class="dlv-tag">Delivery flight</span>
+                    <b class="dlv-fn">${escAttr(f.flight)}</b>${f.callsign ? `<span class="dlv-cs">${escAttr(f.callsign)}</span>` : ''}
+                    <span class="sp"></span>
+                    <a class="dlv-fr24" href="${escAttr(url)}" target="_blank" rel="noopener" title="Open this flight's playback on Flightradar24">Flightradar24 ↗</a>
+                </div>
+                <div class="dlv-route">
+                    ${end('dep', 'Departed', f.fromIata, f.from, f.dep, depDate, 0)}
+                    <div class="dlv-path">
+                        <svg class="dlv-arc" viewBox="0 0 300 64" preserveAspectRatio="none" aria-hidden="true">
+                            <path d="M4,58 Q150,-6 296,58" vector-effect="non-scaling-stroke"/>
+                        </svg>
+                        <span class="dlv-pin dlv-pin-l"></span><span class="dlv-pin dlv-pin-r"></span>
+                        ${plane}
+                        <div class="dlv-stats">
+                            <span class="dlv-dur">${durTxt}</span>
+                            <span class="dlv-sub">${[km ? `${n(km)} km · ${n(nm)} nm` : '', kmh ? `avg ${n(kmh)} km/h` : ''].filter(Boolean).join(' · ')}</span>
+                        </div>
+                    </div>
+                    ${end('arr', 'Arrived', f.toIata, f.to, arrTime, arrDate, plusDays)}
+                </div>
+                ${ac && ac.activatedDate ? `<div class="dlv-foot">Activated <b>${escAttr(ac.activatedDate)}</b>${toSvc != null ? ` · ${toSvc === 0 ? 'on arrival day' : `${toSvc} ${toSvc === 1 ? 'day' : 'days'} after arrival`}` : ''}${activationLocationOf(ac) ? ` · ${escAttr(activationLocationOf(ac))}` : ''}</div>` : ''}
+            </div>`;
         }
 
         // ===== Unit History (v2.199.0) =====
