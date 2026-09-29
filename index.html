@@ -7901,8 +7901,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.206.1';
-        const APP_BUILD    = '2026.09.29.06';
+        const APP_VERSION  = '2.206.2';
+        const APP_BUILD    = '2026.09.29.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -23358,7 +23358,9 @@
                                // and nothing about it is stored with a location — so it carries
                                // no pill and must NOT inherit the install/base station fallback.
                                location: '',
-                               title: l.cycle ? `Media ${cycleToDisplay(l.cycle)}` : 'Media load',
+                               // Light Media (the baseline on every new aircraft) already reads as
+                               // "Light Media" — prefixing "Media" doubled the word.
+                               title: l.cycle ? (isLightMediaCycle(l.cycle) ? cycleToDisplay(l.cycle) : `Media ${cycleToDisplay(l.cycle)}`) : 'Media load',
                                // No "late" remark (user, 2026-09-29): a load after the cycle
                                // closed still belongs to that cycle and is reported in its MLR.
                                sub: l.source || '' });

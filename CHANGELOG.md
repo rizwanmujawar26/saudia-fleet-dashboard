@@ -13,6 +13,9 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.206.2 — Timeline: Light Media title no longer doubled (2026-09-29)
+A 0526 (Light Media baseline) load read "Media Light Media" on the Timeline; it now reads "Light Media".
+
 ### v2.206.1 — Media: no "late" remark on the Timeline; MLR measures roll-out in-window (2026-09-29)
 A load after the cycle closed (ASAA, Sep 2026, loaded 29-Sep) no longer shows `· late` on the Timeline — it
 belongs to that cycle and is reported in its MLR. The MLR still counts it towards completion and tags it Late in
