@@ -13,6 +13,52 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.206.0 — Home Watchlist: AOG vs Planned ground time (2026-09-29)
+Grounded splits into **🚨 AOG — Unplanned** (red band, first) and **🛬 Planned ground time** (checks, mods,
+storage, painting — purple band); Maintenance unchanged. Empty groups are not drawn.
+
+### v2.205.0 — Hardware: assign a spare SIM to an aircraft (2026-09-29)
+In edit mode a spare row's TAIL cell is a picker of aircraft with an EMPTY slot for its LRU, and Fitted takes
+the date; both set → `hwAssignSpare` adds an on-wing fitment to the spare's OWN record, carrying its roaming.
+The typed-serial path (`hwCreateFromRow` reuse) now carries the unit's roaming too. Data: ASAA SIM …35915
+fitment `roaming=global` (the user had fitted it by typing the serial; the plan had not followed).
+
+### v2.204.2 — Satcom: IPHO editable when a retrofit tail has no stored fit (2026-09-29)
+`satcomRows` gated IPHO on the raw `/fleet` `fit`; ASAA and AS73 were In Retrofit with none, so IPHO sat N/A.
+Now `fitOf(ac)`. Data: `fit=retrofit` set on `/fleet/ASAA` and `/fleet/AS73`.
+
+### v2.204.1 — HBC+ MODMAN reads ASTRONICS + S/N pill; delivery flight drops nm (2026-09-29)
+An Airbus HBC+ box has one identity: "ASTRONICS [226]". The placeholder Kontron values stored on those
+records ('0' ASBA, 'N/A' ASBB) are never shown; the dossier's Kontron row is suppressed for Astronics.
+
+### v2.204.0 — AVR: linefit aircraft draw their delivery flight (2026-09-29)
+Where a retrofit shows its mod window, ASBA/ASBB/ASBE show the TLS→JED ferry flight: flight no. + callsign,
+departure and derived arrival (UTC), flight time, km, average speed, an arc with the aircraft at its apex,
+activation gap after arrival, and a Flightradar24 playback link. New `/fleetSpecs/{tail}/deliveryFlight`
+(rules first). Phone layout moves the stats below the arc.
+
+### v2.203.0 — New Aircraft Visit defaults to Jeddah (2026-09-28)
+Airport/station was filled on aircraft change from the tail's completion/install site (Toulouse for a linefit).
+A new Aircraft Visit now starts at Jeddah; other types blank; Jeddah · Riyadh quick picks; an untouched
+default follows the report type; existing reports keep their location.
+
+### v2.202.2 — Removed equipment shows Reason for removal AND Shop finding (2026-09-28)
+Hardware Aircraft view showed only the finding; the AVR showed one or the other for earlier removals. Both now
+list the reason, then the finding, each when recorded.
+
+### v2.202.1 — MODMAN serials open Unit History (2026-09-28)
+`modmanUnit()` folds every `/modmans` record sharing the primary serial into a unit-shaped object
+(`'mm:<id>'`) that `openUnitHistory` and the ↻ chip read as-is. Linked in the Aircraft view and MODMAN tab.
+
+### v2.202.0 — AVR form: quick-add people chips (2026-09-28)
+Technician (Saudia Technic), Murtuza (NSG), Rizwan (NSG) pinned, then up to 5 regulars (2+ reports) by
+frequency — derived from `/avr` attendees, no stored list. A chip fills the blank row with name, company,
+usual role and usual mode, and hides while that person is listed.
+
+### v2.201.1 — AVR: MODMAN Reason for removal shows (2026-09-28)
+`satcomRows()` builds rows from a fixed field list and never exposed `removalReason`, so the report's MODMAN
+path read it blank. Added.
+
 ### v2.201.0 — HBC+ software: FLS6 / SBC config / Local config (2026-09-27)
 New `/aircraft` fields `fls6Version`, `sbcConfig`, `localConfig` (+ `*Date`), rules added. AVR report for
 HBC+: "SBC config Pending" dropped from the config strip; one full-width **Software & Connectivity** card,

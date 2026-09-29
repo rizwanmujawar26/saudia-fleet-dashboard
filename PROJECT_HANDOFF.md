@@ -1046,6 +1046,17 @@ still handles both forms; the Fleet **Delivery** column renders full `dd-mmm-yyy
 `deliveryLong()`, falling back to `Mon-YYYY` only for a legacy month-only value. This is
 the "curl the node before trusting a doc figure" rule in the flesh.
 
+**`deliveryFlight` (v2.204.0)** — a linefit's factory ferry flight, drawn on the AVR
+where a retrofit draws its mod window (`deliveryFlightHTML`): `{ flight, callsign,
+date (DD-Mon-YYYY, departure day UTC), dep (HH:MM UTC — the FR24 playback's FIRST track
+point, on the ground), durMin (FR24 "actual flight time"), from/fromIata, to/toIata,
+distanceKm, fr24Id (the playback hash → fr24Url(tail)#id) }`. **Arrival is derived**
+(dep + durMin, `+1` past midnight UTC), never stored. Has its own `.validate` block with
+`$other: false`. Seeded for ASBA (SV9010, 24-May), ASBB (SV9016, 02-Jul) and ASBE (SV9020,
+21-Sep), all TLS→JED — dates confirmed by the user 2026-09-29. **No editor UI** — a new
+linefit delivery is written by hand (FR24's free tier keeps only 7 days, so the details
+come from the user's playback screenshots). Kept on re-key (`AC_MOVE_SPEC`).
+
 ### `/aircraft/{tail}` — per-aircraft state
 
 | field | values |
@@ -1302,6 +1313,13 @@ meaningfully carry a serial with no date, which is exactly what the backlog need
 Activity's Old/New part fields now write to `/units` via `unitWritesForActivity()`.
 
 ### `/modmans/{id}` — the MODMAN register, one record per physical box
+
+⚠️ **Read through `satcomRows()`, which exposes a FIXED field list** — add any new field
+there or it reads blank everywhere (v2.201.1: `removalReason`). A box's Unit History is
+**derived** by `modmanUnit(id)` (v2.202.1): every record sharing the primary serial becomes
+one fitment of an `'mm:<id>'` unit-shaped object. **HBC+ (Astronics) records carry
+placeholder `kontronSn` `'0'`/`'N/A'`** (ASBA, ASBB) — never display Kontron for them
+(v2.204.1); the stored values are left as-is pending the user's call.
 
 **The Satcom tab's node, and a deliberate exception to "no duplicate nodes".** Unlike
 the SIM register (which has no node and derives from `/units`), a MODMAN carries
@@ -1943,6 +1961,12 @@ Operational**. Adding a kind is one line in `TIMELINE_KINDS`; the dropdown deriv
 
 `#timelinePinned` sits between the calendar strip and the day list and lists every
 Active aircraft whose `ops.state` is an `out: true` state, **longest out first**.
+
+**Three groups since v2.206.0** (now titled 📌 Watchlist): **🚨 AOG — Unplanned**
+(`ops.state === 'aog'`, red band) first, then **🛬 Planned ground time** (every other
+`out: true` state — checks, mods, storage, painting; purple band), then **🔧 Maintenance**
+(flying, open `/issues`). A group with no rows is not drawn. A tail that has entered
+service keeps showing under Planned until its ops period is closed — that is data, not a bug.
 
 ⚠️ **It is built from the roster, NOT from the filtered items**, and is deliberately
 **not subject to the kind filter**. It is a standing banner rather than one of the
