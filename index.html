@@ -7901,8 +7901,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.206.0';
-        const APP_BUILD    = '2026.09.29.05';
+        const APP_VERSION  = '2.206.1';
+        const APP_BUILD    = '2026.09.29.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15782,7 +15782,12 @@
 
             // The journey: entered dates, then the first and last aircraft.
             const journey = MEDIA_JOURNEY.map(j => ({ ...j, date: mc[j.key] || '' }));
-            const firstLoad = loads[0] || null, lastLoad = loads[loads.length - 1] || null;
+            // The last aircraft is the last one loaded WITHIN the cycle window. A load after
+            // the close still counts towards completion, but must not stretch the roll-out
+            // or the content-to-last-aircraft span — it is named separately (lateLoads).
+            const lateLoads = loads.filter(l => l.late);
+            const onTime = loads.filter(l => !l.late);
+            const firstLoad = loads[0] || null, lastLoad = onTime[onTime.length - 1] || loads[loads.length - 1] || null;
             const iso = k => (mc[k] ? toISODate(mc[k]) : '');
             const span = (a, b) => (a && b ? mlrDaysBetween(a, b) : null);
             const durations = {
@@ -15800,7 +15805,7 @@
                 firstWeek: daily.slice(0, 7).reduce((x, y) => x + y, 0),
                 t50: reach(50), t90: reach(90), t100: reach(100),
                 median, daily, peak: { day: peakDay + 1, iso: isoOfDay(peakDay + 1), n: daily[peakDay] || 0 },
-                weeks, busiestWeek, byType, missing, late: loads.filter(l => l.late).length,
+                weeks, busiestWeek, byType, missing, late: lateLoads.length, lateLoads,
                 journey, durations, disks: mediaDisksForCycle(cycle), disksLocked: !!mc.disksSnapshotAt, disksSnapshotAt: mc.disksSnapshotAt || '', disksISO: iso('disksToTeam'),
                 isoOfDay,
             };
@@ -15870,7 +15875,7 @@
                 out.push({ k: 'Finish', t:
                     `The last aircraft was loaded on ${fd(d.lastLoad.iso)} (day ${d.lastLoad.day}).`
                     + (tail != null ? ` The final 10% took ${mlrPlural(tail, 'day')} — ${long ? 'a long tail relative to the cycle' : 'a short tail'}.` : '')
-                    + (d.late ? ` ${mlrPlural(d.late, 'load')} landed after the cycle closed and still count towards it.` : '') });
+                    + (d.late ? ` ${d.lateLoads.map(l => `${l.tail} (${fd(l.iso)})`).join(', ')} ${d.late === 1 ? 'was' : 'were'} loaded after the cycle closed and still ${d.late === 1 ? 'counts' : 'count'} towards it.` : '') });
             }
 
             if (prev && prev.done && !d.open) {
@@ -23354,7 +23359,9 @@
                                // no pill and must NOT inherit the install/base station fallback.
                                location: '',
                                title: l.cycle ? `Media ${cycleToDisplay(l.cycle)}` : 'Media load',
-                               sub: (l.source || '') + (loadIsLate(l) ? ' · late' : '') });
+                               // No "late" remark (user, 2026-09-29): a load after the cycle
+                               // closed still belongs to that cycle and is reported in its MLR.
+                               sub: l.source || '' });
                 });
             });
 

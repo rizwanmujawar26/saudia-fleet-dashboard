@@ -13,6 +13,12 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.206.1 — Media: no "late" remark on the Timeline; MLR measures roll-out in-window (2026-09-29)
+A load after the cycle closed (ASAA, Sep 2026, loaded 29-Sep) no longer shows `· late` on the Timeline — it
+belongs to that cycle and is reported in its MLR. The MLR still counts it towards completion and tags it Late in
+the log, but Last aircraft / Roll-out / Content-to-last-aircraft now use the last load WITHIN the window, and the
+Finish narrative names each post-close load by tail and date.
+
 ### v2.206.0 — Home Watchlist: AOG vs Planned ground time (2026-09-29)
 Grounded splits into **🚨 AOG — Unplanned** (red band, first) and **🛬 Planned ground time** (checks, mods,
 storage, painting — purple band); Maintenance unchanged. Empty groups are not drawn.
