@@ -6,7 +6,11 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.199.0–v2.201.0 (2026-09-25 → 09-27).** Unit lifecycle, AVR swap tags, HBC+ software.
+**Latest — v2.206.1–v2.206.2 (2026-09-29).** Media: no Timeline "late" remark; MLR roll-out /
+last aircraft measured inside the cycle window, post-close loads named (see *Media module specifics*);
+Light Media Timeline title de-duplicated.
+
+**Before that — v2.199.0–v2.201.0 (2026-09-25 → 09-27).** Unit lifecycle, AVR swap tags, HBC+ software.
 
 - **Unit lifecycle (v2.199).** A serial is one box for life: a repaired/NFF box fitted again gains a
   fitment on its existing `/units` record (history carried), never a "duplicate". `serialReuse()` gates
@@ -3494,6 +3498,15 @@ clears them rather than keeping a stale month.
   with the total and percentage — never stored, like the Activation milestone.
   ⚠️ Because a late load still counts toward its cycle (user's call), that figure can
   **rise after the close date**: it is the cycle's total, not a frozen snapshot.
+  ⚠️ **No "late" remark on a load row** (user, 2026-09-29, v2.206.1). A post-close load
+  (ASAA took September on 29-Sep because October disks were still being duplicated) is
+  just that cycle's load on the Timeline. The MLR is where lateness is reported: it
+  counts toward completion, is tagged Late in the log and named in the Finish line, but
+  **Last aircraft / Roll-out / Content-to-last-aircraft use the last load INSIDE the
+  window** (`lateLoads` vs `onTime` in `mediaReportData()`), or one straggler stretches
+  the cycle's headline spans. A Light Media row is titled "Light Media", not
+  "Media Light Media" (v2.206.2). A new aircraft typically shows Light Media then the
+  running month within hours — both rows are correct.
 
 - `mediaStatus` is **never stored** — it is relative to the newest cycle in the
   fleet, so a stored value goes stale the moment a newer cycle lands.
