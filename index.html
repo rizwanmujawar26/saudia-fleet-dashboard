@@ -5016,7 +5016,21 @@
         a.avr-assign-item { display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; box-sizing: border-box; }
         .dl-item-ref { margin-left: auto; font-size: 10.5px; font-weight: 700; color: #146c3a; white-space: nowrap;
             padding: 1px 7px; border-radius: 999px; background: #e7f4ec; border: 1px solid #bfe3cd; }
-        .dl-item-open { font-size: 10px; font-weight: 700; color: #8a6d00; text-transform: uppercase; letter-spacing: .03em; }
+        /* Every row has the same shape — status icon · month over status line · ref pill —
+           so the running cycle no longer wraps its month onto two lines (user, 2026-10-04). */
+        a.avr-assign-item.dl-item { gap: 10px; padding: 7px 10px; }
+        .dl-item-ic { flex: none; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+        .dl-item-ic svg { display: block; }
+        .dl-item-ic.is-done { background: #e7f4ec; color: #146c3a; box-shadow: inset 0 0 0 1px #bfe3cd; }
+        .dl-item-ic.is-open { background: #fff6dc; box-shadow: inset 0 0 0 1px #f0d98a; }
+        .dl-item-ic.is-open::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #d69e00;
+            animation: dlPulse 1.6s ease-in-out infinite; }
+        @keyframes dlPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(214,158,0,.45); } 60% { box-shadow: 0 0 0 5px rgba(214,158,0,0); } }
+        @media (prefers-reduced-motion: reduce) { .dl-item-ic.is-open::after { animation: none; } }
+        .dl-item-txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+        .dl-item-month { font-size: 13px; font-weight: 600; white-space: nowrap; }
+        .dl-item-state { font-size: 10.5px; font-weight: 600; color: #6b7a72; white-space: nowrap; margin-top: 1px; }
+        .dl-item-state.is-open { color: #8a6d00; }
         .dl-menu-head { padding: 6px 12px 4px; font-size: 10.5px; font-weight: 700; color: #6b7a72; text-transform: uppercase; letter-spacing: .05em; }
         .dl-menu-empty { padding: 8px 12px; font-size: 12.5px; color: #6b7a72; }
 
@@ -7901,8 +7915,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.206.2';
-        const APP_BUILD    = '2026.09.29.07';
+        const APP_VERSION  = '2.206.3';
+        const APP_BUILD    = '2026.10.04.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12822,13 +12836,15 @@
             const base = location.origin + location.pathname;
             const items = mediaReportCycles().map(c => {
                 const open = !mediaCycleWindow(c).end;
-                return `<a class="avr-assign-item" role="menuitem" href="${escAttr(base + '#mlr=' + encodeURIComponent(c))}" target="_blank" rel="noopener" onclick="closeAssignMenuSoon()" title="Open the Media Loading Report for ${escAttr(cycleViewLabel(c))} in a new tab">📊 ${escAttr(cycleViewLabel(c))}${open ? ' <span class="dl-item-open">running</span>' : ''}<span class="dl-item-ref">${escAttr(mlrRef(c))}</span></a>`;
+                const ic = open ? '<span class="dl-item-ic is-open" aria-hidden="true"></span>'
+                    : '<span class="dl-item-ic is-done" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 6.3l2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+                return `<a class="avr-assign-item dl-item" role="menuitem" href="${escAttr(base + '#mlr=' + encodeURIComponent(c))}" target="_blank" rel="noopener" onclick="closeAssignMenuSoon()" title="Open the Media Loading Report for ${escAttr(cycleViewLabel(c))} in a new tab">${ic}<span class="dl-item-txt"><span class="dl-item-month">${escAttr(cycleViewLabel(c))}</span><span class="dl-item-state${open ? ' is-open' : ''}">${open ? 'In progress' : 'Completed'}</span></span><span class="dl-item-ref">${escAttr(mlrRef(c))}</span></a>`;
             }).join('');
             menu.innerHTML = `<div class="dl-menu-head">Media Loading Reports</div>` +
                 (items || '<div class="dl-menu-empty">No cycle has been released yet.</div>');
             document.body.appendChild(menu);
             const r = btn.getBoundingClientRect();
-            const w = 260;
+            const w = 270;
             menu.style.width = w + 'px';
             menu.style.top = (r.bottom + 6) + 'px';
             menu.style.left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8)) + 'px';

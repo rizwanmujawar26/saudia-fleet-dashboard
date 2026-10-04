@@ -13,6 +13,11 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.206.3 — Media Download menu: uniform rows (2026-10-04)
+Every report row now has the same shape: a status icon (green ✓ completed, pulsing amber dot in progress), the month
+on one line with "Completed" / "In progress" beneath it, then the MLR ref pill. The old inline RUNNING tag pushed the
+running month onto two lines.
+
 ### v2.206.2 — Timeline: Light Media title no longer doubled (2026-09-29)
 A 0526 (Light Media baseline) load read "Media Light Media" on the Timeline; it now reads "Light Media".
 
