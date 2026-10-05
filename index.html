@@ -2405,6 +2405,32 @@
         .deliv-flt .fleet-date { border-bottom: 1px dotted #7d98b8; }
         .deliv-flt-ic { font-size: 9px; color: #2f7fd0; margin-left: 3px; }
 
+        /* ===== Flight row — boarding-pass line (v2.212.0) ===== */
+        .flt-chip, .flt-route { font: inherit; border: none; cursor: pointer; }
+        .flt-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; letter-spacing: .02em; color: #fff;
+            background: linear-gradient(120deg, #0b1f3a, #123a63); border-radius: 999px; padding: 3px 10px 3px 8px; box-shadow: 0 1px 3px rgba(11,31,58,.25); transition: transform .12s, box-shadow .12s; }
+        .flt-chip svg { color: #7fd3ff; }
+        .flt-chip:hover, .flt-chip.on, .flt-chip:focus-visible { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(11,31,58,.3); outline: none; }
+        .flt-kind-txt { font-size: 12.5px; font-weight: 700; color: #0b1f3a; white-space: nowrap; }
+        .flt-route { display: inline-flex; align-items: center; gap: 6px; background: #f3f7fb; border: 1px solid #dfe8f1; border-radius: 999px; padding: 2px 10px; transition: background .12s, border-color .12s; }
+        .flt-route:hover, .flt-route.on, .flt-route:focus-visible { background: #e9f1fb; border-color: #b7d0ea; outline: none; }
+        .flt-route b { font-size: 12px; font-weight: 800; color: #0b1f3a; letter-spacing: .03em; }
+        .flt-route small { font-size: 10.5px; font-weight: 700; color: #5d7286; }
+        .flt-line { position: relative; display: inline-block; width: 64px; height: 13px; }
+        .flt-line::before { content: ''; position: absolute; left: 0; right: 0; top: 6px; border-top: 1.5px dashed #b7c7d8; }
+        .flt-line i { position: absolute; left: 0; top: 5.5px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, #3ddc84, #2f7fd0); }
+        .flt-line.landed i { right: 13px; }
+        .flt-line .flt-pl { position: absolute; top: 0; line-height: 0; color: #1c5b96; }
+        .flt-line.landed .flt-pl { right: 0; }
+        .flt-line.scheduled .flt-pl { left: 0; color: #8a96a1; }
+        .flt-line.live .dlv-plane { color: #d03a3a; }
+        .flt-dur { font-size: 10.5px; font-weight: 800; color: #44525e; background: #eef1f4; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+        .flt-st { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+        .flt-st-landed { background: #e7f4ec; color: #146c3a; border: 1px solid #bfe3cd; }
+        .flt-st-enroute { background: #fdeff0; color: #b42a33; border: 1px solid #f6c9ce; }
+        .flt-st-scheduled { background: #e9f1fb; color: #1c5b96; border: 1px solid #c9dcf1; }
+        @media (max-width: 760px) { .flt-kind-txt, .flt-dur, .flt-route small { display: none; } .flt-line { width: 40px; } }
+
         /* ===== Delivery flight card (v2.211.0) — a flight-tracker widget ===== */
         .fc-card { position: fixed; z-index: 1300; width: 330px; max-width: calc(100vw - 16px); border-radius: 16px; overflow: hidden;
             background: #fff; box-shadow: 0 14px 40px rgba(11,31,58,.28), 0 2px 6px rgba(11,31,58,.12); font-family: inherit;
@@ -8048,8 +8074,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.211.0';
-        const APP_BUILD    = '2026.10.06.01';
+        const APP_VERSION  = '2.212.0';
+        const APP_BUILD    = '2026.10.06.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -11627,21 +11653,41 @@
         // delay) and runs to the end over the remaining time, so nothing re-renders.
         // A pending delivery's row on the Timeline / Activity: the live strip while in the
         // air, just the FR24 link while scheduled. '' for every other row.
-        // A Flight row's tail end on the Timeline / Activity: the live strip while it is in
-        // the air, otherwise the FR24 link to its playback (when one is recorded).
-        function tlDeliveryLive(x) {
-            if (!x || !x.flightId || !flightsLive[x.flightId]) return '';
-            const d = flightPhaseOf(flightsLive[x.flightId]);
-            if (!d) return '';
-            if (d.phase === 'enroute') return `<span class="tl-dlv-live">${deliveryLiveHTML(x.tail, d)}</span>`;
-            return d.f.fr24Id ? `<span class="tl-dlv-live">${deliveryFr24Link(x.tail, d.f)}</span>` : '';
+        // A Flight row on the Timeline / Activity, re-imagined as a boarding-pass line
+        // (v2.212.0): [✈ FLIGHT chip] kind · FROM time ━✈━ time TO · duration · status ·
+        // FR24. The chip and the route both open the flight card; while the flight is in
+        // the air the route is the live gliding strip.
+        function flightRowMainHTML(x) {
+            const raw = flightsLive[x.flightId];
+            const d = raw && flightPhaseOf(raw);
+            if (!d) return `<span class="tl-title">${escAttr(x.title)}</span>${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}`;
+            const f = d.f, k = flightKindOf(f.kind);
+            const id = escAttr(x.flightId), tail = escAttr(x.tail);
+            const total = d.arrMs - d.depMs;
+            const dur = `${Math.floor(total / 3600000)}h ${String(Math.round(total / 60000) % 60).padStart(2, '0')}m`;
+            const st = d.phase === 'landed' ? ['landed', f.kind === 'delivery' ? 'Delivered' : 'Landed']
+                : d.phase === 'enroute' ? ['enroute', 'In flight'] : ['scheduled', 'Scheduled'];
+            const plane = '<svg viewBox="0 0 24 24" width="13" height="13"><path transform="rotate(90 12 12)" fill="currentColor" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>';
+            const elapsed = Math.min(total, Math.max(0, d.now - d.depMs));
+            const line = d.phase === 'enroute'
+                ? `<span class="flt-line live"><span class="dlv-plane" style="animation-duration:${(total / 1000).toFixed(0)}s;animation-delay:-${(elapsed / 1000).toFixed(0)}s">${plane}</span></span>`
+                : `<span class="flt-line ${d.phase}"><i></i><span class="flt-pl">${plane}</span></span>`;
+            return `<button type="button" class="flt-chip flt-trigger" data-flight="${id}" data-tail="${tail}" title="Open the flight card">${plane}${escAttr(f.flight || '')}</button>`
+                + `<span class="flt-kind-txt">${escAttr(k.label)}</span>`
+                + `<button type="button" class="flt-route flt-trigger" data-flight="${id}" data-tail="${tail}" title="${escAttr(f.from || '')} → ${escAttr(f.to || '')} — open the flight card">`
+                + `<b>${escAttr(f.fromIata || '')}</b><small>${d.depHM}Z</small>${line}<small>${d.arrHM}Z</small><b>${escAttr(f.toIata || '')}</b></button>`
+                + `<span class="flt-dur">${dur}</span>`
+                + `<span class="flt-st flt-st-${st[0]}">${st[1]}</span>`
+                + (f.fr24Id ? deliveryFr24Link(x.tail, f) : '');
         }
+
         // ===== Delivery flight card (v2.211.0, user 2026-10-06) =====
         // Hover (or click / Enter, for touch and keyboard) a Fleet delivery date that has
         // a recorded flight: a flight-tracker card — route, times, duration, distance,
         // average speed, aircraft, gap to service, FR24 playback. One floating element.
-        function dlvCardHTML(tail) {
-            const f = deliveryFlightOf(tail);
+        function dlvCardHTML(tail, flightId) {
+            // A Timeline row opens its own flight (any kind); the Fleet date its delivery.
+            const f = flightId && flightsLive[flightId] ? { id: flightId, ...flightsLive[flightId] } : deliveryFlightOf(tail);
             const d = flightPhaseOf(f, (fleetSpecsLive[tail] || {}).deliveryDate);
             if (!d) return '';
             const k = flightKindOf(f.kind || 'delivery');
@@ -11686,7 +11732,7 @@
         function dlvCardShow(trigger, pin) {
             clearTimeout(dlvCardHideT);
             const tail = trigger.dataset.tail;
-            const html = dlvCardHTML(tail);
+            const html = dlvCardHTML(tail, trigger.dataset.flight);
             if (!html) return;
             if (!dlvCardEl) {
                 dlvCardEl = document.createElement('div');
@@ -11696,10 +11742,10 @@
                 dlvCardEl.addEventListener('mouseleave', () => { if (!dlvCardPinned) dlvCardHide(); });
                 document.body.appendChild(dlvCardEl);
             }
-            document.querySelectorAll('.deliv-flt.on').forEach(e => e.classList.remove('on'));
+            document.querySelectorAll('.deliv-flt.on, .flt-trigger.on').forEach(e => e.classList.remove('on'));
             trigger.classList.add('on');
             dlvCardEl.innerHTML = html;
-            dlvCardEl.setAttribute('aria-label', `Delivery flight of ${tail}`);
+            dlvCardEl.setAttribute('aria-label', `Flight card — ${tail}`);
             dlvCardFor = trigger; dlvCardPinned = !!pin;
             // Below the date when there is room, else above; clamped to the viewport.
             const r = trigger.getBoundingClientRect();
@@ -11722,7 +11768,7 @@
         }
         (function initDlvCard() {
             const hoverable = window.matchMedia && window.matchMedia('(hover: hover)').matches;
-            const trig = e => e.target.closest && e.target.closest('.deliv-flt');
+            const trig = e => e.target.closest && e.target.closest('.deliv-flt, .flt-trigger');
             if (hoverable) {
                 document.addEventListener('mouseover', e => { const t = trig(e); if (t && t !== dlvCardFor && !dlvCardPinned) dlvCardShow(t, false); else if (t) clearTimeout(dlvCardHideT); });
                 document.addEventListener('mouseout', e => { const t = trig(e); if (t && !dlvCardPinned && !(e.relatedTarget && (t.contains(e.relatedTarget) || (dlvCardEl && dlvCardEl.contains(e.relatedTarget))))) dlvCardHide(); });
@@ -13816,9 +13862,10 @@
                        : x.kind === 'activation' ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>'
                        : x.kind === 'modification' ? `<span class="tl-mod-mark" aria-hidden="true">${x.modPhase === 'start' ? '🔧' : '🏁'}</span>`
                        : '';
-            const main = `${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}`
+            const main = (x.kind === 'flight' ? flightRowMainHTML(x)
+                : `${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}`
                 + `<span class="tl-title">${escAttr(x.title)}</span>`
-                + `${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}${tlEclPill(x.ecl)}${tlDeliveryLive(x)}`
+                + `${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}${tlEclPill(x.ecl)}`)
                 + `<span class="avr-spacer"></span>${visitChip}${srcTag}${actions}`;
             return `<li class="repo-row kind-${x.kind} tl-grid">${tlCells({
                 mark,
@@ -24853,7 +24900,7 @@
                         reg: escAttr(x.tail),
                         type: typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : '',
                         kind: kind ? '' : `<span class="tl-kind tl-kind-${x.kind}">${x.kind === 'visit' ? 'REPORT' : x.kind}</span>`,
-                        main: `${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}<span class="tl-title">${escAttr(x.title)}</span>${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}${tlEclPill(x.ecl)}${tlDeliveryLive(x)}`,
+                        main: x.kind === 'flight' ? flightRowMainHTML(x) : `${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}<span class="tl-title">${escAttr(x.title)}</span>${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}${tlEclPill(x.ecl)}`,
                     })}</div>
                 </li>`;
             };

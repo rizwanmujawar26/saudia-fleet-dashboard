@@ -13,6 +13,12 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.212.0 — Timeline/Activity: Flight rows as a boarding-pass line that opens the flight card (2026-10-06)
+`flightRowMainHTML(x)`: [✈ FLIGHT chip] kind · FROM time ━✈━ time TO · duration · status (Scheduled / In flight /
+Delivered|Landed) · FR24. The chip and the route are `.flt-trigger`s that open the v2.211 flight card for THAT flight
+(`dlvCardHTML(tail, flightId)` — any kind, not only deliveries). In the air the route line carries the gliding plane.
+Narrow screens keep chip · route · status. `tlDeliveryLive` retired (folded into the row).
+
 ### v2.211.0 — Fleet: delivery flight card on the Delivery date (2026-10-06)
 A delivery date whose tail has a recorded delivery flight (`deliveryFlightOf`) gets a dotted underline + ✈ and opens a
 flight-tracker card (`dlvCardHTML` / `dlvCardShow`) on hover — or click/Enter for touch and keyboard: navy band with
