@@ -7931,8 +7931,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.207.0';
-        const APP_BUILD    = '2026.10.05.01';
+        const APP_VERSION  = '2.208.0';
+        const APP_BUILD    = '2026.10.05.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15838,13 +15838,19 @@
             let peakDay = 0;
             daily.forEach((n, i) => { if (n > daily[peakDay]) peakDay = i; });
 
+            // At least four weeks, every one dated — the dates are known on day 1. While the
+            // cycle is open a week is a full seven days; one that has not started is
+            // `future` (drawn greyed), the one containing today is `current` (user, 2026-10-05).
             const weeks = [];
             let cum = 0;
-            for (let s = 1; s <= daily.length; s += 7) {
-                const e = Math.min(s + 6, daily.length);
-                const n = daily.slice(s - 1, e).reduce((x, y) => x + y, 0);
+            const weekSpan = Math.max(28, open ? Math.ceil(daily.length / 7) * 7 : daily.length);
+            for (let s = 1; s <= weekSpan; s += 7) {
+                const e = open || s + 6 <= daily.length ? s + 6 : Math.max(s, daily.length);
+                const future = open && isoOfDay(s) > todayISO;
+                const n = future ? 0 : daily.slice(s - 1, Math.min(e, daily.length)).reduce((x, y) => x + y, 0);
                 cum += n;
-                weeks.push({ no: weeks.length + 1, from: isoOfDay(s), to: isoOfDay(e), n, cum,
+                weeks.push({ no: weeks.length + 1, from: isoOfDay(s), to: isoOfDay(e), n, cum, future,
+                             current: open && !future && isoOfDay(e) >= todayISO,
                              pct: scope ? Math.round(cum / scope * 1000) / 10 : 0 });
             }
             const busiestWeek = weeks.reduce((b, x) => (x.n > (b ? b.n : -1) ? x : b), null);
@@ -15908,6 +15914,29 @@
         function mlrPrev(cycle) {
             const p = previousCycle(cycle);
             return p && MEDIA_CYCLES[p] && MEDIA_CYCLES[p].start ? mediaReportData(p) : null;
+        }
+        // The n cycles before this one that have started, newest first — the muted
+        // reference curves on the roll-out chart (user, 2026-10-05: August AND September).
+        function mlrPrevs(cycle, n) {
+            const out = [];
+            let c = cycle;
+            for (let i = 0; i < 12 && out.length < n; i++) {
+                c = previousCycle(c);
+                if (MEDIA_CYCLES[c] && MEDIA_CYCLES[c].start) { const r = mediaReportData(c); if (r) out.push(r); }
+            }
+            return out;
+        }
+        // What an open cycle can expect, from the last two CLOSED cycles: the average window
+        // length (start → close) gives a tentative close day, the average day they reached
+        // 90% a tentative 90% day. null for a closed cycle or when there is no history.
+        function mlrExpect(d) {
+            if (!d || !d.open) return null;
+            const ps = mlrPrevs(d.cycle, 2).filter(p => !p.open);
+            if (!ps.length) return null;
+            const avg = a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : null;
+            const days = avg(ps.map(p => p.days));
+            const t90 = avg(ps.filter(p => p.t90).map(p => p.t90.day));
+            return { days, iso: days ? d.isoOfDay(days) : '', t90, basis: ps.map(p => p.label).reverse() };
         }
 
         function mlrRating(d) {
@@ -16007,9 +16036,15 @@
         // The previous cycle rides underneath as a dashed line for comparison. Pure SVG
         // with inline attributes, so it prints and renders identically in the report and
         // on the dashboard card.
-        function mlrCurveSVG(d, prev) {
+        // Muted, distinct styles for the reference cycles — newest first.
+        const MLR_REF_STYLES = [
+            { stroke: '#7d98b8', dash: '5 4' },
+            { stroke: '#c2a27c', dash: '2 3' },
+        ];
+        function mlrCurveSVG(d, prevArg) {
+            const prevs = (Array.isArray(prevArg) ? prevArg : [prevArg]).filter(p => p && p.loads.length).slice(0, MLR_REF_STYLES.length);
             const W = 720, H = 268, L = 40, R = 18, T = 34, B = 34;
-            const span = Math.max(d.daily.length, prev ? prev.daily.length : 0, 1);
+            const span = Math.max(d.daily.length, ...prevs.map(p => p.daily.length), 1);
             const x = t => L + (t / span) * (W - L - R);
             const y = p => T + (1 - p / 100) * (H - T - B);
             const step = (dd, close) => {
@@ -16033,9 +16068,11 @@
                    + `<text x="${lx}" y="${H - B + 15}" text-anchor="middle" font-size="10" fill="#6b7883">Day ${dday + 1}</text>`
                    + `<text x="${lx}" y="${H - B + 27}" text-anchor="middle" font-size="9" fill="#9aa5af">${escAttr(fmtDateShort(fmtDate(d.isoOfDay(dday + 1))).slice(0, 6))}</text>`;
             }
-            if (prev && prev.loads.length) {
-                g += `<path d="${step(prev, false)}" fill="none" stroke="#9aa5af" stroke-width="1.6" stroke-dasharray="5 4"/>`;
-            }
+            // Oldest drawn first so the newer reference sits on top; the current cycle last.
+            prevs.slice().reverse().forEach(p => {
+                const st = MLR_REF_STYLES[prevs.indexOf(p)];
+                g += `<path d="${step(p, false)}" fill="none" stroke="${st.stroke}" stroke-opacity="0.85" stroke-width="1.5" stroke-dasharray="${st.dash}"/>`;
+            });
             g += `<path d="${step(d, true)}" fill="#0b7a3b" fill-opacity="0.10" stroke="none"/>`
                + `<path d="${step(d, false)}" fill="none" stroke="#0b7a3b" stroke-width="2.4" stroke-linejoin="round"/>`;
             [['50%', d.t50, 50], ['90%', d.t90, 90]].forEach(([lab, m, p]) => {
@@ -16047,14 +16084,15 @@
             });
             const legend = `<g font-size="10.5" fill="#44525e">
                 <line x1="${L + 8}" x2="${L + 30}" y1="10" y2="10" stroke="#0b7a3b" stroke-width="2.4"/><text x="${L + 35}" y="13.5" font-weight="700">${escAttr(d.label)}</text>
-                ${prev && prev.loads.length ? `<line x1="${L + 140}" x2="${L + 162}" y1="10" y2="10" stroke="#9aa5af" stroke-width="1.6" stroke-dasharray="5 4"/><text x="${L + 167}" y="13.5">${escAttr(prev.label)}</text>` : ''}
+                ${prevs.map((p, i) => { const st = MLR_REF_STYLES[i], lx = L + 140 + i * 135;
+                    return `<line x1="${lx}" x2="${lx + 22}" y1="10" y2="10" stroke="${st.stroke}" stroke-width="1.5" stroke-dasharray="${st.dash}"/><text x="${lx + 27}" y="13.5" fill="#6b7883">${escAttr(p.label)}</text>`; }).join('')}
             </g>`;
             return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Cumulative share of the fleet loaded with ${escAttr(d.label)} media, by day of the cycle" style="display:block; max-width:100%; height:auto;">${g}${legend}</svg>`;
         }
 
         // Daily loads as bars — shows the rhythm: the opening burst, the lulls, the tail.
         function mlrDailySVG(d) {
-            const W = 720, H = 130, L = 40, R = 18, T = 12, B = 22;
+            const W = 720, H = 136, L = 40, R = 18, T = 20, B = 22;
             const n = d.daily.length || 1;
             const max = Math.max(1, ...d.daily);
             const bw = (W - L - R) / n;
@@ -16068,7 +16106,9 @@
             d.daily.forEach((v, i) => {
                 if (!v) return;
                 const peak = i + 1 === d.peak.day;
-                g += `<rect x="${(L + i * bw + bw * 0.15).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${(H - B - y(v)).toFixed(1)}" rx="1.5" fill="${peak ? '#0b1f3a' : '#3f8f63'}"/>`;
+                g += `<rect x="${(L + i * bw + bw * 0.15).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${(H - B - y(v)).toFixed(1)}" rx="1.5" fill="${peak ? '#0b1f3a' : '#3f8f63'}"/>`
+                   // the count on top, so the day reads at a glance (user, 2026-10-05)
+                   + `<text x="${(L + i * bw + bw / 2).toFixed(1)}" y="${(y(v) - 4).toFixed(1)}" text-anchor="middle" font-size="${bw < 16 ? 8.5 : 10.5}" font-weight="800" fill="${peak ? '#0b1f3a' : '#2d6b4a'}">${v}</text>`;
             });
             for (let dday = 0; dday < n; dday += 7) {
                 g += `<text x="${(L + dday * bw + bw / 2).toFixed(1)}" y="${H - B + 14}" text-anchor="middle" font-size="10" fill="#6b7883">Day ${dday + 1}</text>`;
@@ -16127,52 +16167,102 @@
         // coordinate system — each marker sits at its real day (fractional, from the load
         // time-stamp). Milestones (50% / 90% of the fleet) are captioned ABOVE the rail on a
         // stem; the window's two ends are captioned BELOW it.
+        // The loading timeline, one segment per DAY (user, 2026-10-05). An open cycle draws
+        // at least a week, and as far as the expected close (the last two closed cycles'
+        // average window) so the rail shows both what happened and what is still ahead:
+        // past days are shaded by how many aircraft loaded (count above), today is marked,
+        // days to come are pale and dashed. 50%/90% milestones sit on the rail; while 90%
+        // is not reached its expected day (the same history) is drawn as a ghost.
         function mlrTimelineSVG(d) {
-            const W = 700, H = 108, X0 = 14, X1 = 686, RY = 60;
-            const x = t => X0 + Math.max(0, Math.min(1, t / Math.max(1, d.days))) * (X1 - X0);
-            const reach = d.lastLoad ? x(Math.min(d.days, d.lastLoad.t)) : X0;
-            let g = `<line x1="${X0}" x2="${X1}" y1="${RY}" y2="${RY}" stroke="#e3e8ee" stroke-width="6" stroke-linecap="round"/>`;
-            if (d.lastLoad) g += `<line x1="${X0}" x2="${reach.toFixed(1)}" y1="${RY}" y2="${RY}" stroke="#1f8a52" stroke-width="6" stroke-linecap="round"/>`;
-            // weekly ticks under the rail, so the spacing reads as time
-            for (let day = 8; day < d.days; day += 7) {
-                const tx = x(day - 1);
-                g += `<line x1="${tx.toFixed(1)}" x2="${tx.toFixed(1)}" y1="${RY + 6}" y2="${RY + 10}" stroke="#c3cad1" stroke-width="1.2"/>`;
+            const exp = mlrExpect(d);
+            const N = d.open ? Math.max(7, d.days, exp && exp.days || 0) : d.days;
+            const W = 700, H = 122, X0 = 14, X1 = 686, RY = 64, SH = 10, GAP = N > 40 ? 1 : 2;
+            const sw = (X1 - X0) / N;
+            const xL = day => X0 + (day - 1) * sw;           // left edge of a day's segment
+            const xC = day => xL(day) + sw / 2;              // its centre
+            const maxN = Math.max(1, ...d.daily.slice(0, d.days));
+            const fs = n => escAttr(fmtDateShort(fmtDate(d.isoOfDay(n))));
+            let g = '';
+            for (let day = 1; day <= N; day++) {
+                const x = xL(day) + GAP / 2, w = Math.max(1, sw - GAP);
+                const isPast = day <= d.days;
+                const n = isPast ? (d.daily[day - 1] || 0) : 0;
+                if (isPast) {
+                    const op = n ? (0.45 + 0.55 * n / maxN).toFixed(2) : 1;
+                    g += `<rect x="${x.toFixed(1)}" y="${RY - SH / 2}" width="${w.toFixed(1)}" height="${SH}" rx="2" fill="${n ? '#1f8a52' : '#cfe0d5'}" fill-opacity="${op}"><title>Day ${day} · ${fs(day)} · ${n} loaded</title></rect>`;
+                    if (n && sw >= 11) g += `<text x="${xC(day).toFixed(1)}" y="${RY - SH / 2 - 4}" text-anchor="middle" font-size="${sw < 16 ? 8.5 : 9.5}" font-weight="800" fill="#2d6b4a">${n}</text>`;
+                } else {
+                    g += `<rect x="${(x + .5).toFixed(1)}" y="${RY - SH / 2 + .5}" width="${(w - 1).toFixed(1)}" height="${SH - 1}" rx="2" fill="#f3f5f8" stroke="#c9d1d9" stroke-width="1" stroke-dasharray="2 2"><title>Day ${day} · ${fs(day)}</title></rect>`;
+                }
             }
-            const ms = [['50% of fleet', d.t50], ['90% of fleet', d.t90]].filter(([, m]) => m).map(([lab, m]) => ({ lab, m, cx: x(m.t) }));
-            // anchor each caption so two close milestones never overlap
+            // week ticks + labels under the rail
+            for (let day = 1; day <= N; day += 7) {
+                const tx = xL(day);
+                g += `<line x1="${tx.toFixed(1)}" x2="${tx.toFixed(1)}" y1="${RY + SH / 2 + 2}" y2="${RY + SH / 2 + 6}" stroke="#c3cad1" stroke-width="1.2"/>`;
+                if (sw * 7 >= 34) g += `<text x="${(tx + 2).toFixed(1)}" y="${RY + SH / 2 + 14}" font-size="8.5" font-weight="700" fill="#a3adb7">W${Math.ceil(day / 7)}</text>`;
+            }
+            // milestones: reached (solid) and, while open, the expected 90% (ghost)
+            const ms = [['50% of fleet', d.t50], ['90% of fleet', d.t90]].filter(([, m]) => m)
+                .map(([lab, m]) => ({ lab, val: `Day ${m.day} · ${fs(m.day).slice(0, 6)}`, cx: xC(m.day), ghost: false }));
+            if (d.open && !d.t90 && exp && exp.t90 && exp.t90 <= N) {
+                ms.push({ lab: 'Expected 90%', val: `~Day ${exp.t90} · ${fs(exp.t90).slice(0, 6)}`, cx: xC(exp.t90), ghost: true });
+            }
             ms.forEach((o, i) => {
                 o.anchor = 'middle'; o.tx = o.cx;
-                const other = ms[1 - i];
-                if (other && Math.abs(other.cx - o.cx) < 130) { o.anchor = o.cx < other.cx ? 'end' : 'start'; o.tx = o.cx + (o.anchor === 'end' ? 4 : -4); }
+                const other = ms[i - 1];
+                if (other && Math.abs(other.cx - o.cx) < 130) { other.anchor = 'end'; other.tx = other.cx + 4; o.anchor = 'start'; o.tx = o.cx - 4; }
                 if (o.cx < 70) { o.anchor = 'start'; o.tx = o.cx - 6; }
                 if (o.cx > W - 70) { o.anchor = 'end'; o.tx = o.cx + 6; }
             });
             ms.forEach(o => {
-                g += `<line x1="${o.cx.toFixed(1)}" x2="${o.cx.toFixed(1)}" y1="${RY - 30}" y2="${RY - 7}" stroke="#9aa5af" stroke-width="1"/>`
-                   + `<circle cx="${o.cx.toFixed(1)}" cy="${RY}" r="6.5" fill="#fff" stroke="#0b1f3a" stroke-width="2.5"/>`
-                   + `<text x="${o.tx.toFixed(1)}" y="${RY - 46}" text-anchor="${o.anchor}" font-size="9.5" font-weight="800" letter-spacing=".5" fill="#7c8894">${escAttr(o.lab.toUpperCase())}</text>`
-                   + `<text x="${o.tx.toFixed(1)}" y="${RY - 33}" text-anchor="${o.anchor}" font-size="12" font-weight="800" fill="#0b1f3a">Day ${o.m.day} · ${escAttr(fmtDateShort(fmtDate(o.m.iso)).slice(0, 6))}</text>`;
+                const ink = o.ghost ? '#8a96a1' : '#0b1f3a';
+                g += `<line x1="${o.cx.toFixed(1)}" x2="${o.cx.toFixed(1)}" y1="${RY - 34}" y2="${RY - SH / 2 - 14}" stroke="${o.ghost ? '#c3cad1' : '#9aa5af'}" stroke-width="1"${o.ghost ? ' stroke-dasharray="2 2"' : ''}/>`
+                   + `<circle cx="${o.cx.toFixed(1)}" cy="${RY}" r="6" fill="#fff" stroke="${ink}" stroke-width="2.2"${o.ghost ? ' stroke-dasharray="2.5 2"' : ''}/>`
+                   + `<text x="${o.tx.toFixed(1)}" y="${RY - 50}" text-anchor="${o.anchor}" font-size="9.5" font-weight="800" letter-spacing=".5" fill="#7c8894">${escAttr(o.lab.toUpperCase())}</text>`
+                   + `<text x="${o.tx.toFixed(1)}" y="${RY - 37}" text-anchor="${o.anchor}" font-size="12" font-weight="800" fill="${ink}">${escAttr(o.val)}</text>`;
             });
-            g += `<circle cx="${X0}" cy="${RY}" r="6.5" fill="#1f8a52" stroke="#fff" stroke-width="2"/>`;
-            g += d.open
-                ? `<circle cx="${X1}" cy="${RY}" r="6.5" fill="#fff" stroke="#2f5f8a" stroke-width="2.5" stroke-dasharray="3 2"/>`
-                : `<circle cx="${X1}" cy="${RY}" r="6.5" fill="#0b1f3a" stroke="#fff" stroke-width="2"/>`;
-            g += `<text x="${X0 - 6}" y="${RY + 26}" font-size="9.5" font-weight="800" letter-spacing=".5" fill="#7c8894">LOADING START · DAY 1</text>`
-               + `<text x="${X0 - 6}" y="${RY + 41}" font-size="12" font-weight="800" fill="#0b1f3a">${escAttr(fmtDateShort(d.start))}</text>`
-               + `<text x="${X1 + 6}" y="${RY + 26}" text-anchor="end" font-size="9.5" font-weight="800" letter-spacing=".5" fill="#7c8894">${d.open ? 'TODAY' : 'CLOSED'} · DAY ${d.days}</text>`
-               + `<text x="${X1 + 6}" y="${RY + 41}" text-anchor="end" font-size="12" font-weight="800" fill="#0b1f3a">${escAttr(d.open ? fmtDateShort(fmtDate(d.endISO)) : fmtDateShort(d.end))}</text>`;
-            return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Loading timeline: day 1 to day ${d.days}, with the days the fleet reached 50% and 90%" style="display:block; max-width:100%; height:auto; overflow:visible;">${g}</svg>`;
+            // start, today, and the close (actual, or expected while open)
+            const lab = (x, anchor, k, v, ink) => `<text x="${x.toFixed(1)}" y="${RY + 32}" text-anchor="${anchor}" font-size="9.5" font-weight="800" letter-spacing=".5" fill="#7c8894">${k}</text>`
+                + `<text x="${x.toFixed(1)}" y="${RY + 47}" text-anchor="${anchor}" font-size="12" font-weight="800" fill="${ink || '#0b1f3a'}">${v}</text>`;
+            g += lab(X0, 'start', 'LOADING START · DAY 1', escAttr(fmtDateShort(d.start)));
+            if (d.open) {
+                const tx = xL(d.days) + sw;                     // the end of today
+                g += `<line x1="${tx.toFixed(1)}" x2="${tx.toFixed(1)}" y1="${RY - SH / 2 - 3}" y2="${RY + SH / 2 + 3}" stroke="#0b1f3a" stroke-width="2" stroke-linecap="round"/>`;
+                const endFar = X1 - tx > 150, startFar = tx - X0 > 150;
+                if (endFar && startFar) g += lab(tx, 'middle', `TODAY · DAY ${d.days}`, escAttr(fmtDateShort(fmtDate(d.endISO))));
+                else if (endFar) g += lab(tx + 8, 'start', `TODAY · DAY ${d.days}`, escAttr(fmtDateShort(fmtDate(d.endISO))));
+                if (exp && exp.days && exp.days > d.days) {
+                    g += `<circle cx="${X1}" cy="${RY}" r="5.5" fill="#fff" stroke="#2f5f8a" stroke-width="2.2" stroke-dasharray="3 2"/>`
+                       + lab(X1 + 6, 'end', `EXPECTED CLOSE · DAY ${exp.days}`, '~' + escAttr(fmtDateShort(fmtDate(exp.iso))), '#2f5f8a');
+                } else if (!endFar || !startFar) {
+                    g += lab(X1 + 6, 'end', `TODAY · DAY ${d.days}`, escAttr(fmtDateShort(fmtDate(d.endISO))));
+                }
+            } else {
+                g += `<circle cx="${X1}" cy="${RY}" r="5.5" fill="#0b1f3a" stroke="#fff" stroke-width="2"/>`
+                   + lab(X1 + 6, 'end', `CLOSED · DAY ${d.days}`, escAttr(fmtDateShort(d.end)));
+            }
+            return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Loading timeline by day: day 1 to day ${d.days}${exp && exp.days ? `, expected close day ${exp.days}` : ''}, aircraft loaded per day, and the days the fleet reached 50% and 90%" style="display:block; max-width:100%; height:auto; overflow:visible;">${g}</svg>`;
         }
 
         function mlrTopHTML(d) {
             const r = mlrRating(d);
             const clamp = v => Math.max(0, Math.min(100, v));
+            const exp = mlrExpect(d);
+            // While open: the loading pace so far, and when 90% falls if it holds.
+            const pace = d.open && d.done ? (() => {
+                const per = d.done / d.days;
+                const need = Math.ceil(d.scope * 0.9);
+                return { perDay: (Math.round(per * 10) / 10).toString(),
+                         day90: !d.t90 && need > d.done ? d.days + Math.ceil((need - d.done) / per) : null };
+            })() : null;
 
             const facts = [
                 d.firstLoad ? `First aircraft <b>day ${d.firstLoad.day}</b>` : '',
                 d.median != null ? `Typical load <b>day ${d.median}</b>` : '',
                 d.peak.n ? `Busiest day <b>${escAttr(fmtDateShort(fmtDate(d.peak.iso)))} · ${d.peak.n}</b>` : '',
                 d.late ? `Loaded late <b>${d.late}</b>` : '',
+                pace ? `Pace <b>${pace.perDay} a day</b>` : '',
+                pace && pace.day90 ? `At this pace, 90% by <b>day ${pace.day90}</b>` : '',
             ].filter(Boolean);
 
             const step = (cls, ic, lb, dt) => `<div class="mlr-jr-s ${cls}"><div class="ic" aria-hidden="true">${ic}</div><div class="lb">${escAttr(lb)}</div><div class="dt">${escAttr(dt)}</div></div>`;
@@ -16196,7 +16286,7 @@
                 <div class="mlr-bar"><i style="width:${clamp(d.pct)}%"><span class="${d.pct < 14 ? 'out' : ''}">${d.pct}%</span></i></div>
                 <div class="mlr-bar-foot"><span><b>${d.done}</b> of ${d.scope} eligible aircraft loaded</span>${d.missing.length ? `<span><b>${d.missing.length}</b> ${d.open ? 'still to load' : 'not loaded'}</span>` : ''}</div>
                 <div class="mlr-tl">
-                    <div class="mlr-k">Loading timeline · ${mlrPlural(d.days, 'day')}${d.open ? ' so far' : ''}</div>
+                    <div class="mlr-k">Loading timeline · ${mlrPlural(d.days, 'day')}${d.open ? ' so far' : ''}${exp && exp.days ? ` · expected ~${exp.days} (${escAttr(exp.basis.map(b => b.slice(0, 3)).join('–'))} average)` : ''}</div>
                     ${mlrTimelineSVG(d)}
                 </div>
                 ${facts.length ? `<div class="mlr-facts">${facts.map(f => `<span>${f}</span>`).join('')}</div>` : ''}
@@ -16256,7 +16346,7 @@
                 <div class="avr-section-label" style="margin-top:14px;">Executive summary</div>
                 <div class="mlr-narr">${mediaReportNarrative(d, prev).map(p => `<p><b>${escAttr(p.k)}.</b> ${escAttr(p.t)}</p>`).join('')}</div>
                 <div class="avr-section-label">Roll-out curve — share of fleet loaded</div>
-                <div class="mlr-chart">${mlrCurveSVG(d, prev)}</div>
+                <div class="mlr-chart">${mlrCurveSVG(d, mlrPrevs(d.cycle, 2))}</div>
                 <div class="mlr-foot">Generated from the media load log, the cycle's dates and the Media Disks in Hardware › Assets. The printed report adds daily loads, a week-by-week breakdown, results by aircraft type, the disks used, the aircraft not loaded and the full load log.</div>
             </div>`;
             return `<div class="avr-card mlr-card is-open" id="avrCard-${id}">${head}${body}</div>`;
@@ -16269,6 +16359,7 @@
             const d = mediaReportData(cycle);
             if (!d) return null;
             const prev = mlrPrev(cycle);
+            const refs = mlrPrevs(cycle, 2).filter(r => r.loads.length);
             const stamp = `${fmtDate(new Date().toISOString().slice(0, 10))} ${new Date().toISOString().slice(11, 16)} UTC`;
             const pctBar = p => `<span class="bar"><i style="width:${Math.min(100, p)}%"></i></span>`;
             const narr = mediaReportNarrative(d, prev).map(p => `<div class="nr"><div class="nr-k">${escAttr(p.k)}</div><div class="nr-t">${escAttr(p.t)}</div></div>`).join('');
@@ -16277,7 +16368,9 @@
             const weekRows = d.weeks.map(w => {
                 const wp = d.scope ? Math.round(w.n / d.scope * 1000) / 10 : 0;
                 const top = d.busiestWeek && w.no === d.busiestWeek.no && w.n;
-                return `<tr${top ? ' class="top"' : ''}><td><b>W${w.no}</b></td><td class="nowrap">${escAttr(fmtDateShort(fmtDate(w.from)).slice(0, 6))} → ${escAttr(fmtDateShort(fmtDate(w.to)).slice(0, 6))}</td><td class="num">${w.n}</td><td class="num">${wp}%</td><td>${pctBar(wp)}</td></tr>`;
+                const dates = `${escAttr(fmtDateShort(fmtDate(w.from)).slice(0, 6))} → ${escAttr(fmtDateShort(fmtDate(w.to)).slice(0, 6))}`;
+                if (w.future) return `<tr class="fut"><td><b>W${w.no}</b></td><td class="nowrap">${dates}</td><td class="num">—</td><td class="num"></td><td>${pctBar(0)}</td></tr>`;
+                return `<tr${top ? ' class="top"' : ''}><td class="nowrap"><b>W${w.no}</b>${w.current ? ' <span class="wk-now">now</span>' : ''}</td><td class="nowrap">${dates}</td><td class="num">${w.n}</td><td class="num">${wp}%</td><td>${pctBar(wp)}</td></tr>`;
             }).join('');
             const typeRows = d.byType.map(t => `<tr><td><b>${escAttr(t.type)}</b></td><td class="num">${t.done}/${t.scope}</td><td class="num">${t.pct}%</td><td>${pctBar(t.pct)}</td></tr>`).join('');
             const missRows = d.missing.length
@@ -16346,6 +16439,9 @@
   .bar { display:inline-block; width:100%; min-width:80px; height:7px; background:#eef1f4; border-radius:99px; overflow:hidden; vertical-align:middle; }
   .bar i { display:block; height:100%; background:#3f8f63; border-radius:99px; }
   tr.top .bar i { background:#0b1f3a; }
+  table.tbl tr.fut td { color:#b4bdc6; }
+  table.tbl tr.fut .bar { opacity:.45; }
+  .wk-now { font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:#0b7a3b; background:#e7f4ec; border-radius:999px; padding:1px 6px; margin-left:4px; vertical-align:1px; }
   table.tbl tr.me td { background:#eef8f2 !important; }
   .two .bar { min-width:50px; }
   .tbl-card { border:1px solid var(--line); border-radius:8px; overflow:hidden; margin:8px 0; }
@@ -16397,8 +16493,8 @@
     ${d.notes ? `<div class="note">${escAttr(d.notes)}</div>` : ''}
 
     <div class="sec">Roll-out curve</div>
-    <div class="chart">${mlrCurveSVG(d, prev)}
-      <div class="cap">Share of the eligible fleet carrying ${escAttr(d.label)} media, by day of the loading window (day 1 = ${escAttr(d.start)}).${prev && prev.loads.length ? ` Dashed: ${escAttr(prev.label)} for comparison.` : ''}</div>
+    <div class="chart">${mlrCurveSVG(d, refs)}
+      <div class="cap">Share of the eligible fleet carrying ${escAttr(d.label)} media, by day of the loading window (day 1 = ${escAttr(d.start)}).${refs.length ? ` Dashed: ${escAttr(refs.map(r => r.label).join(' and '))} for comparison.` : ''}</div>
     </div>
 
     <div class="page2">

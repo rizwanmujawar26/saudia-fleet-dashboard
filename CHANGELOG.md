@@ -13,6 +13,16 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.208.0 — Media Loading Report: richer charts while a cycle is open (2026-10-05)
+- **Roll-out curve** draws the two previous cycles as muted references (`mlrPrevs`, `MLR_REF_STYLES`: slate dashed,
+  sand dotted) — the current cycle stays the bold green line.
+- **Daily loads** prints the count on top of every bar.
+- **Week by week** always lists at least four dated weeks; while open, weeks not started are greyed (`tr.fut`) and
+  the current week carries a "now" tag — so it matches the By-type table's height.
+- **Loading timeline** is one segment per day, shaded by loads (count above); an open cycle shows at least a week
+  and runs to the **expected close** (`mlrExpect`: the last two closed cycles' average window), with today marked,
+  days ahead dashed, and an Expected-90% ghost marker. New facts: loading pace and "at this pace, 90% by day N".
+
 ### v2.207.0 — Fleet: live delivery-flight status for linefit deliveries (2026-10-05)
 `deliveryPhase(id)` reads `/fleetSpecs/{tail}/deliveryFlight` (date + dep UTC + durMin) against the clock:
 before departure the Operations cell shows a dashed blue **DELIVERY SCHEDULED** (flight · route · dep), in the
