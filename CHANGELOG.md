@@ -13,6 +13,11 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.208.3 — Media journey: "Content delivered" → "Content uploaded" (2026-10-05)
+The first journey step is a digital hand-off — the Paris media team uploads the media to AWS, ready for the Jeddah
+media station to download — so it reads **Content uploaded** with a 🌐 icon (pairs with "Media downloaded").
+Narrative and the Media Cycle form label/hint follow. Stored field `contentDelivered` unchanged.
+
 ### v2.208.2 — MLR timeline: TODAY circle marker; forecast facts replace first/typical (2026-10-05)
 TODAY uses the milestones' circle-and-stem (filled navy with a soft halo) on the centre of today's segment, not a bar.
 Facts line: "First aircraft" and "Typical load" removed (loading always starts day 1). Open cycle: Pace · At this

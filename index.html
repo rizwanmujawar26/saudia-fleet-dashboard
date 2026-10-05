@@ -7931,8 +7931,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.208.2';
-        const APP_BUILD    = '2026.10.05.04';
+        const APP_VERSION  = '2.208.3';
+        const APP_BUILD    = '2026.10.05.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15650,7 +15650,9 @@
         // The media journey, content to cabin. The first four are dates on /mediaCycles,
         // entered in the Media Cycle form; the last two are derived from the load log.
         const MEDIA_JOURNEY = [
-            { key: 'contentDelivered', label: 'Content delivered', icon: '📦' },
+            // A DIGITAL hand-off: the Paris media team uploads the month's media to AWS, ready
+            // for the Jeddah media station to download (user, 2026-10-05). Field name kept.
+            { key: 'contentDelivered', label: 'Content uploaded', icon: '🌐' },
             { key: 'downloaded',       label: 'Media downloaded',  icon: '⬇️' },
             { key: 'disksDuplicated',  label: 'Disks duplicated',  icon: '💽' },
             { key: 'disksToTeam',      label: 'Disks delivered',   icon: '🤝' },
@@ -15959,8 +15961,8 @@
             if (jd.length) {
                 out.push({ k: 'Journey', t:
                     jd.map(j => `${j.label.toLowerCase().replace(/^./, c => c.toUpperCase())} ${j.date}`).join('; ') + '.'
-                    + (d.durations.ground != null ? ` Ground lead time from content delivery to disks delivered was ${mlrPlural(d.durations.ground, 'day')}.` : '')
-                    + (d.durations.endToEnd != null ? ` From content delivery to the last aircraft took ${mlrPlural(d.durations.endToEnd, 'day')}.` : '') });
+                    + (d.durations.ground != null ? ` Ground lead time from content upload to disks delivered was ${mlrPlural(d.durations.ground, 'day')}.` : '')
+                    + (d.durations.endToEnd != null ? ` From content upload to the last aircraft took ${mlrPlural(d.durations.endToEnd, 'day')}.` : '') });
             }
 
             // START — loading can only begin once the disks have been delivered. ⚠️ TERMS (user,
@@ -16651,7 +16653,7 @@
         // final), and the four journey dates feed the report's Media journey strip.
 
         const MC_DATE_FIELDS = [
-            ['contentDelivered', 'Content delivered',    'Media content received from the provider'],
+            ['contentDelivered', 'Content uploaded',     'Uploaded to AWS by the Paris media team, ready to download in Jeddah'],
             ['downloaded',       'Media downloaded',     'Content downloaded by NSG'],
             ['disksDuplicated',  'Disks duplicated',     'Media copied onto the loading disks'],
             ['disksToTeam',      'Disks delivered',      'Disks delivered to SV IFE Engineering'],
