@@ -13,6 +13,9 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.208.5 — MLR timeline: start label reads "DAY 1 · LOADING START" (2026-10-05)
+The day leads on the left corner so it reads first.
+
 ### v2.208.4 — Media journey: "Content uploaded" → "Media uploaded" (2026-10-05)
 User's wording; narrative and the Media Cycle form follow.
 

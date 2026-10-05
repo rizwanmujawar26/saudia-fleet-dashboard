@@ -7931,8 +7931,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.208.4';
-        const APP_BUILD    = '2026.10.05.06';
+        const APP_VERSION  = '2.208.5';
+        const APP_BUILD    = '2026.10.05.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -16205,7 +16205,7 @@
             };
             const clash = (o, list) => list.some(p => o.l < p.r + 14 && p.l < o.r + 14);
             const below = [];
-            below.push(extent({ x: X0, k: 'LOADING START · DAY 1', v: fmtDateShort(d.start), corner: true }));
+            below.push(extent({ x: X0, k: 'DAY 1 · LOADING START', v: fmtDateShort(d.start), corner: true }));
             if (d.open && exp && exp.days && exp.days > d.days) {
                 below.push(extent({ x: X1, k: `EXPECTED CLOSE · DAY ${exp.days}`, v: '~' + fmtDateShort(fmtDate(exp.iso)), ink: '#2f5f8a', corner: true, endDot: 'exp' }));
             } else if (!d.open) {
