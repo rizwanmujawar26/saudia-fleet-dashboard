@@ -13,6 +13,9 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.208.4 — Media journey: "Content uploaded" → "Media uploaded" (2026-10-05)
+User's wording; narrative and the Media Cycle form follow.
+
 ### v2.208.3 — Media journey: "Content delivered" → "Content uploaded" (2026-10-05)
 The first journey step is a digital hand-off — the Paris media team uploads the media to AWS, ready for the Jeddah
 media station to download — so it reads **Content uploaded** with a 🌐 icon (pairs with "Media downloaded").
