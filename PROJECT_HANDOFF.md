@@ -1061,6 +1061,16 @@ distanceKm, fr24Id (the playback hash → fr24Url(tail)#id) }`. **Arrival is der
 linefit delivery is written by hand (FR24's free tier keeps only 7 days, so the details
 come from the user's playback screenshots). Kept on re-key (`AC_MOVE_SPEC`).
 
+### `/flights/{id}` — special flights (v2.210.0)
+
+`{ tail, kind (delivery|test|vip|ferry|other), flight, callsign, date (DD-Mon-YYYY, UTC departure day), dep (HH:MM
+UTC), durMin, from, fromIata, to, toIata, distanceKm, fr24Id, note, loggedAt, loggedBy }`. Written by the
+Maintenance ＋ Add → **✈️ Add Flight** form (`openFlightEditor` / `saveFlight`, whole-record PUT, `$other: false`).
+Polled and in the initial fetch. Arrival is derived (`flightPhaseOf`: scheduled → enroute → landed). Drives the
+**Flight** Timeline kind and the Home **Live Activity** bar (`renderLiveActivity`, only while enroute).
+`deliveryFlightOf(tail)` prefers a `kind: delivery` record here over `/fleetSpecs/{tail}/deliveryFlight`, which is
+superseded but kept (not deleted). Seeded 2026-10-05 with ASBA/ASBB/ASBE/ASBC.
+
 ### `/aircraft/{tail}` — per-aircraft state
 
 | field | values |

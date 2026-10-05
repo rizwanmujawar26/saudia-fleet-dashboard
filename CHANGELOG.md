@@ -13,6 +13,19 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.210.0 — Special flights: /flights node, Flight category, Live Activity bar, Add Flight form (2026-10-05)
+- **New node `/flights/{id}`** `{ tail, kind (delivery|test|vip|ferry|other), flight, callsign, date, dep (UTC), durMin,
+  from/fromIata, to/toIata, distanceKm, fr24Id, note, loggedAt, loggedBy }` — rules (`$other:false`), backup/restore/
+  verify lists. Seeded with the four HBC+ deliveries (ASBA SV9010, ASBB SV9016, ASBE SV9020, ASBC SV9022).
+- **Flight** is its own Timeline / Activity kind (Show filter + Activity Kind filter), replacing the Operational
+  "Aircraft Delivered" row for any tail with a recorded delivery flight. Title follows the clock (scheduled → in
+  flight → done), FR24 playback link on every row, live strip while airborne, ✏️ edit in Activity.
+- **Live Activity** bar under the Watchlist (`renderLiveActivity`), shown only while a flight is in the air: LIVE ·
+  kind · flight · HZ-tail/type · DEP time ━✈━ ARR time · time left · FR24; click for details (route, departed,
+  arrives, flight time, progress, distance, MSN, callsign, note). Redrawn every 30 s; one line, Watchlist height.
+- **＋ Add → ✈️ Add Flight** form (UTC dep + arrival → durMin, next-day aware; SV#### → SVA#### callsign; FR24 link
+  parsed to its #id). `deliveryFlightOf(tail)` prefers /flights and falls back to /fleetSpecs deliveryFlight (kept).
+
 ### v2.209.0 — Live delivery flight on Fleet, Timeline and Activity, with FR24 link (2026-10-05)
 Shared `deliveryLiveHTML(tail, d)`: TLS ──✈── JED with the CSS-glided plane plus the Flightradar24 icon linking to
 the flight's playback (`fr24Url(tail)#fr24Id`, `deliveryFr24Link`). Fleet Operations cell uses it under DELIVERY IN
