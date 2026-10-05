@@ -2425,6 +2425,9 @@
         .flt-line.scheduled .flt-pl { left: 0; color: #8a96a1; }
         .flt-line.live .dlv-plane { color: #d03a3a; }
         .flt-dur { font-size: 10.5px; font-weight: 800; color: #44525e; background: #eef1f4; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+        .flt-card-btn { margin-left: auto; font: inherit; font-size: 10.5px; font-weight: 700; color: #1c5b96; white-space: nowrap; cursor: pointer;
+            padding: 2px 8px; border-radius: 999px; background: #e9f1fb; border: 1px solid #c9dcf1; }
+        .flt-card-btn:hover, .flt-card-btn.on, .flt-card-btn:focus-visible { background: #d8e7f7; border-color: #9fc0e3; outline: none; }
         .flt-st { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
         .flt-st-landed { background: #e7f4ec; color: #146c3a; border: 1px solid #bfe3cd; }
         .flt-st-enroute { background: #fdeff0; color: #b42a33; border: 1px solid #f6c9ce; }
@@ -8074,8 +8077,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.212.0';
-        const APP_BUILD    = '2026.10.06.02';
+        const APP_VERSION  = '2.212.1';
+        const APP_BUILD    = '2026.10.06.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -11678,7 +11681,9 @@
                 + `<b>${escAttr(f.fromIata || '')}</b><small>${d.depHM}Z</small>${line}<small>${d.arrHM}Z</small><b>${escAttr(f.toIata || '')}</b></button>`
                 + `<span class="flt-dur">${dur}</span>`
                 + `<span class="flt-st flt-st-${st[0]}">${st[1]}</span>`
-                + (f.fr24Id ? deliveryFr24Link(x.tail, f) : '');
+                + (f.fr24Id ? deliveryFr24Link(x.tail, f) : '')
+                // Right-aligned like the AVR report pill — the row's explicit "open" action.
+                + `<button type="button" class="flt-card-btn flt-trigger" data-flight="${id}" data-tail="${tail}" title="Open the ${escAttr(f.flight || '')} flight card">🎫 Flight card</button>`;
         }
 
         // ===== Delivery flight card (v2.211.0, user 2026-10-06) =====

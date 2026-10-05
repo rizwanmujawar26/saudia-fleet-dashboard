@@ -13,6 +13,9 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.212.1 — Flight rows: right-aligned 🎫 Flight card button (2026-10-06)
+Same place and shape as the AVR report pill, in flight blue; opens the flight card.
+
 ### v2.212.0 — Timeline/Activity: Flight rows as a boarding-pass line that opens the flight card (2026-10-06)
 `flightRowMainHTML(x)`: [✈ FLIGHT chip] kind · FROM time ━✈━ time TO · duration · status (Scheduled / In flight /
 Delivered|Landed) · FR24. The chip and the route are `.flt-trigger`s that open the v2.211 flight card for THAT flight
