@@ -13,6 +13,12 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.208.2 — MLR timeline: TODAY circle marker; forecast facts replace first/typical (2026-10-05)
+TODAY uses the milestones' circle-and-stem (filled navy with a soft halo) on the centre of today's segment, not a bar.
+Facts line: "First aircraft" and "Typical load" removed (loading always starts day 1). Open cycle: Pace · At this
+pace 90% by day N · date · previous cycle's share by the same day · Busiest day. Closed cycle: Average pace ·
+Busiest day · Busiest week · Loaded late. No straight-line "all aircraft by" forecast — the tail always trails.
+
 ### v2.208.1 — MLR timeline: TODAY above the rail, collision-free marker labels (2026-10-05)
 TODAY joins 50% / 90% / Expected-90% as a point marker ABOVE the rail; Start and Close own the bottom corners.
 Markers whose captions would touch form a cluster drawn as a staircase — each caption hangs off the same side of

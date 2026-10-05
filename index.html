@@ -7931,8 +7931,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.208.1';
-        const APP_BUILD    = '2026.10.05.03';
+        const APP_VERSION  = '2.208.2';
+        const APP_BUILD    = '2026.10.05.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -16213,7 +16213,7 @@
             [['50% of fleet', d.t50], ['90% of fleet', d.t90]].forEach(([k, m]) => {
                 if (m) marks.push({ x: xC(m.day), k: k.toUpperCase(), v: `Day ${m.day} · ${fs(m.day).slice(0, 6)}`, kind: 'ms' });
             });
-            const todayX = d.open ? xL(d.days) + sw : null;   // the end of today
+            const todayX = d.open ? xC(d.days) : null;        // today's segment
             if (d.open) marks.push({ x: todayX, k: `TODAY · DAY ${d.days}`, v: fmtDateShort(fmtDate(d.endISO)), kind: 'today' });
             if (d.open && !d.t90 && exp && exp.t90 && exp.t90 <= N) {
                 marks.push({ x: xC(exp.t90), k: 'EXPECTED 90%', v: `~Day ${exp.t90} · ${fs(exp.t90).slice(0, 6)}`, kind: 'ghost', ink: '#8a96a1' });
@@ -16270,15 +16270,16 @@
             // markers: stems first, so captions and dots sit on top
             marks.forEach(o => {
                 const ghost = o.kind === 'ghost', today = o.kind === 'today';
-                const stroke = today ? '#0b1f3a' : ghost ? '#c3cad1' : '#9aa5af';
+                const stroke = ghost ? '#c3cad1' : '#9aa5af';
                 const dash = ghost ? ' stroke-dasharray="2 2"' : '';
                 if (o.tier >= 0) {
                     const yk = RY - 50 - o.tier * TIER;
-                    g += `<line x1="${o.x.toFixed(1)}" x2="${o.x.toFixed(1)}" y1="${yk + 17}" y2="${RY - SH / 2 - (today ? 2 : 14)}" stroke="${stroke}" stroke-width="${today ? 1.4 : 1}"${dash}/>` + caption(o, yk);
+                    g += `<line x1="${o.x.toFixed(1)}" x2="${o.x.toFixed(1)}" y1="${yk + 17}" y2="${RY - SH / 2 - 14}" stroke="${stroke}" stroke-width="1"${dash}/>` + caption(o, yk);
                 } else {
                     g += `<line x1="${o.x.toFixed(1)}" x2="${o.x.toFixed(1)}" y1="${RY + SH / 2 + 2}" y2="${RY + 20}" stroke="${stroke}" stroke-width="${today ? 1.4 : 1}"${dash}/>` + caption(o, RY + 32);
                 }
-                if (today) g += `<line x1="${o.x.toFixed(1)}" x2="${o.x.toFixed(1)}" y1="${RY - SH / 2 - 3}" y2="${RY + SH / 2 + 3}" stroke="#0b1f3a" stroke-width="2.2" stroke-linecap="round"/>`;
+                // TODAY uses the milestones' circle-and-stem, filled so it reads as "now".
+                if (today) g += `<circle cx="${o.x.toFixed(1)}" cy="${RY}" r="6" fill="#0b1f3a" stroke="#fff" stroke-width="2"/><circle cx="${o.x.toFixed(1)}" cy="${RY}" r="8.5" fill="none" stroke="#0b1f3a" stroke-opacity=".25" stroke-width="1.5"/>`;
                 else g += `<circle cx="${o.x.toFixed(1)}" cy="${RY}" r="6" fill="#fff" stroke="${ghost ? '#8a96a1' : '#0b1f3a'}" stroke-width="2.2"${ghost ? ' stroke-dasharray="2.5 2"' : ''}/>`;
             });
             below.filter(o => o.corner).forEach(o => {
@@ -16294,21 +16295,34 @@
             const clamp = v => Math.max(0, Math.min(100, v));
             const exp = mlrExpect(d);
             // While open: the loading pace so far, and when 90% falls if it holds.
-            const pace = d.open && d.done ? (() => {
+            // While open: the loading pace so far and where it leads — the day 90% and the
+            // whole eligible fleet fall if it holds. A cycle that reached a mark reports it.
+            const fsd = n => escAttr(fmtDateShort(fmtDate(d.isoOfDay(n))).slice(0, 6));
+            const pace = d.done ? (() => {
                 const per = d.done / d.days;
+                // 90% only — the last few aircraft always trail, so a straight-line "all by"
+                // date would mislead.
                 const need = Math.ceil(d.scope * 0.9);
                 return { perDay: (Math.round(per * 10) / 10).toString(),
                          day90: !d.t90 && need > d.done ? d.days + Math.ceil((need - d.done) / per) : null };
             })() : null;
+            // Where the previous cycle stood on the same day — the like-for-like yardstick.
+            const prev = d.open ? mlrPrev(d.cycle) : null;
+            const prevSame = prev && prev.scope ? Math.round(prev.loads.filter(l => l.day <= d.days).length / prev.scope * 1000) / 10 : null;
 
-            const facts = [
-                d.firstLoad ? `First aircraft <b>day ${d.firstLoad.day}</b>` : '',
-                d.median != null ? `Typical load <b>day ${d.median}</b>` : '',
-                d.peak.n ? `Busiest day <b>${escAttr(fmtDateShort(fmtDate(d.peak.iso)))} · ${d.peak.n}</b>` : '',
-                d.late ? `Loaded late <b>${d.late}</b>` : '',
+            // First aircraft / typical load are dropped (user, 2026-10-05): loading always
+            // starts on day 1, so they told nobody anything. Forecasts take their place.
+            const facts = (d.open ? [
                 pace ? `Pace <b>${pace.perDay} a day</b>` : '',
-                pace && pace.day90 ? `At this pace, 90% by <b>day ${pace.day90}</b>` : '',
-            ].filter(Boolean);
+                pace && pace.day90 ? `At this pace, 90% by <b>day ${pace.day90} · ${fsd(pace.day90)}</b>` : '',
+                prevSame != null ? `${escAttr(prev.label.slice(0, 3))} by day ${d.days} <b>${prevSame}%</b>` : '',
+                d.peak.n ? `Busiest day <b>${escAttr(fmtDateShort(fmtDate(d.peak.iso)))} · ${d.peak.n}</b>` : '',
+            ] : [
+                pace ? `Average pace <b>${pace.perDay} a day</b>` : '',
+                d.peak.n ? `Busiest day <b>${escAttr(fmtDateShort(fmtDate(d.peak.iso)))} · ${d.peak.n}</b>` : '',
+                d.busiestWeek && d.busiestWeek.n ? `Busiest week <b>W${d.busiestWeek.no} · ${d.busiestWeek.n}</b>` : '',
+                d.late ? `Loaded late <b>${d.late}</b>` : '',
+            ]).filter(Boolean);
 
             const step = (cls, ic, lb, dt) => `<div class="mlr-jr-s ${cls}"><div class="ic" aria-hidden="true">${ic}</div><div class="lb">${escAttr(lb)}</div><div class="dt">${escAttr(dt)}</div></div>`;
             const steps = d.journey.map(j => step(j.date ? '' : 'miss', j.icon, j.label, j.date ? fmtDateShort(j.date) : 'Not recorded'))
