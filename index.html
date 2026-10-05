@@ -7931,8 +7931,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.208.0';
-        const APP_BUILD    = '2026.10.05.02';
+        const APP_VERSION  = '2.208.1';
+        const APP_BUILD    = '2026.10.05.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -16176,12 +16176,77 @@
         function mlrTimelineSVG(d) {
             const exp = mlrExpect(d);
             const N = d.open ? Math.max(7, d.days, exp && exp.days || 0) : d.days;
-            const W = 700, H = 122, X0 = 14, X1 = 686, RY = 64, SH = 10, GAP = N > 40 ? 1 : 2;
+            const W = 700, X0 = 14, X1 = 686, SH = 10, GAP = N > 40 ? 1 : 2, TIER = 32;
             const sw = (X1 - X0) / N;
             const xL = day => X0 + (day - 1) * sw;           // left edge of a day's segment
             const xC = day => xL(day) + sw / 2;              // its centre
             const maxN = Math.max(1, ...d.daily.slice(0, d.days));
             const fs = n => escAttr(fmtDateShort(fmtDate(d.isoOfDay(n))));
+
+            // ----- Label layout (user, 2026-10-05: "keep clear distance between markers").
+            // Corner labels (start, close) sit BELOW the rail. Every point marker — 50%,
+            // 90%, expected 90%, TODAY — goes ABOVE, each claiming the width of its caption.
+            // On a clash a marker first tries the free space below the rail, then climbs to
+            // the next tier above; the rail moves down to make room for the tiers used.
+            const capW = (k, v) => Math.max(k.length * 6.4, v.length * 7.3) + 6;
+            // anchor: 'middle' centres the caption on its stem; 'start' hangs it to the right
+            // of the stem, 'end' to the left. Without one, the edges decide (as before).
+            const extent = (o, anchor) => {
+                const w = capW(o.k, o.v);
+                o.anchor = anchor || 'middle';
+                if (!anchor && o.x - w / 2 < X0 - 6) o.anchor = 'start';
+                else if (!anchor && o.x + w / 2 > X1 + 6) o.anchor = 'end';
+                o.tx = o.anchor === 'start' ? Math.max(X0 - 6, o.x - 4) : o.anchor === 'end' ? Math.min(X1 + 6, o.x + 4) : o.x;
+                const l = o.anchor === 'start' ? o.tx : o.anchor === 'end' ? o.tx - w : o.tx - w / 2;
+                o.l = l; o.r = l + w;
+                return o;
+            };
+            const clash = (o, list) => list.some(p => o.l < p.r + 14 && p.l < o.r + 14);
+            const below = [];
+            below.push(extent({ x: X0, k: 'LOADING START · DAY 1', v: fmtDateShort(d.start), corner: true }));
+            if (d.open && exp && exp.days && exp.days > d.days) {
+                below.push(extent({ x: X1, k: `EXPECTED CLOSE · DAY ${exp.days}`, v: '~' + fmtDateShort(fmtDate(exp.iso)), ink: '#2f5f8a', corner: true, endDot: 'exp' }));
+            } else if (!d.open) {
+                below.push(extent({ x: X1, k: `CLOSED · DAY ${d.days}`, v: fmtDateShort(d.end), corner: true, endDot: 'closed' }));
+            }
+            const marks = [];
+            [['50% of fleet', d.t50], ['90% of fleet', d.t90]].forEach(([k, m]) => {
+                if (m) marks.push({ x: xC(m.day), k: k.toUpperCase(), v: `Day ${m.day} · ${fs(m.day).slice(0, 6)}`, kind: 'ms' });
+            });
+            const todayX = d.open ? xL(d.days) + sw : null;   // the end of today
+            if (d.open) marks.push({ x: todayX, k: `TODAY · DAY ${d.days}`, v: fmtDateShort(fmtDate(d.endISO)), kind: 'today' });
+            if (d.open && !d.t90 && exp && exp.t90 && exp.t90 <= N) {
+                marks.push({ x: xC(exp.t90), k: 'EXPECTED 90%', v: `~Day ${exp.t90} · ${fs(exp.t90).slice(0, 6)}`, kind: 'ghost', ink: '#8a96a1' });
+            }
+            // An open cycle with no expected close still needs its right end named.
+            if (d.open && !below.some(o => o.endDot)) below.push(extent({ x: X1, k: `DAY ${N}`, v: fmtDateShort(fmtDate(d.isoOfDay(N))), ink: '#8a96a1', corner: true }));
+            // Markers whose centred captions would touch form a CLUSTER. A lone marker sits
+            // on the first tier, centred. A cluster becomes a staircase: every caption hangs
+            // off the same side of its own stem, one tier apart, the far end highest — so no
+            // stem ever crosses a caption, and N close markers need exactly N tiers. It hangs
+            // right ('start') unless that would run past the right edge.
+            const tiers = [[]];
+            const sorted = marks.sort((a, b) => a.x - b.x);
+            const clusters = [];
+            sorted.forEach(o => {
+                extent(o);
+                const last = clusters[clusters.length - 1];
+                if (last && clash(o, [last[last.length - 1]])) last.push(o); else clusters.push([o]);
+            });
+            clusters.forEach(c => {
+                if (c.length === 1) { const o = c[0]; extent(o); o.tier = 0; tiers[0].push(o); return; }
+                const right = c.every(o => (extent(o, 'start'), o.r <= X1 + 8));
+                c.forEach((o, i) => {
+                    extent(o, right ? 'start' : 'end');
+                    o.tier = right ? c.length - 1 - i : i;      // the left end highest when hanging right
+                    (tiers[o.tier] = tiers[o.tier] || []).push(o);
+                });
+            });
+            for (let t = 0; t < tiers.length; t++) tiers[t] = tiers[t] || [];
+            const top = tiers.length - 1;
+            const RY = 64 + top * TIER;
+            const H = RY + 58;
+
             let g = '';
             for (let day = 1; day <= N; day++) {
                 const x = xL(day) + GAP / 2, w = Math.max(1, sw - GAP);
@@ -16195,52 +16260,32 @@
                     g += `<rect x="${(x + .5).toFixed(1)}" y="${RY - SH / 2 + .5}" width="${(w - 1).toFixed(1)}" height="${SH - 1}" rx="2" fill="#f3f5f8" stroke="#c9d1d9" stroke-width="1" stroke-dasharray="2 2"><title>Day ${day} · ${fs(day)}</title></rect>`;
                 }
             }
-            // week ticks + labels under the rail
             for (let day = 1; day <= N; day += 7) {
                 const tx = xL(day);
                 g += `<line x1="${tx.toFixed(1)}" x2="${tx.toFixed(1)}" y1="${RY + SH / 2 + 2}" y2="${RY + SH / 2 + 6}" stroke="#c3cad1" stroke-width="1.2"/>`;
                 if (sw * 7 >= 34) g += `<text x="${(tx + 2).toFixed(1)}" y="${RY + SH / 2 + 14}" font-size="8.5" font-weight="700" fill="#a3adb7">W${Math.ceil(day / 7)}</text>`;
             }
-            // milestones: reached (solid) and, while open, the expected 90% (ghost)
-            const ms = [['50% of fleet', d.t50], ['90% of fleet', d.t90]].filter(([, m]) => m)
-                .map(([lab, m]) => ({ lab, val: `Day ${m.day} · ${fs(m.day).slice(0, 6)}`, cx: xC(m.day), ghost: false }));
-            if (d.open && !d.t90 && exp && exp.t90 && exp.t90 <= N) {
-                ms.push({ lab: 'Expected 90%', val: `~Day ${exp.t90} · ${fs(exp.t90).slice(0, 6)}`, cx: xC(exp.t90), ghost: true });
-            }
-            ms.forEach((o, i) => {
-                o.anchor = 'middle'; o.tx = o.cx;
-                const other = ms[i - 1];
-                if (other && Math.abs(other.cx - o.cx) < 130) { other.anchor = 'end'; other.tx = other.cx + 4; o.anchor = 'start'; o.tx = o.cx - 4; }
-                if (o.cx < 70) { o.anchor = 'start'; o.tx = o.cx - 6; }
-                if (o.cx > W - 70) { o.anchor = 'end'; o.tx = o.cx + 6; }
-            });
-            ms.forEach(o => {
-                const ink = o.ghost ? '#8a96a1' : '#0b1f3a';
-                g += `<line x1="${o.cx.toFixed(1)}" x2="${o.cx.toFixed(1)}" y1="${RY - 34}" y2="${RY - SH / 2 - 14}" stroke="${o.ghost ? '#c3cad1' : '#9aa5af'}" stroke-width="1"${o.ghost ? ' stroke-dasharray="2 2"' : ''}/>`
-                   + `<circle cx="${o.cx.toFixed(1)}" cy="${RY}" r="6" fill="#fff" stroke="${ink}" stroke-width="2.2"${o.ghost ? ' stroke-dasharray="2.5 2"' : ''}/>`
-                   + `<text x="${o.tx.toFixed(1)}" y="${RY - 50}" text-anchor="${o.anchor}" font-size="9.5" font-weight="800" letter-spacing=".5" fill="#7c8894">${escAttr(o.lab.toUpperCase())}</text>`
-                   + `<text x="${o.tx.toFixed(1)}" y="${RY - 37}" text-anchor="${o.anchor}" font-size="12" font-weight="800" fill="${ink}">${escAttr(o.val)}</text>`;
-            });
-            // start, today, and the close (actual, or expected while open)
-            const lab = (x, anchor, k, v, ink) => `<text x="${x.toFixed(1)}" y="${RY + 32}" text-anchor="${anchor}" font-size="9.5" font-weight="800" letter-spacing=".5" fill="#7c8894">${k}</text>`
-                + `<text x="${x.toFixed(1)}" y="${RY + 47}" text-anchor="${anchor}" font-size="12" font-weight="800" fill="${ink || '#0b1f3a'}">${v}</text>`;
-            g += lab(X0, 'start', 'LOADING START · DAY 1', escAttr(fmtDateShort(d.start)));
-            if (d.open) {
-                const tx = xL(d.days) + sw;                     // the end of today
-                g += `<line x1="${tx.toFixed(1)}" x2="${tx.toFixed(1)}" y1="${RY - SH / 2 - 3}" y2="${RY + SH / 2 + 3}" stroke="#0b1f3a" stroke-width="2" stroke-linecap="round"/>`;
-                const endFar = X1 - tx > 150, startFar = tx - X0 > 150;
-                if (endFar && startFar) g += lab(tx, 'middle', `TODAY · DAY ${d.days}`, escAttr(fmtDateShort(fmtDate(d.endISO))));
-                else if (endFar) g += lab(tx + 8, 'start', `TODAY · DAY ${d.days}`, escAttr(fmtDateShort(fmtDate(d.endISO))));
-                if (exp && exp.days && exp.days > d.days) {
-                    g += `<circle cx="${X1}" cy="${RY}" r="5.5" fill="#fff" stroke="#2f5f8a" stroke-width="2.2" stroke-dasharray="3 2"/>`
-                       + lab(X1 + 6, 'end', `EXPECTED CLOSE · DAY ${exp.days}`, '~' + escAttr(fmtDateShort(fmtDate(exp.iso))), '#2f5f8a');
-                } else if (!endFar || !startFar) {
-                    g += lab(X1 + 6, 'end', `TODAY · DAY ${d.days}`, escAttr(fmtDateShort(fmtDate(d.endISO))));
+            const caption = (o, yk) => `<text x="${o.tx.toFixed(1)}" y="${yk}" text-anchor="${o.anchor}" font-size="9.5" font-weight="800" letter-spacing=".5" fill="#7c8894">${escAttr(o.k)}</text>`
+                + `<text x="${o.tx.toFixed(1)}" y="${yk + 13}" text-anchor="${o.anchor}" font-size="12" font-weight="800" fill="${o.ink || '#0b1f3a'}">${escAttr(o.v)}</text>`;
+            // markers: stems first, so captions and dots sit on top
+            marks.forEach(o => {
+                const ghost = o.kind === 'ghost', today = o.kind === 'today';
+                const stroke = today ? '#0b1f3a' : ghost ? '#c3cad1' : '#9aa5af';
+                const dash = ghost ? ' stroke-dasharray="2 2"' : '';
+                if (o.tier >= 0) {
+                    const yk = RY - 50 - o.tier * TIER;
+                    g += `<line x1="${o.x.toFixed(1)}" x2="${o.x.toFixed(1)}" y1="${yk + 17}" y2="${RY - SH / 2 - (today ? 2 : 14)}" stroke="${stroke}" stroke-width="${today ? 1.4 : 1}"${dash}/>` + caption(o, yk);
+                } else {
+                    g += `<line x1="${o.x.toFixed(1)}" x2="${o.x.toFixed(1)}" y1="${RY + SH / 2 + 2}" y2="${RY + 20}" stroke="${stroke}" stroke-width="${today ? 1.4 : 1}"${dash}/>` + caption(o, RY + 32);
                 }
-            } else {
-                g += `<circle cx="${X1}" cy="${RY}" r="5.5" fill="#0b1f3a" stroke="#fff" stroke-width="2"/>`
-                   + lab(X1 + 6, 'end', `CLOSED · DAY ${d.days}`, escAttr(fmtDateShort(d.end)));
-            }
+                if (today) g += `<line x1="${o.x.toFixed(1)}" x2="${o.x.toFixed(1)}" y1="${RY - SH / 2 - 3}" y2="${RY + SH / 2 + 3}" stroke="#0b1f3a" stroke-width="2.2" stroke-linecap="round"/>`;
+                else g += `<circle cx="${o.x.toFixed(1)}" cy="${RY}" r="6" fill="#fff" stroke="${ghost ? '#8a96a1' : '#0b1f3a'}" stroke-width="2.2"${ghost ? ' stroke-dasharray="2.5 2"' : ''}/>`;
+            });
+            below.filter(o => o.corner).forEach(o => {
+                if (o.endDot === 'exp') g += `<circle cx="${X1}" cy="${RY}" r="5.5" fill="#fff" stroke="#2f5f8a" stroke-width="2.2" stroke-dasharray="3 2"/>`;
+                if (o.endDot === 'closed') g += `<circle cx="${X1}" cy="${RY}" r="5.5" fill="#0b1f3a" stroke="#fff" stroke-width="2"/>`;
+                g += caption(o, RY + 32);
+            });
             return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Loading timeline by day: day 1 to day ${d.days}${exp && exp.days ? `, expected close day ${exp.days}` : ''}, aircraft loaded per day, and the days the fleet reached 50% and 90%" style="display:block; max-width:100%; height:auto; overflow:visible;">${g}</svg>`;
         }
 

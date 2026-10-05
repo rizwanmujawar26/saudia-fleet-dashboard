@@ -13,6 +13,11 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.208.1 — MLR timeline: TODAY above the rail, collision-free marker labels (2026-10-05)
+TODAY joins 50% / 90% / Expected-90% as a point marker ABOVE the rail; Start and Close own the bottom corners.
+Markers whose captions would touch form a cluster drawn as a staircase — each caption hangs off the same side of
+its own stem, one tier apart — so no stem crosses a caption; the rail drops to make room for the tiers used.
+
 ### v2.208.0 — Media Loading Report: richer charts while a cycle is open (2026-10-05)
 - **Roll-out curve** draws the two previous cycles as muted references (`mlrPrevs`, `MLR_REF_STYLES`: slate dashed,
   sand dotted) — the current cycle stays the bold green line.
