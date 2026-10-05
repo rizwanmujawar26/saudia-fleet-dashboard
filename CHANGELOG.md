@@ -13,6 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.207.0 — Fleet: live delivery-flight status for linefit deliveries (2026-10-05)
+`deliveryPhase(id)` reads `/fleetSpecs/{tail}/deliveryFlight` (date + dep UTC + durMin) against the clock:
+before departure the Operations cell shows a dashed blue **DELIVERY SCHEDULED** (flight · route · dep), in the
+air a **DELIVERY IN FLIGHT** badge with a pulsing dot and a plane gliding along a TLS→JED track (pure CSS —
+negative animation-delay = elapsed, duration = block time), and from arrival the normal IN SERVICE. The delivery
+age pill and the Timeline "Aircraft Delivered" title wait for arrival too. `scheduleDeliveryTick()` re-renders at
+the next dep/arrival so an open page flips on its own. First used for ASBC (SV9022, 05-Oct-2026).
+
 ### v2.206.3 — Media Download menu: uniform rows (2026-10-04)
 Every report row now has the same shape: a status icon (green ✓ completed, pulsing amber dot in progress), the month
 on one line with "Completed" / "In progress" beneath it, then the MLR ref pill. The old inline RUNNING tag pushed the

@@ -2466,6 +2466,22 @@
            just a placeholder in the roster. A dashed edge reads as "not here yet" and
            keeps it distinct from the solid IN SERVICE badge beside it. */
         .status-badge.ops-future      { background: #f5f3ec; color: #7a6f52; border: 1px dashed #cabf9e; }
+        /* A linefit's delivery flight, before it lands (user, 2026-10-05). SCHEDULED keeps
+           FUTURE's dashed "not here yet" edge in a calm blue; IN FLIGHT is solid-edged with
+           a softly pulsing dot and a hairline track the plane glides along — motion that
+           says "happening now" without shouting like AOG. */
+        .status-badge.ops-dlv-sched   { background: #eef4fb; color: #2a5d8f; border: 1px dashed #a9c4e0; }
+        .status-badge.ops-dlv-air     { background: #e8f1fb; color: #1c5b96; border: 1px solid #b7d0ea; display: inline-flex; align-items: center; gap: 5px; }
+        .dlv-dot { width: 6px; height: 6px; border-radius: 50%; background: #2f7fd0; animation: dlvPulse 1.8s ease-in-out infinite; }
+        @keyframes dlvPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(47,127,208,.5); } 60% { box-shadow: 0 0 0 4px rgba(47,127,208,0); } }
+        .dlv-track { position: relative; width: 120px; height: 14px; margin: 1px 0 0; }
+        .dlv-track::before { content: ''; position: absolute; left: 2px; right: 2px; top: 7px; border-top: 1px dashed #a9c4e0; }
+        .dlv-plane { position: absolute; top: 0; left: 0; width: 14px; height: 14px; color: #1c5b96;
+            animation-name: dlvFly; animation-timing-function: linear; animation-fill-mode: both; }
+        .dlv-plane svg { display: block; }
+        @keyframes dlvFly { from { left: 0; } to { left: calc(100% - 14px); } }
+        .dlv-ops-sub { font-size: 10.5px; color: #5d7286; white-space: nowrap; }
+        @media (prefers-reduced-motion: reduce) { .dlv-dot { animation: none; } }
         /* A placeholder registration, shown in the Registration cell for a future tail
            that is not known yet — muted and italic so it never reads as a real tail. */
         .reg-unknown { color: #9a8f6a; font-style: italic; font-weight: 700; letter-spacing: .02em; }
@@ -7915,8 +7931,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.206.3';
-        const APP_BUILD    = '2026.10.04.01';
+        const APP_VERSION  = '2.207.0';
+        const APP_BUILD    = '2026.10.05.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -11424,6 +11440,62 @@
         function deliveryDateOf(id) {
             return (fleetSpecsLive[id] || {}).deliveryDate || '';
         }
+        // Where a linefit's delivery flight stands RIGHT NOW, from /fleetSpecs
+        // deliveryFlight (date + dep are UTC, arrival = dep + durMin — the same maths as
+        // deliveryFlightHTML). 'scheduled' before departure, 'enroute' in the air,
+        // 'delivered' from arrival. null when the tail has no delivery flight recorded —
+        // every older aircraft, which simply reads as delivered (user, 2026-10-05).
+        function deliveryPhase(id) {
+            const spec = fleetSpecsLive[id] || {};
+            const f = spec.deliveryFlight;
+            if (!f || !f.dep) return null;
+            const dIso = toISODate(f.date || spec.deliveryDate || '');
+            const [h, m] = String(f.dep).split(':').map(Number);
+            if (!dIso || !Number.isFinite(h) || !Number.isFinite(m)) return null;
+            const depMs = Date.parse(dIso + 'T00:00:00Z') + (h * 60 + m) * 60000;
+            const arrMs = depMs + (+f.durMin || 0) * 60000;
+            const now = Date.now();
+            const phase = now < depMs ? 'scheduled' : now < arrMs ? 'enroute' : 'delivered';
+            const hm = ms => new Date(ms).toISOString().slice(11, 16);
+            return { phase, depMs, arrMs, now, f, depHM: hm(depMs), arrHM: hm(arrMs) };
+        }
+        // Re-render once at the next scheduled departure/arrival on the roster, so the
+        // badge flips Scheduled → In flight → In Service on its own with the page open.
+        let deliveryTickTimer = null;
+        function scheduleDeliveryTick() {
+            clearTimeout(deliveryTickTimer);
+            const now = Date.now();
+            let next = Infinity;
+            Object.keys(fleetSpecsLive).forEach(id => {
+                const d = deliveryPhase(id);
+                if (!d) return;
+                [d.depMs, d.arrMs].forEach(t => { if (t > now && t < next) next = t; });
+            });
+            if (next === Infinity) return;
+            deliveryTickTimer = setTimeout(() => { try { renderAll(); } catch (e) { /* next poll redraws */ } },
+                Math.min(next - now + 1500, 2147000000));
+        }
+        // The Operational cell while the delivery flight is pending: a quiet dashed
+        // SCHEDULED badge, then an IN FLIGHT badge over a thin TLS→JED track whose plane
+        // glides by pure CSS — its animation starts at the elapsed fraction (negative
+        // delay) and runs to the end over the remaining time, so nothing re-renders.
+        function deliveryOpsHTML(d) {
+            const f = d.f;
+            const route = `${escAttr(f.fromIata || '')} → ${escAttr(f.toIata || '')}`;
+            if (d.phase === 'scheduled') {
+                return `<div class="ops-stack">
+                    <span class="status-badge ops-dlv-sched" title="Delivery flight ${escAttr(f.flight)} ${escAttr(f.from || '')} → ${escAttr(f.to || '')}, departs ${escAttr(f.date || '')} ${d.depHM} UTC">DELIVERY SCHEDULED</span>
+                    <div class="ops-sub dlv-ops-sub">${escAttr(f.flight)} · ${route} · dep ${d.depHM}Z</div>
+                  </div>`;
+            }
+            const total = Math.max(1, d.arrMs - d.depMs);
+            const elapsed = Math.min(total, Math.max(0, d.now - d.depMs));
+            return `<div class="ops-stack">
+                    <span class="status-badge ops-dlv-air" title="Delivery flight ${escAttr(f.flight)} in the air — ${escAttr(f.from || '')} → ${escAttr(f.to || '')}, arrives ${d.arrHM} UTC"><span class="dlv-dot"></span>DELIVERY IN FLIGHT</span>
+                    <div class="dlv-track" aria-hidden="true"><span class="dlv-plane" style="animation-duration:${(total / 1000).toFixed(0)}s;animation-delay:-${(elapsed / 1000).toFixed(0)}s"><svg viewBox="0 0 24 24" width="14" height="14"><path transform="rotate(90 12 12)" fill="currentColor" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></span></div>
+                    <div class="ops-sub dlv-ops-sub">${escAttr(f.flight)} · ${route} · ETA ${d.arrHM}Z</div>
+                  </div>`;
+        }
 
         // The same calendar-aware count, but between any two dates. `to` blank means
         // "until today", which is what an open-ended age is. A closed span — a SIM
@@ -11600,6 +11672,9 @@
                 // out of every count (no fit, no status) and shows a FUTURE badge in the
                 // Operational column instead of an ops state.
                 const isFuture  = a.delivered === false;
+                // Delivered on paper but the delivery flight has not landed yet.
+                const dlv = isFuture ? null : deliveryPhase(a.id);
+                const dlvPending = !!dlv && dlv.phase !== 'delivered';
 
                 const row = document.createElement('tr');
                 row.dataset.type = a.type;
@@ -11736,6 +11811,8 @@
                 // chosen. Picking In Service hides them and clears the record on save.
                 const opsCell = isFuture
                     ? `<span class="status-badge ops-future" title="Future aircraft — not yet delivered, still with the manufacturer. Edit to set the tail and deliver it.">FUTURE</span>`
+                    : dlvPending && !editing
+                    ? deliveryOpsHTML(dlv)
                     : editing
                     ? `<div class="ops-edit">
                         <select class="edit-select" data-id="${a.id}" data-field="ops/state" onchange="handleFleetEdit(this)">${
@@ -11799,7 +11876,7 @@
                 // is reference data), '—' when the spec has no delivery date.
                 const delivery = deliveryDateOf(a.id);
                 const delivLong = deliveryLong(delivery);
-                const delivAge = deliveryAge(delivery);
+                const delivAge = dlvPending ? '' : deliveryAge(delivery);
                 const ageCell = delivLong
                     ? `<div class="deliv-stack"><span class="fleet-date">${escAttr(delivLong)}</span>${delivAge ? `<span class="age-pill" title="Age since delivery (${escAttr(delivery)})">${escAttr(delivAge)}</span>` : ''}</div>`
                     : '<span class="fleet-notset">—</span>';
@@ -11857,6 +11934,7 @@
             updateSortIndicators('fleetTable');
             syncFleetOrderNote();   // the "Newest first" note — must follow updateSortIndicators
             updateFleetEditUI();
+            scheduleDeliveryTick(); // flip a pending delivery's badge at dep / arrival
         }
 
         // Tail-code order for the widget note lines: like a plain sort, except a LETTER
@@ -23434,9 +23512,14 @@
             aircraftData.forEach(a => {
                 const dIso = toISODate(deliveryDateOf(a.id));
                 if (!dIso || dIso < DELIVERY_TIMELINE_FROM) return;
+                // A delivery flight still pending reads as such, not as delivered.
+                const dp = deliveryPhase(a.id);
+                const title = dp && dp.phase === 'scheduled' ? `Delivery Flight Scheduled — ${dp.f.flight} dep ${dp.depHM}Z`
+                    : dp && dp.phase === 'enroute' ? `Delivery Flight In Progress — ${dp.f.flight} ETA ${dp.arrHM}Z`
+                    : 'Aircraft Delivered';
                 out.push({ iso: dIso, kind: 'operational', delivery: true,
                            tail: a.id, type: a.type,
-                           title: 'Aircraft Delivered', sub: '' });
+                           title, sub: '' });
             });
 
             // --- Service: Maintenance Issues (IFC/WiFi outages), open and closed ---
