@@ -2474,13 +2474,17 @@
         .status-badge.ops-dlv-air     { background: #e8f1fb; color: #1c5b96; border: 1px solid #b7d0ea; display: inline-flex; align-items: center; gap: 5px; }
         .dlv-dot { width: 6px; height: 6px; border-radius: 50%; background: #2f7fd0; animation: dlvPulse 1.8s ease-in-out infinite; }
         @keyframes dlvPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(47,127,208,.5); } 60% { box-shadow: 0 0 0 4px rgba(47,127,208,0); } }
-        .dlv-track { position: relative; width: 120px; height: 14px; margin: 1px 0 0; }
+        .dlv-live { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; vertical-align: middle; }
+        .dlv-live .fr24-link { margin-left: 3px; }
+        .dlv-iata { font-size: 9.5px; font-weight: 800; letter-spacing: .03em; color: #5d7286; }
+        .dlv-track { position: relative; display: inline-block; width: 96px; height: 14px; }
         .dlv-track::before { content: ''; position: absolute; left: 2px; right: 2px; top: 7px; border-top: 1px dashed #a9c4e0; }
         .dlv-plane { position: absolute; top: 0; left: 0; width: 14px; height: 14px; color: #1c5b96;
             animation-name: dlvFly; animation-timing-function: linear; animation-fill-mode: both; }
         .dlv-plane svg { display: block; }
         @keyframes dlvFly { from { left: 0; } to { left: calc(100% - 14px); } }
         .dlv-ops-sub { font-size: 10.5px; color: #5d7286; white-space: nowrap; }
+        .tl-dlv-live { margin-left: 8px; display: inline-flex; align-items: center; }
         @media (prefers-reduced-motion: reduce) { .dlv-dot { animation: none; } }
         /* A placeholder registration, shown in the Registration cell for a future tail
            that is not known yet — muted and italic so it never reads as a real tail. */
@@ -7931,8 +7935,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.208.5';
-        const APP_BUILD    = '2026.10.05.07';
+        const APP_VERSION  = '2.209.0';
+        const APP_BUILD    = '2026.10.05.08';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -11479,21 +11483,48 @@
         // SCHEDULED badge, then an IN FLIGHT badge over a thin TLS→JED track whose plane
         // glides by pure CSS — its animation starts at the elapsed fraction (negative
         // delay) and runs to the end over the remaining time, so nothing re-renders.
-        function deliveryOpsHTML(d) {
+        // A pending delivery's row on the Timeline / Activity: the live strip while in the
+        // air, just the FR24 link while scheduled. '' for every other row.
+        function tlDeliveryLive(x) {
+            if (!x || !x.delivery || !x.dlvFlight) return '';
+            const d = deliveryPhase(x.tail);
+            if (!d || d.phase === 'delivered') return '';
+            return `<span class="tl-dlv-live">${d.phase === 'enroute' ? deliveryLiveHTML(x.tail, d) : (d.f.fr24Id ? deliveryFr24Link(x.tail, d.f) : '')}</span>`;
+        }
+        // The FR24 link for a delivery flight — the same icon as the Fleet tail cell, but to
+        // this flight's playback (fr24Url#fr24Id) so a reader lands on the live track.
+        function deliveryFr24Link(tail, f) {
+            const url = fr24Url(tail) + (f.fr24Id ? '#' + f.fr24Id : '');
+            return `<a class="fr24-link" href="${escAttr(url)}" target="_blank" rel="noopener noreferrer" title="Follow ${escAttr(f.flight)} on Flightradar24" aria-label="Follow ${escAttr(f.flight)} on Flightradar24">${FR24_ICON}</a>`;
+        }
+        // TLS ──✈── JED with the plane gliding by pure CSS: the animation starts at the
+        // elapsed fraction (negative delay) and runs to the end over the block time, so it
+        // sits where the aircraft is and needs no re-render. Shared by Fleet, Timeline and
+        // Activity (user, 2026-10-05).
+        function deliveryLiveHTML(tail, d) {
+            const f = d.f;
+            const total = Math.max(1, d.arrMs - d.depMs);
+            const elapsed = Math.min(total, Math.max(0, d.now - d.depMs));
+            return `<span class="dlv-live" title="${escAttr(f.flight)} ${escAttr(f.from || '')} → ${escAttr(f.to || '')} · departed ${d.depHM} UTC · ETA ${d.arrHM} UTC">`
+                + `<span class="dlv-iata">${escAttr(f.fromIata || '')}</span>`
+                + `<span class="dlv-track" aria-hidden="true"><span class="dlv-plane" style="animation-duration:${(total / 1000).toFixed(0)}s;animation-delay:-${(elapsed / 1000).toFixed(0)}s"><svg viewBox="0 0 24 24" width="14" height="14"><path transform="rotate(90 12 12)" fill="currentColor" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></span></span>`
+                + `<span class="dlv-iata">${escAttr(f.toIata || '')}</span>${deliveryFr24Link(tail, f)}</span>`;
+        }
+        // The Operational cell while the delivery flight is pending: a quiet dashed
+        // SCHEDULED badge, then an IN FLIGHT badge over the live track with its ETA.
+        function deliveryOpsHTML(tail, d) {
             const f = d.f;
             const route = `${escAttr(f.fromIata || '')} → ${escAttr(f.toIata || '')}`;
             if (d.phase === 'scheduled') {
                 return `<div class="ops-stack">
                     <span class="status-badge ops-dlv-sched" title="Delivery flight ${escAttr(f.flight)} ${escAttr(f.from || '')} → ${escAttr(f.to || '')}, departs ${escAttr(f.date || '')} ${d.depHM} UTC">DELIVERY SCHEDULED</span>
-                    <div class="ops-sub dlv-ops-sub">${escAttr(f.flight)} · ${route} · dep ${d.depHM}Z</div>
+                    <div class="ops-sub dlv-ops-sub">${escAttr(f.flight)} · ${route} · dep ${d.depHM}Z${f.fr24Id ? deliveryFr24Link(tail, f) : ''}</div>
                   </div>`;
             }
-            const total = Math.max(1, d.arrMs - d.depMs);
-            const elapsed = Math.min(total, Math.max(0, d.now - d.depMs));
             return `<div class="ops-stack">
                     <span class="status-badge ops-dlv-air" title="Delivery flight ${escAttr(f.flight)} in the air — ${escAttr(f.from || '')} → ${escAttr(f.to || '')}, arrives ${d.arrHM} UTC"><span class="dlv-dot"></span>DELIVERY IN FLIGHT</span>
-                    <div class="dlv-track" aria-hidden="true"><span class="dlv-plane" style="animation-duration:${(total / 1000).toFixed(0)}s;animation-delay:-${(elapsed / 1000).toFixed(0)}s"><svg viewBox="0 0 24 24" width="14" height="14"><path transform="rotate(90 12 12)" fill="currentColor" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></span></div>
-                    <div class="ops-sub dlv-ops-sub">${escAttr(f.flight)} · ${route} · ETA ${d.arrHM}Z</div>
+                    ${deliveryLiveHTML(tail, d)}
+                    <div class="ops-sub dlv-ops-sub">${escAttr(f.flight)} · dep ${d.depHM}Z · ETA ${d.arrHM}Z</div>
                   </div>`;
         }
 
@@ -11812,7 +11843,7 @@
                 const opsCell = isFuture
                     ? `<span class="status-badge ops-future" title="Future aircraft — not yet delivered, still with the manufacturer. Edit to set the tail and deliver it.">FUTURE</span>`
                     : dlvPending && !editing
-                    ? deliveryOpsHTML(dlv)
+                    ? deliveryOpsHTML(a.id, dlv)
                     : editing
                     ? `<div class="ops-edit">
                         <select class="edit-select" data-id="${a.id}" data-field="ops/state" onchange="handleFleetEdit(this)">${
@@ -13525,7 +13556,7 @@
                 ${pinnedVisit ? `<button class="avr-act-btn" title="Remove from report" onclick="unpinDerived('${escAttr(key)}','${escAttr(pinnedVisit.id)}')">🔓</button>` : ''}
             </span>` : '';
 
-            const mark = x.kind === 'operational' ? `<span class="tl-ops-mark" aria-hidden="true">${x.delivery ? '🛬' : x.opsReturn ? '✔' : '⚠'}</span>`
+            const mark = x.kind === 'operational' ? `<span class="tl-ops-mark" aria-hidden="true">${x.delivery ? (x.dlvFlight ? '✈️' : '🛬') : x.opsReturn ? '✔' : '⚠'}</span>`
                        : x.kind === 'service' ? `<span class="tl-ops-mark" aria-hidden="true">${x.svcRestored ? '✔' : '🛜'}</span>`
                        : x.kind === 'visit' ? '<span class="tl-mod-mark" aria-hidden="true">📋</span>'
                        : x.kind === 'activation' ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>'
@@ -13533,7 +13564,7 @@
                        : '';
             const main = `${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}`
                 + `<span class="tl-title">${escAttr(x.title)}</span>`
-                + `${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}${tlEclPill(x.ecl)}`
+                + `${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}${tlEclPill(x.ecl)}${tlDeliveryLive(x)}`
                 + `<span class="avr-spacer"></span>${visitChip}${srcTag}${actions}`;
             return `<li class="repo-row kind-${x.kind} tl-grid">${tlCells({
                 mark,
@@ -23675,6 +23706,7 @@
                     : dp && dp.phase === 'enroute' ? `Delivery Flight In Progress — ${dp.f.flight} ETA ${dp.arrHM}Z`
                     : 'Aircraft Delivered';
                 out.push({ iso: dIso, kind: 'operational', delivery: true,
+                           dlvLive: !!dp && dp.phase === 'enroute', dlvFlight: !!dp && dp.phase !== 'delivered',
                            tail: a.id, type: a.type,
                            title, sub: '' });
             });
@@ -24339,7 +24371,7 @@
                 const opsCls = x.kind === 'operational' ? (x.delivery ? '' : x.opsReturn ? ' tl-ops-back' : ' tl-ops-out')
                              : x.kind === 'service' ? (x.svcRestored ? ' tl-ops-back' : ' tl-ops-out')
                              : '';
-                const opsMark = x.kind === 'operational' ? (x.delivery ? '🛬' : x.opsReturn ? '✔' : '⚠')
+                const opsMark = x.kind === 'operational' ? (x.delivery ? (x.dlvFlight ? '✈️' : '🛬') : x.opsReturn ? '✔' : '⚠')
                               : x.kind === 'service' ? (x.svcRestored ? '✔' : '🛜')
                               : '';
                 const markHtml = milestone ? '<span class="tl-milestone-mark" aria-hidden="true">✈</span>'
@@ -24351,7 +24383,7 @@
                         reg: escAttr(x.tail),
                         type: typeLabel ? `<span class="tl-pill" style="${pillStyle(typeColor)}">${escAttr(typeLabel)}</span>` : '',
                         kind: kind ? '' : `<span class="tl-kind tl-kind-${x.kind}">${x.kind === 'visit' ? 'REPORT' : x.kind}</span>`,
-                        main: `${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}<span class="tl-title">${escAttr(x.title)}</span>${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}${tlEclPill(x.ecl)}`,
+                        main: `${x.location ? `<span class="tl-loc-pill" style="${pillStyle(locColor)}" title="${escAttr(x.location)}">📍 ${escAttr(locationCode(x.location))}</span>` : ''}<span class="tl-title">${escAttr(x.title)}</span>${x.sub ? `<span class="tl-sub">${escAttr(x.sub)}</span>` : ''}${tlEclPill(x.ecl)}${tlDeliveryLive(x)}`,
                     })}</div>
                 </li>`;
             };

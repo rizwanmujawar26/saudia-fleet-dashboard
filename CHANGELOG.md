@@ -13,6 +13,13 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.209.0 — Live delivery flight on Fleet, Timeline and Activity, with FR24 link (2026-10-05)
+Shared `deliveryLiveHTML(tail, d)`: TLS ──✈── JED with the CSS-glided plane plus the Flightradar24 icon linking to
+the flight's playback (`fr24Url(tail)#fr24Id`, `deliveryFr24Link`). Fleet Operations cell uses it under DELIVERY IN
+FLIGHT (with dep/ETA); Home Timeline and Activity rows append it via `tlDeliveryLive(x)` while the flight is in the
+air (just the FR24 link while scheduled), and the row mark is ✈️ until it lands. Data: ASBC SV9022 ATD 14:38Z,
+ETA 20:34Z (durMin 356), fr24Id 41fb9ee5 — written to /fleetSpecs/ASBC/deliveryFlight.
+
 ### v2.208.5 — MLR timeline: start label reads "DAY 1 · LOADING START" (2026-10-05)
 The day leads on the left corner so it reads first.
 
