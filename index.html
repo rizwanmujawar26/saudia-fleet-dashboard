@@ -2399,6 +2399,50 @@
         /* Delivery — date on top, age below, both centred. */
         .deliv-stack { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.15; }
         .deliv-stack .fleet-date { font-size: 11px; }
+        /* A delivery date with a recorded flight: hover or click opens its flight card. */
+        .deliv-flt { cursor: pointer; border-radius: 6px; padding: 1px 4px; margin: -1px -4px; transition: background .12s; }
+        .deliv-flt:hover, .deliv-flt:focus-visible, .deliv-flt.on { background: #e9f1fb; outline: none; }
+        .deliv-flt .fleet-date { border-bottom: 1px dotted #7d98b8; }
+        .deliv-flt-ic { font-size: 9px; color: #2f7fd0; margin-left: 3px; }
+
+        /* ===== Delivery flight card (v2.211.0) — a flight-tracker widget ===== */
+        .fc-card { position: fixed; z-index: 1300; width: 330px; max-width: calc(100vw - 16px); border-radius: 16px; overflow: hidden;
+            background: #fff; box-shadow: 0 14px 40px rgba(11,31,58,.28), 0 2px 6px rgba(11,31,58,.12); font-family: inherit;
+            opacity: 0; transform: translateY(4px); transition: opacity .14s, transform .14s; pointer-events: none; }
+        .fc-card.show { opacity: 1; transform: none; pointer-events: auto; }
+        .fc-band { background: linear-gradient(120deg, #0b1f3a 0%, #123a63 60%, #0f4c5c 100%); color: #fff; padding: 12px 14px 14px; }
+        .fc-top { display: flex; align-items: center; gap: 8px; }
+        .fc-kind { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; color: #9fc2e4; text-transform: uppercase; }
+        .fc-status { margin-left: auto; font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
+        .fc-st-landed { background: rgba(61,220,132,.18); color: #7ef0b0; border: 1px solid rgba(61,220,132,.4); }
+        .fc-st-enroute { background: rgba(255,77,79,.18); color: #ffb3b3; border: 1px solid rgba(255,107,107,.45); }
+        .fc-st-scheduled { background: rgba(127,211,255,.16); color: #bfe6ff; border: 1px solid rgba(127,211,255,.4); }
+        .fc-flt { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
+        .fc-flt b { font-size: 20px; font-weight: 800; letter-spacing: .02em; }
+        .fc-flt span { font-size: 11px; color: #a9c3dc; font-weight: 600; }
+        .fc-route { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin-top: 12px; }
+        .fc-port { display: flex; flex-direction: column; line-height: 1.15; }
+        .fc-port.fc-r { text-align: right; align-items: flex-end; }
+        .fc-port b { font-size: 26px; font-weight: 800; letter-spacing: .03em; }
+        .fc-port span { font-size: 11px; color: #bcd3ea; font-weight: 600; }
+        .fc-port em { font-style: normal; font-size: 13px; font-weight: 800; margin-top: 6px; }
+        .fc-port small { font-size: 10px; color: #9fb7cf; font-weight: 600; }
+        .fc-mid { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; }
+        .fc-mid span { font-size: 10.5px; font-weight: 700; color: #bcd3ea; white-space: nowrap; }
+        .fc-line { position: relative; width: 100%; height: 3px; border-radius: 999px; background: rgba(255,255,255,.18); }
+        .fc-line i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, #3ddc84, #7fd3ff); }
+        .fc-line .fc-plane { position: absolute; top: 50%; transform: translate(-50%, -50%); color: #fff; line-height: 0; filter: drop-shadow(0 0 5px rgba(127,211,255,.8)); }
+        .fc-body { padding: 12px 14px 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+        .fc-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .fc-cell span { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8a96a1; }
+        .fc-cell b { font-size: 12.5px; font-weight: 700; color: #0b1f3a; }
+        .fc-note { grid-column: 1 / -1; font-size: 11.5px; color: #55606a; background: #f5f7fa; border-radius: 8px; padding: 6px 9px; }
+        .fc-foot { display: flex; align-items: center; gap: 8px; padding: 0 14px 12px; }
+        .fc-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; text-decoration: none; color: #0b1f3a;
+            background: #fff6d6; border: 1px solid #f3d873; border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+        .fc-btn svg { width: 14px; height: 14px; fill: #e0a800; }
+        .fc-btn:hover { background: #ffefb3; }
+        .fc-edit { margin-left: auto; font-size: 11.5px; font-weight: 700; color: #2f5f8a; background: none; border: none; cursor: pointer; }
 
         /* Mod Start / Mod End squeezed into slim bars: a thin chip, short dd-mmm-yy,
            so the two retrofit-window columns cost almost no width. */
@@ -8004,8 +8048,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.210.0';
-        const APP_BUILD    = '2026.10.05.09';
+        const APP_VERSION  = '2.211.0';
+        const APP_BUILD    = '2026.10.06.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -11592,6 +11636,110 @@
             if (d.phase === 'enroute') return `<span class="tl-dlv-live">${deliveryLiveHTML(x.tail, d)}</span>`;
             return d.f.fr24Id ? `<span class="tl-dlv-live">${deliveryFr24Link(x.tail, d.f)}</span>` : '';
         }
+        // ===== Delivery flight card (v2.211.0, user 2026-10-06) =====
+        // Hover (or click / Enter, for touch and keyboard) a Fleet delivery date that has
+        // a recorded flight: a flight-tracker card — route, times, duration, distance,
+        // average speed, aircraft, gap to service, FR24 playback. One floating element.
+        function dlvCardHTML(tail) {
+            const f = deliveryFlightOf(tail);
+            const d = flightPhaseOf(f, (fleetSpecsLive[tail] || {}).deliveryDate);
+            if (!d) return '';
+            const k = flightKindOf(f.kind || 'delivery');
+            const a = aircraftData.find(x => x.id === tail) || {};
+            const spec = fleetSpecsLive[tail] || {};
+            const typeLabel = TYPE_SHORT_LABEL[a.type] || a.type || '';
+            const total = d.arrMs - d.depMs;
+            const pct = d.phase === 'landed' ? 100 : d.phase === 'scheduled' ? 0 : Math.max(0, Math.min(100, (d.now - d.depMs) / total * 100));
+            const dur = m => `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, '0')}m`;
+            const short = iso => escAttr(fmtDate(iso).slice(0, 6));
+            const depISO = toISODate(f.date || spec.deliveryDate);
+            const st = d.phase === 'landed' ? ['landed', f.kind === 'delivery' || !f.kind ? 'Delivered' : 'Landed']
+                : d.phase === 'enroute' ? ['enroute', 'In flight'] : ['scheduled', 'Scheduled'];
+            const kmh = f.distanceKm && total ? Math.round(f.distanceKm / (total / 3600000)) : 0;
+            const act = toISODate(a.activatedDate || '');
+            const gap = act && d.phase === 'landed' ? Math.round((Date.parse(act + 'T00:00:00Z') - Date.parse(d.arrISO + 'T00:00:00Z')) / 864e5) : null;
+            const cell = (lab, v) => `<div class="fc-cell"><span>${lab}</span><b>${v}</b></div>`;
+            const plane = '<svg viewBox="0 0 24 24" width="16" height="16"><path transform="rotate(90 12 12)" fill="currentColor" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>';
+            const fid = f.id || '';
+            return `<div class="fc-band">
+                    <div class="fc-top"><span class="fc-kind">${escAttr(k.label)}</span><span class="fc-status fc-st-${st[0]}">${st[1]}</span></div>
+                    <div class="fc-flt"><b>${escAttr(f.flight || '')}</b><span>${f.callsign ? escAttr(f.callsign) + ' · ' : ''}${escAttr(fmtDate(depISO))}</span></div>
+                    <div class="fc-route">
+                        <div class="fc-port"><b>${escAttr(f.fromIata || '')}</b><span>${escAttr(f.from || '')}</span><em>${d.depHM} UTC</em><small>${short(depISO)}</small></div>
+                        <div class="fc-mid"><span>${dur(total / 60000)}</span><div class="fc-line"><i style="width:${pct.toFixed(1)}%"></i><span class="fc-plane" style="left:${pct.toFixed(1)}%">${plane}</span></div><span>${f.distanceKm ? Number(f.distanceKm).toLocaleString('en-GB') + ' km' : '&nbsp;'}</span></div>
+                        <div class="fc-port fc-r"><b>${escAttr(f.toIata || '')}</b><span>${escAttr(f.to || '')}</span><em>${d.arrHM} UTC</em><small>${short(d.arrISO)}</small></div>
+                    </div>
+                </div>
+                <div class="fc-body">
+                    ${cell('Aircraft', `HZ-${escAttr(tail)}${typeLabel ? ' · ' + escAttr(typeLabel) : ''}`)}
+                    ${cell('MSN', escAttr(spec.msn || '—'))}
+                    ${cell('Average speed', kmh ? `${kmh.toLocaleString('en-GB')} km/h` : '—')}
+                    ${cell('Entered service', a.activatedDate ? `${escAttr(a.activatedDate)}${gap != null && gap >= 0 ? ` · +${gap}d` : ''}` : 'Not yet')}
+                    ${f.note ? `<div class="fc-note">${escAttr(f.note)}</div>` : ''}
+                </div>
+                <div class="fc-foot">
+                    ${f.fr24Id ? `<a class="fc-btn" href="${escAttr(fr24Url(tail) + '#' + f.fr24Id)}" target="_blank" rel="noopener noreferrer">${FR24_ICON}Flight playback</a>` : ''}
+                    ${fid && canEdit() ? `<button class="fc-edit" onclick="dlvCardHide(true); openFlightEditor('${escAttr(fid)}')">✏️ Edit</button>` : ''}
+                </div>`;
+        }
+        let dlvCardEl = null, dlvCardFor = null, dlvCardPinned = false, dlvCardHideT = null;
+        function dlvCardShow(trigger, pin) {
+            clearTimeout(dlvCardHideT);
+            const tail = trigger.dataset.tail;
+            const html = dlvCardHTML(tail);
+            if (!html) return;
+            if (!dlvCardEl) {
+                dlvCardEl = document.createElement('div');
+                dlvCardEl.className = 'fc-card';
+                dlvCardEl.setAttribute('role', 'dialog');
+                dlvCardEl.addEventListener('mouseenter', () => clearTimeout(dlvCardHideT));
+                dlvCardEl.addEventListener('mouseleave', () => { if (!dlvCardPinned) dlvCardHide(); });
+                document.body.appendChild(dlvCardEl);
+            }
+            document.querySelectorAll('.deliv-flt.on').forEach(e => e.classList.remove('on'));
+            trigger.classList.add('on');
+            dlvCardEl.innerHTML = html;
+            dlvCardEl.setAttribute('aria-label', `Delivery flight of ${tail}`);
+            dlvCardFor = trigger; dlvCardPinned = !!pin;
+            // Below the date when there is room, else above; clamped to the viewport.
+            const r = trigger.getBoundingClientRect();
+            const w = Math.min(330, window.innerWidth - 16);
+            const h = dlvCardEl.offsetHeight || 330;
+            const left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8));
+            const below = r.bottom + 8 + h <= window.innerHeight - 8;
+            dlvCardEl.style.left = left + 'px';
+            dlvCardEl.style.top = (below ? r.bottom + 8 : Math.max(8, r.top - 8 - h)) + 'px';
+            requestAnimationFrame(() => dlvCardEl.classList.add('show'));
+        }
+        function dlvCardHide(now) {
+            clearTimeout(dlvCardHideT);
+            const go = () => {
+                if (dlvCardEl) dlvCardEl.classList.remove('show');
+                if (dlvCardFor) dlvCardFor.classList.remove('on');
+                dlvCardFor = null; dlvCardPinned = false;
+            };
+            if (now) go(); else dlvCardHideT = setTimeout(go, 180);
+        }
+        (function initDlvCard() {
+            const hoverable = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+            const trig = e => e.target.closest && e.target.closest('.deliv-flt');
+            if (hoverable) {
+                document.addEventListener('mouseover', e => { const t = trig(e); if (t && t !== dlvCardFor && !dlvCardPinned) dlvCardShow(t, false); else if (t) clearTimeout(dlvCardHideT); });
+                document.addEventListener('mouseout', e => { const t = trig(e); if (t && !dlvCardPinned && !(e.relatedTarget && (t.contains(e.relatedTarget) || (dlvCardEl && dlvCardEl.contains(e.relatedTarget))))) dlvCardHide(); });
+            }
+            document.addEventListener('click', e => {
+                const t = trig(e);
+                if (t) { e.preventDefault(); (dlvCardFor === t && dlvCardPinned) ? dlvCardHide(true) : dlvCardShow(t, true); return; }
+                if (dlvCardEl && dlvCardFor && !dlvCardEl.contains(e.target)) dlvCardHide(true);
+            });
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape' && dlvCardFor) dlvCardHide(true);
+                const t = trig(e);
+                if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); dlvCardShow(t, true); }
+            });
+            window.addEventListener('scroll', () => { if (dlvCardFor) dlvCardHide(true); }, { passive: true, capture: true });
+        })();
+
         // The FR24 link for a delivery flight — the same icon as the Fleet tail cell, but to
         // this flight's playback (fr24Url#fr24Id) so a reader lands on the live track.
         function deliveryFr24Link(tail, f) {
@@ -12009,8 +12157,11 @@
                 const delivery = deliveryDateOf(a.id);
                 const delivLong = deliveryLong(delivery);
                 const delivAge = dlvPending ? '' : deliveryAge(delivery);
+                // A recorded delivery flight makes the date a trigger for its flight card
+                // (hover or click — dlvCard*, v2.211.0).
+                const hasDlvFlight = !!deliveryFlightOf(a.id);
                 const ageCell = delivLong
-                    ? `<div class="deliv-stack"><span class="fleet-date">${escAttr(delivLong)}</span>${delivAge ? `<span class="age-pill" title="Age since delivery (${escAttr(delivery)})">${escAttr(delivAge)}</span>` : ''}</div>`
+                    ? `<div class="deliv-stack${hasDlvFlight ? ' deliv-flt' : ''}"${hasDlvFlight ? ` data-tail="${escAttr(a.id)}" tabindex="0" role="button" aria-label="Show the delivery flight of ${escAttr(a.id)}"` : ''}><span class="fleet-date">${escAttr(delivLong)}${hasDlvFlight ? '<span class="deliv-flt-ic" aria-hidden="true">✈</span>' : ''}</span>${delivAge ? `<span class="age-pill" title="Age since delivery (${escAttr(delivery)})">${escAttr(delivAge)}</span>` : ''}</div>`
                     : '<span class="fleet-notset">—</span>';
 
                 // The tail plus a Flightradar24 link — icon sized to the text, opens the

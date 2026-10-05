@@ -13,6 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.211.0 — Fleet: delivery flight card on the Delivery date (2026-10-06)
+A delivery date whose tail has a recorded delivery flight (`deliveryFlightOf`) gets a dotted underline + ✈ and opens a
+flight-tracker card (`dlvCardHTML` / `dlvCardShow`) on hover — or click/Enter for touch and keyboard: navy band with
+kind, status (Scheduled / In flight / Delivered), flight + callsign + date, big FROM → TO with UTC times, duration,
+distance and progress line; body with aircraft, MSN, average speed, entered service (+days after arrival), note;
+FR24 "Flight playback" button and ✏️ Edit for editors. Closes on outside click, Escape or scroll. Any tail given a
+delivery flight via ✈️ Add Flight gets the card automatically.
+
 ### v2.210.0 — Special flights: /flights node, Flight category, Live Activity bar, Add Flight form (2026-10-05)
 - **New node `/flights/{id}`** `{ tail, kind (delivery|test|vip|ferry|other), flight, callsign, date, dep (UTC), durMin,
   from/fromIata, to/toIata, distanceKm, fr24Id, note, loggedAt, loggedBy }` — rules (`$other:false`), backup/restore/
