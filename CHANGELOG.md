@@ -13,6 +13,17 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.222.0 — Phased connectivity status: Power OFF → Power ON → Software Loading → Commissioned → Commercial (2026-10-06)
+`FLEET_STATUSES` replaced (Planned/Installed/Decommissioned/Active/In Retrofit retired; legacy values read through
+`normFleetStatus`). Three gates, one helper each: `isCommercial` (in-service COUNTS — IFC Fleet, SSID, HBC+ active,
+KPIs; `commercialFleet()`), `isSystemOn` (Power ON onward — every EDITING page: Software, Media, Hardware,
+Maintenance, Timeline; `activeFleet()` renamed `systemOnFleet()`), `isRetrofitPhase` (Power OFF…Commissioned — on
+ground). Activation date ⇒ Commissioned, forward only (`statusAfterActivation`) on all three save paths (Fleet table —
+staged visibly; Edit modal; Maintenance page). Fleet table: one coloured badge per phase (grey/amber/blue/teal/green),
+Status filter lists the phases, sort by phase. IFC Fleet card: Commercial vs In Retrofit, note grouped by phase.
+Activity picker tag shows the phase. Migration: Active→Commercial (48), AS73→Commissioned, AQK/ASP/ASU→Power OFF.
+⚠️ Fleet table at 1280px was already 14px over its wrapper; COMMISSIONED adds ~19px more (scrolls).
+
 ### v2.221.0 — IFC System note: only what matters (2026-10-06)
 Note under the Eclipse | HBC+ split is one line: the HBC+ tails oldest → newest by induction (activation, else
 delivery date), the newest flagged with a purple `NEW · 05-Oct` pill when inducted ≤ 30 days ago. Past 4 HBC+ tails it

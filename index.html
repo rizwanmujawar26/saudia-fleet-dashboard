@@ -2326,6 +2326,13 @@
         .status-badge.fleet-installed      { background: #e6f0fb; color: #1c5b96; }
         .status-badge.fleet-commissioned   { background: #e6f7f4; color: #10695c; }
         .status-badge.fleet-planned        { background: #eef1f3; color: #55606a; }
+        /* Phased status (v2.222): grey → amber → blue → teal → green, the journey left to right. */
+        .status-badge.fleet-ph-off  { background: #e9ecef; color: #495057; }
+        .status-badge.fleet-ph-on   { background: #fdf0d5; color: #8a5a12; }
+        .status-badge.fleet-ph-sw   { background: #e3eefa; color: #1c5b96; }
+        .status-badge.fleet-ph-comm { background: #dff4ef; color: #10695c; }
+        .status-badge.fleet-ph-cml  { background: #28a745; color: #fff; }
+        #fleetTable .status-badge[class*="fleet-ph-"] { letter-spacing: 0; padding-left: 6px; padding-right: 6px; }
         .status-badge.fleet-decommissioned { background: #fdeff0; color: #a52834; }
 
         .fleet-date { white-space: nowrap; }
@@ -7666,7 +7673,7 @@
         // True when this unit is fitted more than once anywhere in the fleet it applies
         // to — that is what turns the fitment list into one row per position.
         function lruIsMulti(lru) {
-            return activeFleet().some(a => fitOf(a) === lru.fit && lruQtyFor(lru, a.type) > 1);
+            return systemOnFleet().some(a => fitOf(a) === lru.fit && lruQtyFor(lru, a.type) > 1);
         }
 
         // The grey detail beside an activity's title. It should be the most SPECIFIC
@@ -7748,7 +7755,7 @@
             const multi = lruIsMulti(lru);
             const rows = [];
 
-            activeFleet()
+            systemOnFleet()
                 .filter(a => fitOf(a) === lru.fit)
                 .sort((a, b) => a.id.localeCompare(b.id))
                 .forEach(a => {
@@ -8140,8 +8147,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.221.0';
-        const APP_BUILD    = '2026.10.06.12';
+        const APP_VERSION  = '2.222.0';
+        const APP_BUILD    = '2026.10.06.13';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -8223,7 +8230,7 @@
         // "has a `fit`", and two In-Retrofit tails (ASAA, AS73) with no fit on record made
         // the nav Fleet badge read 47 while the IFC Fleet widget read 49 (v2.185.0).
         // The full roster (all airframes) lives on the Fleet page, which lists everything.
-        function inProgramme(a)    { const s = fleetStatusOf(a); return s === 'Active' || s === 'In Retrofit'; }
+        function inProgramme(a)    { return statusPhase(fleetStatusOf(a)) >= 1; }
         function programmeFleet()  { return fleetRoster.filter(inProgramme); }
         function projectScope()    { return programmeFleet().length; }
         function hbcScope()        { return hbcFleet().length; }
@@ -10196,11 +10203,9 @@
                         { v: 'none', l: 'Not Started' },
                     ] },
                     { id: 'fstatus', label: 'Status', grouped: true,
-                      rowValue: row => row.dataset.fstatus === 'Active' ? 'Active' : 'inactive',
-                      options: [
-                        { v: 'Active', l: 'Active' },
-                        { v: 'inactive', l: 'Inactive' },
-                      ] },
+                      rowValue: row => row.dataset.fstatus || 'none',
+                      // A function: FLEET_STATUSES is declared later in the script (TDZ at load).
+                      options: () => FLEET_STATUSES.map(f => ({ v: f.value, l: f.label })) },
                     // Only the states actually in use, so the dropdown does not list six
                     // kinds of check that no aircraft is in. In Service is forced in
                     // because it is always true of somebody and is the useful inverse
@@ -10385,7 +10390,7 @@
                 apply: () => renderActivityFeedOnly(),
                 search: 'Search — tail, task, part, S/N, ref, person',
                 filters: [
-                    { id: 'type', label: 'Type', options: () => fbTypeOptions(activeFleet()) },
+                    { id: 'type', label: 'Type', options: () => fbTypeOptions(systemOnFleet()) },
                     { id: 'kind', label: 'Kind', options: [
                         { v: 'software', l: 'Software' }, { v: 'media', l: 'Media' },
                         { v: 'hardware', l: 'Hardware' }, { v: 'commission', l: 'Commissioning' },
@@ -10799,7 +10804,7 @@
                 // when the tail is a placeholder).
                 const record = future
                     ? Object.assign({ type, delivered: false }, wantPlaceholder ? { regUnknown: true } : {})
-                    : { type, fit: document.getElementById('addAcFit').value, fleetStatus: 'Active' };
+                    : { type, fit: document.getElementById('addAcFit').value, fleetStatus: 'Commercial' };
 
                 const token = await getIdToken();
                 if (!token) return;
@@ -11104,6 +11109,10 @@
             const fleetBody = { type: c.fleet.type };
             ['fit', 'scope', 'system', 'fleetStatus', 'comments'].forEach(k => { fleetBody[k] = c.fleet[k] ? c.fleet[k] : null; });
             fleetBody.delivered = future ? false : null;
+            {   // Activation date ⇒ Commissioned (v2.222), forward only.
+                const nextSt = statusAfterActivation({ ...(fleetRowOf(oldId) || {}), fit: c.fleet.fit }, fleetBody.fleetStatus, c.ac.activatedDate);
+                if (nextSt) fleetBody.fleetStatus = nextSt;
+            }
 
             // ── /aircraft (flat + deep-path leaves; never a group path beside a leaf) ──
             const acBody = {};
@@ -11205,7 +11214,7 @@
 
         // Active retrofit aircraft — the Software and Media population (39).
         function swFleet() {
-            return activeFleet().filter(a => !isLinefit(a));
+            return systemOnFleet().filter(a => !isLinefit(a));
         }
 
         // Retrofit aircraft still on the ground being fitted. They are NOT Active, so
@@ -11215,12 +11224,12 @@
         // 2026-09-13 the cards count the active fleet only and this helper is unused.
         // Whole-roster scope, non-linefit only, exactly the In-Retrofit programme status.
         function inRetrofitSwFleet() {
-            return aircraftData.filter(a => fleetStatusOf(a) === 'In Retrofit' && !isLinefit(a));
+            return aircraftData.filter(a => isRetrofitPhase(a) && !isSystemOn(a) && !isLinefit(a));
         }
 
         // Active linefit aircraft — the HBC+ / SBC population (2), deliberately apart.
         function hbcFleet() {
-            return activeFleet().filter(isLinefit);
+            return systemOnFleet().filter(isLinefit);
         }
 
         // One card for the whole middleware picture: on the latest build to the left, on
@@ -11366,19 +11375,48 @@
         // alternative spellings ("Retrofitting", "Live", "Operational") anywhere.
         // This is the ONE status field: there is deliberately no second
         // `installationStatus` alongside it, or the two would drift apart.
+        // PHASED STATUS (v2.222, user 2026-10-06) — the aircraft's journey through the mod:
+        //   Power OFF        arrived, powered down for the installation (Mod start)
+        //   Power ON         first power-up — software and media loading can begin
+        //   Software Loading middleware / media / config going on
+        //   Commissioned     first time on the network = the Activation date
+        //   Commercial       in commercial service (was "Active")
+        // Three tests hang off the phase, one helper each:
+        //   isCommercial  — Commercial only: every "active fleet" COUNT (IFC Fleet, SSID, KPIs)
+        //   isSystemOn    — Power ON onward: every EDITING page (Software, Media, Hardware,
+        //                   Maintenance, Timeline) — the aircraft is still on ground, but loadable
+        //   isRetrofitPhase — Power OFF … Commissioned: on ground under modification
         const FLEET_STATUSES = [
-            { value: 'Planned',        label: 'Planned',        css: 'planned' },
-            { value: 'In Retrofit',    label: 'In Retrofit',    css: 'in-retrofit' },
-            { value: 'Installed',      label: 'Installed',      css: 'installed' },
-            { value: 'Commissioned',   label: 'Commissioned',   css: 'commissioned' },
-            { value: 'Active',         label: 'Active',         css: 'active' },
-            { value: 'Decommissioned', label: 'Decommissioned', css: 'decommissioned' },
+            { value: 'Power OFF',        label: 'Power OFF',        badge: 'POWER OFF',    css: 'ph-off',   phase: 1 },
+            { value: 'Power ON',         label: 'Power ON',         badge: 'POWER ON',     css: 'ph-on',    phase: 2 },
+            { value: 'Software Loading', label: 'Software Loading', badge: 'SW LOADING',   css: 'ph-sw',    phase: 3 },
+            { value: 'Commissioned',     label: 'Commissioned',     badge: 'COMMISSIONED', css: 'ph-comm',  phase: 4 },
+            { value: 'Commercial',       label: 'Commercial',       badge: 'COMMERCIAL',   css: 'ph-cml',   phase: 5 },
         ];
+        // Pre-v2.222 values, read through until the data is migrated (and forever, harmlessly).
+        const LEGACY_FLEET_STATUS = { 'Active': 'Commercial', 'In Retrofit': 'Power OFF', 'Installed': 'Software Loading', 'Planned': '', 'Decommissioned': '' };
+        function normFleetStatus(v) {
+            const s = v || '';
+            return Object.prototype.hasOwnProperty.call(LEGACY_FLEET_STATUS, s) ? LEGACY_FLEET_STATUS[s] : s;
+        }
+        function statusPhase(v) { const x = FLEET_STATUSES.find(f => f.value === normFleetStatus(v)); return x ? x.phase : 0; }
+        function statusDef(v) { return FLEET_STATUSES.find(f => f.value === normFleetStatus(v)) || null; }
+        function isCommercial(a)    { return statusPhase(fleetStatusOf(a)) === 5; }
+        function isSystemOn(a)      { return statusPhase(fleetStatusOf(a)) >= 2; }
+        function isRetrofitPhase(a) { const p = statusPhase(fleetStatusOf(a)); return p >= 1 && p <= 4; }
+        // An Activation date means Commissioned (user, 2026-10-06): a retrofit aircraft still
+        // in an earlier phase moves forward to Commissioned — forward only, never back, and
+        // Commercial stays a deliberate step. Returns the status to write, or '' for none.
+        function statusAfterActivation(a, curStatus, activated) {
+            if (!activated || isLinefit(a || {})) return '';
+            const p = statusPhase(curStatus);
+            return p >= 1 && p <= 3 ? 'Commissioned' : '';
+        }
 
         // '' when no programme status is set — an aircraft in scope but not yet being
         // retrofitted. Must NOT default to 'Active', or the 55 not-yet-programme
-        // airframes would flood activeFleet() and every count derived from it.
-        function fleetStatusOf(a) { return a.fleetStatus || ''; }
+        // airframes would flood systemOnFleet() and every count derived from it.
+        function fleetStatusOf(a) { return normFleetStatus(a.fleetStatus); }
         function fleetStatusCss(v) {
             const s = FLEET_STATUSES.find(x => x.value === v);
             return s ? s.css : 'active';
@@ -11495,7 +11533,7 @@
         // aircraft actually flying — ASBA/ASBB/ASBE, not all eight. A not-yet-Active HBC+
         // row gets a value no pill selects. Eclipse is unchanged (Active + In Retrofit).
         function fleetSystemPillValue(system, status) {
-            return system === 'HBC+' && status !== 'Active' ? 'HBC+ (not active)' : system;
+            return system === 'HBC+' && normFleetStatus(status) !== 'Commercial' ? 'HBC+ (not active)' : system;
         }
         function fleetSystemCount(v) { return fleetRoster.filter(a => fleetSystemPillValue(fleetSystemOf(a), fleetStatusOf(a)) === v).length; }
         function fleetSystemPillOn(v) { return fbSel('fleet', 'system').has(v); }
@@ -11521,7 +11559,7 @@
         // Active = programme status Active, AOG = every out-of-service airframe
         // (opsOutFleet — any out state, delivered airframes only).
         function fleetPillCount(mode) {
-            if (mode === 'active') return fleetRoster.filter(a => fleetStatusOf(a) === 'Active').length;
+            if (mode === 'active') return fleetRoster.filter(isCommercial).length;
             if (mode === 'aog')    return opsOutFleet().length;
             return fleetRoster.length;
         }
@@ -11529,7 +11567,7 @@
         // uses fleetIsAllMode.) Kept loose (has, not size===1) so Active + a Type still
         // reads as "Active". AOG rides the hidden opsout axis (any out state).
         function fleetPillOn(mode) {
-            if (mode === 'active') return fbSel('fleet', 'fstatus').has('Active');
+            if (mode === 'active') return fbSel('fleet', 'fstatus').has('Commercial');
             if (mode === 'aog')    return fbSel('fleet', 'opsout').has('yes');
             return false;
         }
@@ -11575,7 +11613,7 @@
                        : false;
             const turnOn = mode !== 'all' && !isOn;
             fbClear('fleet');
-            if (turnOn && mode === 'active') fbSel('fleet', 'fstatus').add('Active');
+            if (turnOn && mode === 'active') fbSel('fleet', 'fstatus').add('Commercial');
             else if (turnOn && mode === 'aog') fbSel('fleet', 'opsout').add('yes');
             else if (turnOn && mode === 'eclipse') fbSel('fleet', 'system').add('Eclipse');
             else if (turnOn && mode === 'hbc') fbSel('fleet', 'system').add('HBC+');
@@ -12001,7 +12039,7 @@
                 // NOT coerced to 'retrofit'/'Active', so the Fit and Status columns can
                 // show it as not started rather than inventing a status.
                 const fit = staged.fit !== undefined ? staged.fit : (a.fit || '');
-                const st = staged.fleetStatus !== undefined ? staged.fleetStatus : fleetStatusOf(a);
+                const st = staged.fleetStatus !== undefined ? normFleetStatus(staged.fleetStatus) : fleetStatusOf(a);
                 // Scope and System both live on /fleet, so they read from the roster
                 // record (a.*) and stage flat like `fit`. Scope only surfaces in the Fit
                 // column for airframes with no fit yet — a fitted aircraft is self-
@@ -12011,7 +12049,7 @@
                 // The single value the Fit COLUMN reads and its filter matches. Precedence:
                 // being retrofitted wins over how it will be fitted, an actual fit wins
                 // over scope, and scope wins over "nothing decided".
-                const fitview = st === 'In Retrofit' ? 'in-retrofit'
+                const fitview = (statusPhase(st) >= 1 && statusPhase(st) <= 4) ? 'in-retrofit'
                     : fit === 'retrofit' ? 'retrofit'
                     : fit === 'linefit' ? 'linefit'
                     : scope === 'no' ? 'no-scope'
@@ -12184,9 +12222,9 @@
                     : `<span class="fleet-status-stack">${
                         (!st
                             ? '<span class="fleet-notset">—</span>'
-                            : st === 'Active'
-                                ? '<span class="status-badge fleet-active">ACTIVE</span>'
-                                : `<span class="status-badge fleet-inactive" title="${escAttr(st)}">INACTIVE</span>`)
+                            : (d => d
+                                ? `<span class="status-badge fleet-${d.css}" title="${escAttr(d.label)}">${d.badge}</span>`
+                                : `<span class="status-badge fleet-inactive" title="${escAttr(st)}">${escAttr(st)}</span>`)(statusDef(st)))
                         }${svcBadge}</span>`;
 
                 // Never inferred — blank until someone types it.
@@ -12310,7 +12348,7 @@
                     <td data-sort="${deliverySortKey(delivery)}">${ageCell}</td>
                     <td class="col-ops" data-sort="${escAttr(opsSort)}">${opsCell}</td>
                     <td data-sort="${escAttr((sysShown || 'zzzz').toLowerCase())}">${systemCell}</td>
-                    <td data-sort="${!st ? 'zzzz' : (st === 'Active' ? 'active' : 'inactive')}">${statusCell}</td>
+                    <td data-sort="${!st ? 'zzzz' : (6 - statusPhase(st))}">${statusCell}</td>
                     <td data-sort="${escAttr(wifi)}">${wifiCell}</td>
                     <td data-sort="${dateSortKey(toISODate(activated)) || '00000000'}">${activatedCell}</td>
                     <td class="mod-cell" data-sort="${isLine ? 'zzzz' : (dateSortKey(toISODate(rStart)) || '00000000')}">${modStartCell}</td>
@@ -12368,8 +12406,8 @@
                 const st = fleetStatusOf(a);
                 byStatus[st] = (byStatus[st] || 0) + 1;
             });
-            const activeCount   = byStatus['Active'] || 0;
-            const retrofitCount = byStatus['In Retrofit'] || 0;
+            const activeCount   = byStatus['Commercial'] || 0;
+            const retrofitCount = fleetRoster.filter(isRetrofitPhase).length;
             // Denominator is the WiFi programme, not the whole roster — the not-yet-
             // started airframes are listed on this page but are not what these
             // Active / In Retrofit shares are measured against.
@@ -12382,24 +12420,26 @@
             const actPct = progTotal ? (activeCount / progTotal) * 100 : 0;
             // Name the tails still In Retrofit under the bar — the smaller, incomplete
             // share — rather than leaving the count to speak for itself.
-            const retroTails = fleetRoster
-                .filter(a => fleetStatusOf(a) === 'In Retrofit')
-                .map(a => a.id).sort(tailCompare);
+            // Grouped by phase, latest phase first: "AS73 Commissioned · AQK, ASP, ASU Power OFF".
+            const retroByPhase = FLEET_STATUSES.filter(f => f.phase <= 4).slice().reverse()
+                .map(f => ({ f, tails: fleetRoster.filter(a => fleetStatusOf(a) === f.value).map(a => a.id).sort(tailCompare) }))
+                .filter(g => g.tails.length);
+            const retroTails = retroByPhase.flatMap(g => g.tails);
             const totalCard = `<div class="media-widget fleet-total">
                 <div class="media-widget-head">
                     <span class="media-widget-label">IFC Fleet</span>
                     <span class="media-size-pill">${progTotal} aircraft</span>
                 </div>
                 <div class="ssid-figures">
-                    <span class="ssid-side fleet-active-side"><b>${activeCount}</b> Active</span>
+                    <span class="ssid-side fleet-active-side"><b>${activeCount}</b> Commercial</span>
                     <span class="ssid-side fleet-retrofit-side">In Retrofit <b>${retrofitCount}</b></span>
                 </div>
-                <div class="ssid-track" role="img" aria-label="${activeCount} active, ${retrofitCount} in retrofit">
+                <div class="ssid-track" role="img" aria-label="${activeCount} commercial, ${retrofitCount} in retrofit">
                     <div class="fleet-fill-active" style="width:${actPct}%"></div>
                     <div class="fleet-fill-retrofit" style="width:${100 - actPct}%"></div>
                 </div>
                 ${retroTails.length
-                    ? `<div class="fleet-note fleet-note-retrofit"><b>${retroTails.join(', ')}</b> In Retrofit</div>`
+                    ? `<div class="fleet-note fleet-note-retrofit">${retroByPhase.map(g => `<b>${g.tails.join(', ')}</b> ${escAttr(g.f.label)}`).join(' · ')}</div>`
                     : ''}
             </div>`;
 
@@ -12414,7 +12454,7 @@
 
             // SSID visibility counts the ACTIVE fleet only: an aircraft still in retrofit
             // has not been activated, so it has no SSID on air to be public or hidden.
-            const active = fleetRoster.filter(a => fleetStatusOf(a) === 'Active');
+            const active = fleetRoster.filter(isCommercial);
             let pub = 0, hid = 0;
             const hidTails = [];
             active.forEach(a => {
@@ -12452,7 +12492,7 @@
             const eclTails = programmeFleet().filter(a => !isHbcAircraft(a));
             // Induction = the day it entered service (activation), else its delivery date.
             const inductedOf = id => (aircraftLive[id] || {}).activatedDate || (fleetSpecsLive[id] || {}).deliveryDate || '';
-            const hbcTails = fleetRoster.filter(a => isHbcAircraft(a) && fleetStatusOf(a) === 'Active')
+            const hbcTails = fleetRoster.filter(a => isHbcAircraft(a) && isCommercial(a))
                 .map(a => a.id)
                 .sort((x, y) => dateSortKey(toISODate(inductedOf(x))).localeCompare(dateSortKey(toISODate(inductedOf(y)))) || tailCompare(x, y));
             const sysTotal = eclTails.length + hbcTails.length;
@@ -12567,9 +12607,11 @@
                 pendingFleet[id] = pendingFleet[id] || {};
                 const setF = (f, val) => { pendingFleet[id][f] = val; const r = fleetRowOf(id); if (r) r[f] = val; };
                 if (v === 'in-retrofit') {
-                    setF('fleetStatus', 'In Retrofit'); setF('fit', 'retrofit'); setF('scope', '');
+                    // Entering retrofit starts at Power OFF; a tail already mid-mod keeps its phase.
+                    if (!isRetrofitPhase(fleetRowOf(id) || {})) setF('fleetStatus', 'Power OFF');
+                    setF('fit', 'retrofit'); setF('scope', '');
                 } else {
-                    if (fleetStatusOf(fleetRowOf(id)) === 'In Retrofit') setF('fleetStatus', '');
+                    if (isRetrofitPhase(fleetRowOf(id) || {})) setF('fleetStatus', '');
                     if (v === 'retrofit')      { setF('fit', 'retrofit'); setF('scope', ''); }
                     else if (v === 'linefit')  { setF('fit', 'linefit');  setF('scope', ''); }
                     else if (v === 'in-scope') { setF('fit', '');         setF('scope', 'in'); }
@@ -12593,6 +12635,15 @@
             }
             pendingFleet[id] = pendingFleet[id] || {};
             pendingFleet[id][field] = staged;
+            // Activation date ⇒ Commissioned (v2.222): staged visibly, so the Status cell
+            // shows the move before Save and the user can still pick something else.
+            let autoNote = '';
+            if (field === 'activatedDate' && staged) {
+                const row0 = fleetRowOf(id) || {};
+                const cur = pendingFleet[id].fleetStatus !== undefined ? pendingFleet[id].fleetStatus : fleetStatusOf(row0);
+                const next = statusAfterActivation(row0, cur, staged);
+                if (next) { pendingFleet[id].fleetStatus = next; row0.fleetStatus = next; autoNote = ` · status → ${next}`; populateFleetTable(); }
+            }
             // The roster mirror is for flat roster fields only. An 'ops/…' key would
             // sit on the roster object as a literal slashed property that nothing
             // reads — populateFleetTable takes staged ops values from pendingFleet.
@@ -12626,7 +12677,7 @@
                 }
                 populateFleetTable();
             }
-            setSyncStatus(`🟡 ${id} staged — press Save`, '#e0a800');
+            setSyncStatus(`🟡 ${id} staged${autoNote} — press Save`, '#e0a800');
         }
 
         async function commitFleetChanges() {
@@ -13498,7 +13549,7 @@
         ];
 
         function maintenanceFleet() {
-            return activeFleet().sort((a, b) => a.id.localeCompare(b.id));
+            return systemOnFleet().sort((a, b) => a.id.localeCompare(b.id));
         }
 
         // The stored record with anything staged-but-unsaved laid over it. flaggedAt is
@@ -14135,7 +14186,7 @@
         function avrTypeFleet() {
             const tails = new Set(avrEntries().map(v => v.aircraft));
             const list = aircraftData.filter(a => tails.has(a.id));
-            return list.length ? list : activeFleet();
+            return list.length ? list : systemOnFleet();
         }
         function avrTypeOf(tail) {
             const a = aircraftData.find(x => x.id === tail);
@@ -17628,6 +17679,20 @@
                 });
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                // Activation date ⇒ Commissioned (v2.222): the /fleet status follows, forward only.
+                const promo = {};
+                ids.forEach(id => {
+                    const act = pendingMaint[id].activatedDate;
+                    const row = fleetRowOf(id);
+                    const next = row && statusAfterActivation(row, fleetStatusOf(row), act);
+                    if (next) promo[`${id}/fleetStatus`] = next;
+                });
+                if (Object.keys(promo).length) {
+                    const r2 = await fetchWithTimeout(`${FIREBASE_DB_URL}/fleet.json?auth=${token}`, { method: 'PATCH', body: JSON.stringify(promo) });
+                    const d2 = await r2.json();
+                    if (!r2.ok || (d2 && d2.error)) throw new Error('activation saved, but the status did not move — ' + ((d2 && d2.error) || 'write failed'));
+                    Object.entries(promo).forEach(([k, v]) => { const r = fleetRowOf(k.split('/')[0]); if (r) r.fleetStatus = v; });
+                }
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
                 pendingMaint = {};
                 maintEditMode = false;
@@ -17855,7 +17920,7 @@
             return Array.from(sel.options).map(o => {
                 const a = aircraftData.find(x => x.id === o.value) || {};
                 return { id: o.value, label: o.textContent, type: TYPE_SHORT_LABEL[a.type] || a.type || '',
-                         retro: fleetStatusOf(a) === 'In Retrofit' };
+                         retro: isRetrofitPhase(a) ? (statusDef(fleetStatusOf(a)) || {}).badge : '' };
             });
         }
         // The visible box mirrors the select — called whenever code sets acSel.value.
@@ -17888,7 +17953,7 @@
             list.innerHTML = opts.length
                 ? opts.map((o, i) => `<li role="option" data-id="${escAttr(o.id)}" class="${i === 0 ? 'hl' : ''}">`
                     + `<b>${escAttr(o.id)}</b><span class="ac-type">${escAttr(o.type)}</span>`
-                    + `${o.retro ? '<span class="ac-tag">IN RETROFIT</span>' : ''}</li>`).join('')
+                    + `${o.retro ? `<span class="ac-tag">${escAttr(o.retro)}</span>` : ''}</li>`).join('')
                 : '<li class="none">No aircraft matches</li>';
             list.hidden = false;
             document.getElementById('addActAircraftSearch').setAttribute('aria-expanded', 'true');
@@ -20608,7 +20673,7 @@
         // The active fleet that carries a group — any airframe whose fit has one of the
         // group's LRUs (linefit-only gaps like Waveguide/Coax drop out on their own).
         function hwGroupFleet(group) {
-            return activeFleet()
+            return systemOnFleet()
                 .filter(a => groupBases(group).some(b => lruIdForFit(b, fitOf(a))))
                 .sort((a, b) => a.id.localeCompare(b.id));
         }
@@ -20782,8 +20847,8 @@
                     }).join('');
             };
 
-            const retroCount = activeFleet().filter(a => fitOf(a) === 'retrofit').length;
-            const lineCount  = activeFleet().filter(a => fitOf(a) === 'linefit').length;
+            const retroCount = systemOnFleet().filter(a => fitOf(a) === 'retrofit').length;
+            const lineCount  = systemOnFleet().filter(a => fitOf(a) === 'linefit').length;
 
             list.innerHTML =
                 group('retrofit', 'Retrofit', `${retroCount} aircraft`) +
@@ -20824,7 +20889,7 @@
                 cell('Vendor', field('vendor', rec.vendor, 'e.g. Hughes')),
                 cell('Fit', lru.fit === 'linefit' ? 'Linefit' : 'Retrofit'),
                 cell('Units per Aircraft', (() => {
-                    const types = [...new Set(activeFleet().filter(a => fitOf(a) === lru.fit).map(a => a.type))].sort();
+                    const types = [...new Set(systemOnFleet().filter(a => fitOf(a) === lru.fit).map(a => a.type))].sort();
                     const parts = types.map(t => `${TYPE_SHORT_LABEL[t] || t} ×${lruQtyFor(lru, t)}`);
                     const qtys = [...new Set(types.map(t => lruQtyFor(lru, t)))];
                     return qtys.length === 1 ? String(qtys[0]) : parts.join(' · ');
@@ -21866,7 +21931,7 @@
                 // Type/Fit. An aircraft still In Retrofit has no activation yet — for it we
                 // show "In Retrofit" and its Mod start date (Fleet retrofitStart) instead,
                 // which is the fact that matters for a tail on the bench (user, 2026-09-17).
-                const inRetrofit = fleetStatusOf(a) === 'In Retrofit';
+                const inRetrofit = isRetrofitPhase(a) && !a.activatedDate;
                 const actRaw = a.activatedDate || '';
                 const actIsoV = toISODate(actRaw) || '';
                 const days = actIsoV ? Math.round((Date.now() - new Date(actIsoV + 'T00:00:00Z')) / 86400000) : null;
@@ -21933,7 +21998,7 @@
         }
 
         function blFleet() {
-            return activeFleet().slice().sort((a, b) => a.id.localeCompare(b.id));
+            return systemOnFleet().slice().sort((a, b) => a.id.localeCompare(b.id));
         }
 
         function blRowsForAircraft(a) {
@@ -22529,7 +22594,7 @@
 
             rmDraft = {};
             const acSel = document.getElementById('rmAircraft');
-            acSel.innerHTML = activeFleet().slice().sort((a, b) => a.id.localeCompare(b.id))
+            acSel.innerHTML = systemOnFleet().slice().sort((a, b) => a.id.localeCompare(b.id))
                 .map(a => `<option value="${escAttr(a.id)}">${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</option>`).join('');
             if (maintSelectedId) acSel.value = maintSelectedId;
 
@@ -24490,9 +24555,9 @@
             // is in the programme but not yet in service, and showing its work here would
             // put it on the Overview while every count deliberately excludes it.
             // To surface retrofit work in progress, this is the one line to relax.
-            const inScope = t => fleetStatusOf(byTail[t] || {}) === 'Active';
+            const inScope = t => isSystemOn(byTail[t] || {});
 
-            activeFleet().forEach(a => {
+            systemOnFleet().forEach(a => {
                 // --- Software: the completion already recorded on the Software tab ---
                 const iso = toISODate(a.completionDate);
                 if (iso) {
@@ -25482,15 +25547,19 @@
             return !!(a.maintenance && a.maintenance.open);
         }
 
-        function activeFleet() {
-            // "Active" only. An aircraft mid-retrofit is in the programme but is not
-            // operational, so it is out of maintenance and hardware scope by definition.
-            return aircraftData.filter(a => fleetStatusOf(a) === 'Active');
+        // v2.222: the editing population is every aircraft with its system ON (Power ON →
+        // Commercial) — still on ground while loading, but its software, media and hardware
+        // must be editable. The in-service COUNT population is commercialFleet().
+        function systemOnFleet() {
+            return aircraftData.filter(isSystemOn);
+        }
+        function commercialFleet() {
+            return aircraftData.filter(isCommercial);
         }
 
         // The Hardware AIRCRAFT tab scope (user, 2026-09-17): Active PLUS In Retrofit —
         // the airframes being fitted carry equipment too, so the register must show them.
-        // This is 46 today (44 Active + 2 In Retrofit), vs activeFleet()'s 44.
+        // This is 46 today (44 Active + 2 In Retrofit), vs systemOnFleet()'s 44.
         function hwAircraftFleet() {
             return aircraftData.filter(inProgramme);
         }
@@ -25531,8 +25600,8 @@
             setWidth('metricMediaBar', mediaRate + '%');
 
             // --- Global widget 4: maintenance ---
-            const activeCount = activeFleet().length;
-            const maintCount = activeFleet().filter(maintenanceOpen).length;
+            const activeCount = commercialFleet().length;
+            const maintCount = commercialFleet().filter(maintenanceOpen).length;
             const maintRate = activeCount ? Math.round((maintCount / activeCount) * 1000) / 10 : 0;
             setText('metricMaintValue', maintCount);
             setText('metricMaintOf', `/${activeCount}`);
@@ -25794,7 +25863,7 @@
                 ? mediaFleet().filter(a => a.media && a.media.mediaCycle === latestCycle).length : 0;
 
             setHTML('sysInfoData', [
-                cell('Aircraft in Scope', projectScope(), `${activeFleet().length} active · ${projectScope() - activeFleet().length} in retrofit`),
+                cell('Aircraft in Scope', projectScope(), `${commercialFleet().length} commercial · ${projectScope() - commercialFleet().length} in retrofit`),
                 cell('Active Population', `${middlewareScope()} retrofit`, `+ ${hbcScope()} linefit (HBC+)`),
                 cell('Software Tracked', `${swOn} / ${middlewareScope()}`, `on ${latestSwVersion()}`),
                 cell('Media Tracked', `${mediaOn} / ${mediaScope()}`, latestCycle ? `on ${cycleToDisplay(latestCycle)}` : 'no cycle loaded'),
