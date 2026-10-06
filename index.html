@@ -8104,8 +8104,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.215.0';
-        const APP_BUILD    = '2026.10.06.06';
+        const APP_VERSION  = '2.216.0';
+        const APP_BUILD    = '2026.10.06.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15462,10 +15462,11 @@
             // Software & Media split into two short cards so the four spec cards pair up
             // 2 × 2: what is LOADED (middleware + OTA patches) and what the passenger SEES.
             const swLabels = ['Middleware', 'Middleware loaded', 'OTA Patch #2', 'OTA Patch #3'];
-            // OTA rows: date bold, "· 22:44 UTC" muted beside it, kept on one line.
+            // OTA rows (v2.216): the date stays in the right-hand corner, in line with every
+            // other date in the card; the UTC time sits small and light just before it.
             const otaRow = r => {
                 const m = /^(.*?) · (\d{2}:\d{2} UTC)$/.exec(r[1] || '');
-                return m ? [r[0], `<span class="vv-nw">${escAttr(m[1])}<span class="vv-time"> · ${m[2]}</span></span>`, 'raw'] : r;
+                return m ? [r[0], `<span class="vv-nw"><span class="vv-time">${m[2]}</span>${escAttr(m[1])}</span>`, 'raw'] : r;
             };
             let softwareCard = specCard('Software', softwareRows.filter(r => swLabels.includes(r[0]))
                 .map(r => /^OTA Patch/.test(r[0]) ? otaRow(r) : r));
@@ -15585,24 +15586,25 @@
                 ${chipsLeft || chipsEnd ? `<div class="cfg-top">${chipsLeft}<span class="sp"></span>${chipsEnd}</div>` : ''}
                 ${dlvFlight || inWindowTrack || msTrack}
             </div>` : '';
-            // CONNECTIVITY STRIP (v2.215, user 2026-10-06): the three links on one line —
+            // MODEMS STRIP (v2.215; wording v2.216): the three links on one line. Reader-facing
+            // words only — the register's To-Do reads "Pending" here; SIM is Active / Faulty —
             // Taurus and Hughes commissioning straight from the MODEM register (done / to-do),
             // and the 4G SIM, which is good by default while a card is on wing (a fitted card
             // flagged faulty reads red). HBC+ has none of these, so it draws no strip.
             let connCard = '';
             if (!isHbcAc) {
-                const comm = c => c === 'done' ? ['ok', 'Commissioned'] : c === 'todo' ? ['warn', 'To-Do'] : ['na', 'N/A'];
+                const comm = c => c === 'done' ? ['ok', 'Commissioned'] : c === 'todo' ? ['warn', 'Pending'] : ['na', 'N/A'];
                 const simOn = simCards().find(x => x.tailShown === v.aircraft && (x.status === 'active' || x.status === 'fault'));
                 const links = [
                     ['Taurus', modman ? comm(modman.commTaurus) : ['na', 'No MODMAN']],
                     ['Hughes', modman ? comm(modman.commHughes) : ['na', 'No MODMAN']],
-                    ['4G SIM', !simOn ? ['na', 'Not fitted'] : simOn.status === 'fault' ? ['bad', 'Fault'] : ['ok', 'On wing']],
+                    ['4G SIM', !simOn ? ['na', 'Not fitted'] : simOn.status === 'fault' ? ['bad', 'Faulty'] : ['ok', 'Active']],
                 ];
                 const ICO = { ok: '\u2713', warn: '!', bad: '\u2715', na: '\u2013' };
                 const PILL = { ok: 'pill-green', warn: 'pill-amber', bad: 'pill-red', na: 'pill-grey' };
                 const okN = links.filter(l => l[1][0] === 'ok').length;
                 const sum = `<span class="sh-r"><span class="pill ${okN === links.length ? 'pill-green' : 'pill-amber'}">${okN} of ${links.length} active</span></span>`;
-                connCard = `<div class="spec-card spec-wide conn-card"><div class="spec-head">Connectivity${sum}</div><div class="conn-row">${links.map(([name, [k, label]]) =>
+                connCard = `<div class="spec-card spec-wide conn-card"><div class="spec-head">Modems${sum}</div><div class="conn-row">${links.map(([name, [k, label]]) =>
                     `<div class="conn-item conn-${k}"><span class="conn-ico">${ICO[k]}</span><span class="conn-name">${name}</span><span class="pill ${PILL[k]} conn-st">${label}</span></div>`).join('')}</div></div>`;
             }
             const specCards = [airframeCard, modmanPrint, softwareCard, mediaCard, connCard].filter(Boolean);
@@ -15755,7 +15757,7 @@
   /* Connectivity strip (v2.215): Taurus · Hughes · 4G SIM on one line, each a status tile. */
   .spec-head .sh-r { float:right; text-transform:none; letter-spacing:0; margin-top:-1px; }
   .kv .vv-nw { white-space:nowrap; }
-  .kv .vv-time { color:var(--muted); font-weight:600; }
+  .kv .vv-time { color:var(--muted); font-weight:400; font-size:10px; margin-right:6px; }
   .conn-row { display:grid; grid-template-columns:repeat(3, 1fr); }
   .conn-item { display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12px; min-width:0; }
   .conn-item + .conn-item { border-left:1px solid #eef2f6; }

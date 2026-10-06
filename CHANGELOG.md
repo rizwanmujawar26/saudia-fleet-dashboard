@@ -13,6 +13,11 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.216.0 — AVR report: Modems bar wording + OTA date alignment (2026-10-06)
+Strip renamed **Modems**. Reader-facing states only: Taurus/Hughes Commissioned · Pending (register `todo` shown as
+Pending), 4G SIM Active · Faulty. OTA rows keep the date in the right-hand corner, in line with the other dates, with the
+UTC time small (10px, weight 400, muted) just before it.
+
 ### v2.215.0 — AVR report: OTA times + Connectivity strip (2026-10-06)
 OTA Patch #2/#3 rows read "05-Oct-2026 · 22:44 UTC" (`otaWithTime` in `avrDossierRows`, so the on-screen dossier gets
 it too; the report mutes the time and keeps it on one line). New full-width single-line **Connectivity** card under
