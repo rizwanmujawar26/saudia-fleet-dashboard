@@ -8201,8 +8201,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.225.1';
-        const APP_BUILD    = '2026.10.06.20';
+        const APP_VERSION  = '2.225.2';
+        const APP_BUILD    = '2026.10.06.21';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -16070,12 +16070,16 @@
     border-radius:999px; padding:2px 8px 2px 6px; white-space:nowrap; }
   .dlv-tag i { width:7px; height:7px; border-radius:50%; background:#3ddc84; }
   .dlv-fn { font-size:16px; font-weight:800; color:#fff; letter-spacing:.03em; }
-  .dlv-cs { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:11px; font-weight:600; color:#a9c3dc; }
   /* FR24 playback = the bare yellow FR24 mark, as on the Live Activity bar (v2.225.1). */
   .dlv-fr24 { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%;
     color:#f8c300; text-decoration:none; transition:background .15s; }
   .dlv-fr24 svg { width:19px; height:19px; fill:currentColor; display:block; }
   .dlv-fr24:hover { color:#ffd84d; background:rgba(248,195,0,.14); }
+  /* The delivery panel has the room: there it is the labelled yellow pill (user 2026-10-06). */
+  .dlv-fr24.dlv-pb { width:auto; height:auto; gap:5px; font-size:11px; font-weight:700; color:#0b1f3a;
+    background:#fff6d6; border:1px solid #f3d873; border-radius:999px; padding:2px 10px 2px 6px; white-space:nowrap; }
+  .dlv-fr24.dlv-pb svg { width:13px; height:13px; fill:#e0a800; }
+  .dlv-fr24.dlv-pb:hover { background:#ffefb3; }
   .dlv-route { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:14px; margin-top:8px; }
   .dlv-end { display:flex; flex-direction:column; line-height:1.2; min-width:0; }
   .dlv-arr { text-align:right; align-items:flex-end; }
@@ -23422,9 +23426,9 @@
             return `<div class="dlv">
                 <div class="dlv-head">
                     <span class="dlv-tag"><i></i>Delivery Flight</span>
-                    <b class="dlv-fn">${escAttr(f.flight)}</b>${f.callsign ? `<span class="dlv-cs">${escAttr(f.callsign)}</span>` : ''}
+                    <b class="dlv-fn">${escAttr(f.flight)}</b>
                     <span class="sp"></span>
-                    <a class="dlv-fr24" href="${escAttr(url)}" target="_blank" rel="noopener" title="Flight playback on Flightradar24" aria-label="Flight playback on Flightradar24">${FR24_ICON}</a>
+                    <a class="dlv-fr24 dlv-pb" href="${escAttr(url)}" target="_blank" rel="noopener" title="Open this flight's playback on Flightradar24">${FR24_ICON}Flight playback</a>
                 </div>
                 <div class="dlv-route">
                     ${end('dep', 'Departed', f.fromIata, f.from, f.dep, depDate, 0)}
