@@ -6,7 +6,33 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.206.1–v2.206.2 (2026-09-29).** Media: no Timeline "late" remark; MLR roll-out /
+**Latest — v2.206.3–v2.212.1 (2026-10-04 → 10-06).** Special flights, live delivery tracking, MLR charts.
+
+- **Special flights — new node `/flights` (v2.210).** Rules + backup/restore/verify lists; seeded with the four
+  HBC+ deliveries (ASBA SV9010, ASBB SV9016, ASBE SV9020, ASBC SV9022). ＋ Add → ✈️ **Add Flight** form
+  (UTC dep + arrival → `durMin`; SV#### → SVA#### callsign; FR24 link → `fr24Id`). **Flight** is its own
+  Timeline/Activity kind (was Operational). See *`/flights/{id}`* and *Timeline*.
+- **Delivery-flight lifecycle (v2.207/2.209).** `flightPhaseOf` → scheduled / enroute / landed from date +
+  dep + durMin vs the clock; Fleet Operations shows DELIVERY SCHEDULED → DELIVERY IN FLIGHT (CSS-glided plane,
+  negative animation-delay = elapsed) → IN SERVICE; `scheduleDeliveryTick()` re-renders at each boundary.
+  `deliveryFlightOf(tail)` prefers `/flights`, falls back to `/fleetSpecs/{tail}/deliveryFlight` (kept).
+- **Live Activity bar (v2.210)** under the Watchlist, only while a flight is airborne — see *Timeline*.
+- **Flight card (v2.211/2.212).** Fleet Delivery date (dotted + ✈) and Timeline flight rows (✈ chip, route
+  pill, right-aligned 🎫 Flight card button) open one flight-tracker card (`dlvCardHTML(tail, flightId)`,
+  `.flt-trigger` / `.deliv-flt`); hover on desktop, click/Enter anywhere; Escape/outside/scroll closes.
+- **MLR (v2.208.x).** Roll-out curve shows the two previous cycles muted (`mlrPrevs`); daily bars carry
+  counts; Week-by-week always ≥ 4 dated weeks (future greyed, "now" tag); Loading timeline is one segment
+  per day to the **expected close** (`mlrExpect` = last two closed cycles' average window), TODAY + 50/90/
+  Expected-90 markers laid out as a collision-free staircase; facts are forecasts (pace, 90% by day N,
+  previous cycle at the same day). Journey step 1 renamed **Media uploaded** (🌐; field still `contentDelivered`).
+- **Media Download menu (v2.206.3)** — uniform rows: status icon · month / Completed|In progress · ref.
+- **Data this session:** Oct-2026 media loads (12 added), ASBC delivered 05-Oct (SV9022 ATD 14:38Z, 393 min,
+  landed 21:11Z). ⚠️ ASBA/ASBB/ASBE `dep` = FR24 first track point (on ground); ASBC uses ATD — prefer ATD
+  + landed/actual flight time for new deliveries.
+- **Open (user):** whether to drop the superseded `/fleetSpecs/{tail}/deliveryFlight` copies; MLR section
+  heading "content to cabin" / "Content to last aircraft" still say *content* (user asked only for step 1).
+
+**Before that — v2.206.1–v2.206.2 (2026-09-29).** Media: no Timeline "late" remark; MLR roll-out /
 last aircraft measured inside the cycle window, post-close loads named (see *Media module specifics*);
 Light Media Timeline title de-duplicated.
 
@@ -1970,6 +1996,15 @@ Filters live in `TIMELINE_KINDS`. **Software / Hardware / Media** are the three 
 pills (the loading streams); the **Show** dropdown holds the full single-select set —
 **All / Activation / Software / Hardware / Media / Commission / Modification / Maintenance /
 Operational**. Adding a kind is one line in `TIMELINE_KINDS`; the dropdown derives from it.
+
+### Flight kind and the Live Activity bar (v2.210.0)
+
+Every `/flights` record emits one **Flight** row (dated by its UTC departure day); for a tail with a recorded
+delivery flight it replaces the Operational "Aircraft Delivered" row. The row is a boarding-pass line
+(`flightRowMainHTML`) whose chip / route / 🎫 button open the flight card. **Live Activity** (`#liveActivity`,
+`renderLiveActivity`) sits under the Watchlist and exists only while a flight is `enroute`: LIVE · kind ·
+flight · HZ-tail · DEP ━✈━ ARR · time left · FR24, one line (Watchlist height), click for details; redrawn
+every 30 s by its own interval, removed at landing by the phase tick.
 
 ### Pinned — what is out of service right now
 
