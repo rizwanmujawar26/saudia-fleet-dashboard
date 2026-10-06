@@ -4513,6 +4513,59 @@
         }
         .ac-edit-field textarea { resize: vertical; min-height: 38px; }
         .ac-edit-field .fld-hint { font-size: 10.5px; color: #aaa; margin-top: 2px; }
+
+        /* ===== Flight form (v2.225) — type chips, type-to-search aircraft, a two-card
+           DEPARTURE ✈ ARRIVAL route with a live summary. Shares the .ac-edit inputs. */
+        .flt-form { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 6px; }
+        .flt-row-lab { font-size: 11px; font-weight: 600; color: #566; margin-bottom: -6px; }
+        .flt-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+        .flt-kind-chip { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 12px; font-weight: 600; color: #33475b;
+            background: #fff; border: 1px solid #d5dde8; border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+        .flt-kind-chip:hover { border-color: #9fb7cf; background: #f5f9ff; }
+        .flt-kind-chip.on { color: #fff; border-color: #123a63; background: linear-gradient(120deg, #0b1f3a, #123a63 60%, #0f4c5c); box-shadow: 0 2px 6px rgba(11,31,58,.22); }
+        .flt-grid3 { display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 10px 14px; }
+        .flt-ac { position: relative; }
+        .flt-ac-list { position: absolute; z-index: 5; top: 100%; left: 0; right: 0; margin-top: 3px; background: #fff; border: 1px solid #d5dde8;
+            border-radius: 8px; box-shadow: 0 10px 26px rgba(11,31,58,.16); padding: 4px; max-height: 260px; overflow-y: auto; }
+        .flt-ac-opt { display: flex; align-items: baseline; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 12.5px; }
+        .flt-ac-opt b { min-width: 42px; color: #0b1f3a; letter-spacing: .02em; }
+        .flt-ac-opt span { color: #55606a; }
+        .flt-ac-opt em { margin-left: auto; font-style: normal; font-size: 10.5px; color: #8a96a1; white-space: nowrap; }
+        .flt-ac-opt.cur, .flt-ac-opt:hover { background: #eaf2fb; }
+        .flt-ac-none { padding: 8px; font-size: 12px; color: #8a96a1; }
+        .flt-auto-tag { font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #0a5c34;
+            background: #e8f5ec; border: 1px solid #b9dcc4; border-radius: 999px; padding: 0 6px; margin-left: 4px; vertical-align: 1px; }
+        .flt-auto-tag[hidden] { display: none; }
+        .flt-opt { font-weight: 500; color: #9aa5ae; margin-left: 3px; }
+        #fltFlight::placeholder, #fltCallsign::placeholder { text-transform: none; }
+        .flt-rt { display: grid; grid-template-columns: 1fr 26px 1fr; align-items: stretch; }
+        .flt-end { border: 1px solid #dfe6ee; border-radius: 10px; background: #f8fafc; padding: 9px 11px 11px; min-width: 0; }
+        .flt-end-k { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #123a63; margin-bottom: 6px; }
+        .flt-ap { display: grid; grid-template-columns: 1fr 64px; gap: 6px; }
+        .flt-end input { padding: 7px 9px; border: 1px solid #d5d9d7; border-radius: 6px; font-size: 13px; font-family: inherit; box-sizing: border-box; width: 100%; background: #fff; min-width: 0; }
+        .flt-end input:focus, .flt-grid3 input:focus { outline: none; border-color: #4a86b8; box-shadow: 0 0 0 3px rgba(74,134,184,.15); }
+        .flt-iata { text-transform: uppercase; font-weight: 800; letter-spacing: .06em; text-align: center; }
+        .flt-picks { margin-top: 5px; flex-wrap: wrap; }
+        .flt-dt { display: grid; grid-template-columns: 1.3fr 1fr; gap: 6px; margin-top: 8px; }
+        .flt-dt label { display: flex; flex-direction: column; gap: 2px; font-size: 10.5px; font-weight: 600; color: #6b7883; }
+        .flt-dt input { font-variant-numeric: tabular-nums; }
+        .flt-route-mid { display: flex; align-items: center; justify-content: center; color: #4a86b8; }
+        .flt-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 18px; font-size: 12px; color: #c9daea;
+            background: linear-gradient(120deg, #0b1f3a 0%, #123a63 55%, #0f4c5c 100%); border-radius: 8px; padding: 7px 12px; margin-top: -4px; }
+        .flt-summary b { color: #fff; font-weight: 800; letter-spacing: .03em; }
+        .flt-summary i { font-style: normal; color: #6f8aa6; }
+        .flt-summary .flt-plus { color: #ffd27a; font-weight: 700; }
+        .flt-summary .flt-sum-ph { color: #8fa9c4; }
+        .flt-summary .flt-warn { margin-left: auto; color: #ffb3b3; font-weight: 700; }
+        .flt-grid-kf { display: grid; grid-template-columns: 1fr 2.2fr; gap: 10px 14px; }
+        .flt-form .ac-edit-field textarea { min-height: 44px; }
+        @media (max-width: 560px) {
+            .flt-grid3, .flt-grid-kf { grid-template-columns: 1fr 1fr; }
+            .flt-grid3 .flt-ac { grid-column: 1 / -1; }
+            .flt-grid-kf > :last-child { grid-column: 1 / -1; }
+            .flt-rt { grid-template-columns: 1fr; gap: 4px; }
+            .flt-route-mid { transform: rotate(90deg); height: 20px; }
+        }
         .ac-edit-error { margin: 4px 22px 0; font-size: 12.5px; color: #dc3545; font-weight: 600; }
         .ac-edit-foot {
             display: flex; gap: 10px; justify-content: flex-end;
@@ -8148,8 +8201,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.224.1';
-        const APP_BUILD    = '2026.10.06.18';
+        const APP_VERSION  = '2.225.0';
+        const APP_BUILD    = '2026.10.06.19';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -18802,54 +18855,96 @@
             flightEditingId = id;
             const isNew = id === '__new';
             if (!isNew && !flightsLive[id]) { setSyncStatus('🔴 That flight is no longer there — reload', '#dc3545'); return; }
-            const v = isNew ? { kind: 'delivery', from: 'Toulouse', fromIata: 'TLS', to: 'Jeddah', toIata: 'JED' } : { id, ...flightsLive[id] };
+            // Redesigned form (v2.225, user 2026-10-06): type as chips (First Connected
+            // Flight by default), a type-to-search aircraft box, callsign derived as you
+            // type, and the route as two DEPARTURE / ARRIVAL cards — airport, date and time
+            // each — with a live summary. Arrival date is optional (same day, or the next
+            // day when the time is earlier). Stored shape is unchanged: date + dep + durMin.
+            const v = isNew ? { kind: 'connected', from: 'Jeddah', fromIata: 'JED' } : { id, ...flightsLive[id] };
             const dp = isNew ? null : flightPhaseOf(v);
             document.getElementById('flightEditTitle').textContent = isNew ? 'Add flight' : `Edit flight — ${v.flight || ''} · ${v.tail || ''}`;
-            document.getElementById('flightEditSub').textContent = 'A delivery, first connected, test, VIP or ferry flight. Times are UTC. While it is in the air it shows on the Home page Live Activity bar.';
+            document.getElementById('flightEditSub').textContent = 'All times UTC. While it is in the air it shows on the Home page Live Activity bar.';
             const err = document.getElementById('flightEditError'); err.textContent = ''; err.style.display = 'none';
             document.getElementById('flightDeleteBtn').style.display = isNew ? 'none' : '';
-            const roster = aircraftData.slice().sort((a, b) => a.id.localeCompare(b.id));
-            const acOpts = `<option value="">— Choose —</option>` + roster.map(a => `<option value="${escAttr(a.id)}" ${a.id === v.tail ? 'selected' : ''}>${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type || '')}</option>`).join('');
-            const kindOpts = FLIGHT_KINDS.map(k => `<option value="${k.value}" ${k.value === v.kind ? 'selected' : ''}>${k.icon} ${escAttr(k.label)}</option>`).join('');
+            const kinds = FLIGHT_KINDS.map(k => `<button type="button" class="flt-kind-chip${k.value === v.kind ? ' on' : ''}" data-kind="${k.value}" onclick="fltSetKind('${k.value}')"><span>${k.icon}</span>${escAttr(k.label)}</button>`).join('');
             const fr24 = v.fr24Id ? `${fr24Url(v.tail)}#${v.fr24Id}` : '';
+            const tailTxt = v.tail ? fltTailLabel(v.tail) : '';
+            const depISO = toISODate(v.date || '');
+            const arrDMY = dp && dp.arrISO !== depISO ? toDMY(fmtDate(dp.arrISO)) : '';
+            const derived = /^SV\d+$/.test(v.flight || '') && v.callsign === 'SVA' + v.flight.slice(2);
+            const cityList = fltAirportIndex().map(a => `<option value="${escAttr(a.city)}">${escAttr(a.iata)}</option>`).join('');
+            const end = (side, k, city, iata, date, time, datePh) => `<div class="flt-end flt-end-${side}">
+                    <div class="flt-end-k">${k}</div>
+                    <div class="flt-ap">
+                        <input id="flt${side === 'dep' ? 'From' : 'To'}" class="flt-city" type="text" maxlength="40" list="fltCityList" placeholder="City" autocomplete="off" value="${escAttr(city || '')}">
+                        <input id="flt${side === 'dep' ? 'From' : 'To'}Iata" class="flt-iata" type="text" maxlength="3" placeholder="IATA" autocomplete="off" value="${escAttr(iata || '')}">
+                    </div>
+                    ${fltPicksHTML(side === 'dep' ? 'from' : 'to')}
+                    <div class="flt-dt">
+                        <label>Date<input id="flt${side === 'dep' ? 'Date' : 'ArrDate'}" type="text" inputmode="numeric" maxlength="10" placeholder="${datePh}" autocomplete="off" value="${escAttr(date)}"></label>
+                        <label>Time<input id="flt${side === 'dep' ? 'Dep' : 'Arr'}" type="text" inputmode="numeric" maxlength="5" placeholder="hh:mm" autocomplete="off" value="${escAttr(time)}"></label>
+                    </div>
+                </div>`;
             document.getElementById('flightEditBody').innerHTML = `
-                <div class="ac-edit-grid">
-                    <div class="ac-edit-field"><label>Aircraft</label><select id="fltTail">${acOpts}</select></div>
-                    <div class="ac-edit-field"><label>Flight type</label><select id="fltKind">${kindOpts}</select></div>
-                    <div class="ac-edit-field"><label>Flight number</label>
-                        <input id="fltFlight" type="text" maxlength="10" placeholder="e.g. SV9022" value="${escAttr(v.flight || '')}" style="text-transform:uppercase"></div>
-                    <div class="ac-edit-field"><label>Callsign (optional)</label>
-                        <input id="fltCallsign" type="text" maxlength="10" placeholder="e.g. SVA9022" value="${escAttr(v.callsign || '')}" style="text-transform:uppercase">
-                        <span class="fld-hint">Left blank, SV#### becomes SVA####.</span></div>
-                    <div class="ac-edit-field"><label>Departure date (UTC)</label>
-                        <input id="fltDate" type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" value="${v.date ? toDMY(v.date) : ''}"></div>
-                    <div class="ac-edit-field"><label>Departure time (UTC)</label>
-                        <input id="fltDep" type="text" inputmode="numeric" maxlength="5" placeholder="hh:mm" autocomplete="off" value="${escAttr(v.dep || '')}">
-                        <span class="fld-hint">Actual (ATD) once it has left; scheduled until then.</span></div>
-                    <div class="ac-edit-field"><label>Arrival time (UTC)</label>
-                        <input id="fltArr" type="text" inputmode="numeric" maxlength="5" placeholder="hh:mm" autocomplete="off" value="${dp ? dp.arrHM : ''}">
-                        <span class="fld-hint">ETA while flying; the next day is understood when earlier than departure.</span></div>
-                    <div class="ac-edit-field"><label>Distance km (optional)</label>
-                        <input id="fltKm" type="text" inputmode="numeric" maxlength="5" placeholder="e.g. 4244" value="${v.distanceKm || ''}"></div>
-                    <div class="ac-edit-field"><label>From — city</label><input id="fltFrom" type="text" maxlength="40" value="${escAttr(v.from || '')}">${fltPicksHTML('from')}</div>
-                    <div class="ac-edit-field"><label>From — IATA</label><input id="fltFromIata" type="text" maxlength="3" placeholder="TLS" value="${escAttr(v.fromIata || '')}" style="text-transform:uppercase"></div>
-                    <div class="ac-edit-field"><label>To — city</label><input id="fltTo" type="text" maxlength="40" value="${escAttr(v.to || '')}">${fltPicksHTML('to')}</div>
-                    <div class="ac-edit-field"><label>To — IATA</label><input id="fltToIata" type="text" maxlength="3" placeholder="JED" value="${escAttr(v.toIata || '')}" style="text-transform:uppercase"></div>
-                    <div class="ac-edit-field full"><label>Flightradar24 link (optional)</label>
-                        <input id="fltFr24" type="text" maxlength="200" placeholder="https://www.flightradar24.com/data/aircraft/hz-asbc#41fb9ee5" value="${escAttr(fr24)}">
-                        <span class="fld-hint">Paste the flight's playback link — the part after # identifies the flight.</span></div>
-                    <div class="ac-edit-field full"><label>Note (optional)</label>
-                        <textarea id="fltNote" maxlength="500" placeholder="e.g. 4th A321XLR — factory delivery">${escAttr(v.note || '')}</textarea></div>
+                <div class="flt-form">
+                    <div class="flt-row-lab">Flight type</div>
+                    <div class="flt-kinds">${kinds}</div>
+                    <input id="fltKind" type="hidden" value="${escAttr(v.kind || 'connected')}">
+                    <div class="flt-grid3">
+                        <div class="ac-edit-field flt-ac"><label>Aircraft</label>
+                            <input id="fltTailQ" type="text" placeholder="Type a tail, e.g. ASBC" autocomplete="off" spellcheck="false" value="${escAttr(tailTxt)}">
+                            <input id="fltTail" type="hidden" value="${escAttr(v.tail || '')}">
+                            <div id="fltAcList" class="flt-ac-list" hidden></div></div>
+                        <div class="ac-edit-field"><label>Flight number</label>
+                            <input id="fltFlight" type="text" maxlength="10" placeholder="e.g. SV1108" autocomplete="off" value="${escAttr(v.flight || '')}" style="text-transform:uppercase"></div>
+                        <div class="ac-edit-field"><label>Callsign <span class="flt-auto-tag" id="fltCsTag"${isNew || derived ? '' : ' hidden'}>auto</span></label>
+                            <input id="fltCallsign" type="text" maxlength="10" placeholder="Fills itself" autocomplete="off" value="${escAttr(v.callsign || '')}" style="text-transform:uppercase" data-auto="${isNew || derived ? '1' : ''}"></div>
+                    </div>
+                    <datalist id="fltCityList">${cityList}</datalist>
+                    <div class="flt-rt">
+                        ${end('dep', '🛫 Departure', v.from, v.fromIata, v.date ? toDMY(v.date) : '', v.dep || '', 'dd-mm-yyyy')}
+                        <div class="flt-route-mid" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path transform="rotate(90 12 12)" fill="currentColor" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+                        ${end('arr', '🛬 Arrival', v.to, v.toIata, arrDMY, dp ? dp.arrHM : '', 'Same day')}
+                    </div>
+                    <div class="flt-summary" id="fltSummary"></div>
+                    <div class="flt-grid-kf">
+                        <div class="ac-edit-field"><label>Distance km <span class="flt-auto-tag" id="fltKmTag" hidden>auto</span></label>
+                            <input id="fltKm" type="text" inputmode="numeric" maxlength="5" placeholder="e.g. 4244" autocomplete="off" value="${v.distanceKm || ''}" data-auto="${v.distanceKm ? '' : '1'}"></div>
+                        <div class="ac-edit-field"><label>Flightradar24 link <span class="flt-opt">optional</span></label>
+                            <input id="fltFr24" type="text" maxlength="200" placeholder="Paste the playback link — …/hz-asbc#41fb9ee5" autocomplete="off" value="${escAttr(fr24)}"></div>
+                    </div>
+                    <div class="ac-edit-field"><label>Note <span class="flt-opt">optional</span></label>
+                        <textarea id="fltNote" maxlength="500" rows="2" placeholder="e.g. 4th A321XLR — factory delivery">${escAttr(v.note || '')}</textarea></div>
                 </div>`;
             document.getElementById('flightEditOverlay').style.display = 'flex';
-            // First Connected Flight departs from the install site: fill From when the type
-            // or the aircraft changes — unless the user has typed or picked a From themselves.
-            const fromIn = document.getElementById('fltFrom'), fromIata = document.getElementById('fltFromIata');
-            const markManual = () => { fromIn.dataset.auto = ''; };
-            fromIn.addEventListener('input', markManual); fromIata.addEventListener('input', markManual);
-            if (isNew) fromIn.dataset.auto = '1';
-            document.getElementById('fltKind').addEventListener('change', fltAutoFrom);
-            document.getElementById('fltTail').addEventListener('change', fltAutoFrom);
+            const $ = id => document.getElementById(id);
+            // First Connected Flight departs from the install site: From follows the type
+            // and the aircraft until the user types or picks a From themselves.
+            const markManual = () => { $('fltFrom').dataset.auto = ''; };
+            $('fltFrom').dataset.auto = isNew ? '1' : '';
+            // Airport fields: a known city fills its IATA and vice versa.
+            [['fltFrom', 'fltFromIata'], ['fltTo', 'fltToIata']].forEach(([c, i]) => {
+                $(c).addEventListener('input', () => { if (c === 'fltFrom') markManual(); const a = fltAirportBy('city', $(c).value); if (a) $(i).value = a.iata; fltRefresh(); });
+                $(c).addEventListener('blur', () => { const a = fltAirportBy('city', $(c).value); if (a) $(c).value = a.city; });
+                $(i).addEventListener('input', () => { if (c === 'fltFrom') markManual(); $(i).value = $(i).value.toUpperCase(); const a = fltAirportBy('iata', $(i).value); if (a && !$(c).value.trim()) $(c).value = a.city; fltRefresh(); });
+            });
+            // Callsign follows the flight number (SV1108 → SVA1108) until typed over.
+            $('fltFlight').addEventListener('input', () => {
+                const cs = $('fltCallsign');
+                if (cs.dataset.auto !== '1') return;
+                const f = $('fltFlight').value.toUpperCase().replace(/\s+/g, '');
+                cs.value = /^SV\d+$/.test(f) ? 'SVA' + f.slice(2) : '';
+            });
+            $('fltCallsign').addEventListener('input', () => { $('fltCallsign').dataset.auto = $('fltCallsign').value ? '' : '1'; $('fltCsTag').hidden = $('fltCallsign').dataset.auto !== '1'; });
+            $('fltKm').addEventListener('input', () => { $('fltKm').dataset.auto = $('fltKm').value ? '' : '1'; fltRefresh(); });
+            // Dates and times tidy themselves on blur: 02072026 → 02-07-2026, 1153 → 11:53.
+            ['fltDate', 'fltArrDate'].forEach(x => $(x).addEventListener('blur', () => { $(x).value = fltTidyDate($(x).value); fltRefresh(); }));
+            ['fltDep', 'fltArr'].forEach(x => $(x).addEventListener('blur', () => { $(x).value = fltTidyTime($(x).value); fltRefresh(); }));
+            ['fltDate', 'fltArrDate', 'fltDep', 'fltArr'].forEach(x => $(x).addEventListener('input', fltRefresh));
+            fltBindAircraft();
+            if (isNew) fltAutoFrom();
+            fltRefresh();
+            (isNew ? $('fltTailQ') : $('fltFlight')).focus();
         }
         // Airport for a city / install-site name. The install sites on record are Jeddah,
         // Toulouse, Malta, Qatar, Jordan and Hamburg — the country names map to their airport city.
@@ -18857,18 +18952,158 @@
             jeddah: ['Jeddah', 'JED'], riyadh: ['Riyadh', 'RUH'], dubai: ['Dubai', 'DXB'],
             toulouse: ['Toulouse', 'TLS'], hamburg: ['Hamburg', 'HAM'], malta: ['Malta', 'MLA'],
             qatar: ['Doha', 'DOH'], doha: ['Doha', 'DOH'], jordan: ['Amman', 'AMM'], amman: ['Amman', 'AMM'],
+            dammam: ['Dammam', 'DMM'], medina: ['Medina', 'MED'], 'al-baha': ['AL-Baha', 'ABT'], vienna: ['Vienna', 'VIE'],
         };
-        const FLT_QUICK = ['jeddah', 'riyadh', 'dubai'];
-        function fltPicksHTML(end) {
-            return `<div class="avr-station-picks">${FLT_QUICK.map(k =>
-                `<button type="button" class="avr-quick-chip" onclick="fltPickAirport('${end}','${k}')" title="${FLT_AIRPORTS[k][0]}">${FLT_AIRPORTS[k][1]}</button>`).join('')}</div>`;
+        // Airport coordinates (lat, lon) — the distance fills itself as a great circle
+        // when both ends are known. Add a line here for a new airport.
+        const FLT_COORDS = {
+            JED: [21.6796, 39.1565], RUH: [24.9576, 46.6988], DXB: [25.2532, 55.3657], TLS: [43.6291, 1.3638],
+            HAM: [53.6304, 9.9882], MLA: [35.8575, 14.4775], DOH: [25.2731, 51.6081], AMM: [31.7226, 35.9932],
+            DMM: [26.4712, 49.7979], MED: [24.5534, 39.7051], ABT: [20.2961, 41.6343], VIE: [48.1103, 16.5697],
+        };
+        // Every airport the form knows — the built-in list plus any used on a recorded
+        // flight — most used first. Feeds the city suggestions and the quick chips.
+        function fltAirportIndex() {
+            const m = new Map();
+            const add = (city, iata, n) => {
+                if (!city || !/^[A-Z]{3}$/.test(iata || '')) return;
+                const e = m.get(iata) || { city, iata, n: 0 };
+                e.n += n; m.set(iata, e);
+            };
+            Object.values(FLT_AIRPORTS).forEach(([c, i]) => add(c, i, 0));
+            Object.values(flightsLive || {}).forEach(f => { add(f.from, f.fromIata, 1); add(f.to, f.toIata, 1); });
+            // Ties go to the home bases first, so the quick chips read JED · RUH · DXB · TLS
+            // until the recorded flights say otherwise.
+            const pref = ['JED', 'RUH', 'DXB', 'TLS'];
+            const rank = i => { const k = pref.indexOf(i); return k < 0 ? 99 : k; };
+            return [...m.values()].sort((a, b) => b.n - a.n || rank(a.iata) - rank(b.iata) || a.city.localeCompare(b.city));
         }
-        function fltPickAirport(end, key) {
-            const ap = FLT_AIRPORTS[key]; if (!ap) return;
+        function fltAirportBy(key, val) {
+            const q = String(val || '').trim().toLowerCase();
+            return q ? fltAirportIndex().find(a => a[key].toLowerCase() === q) || null : null;
+        }
+        function fltPicksHTML(end) {
+            return `<div class="avr-station-picks flt-picks">${fltAirportIndex().slice(0, 4).map(a =>
+                `<button type="button" class="avr-quick-chip" onclick="fltPickAirport('${end}','${escAttr(a.iata)}')" title="${escAttr(a.city)}">${escAttr(a.iata)}</button>`).join('')}</div>`;
+        }
+        function fltPickAirport(end, iata) {
+            const ap = fltAirportBy('iata', iata); if (!ap) return;
             const pre = end === 'from' ? 'fltFrom' : 'fltTo';
-            document.getElementById(pre).value = ap[0];
-            document.getElementById(pre + 'Iata').value = ap[1];
+            document.getElementById(pre).value = ap.city;
+            document.getElementById(pre + 'Iata').value = ap.iata;
             if (end === 'from') document.getElementById('fltFrom').dataset.auto = '';
+            fltRefresh();
+        }
+        function fltSetKind(k) {
+            document.getElementById('fltKind').value = k;
+            document.querySelectorAll('#flightEditBody .flt-kind-chip').forEach(b => b.classList.toggle('on', b.dataset.kind === k));
+            fltAutoFrom();
+        }
+        function fltTailLabel(id) {
+            const a = aircraftData.find(x => x.id === id);
+            return a ? `${a.id} — ${TYPE_SHORT_LABEL[a.type] || a.type || ''}` : id;
+        }
+        // Type-to-search aircraft: filters on tail or type; ↑/↓ + Enter, or click.
+        function fltBindAircraft() {
+            const q = document.getElementById('fltTailQ'), hid = document.getElementById('fltTail'), list = document.getElementById('fltAcList');
+            const roster = aircraftData.slice().sort((a, b) => tailCompare(a.id, b.id));
+            let hits = [], cur = 0;
+            const pick = id => { hid.value = id; q.value = fltTailLabel(id); list.hidden = true; q.classList.remove('input-invalid'); fltAutoFrom(); };
+            const draw = () => {
+                const t = q.value.trim().toUpperCase().replace(/^HZ-?/, '').split(' — ')[0];
+                hits = roster.filter(a => !t || a.id.includes(t) || String(TYPE_SHORT_LABEL[a.type] || a.type || '').toUpperCase().includes(t)).slice(0, 8);
+                cur = Math.min(cur, Math.max(0, hits.length - 1));
+                list.innerHTML = hits.length ? hits.map((a, i) => `<div class="flt-ac-opt${i === cur ? ' cur' : ''}" data-id="${escAttr(a.id)}"><b>${escAttr(a.id)}</b><span>${escAttr(TYPE_SHORT_LABEL[a.type] || a.type || '')}</span><em>${escAttr(fleetStatusOf(fleetRoster.find(r => r.id === a.id) || a) || '')}</em></div>`).join('')
+                    : '<div class="flt-ac-none">No aircraft matches</div>';
+                list.hidden = false;
+            };
+            q.addEventListener('focus', () => { q.select(); draw(); });
+            q.addEventListener('input', () => { hid.value = ''; cur = 0; draw(); });
+            q.addEventListener('keydown', e => {
+                if (list.hidden) return;
+                if (e.key === 'ArrowDown') { cur = Math.min(cur + 1, hits.length - 1); draw(); e.preventDefault(); }
+                else if (e.key === 'ArrowUp') { cur = Math.max(cur - 1, 0); draw(); e.preventDefault(); }
+                else if (e.key === 'Enter' || e.key === 'Tab') { if (hits[cur] && q.value.trim()) { pick(hits[cur].id); if (e.key === 'Enter') e.preventDefault(); } }
+                else if (e.key === 'Escape') { list.hidden = true; e.stopPropagation(); }
+            });
+            list.addEventListener('mousedown', e => { const o = e.target.closest('.flt-ac-opt'); if (o) { e.preventDefault(); pick(o.dataset.id); } });
+            q.addEventListener('blur', () => {
+                list.hidden = true;
+                if (hid.value) { q.value = fltTailLabel(hid.value); return; }
+                const exact = roster.find(a => a.id === q.value.trim().toUpperCase().replace(/^HZ-?/, ''));
+                if (exact) pick(exact.id);
+            });
+        }
+        function fltTidyDate(s) {
+            s = String(s || '').trim();
+            const d = s.replace(/\D/g, '');
+            if (/^\d{8}$/.test(s)) return `${d.slice(0, 2)}-${d.slice(2, 4)}-${d.slice(4)}`;
+            const m = s.match(/^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{2}|\d{4})$/);
+            if (m) return `${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}-${m[3].length === 2 ? '20' + m[3] : m[3]}`;
+            return s;
+        }
+        function fltTidyTime(s) {
+            s = String(s || '').trim();
+            const m = s.match(/^(\d{1,2})[:.h ]?(\d{2})$/);
+            return m ? `${m[1].padStart(2, '0')}:${m[2]}` : s;
+        }
+        // Departure / arrival as UTC instants from the form; null where incomplete.
+        function fltReadTimes() {
+            const $ = id => document.getElementById(id);
+            const hhmm = /^([01][0-9]|2[0-3]):([0-5][0-9])$/;
+            const depD = fmtDate(fltTidyDate($('fltDate').value)), arrRaw = fltTidyDate($('fltArrDate').value);
+            const arrD = arrRaw ? fmtDate(arrRaw) : '';
+            const dm = fltTidyTime($('fltDep').value).match(hhmm), am = fltTidyTime($('fltArr').value).match(hhmm);
+            const out = { depD, arrD, arrBad: !!arrRaw && !arrD, dep: dm ? dm[0] : '', arr: am ? am[0] : '' };
+            if (!depD || !dm || !am) return out;
+            const dayMs = iso => Date.parse(iso + 'T00:00:00Z');
+            const depMs = dayMs(toISODate(depD)) + (+dm[1] * 60 + +dm[2]) * 60000;
+            let arrMs = dayMs(toISODate(arrD || depD)) + (+am[1] * 60 + +am[2]) * 60000;
+            // No arrival date: same day, or the next day when the time is earlier.
+            out.rolled = false;
+            if (!arrD && arrMs <= depMs) { arrMs += 864e5; out.rolled = true; }
+            out.durMin = Math.round((arrMs - depMs) / 60000);
+            out.days = Math.round((dayMs(new Date(arrMs).toISOString().slice(0, 10)) - dayMs(toISODate(depD))) / 864e5);
+            return out;
+        }
+        function fltGreatCircle(a, b) {
+            const p = FLT_COORDS[a], q = FLT_COORDS[b];
+            if (!p || !q || a === b) return 0;
+            const r = x => x * Math.PI / 180;
+            const h = Math.sin(r(q[0] - p[0]) / 2) ** 2 + Math.cos(r(p[0])) * Math.cos(r(q[0])) * Math.sin(r(q[1] - p[1]) / 2) ** 2;
+            return Math.round(2 * 6371 * Math.asin(Math.sqrt(h)));
+        }
+        // Live summary under the route + the auto distance.
+        function fltRefresh() {
+            const $ = id => document.getElementById(id);
+            const sum = $('fltSummary'); if (!sum) return;
+            const fi = $('fltFromIata').value.trim().toUpperCase(), ti = $('fltToIata').value.trim().toUpperCase();
+            const km = $('fltKm');
+            if (km.dataset.auto === '1') {
+                const gc = fltGreatCircle(fi, ti);
+                km.value = gc || '';
+                $('fltKmTag').hidden = !gc;
+            } else $('fltKmTag').hidden = true;
+            const t = fltReadTimes();
+            const bits = [];
+            if (fi || ti) bits.push(`<b>${escAttr(fi || '···')}</b> → <b>${escAttr(ti || '···')}</b>`);
+            let warn = '';
+            if (t.durMin != null) {
+                if (t.durMin <= 0) warn = 'Arrival is before departure';
+                else if (t.durMin > 20 * 60) warn = 'Over 20 hours — check the dates';
+                else {
+                    bits.push(`<b>${Math.floor(t.durMin / 60)}h ${String(t.durMin % 60).padStart(2, '0')}m</b>`);
+                    if (t.days > 0) bits.push(`<span class="flt-plus">lands +${t.days} day${t.days > 1 ? 's' : ''}${t.rolled ? ' (assumed)' : ''}</span>`);
+                    else bits.push('same-day arrival');
+                }
+            }
+            if (km.value && /^\d+$/.test(km.value)) {
+                bits.push(`${Number(km.value).toLocaleString('en-GB')} km`);
+                if (t.durMin > 0 && !warn) bits.push(`avg ${Math.round(km.value / (t.durMin / 60)).toLocaleString('en-GB')} km/h`);
+            }
+            if (t.arrBad) warn = 'Arrival date — use dd-mm-yyyy, or leave it blank';
+            sum.innerHTML = (bits.length ? bits.join('<i>·</i>') : '<span class="flt-sum-ph">Route and duration appear here as you fill the times</span>')
+                + (warn ? `<span class="flt-warn">⚠ ${warn}</span>` : '');
         }
         function fltAutoFrom() {
             const fromIn = document.getElementById('fltFrom');
@@ -18879,11 +19114,7 @@
             const ap = FLT_AIRPORTS[site.toLowerCase()] || (site ? [site, ''] : FLT_AIRPORTS.jeddah);
             fromIn.value = ap[0];
             document.getElementById('fltFromIata').value = ap[1];
-            // The factory-delivery default (→ Jeddah) does not apply; leave To for the user.
-            const toIn = document.getElementById('fltTo');
-            if (toIn.value === 'Jeddah' && document.getElementById('fltToIata').value === 'JED' && ap[1] === 'JED') {
-                toIn.value = ''; document.getElementById('fltToIata').value = '';
-            }
+            fltRefresh();
         }
         async function saveFlight() {
             if (!canEdit()) { requireSignIn(); return; }
@@ -18891,19 +19122,19 @@
             const up = id => val(id).toUpperCase().replace(/\s+/g, '');
             const tail = val('fltTail'), kind = val('fltKind'), flight = up('fltFlight');
             let callsign = up('fltCallsign');
-            const date = readDateField(document.getElementById('fltDate'));
-            const dep = val('fltDep'), arr = val('fltArr');
-            const hhmm = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
-            if (!tail) return flightEditFail('Choose an aircraft.');
+            const t = fltReadTimes();
+            const date = t.depD, dep = t.dep;
+            if (!tail) return flightEditFail('Choose an aircraft — type its tail and pick it from the list.');
             if (!/^[A-Z0-9]{2,10}$/.test(flight)) return flightEditFail('Flight number: letters and digits only, e.g. SV9022.');
             if (!callsign && /^SV\d+$/.test(flight)) callsign = 'SVA' + flight.slice(2);
             if (callsign && !/^[A-Z0-9]{2,10}$/.test(callsign)) return flightEditFail('Callsign: letters and digits only.');
             if (!date) return flightEditFail('Departure date — use dd-mm-yyyy.');
-            if (!hhmm.test(dep)) return flightEditFail('Departure time — use hh:mm (UTC), e.g. 14:38.');
-            if (!hhmm.test(arr)) return flightEditFail('Arrival time — use hh:mm (UTC), e.g. 20:34.');
-            const mins = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-            let durMin = mins(arr) - mins(dep);
-            if (durMin <= 0) durMin += 1440;                   // arrives the next day (UTC)
+            if (!dep) return flightEditFail('Departure time — use hh:mm (UTC), e.g. 14:38.');
+            if (t.arrBad) return flightEditFail('Arrival date — use dd-mm-yyyy, or leave it blank for the same day.');
+            if (!t.arr) return flightEditFail('Arrival time — use hh:mm (UTC), e.g. 20:34.');
+            const durMin = t.durMin;
+            if (!(durMin > 0)) return flightEditFail('Arrival must be after departure — check the arrival date.');
+            if (durMin > 20 * 60) return flightEditFail('That is over 20 hours in the air — check the dates.');
             const fromIata = up('fltFromIata'), toIata = up('fltToIata');
             if (!/^[A-Z]{3}$/.test(fromIata) || !/^[A-Z]{3}$/.test(toIata)) return flightEditFail('IATA codes are three letters, e.g. TLS and JED.');
             const km = val('fltKm');
@@ -18915,7 +19146,9 @@
             const prev = (!wasNew && flightsLive[flightEditingId]) || {};
             const entry = {
                 tail, kind, flight, callsign, date, dep, durMin,
-                from: val('fltFrom'), fromIata, to: val('fltTo'), toIata,
+                // A known city is saved in its proper spelling ("vienna" → "Vienna").
+                from: (fltAirportBy('city', val('fltFrom')) || {}).city || val('fltFrom'), fromIata,
+                to: (fltAirportBy('city', val('fltTo')) || {}).city || val('fltTo'), toIata,
                 distanceKm: km ? Number(km) : '',
                 fr24Id: fr24m ? fr24m[1].toLowerCase() : '',
                 note: val('fltNote'),
