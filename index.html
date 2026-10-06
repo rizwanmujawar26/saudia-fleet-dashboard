@@ -4354,6 +4354,20 @@
         }
 
         .act-row { display: flex; gap: 10px; }
+        /* Quick picks under a field (Yesterday/Today, Jeddah/Riyadh) — reuse the AVR chips */
+        .act-picks { margin: -6px 0 12px; }
+        .avr-quick-chip.on { background: #e8f5ec; border-color: #9cc9a9; color: #0a5c34; }
+        /* Aircraft type-to-find picker */
+        .act-ac-pick { position: relative; }
+        .act-ac-list { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% - 10px);
+            margin: 0; padding: 4px 0; list-style: none; background: #fff; border: 1px solid #cfd6dd;
+            border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.14); max-height: 240px; overflow-y: auto; }
+        .act-ac-list li { display: flex; align-items: center; gap: 8px; padding: 7px 10px; font-size: 13.5px; cursor: pointer; }
+        .act-ac-list li.hl { background: #eef5ff; }
+        .act-ac-list li .ac-type { color: #6b7680; }
+        .act-ac-list li .ac-tag { margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: .4px;
+            padding: 2px 7px; border-radius: 999px; background: #fff4e0; color: #9a5b00; border: 1px solid #f0d29a; }
+        .act-ac-list li.none { color: #8a939b; cursor: default; }
         .act-row > div { flex: 1; min-width: 0; }
 
         /* Only the fields that belong to the chosen category are shown. */
@@ -6586,11 +6600,22 @@
             <div class="act-row">
                 <div>
                     <label class="add-sched-label">Aircraft</label>
-                    <select id="addActAircraft" class="add-sched-input"></select>
+                    <!-- Type-to-find picker over the real <select>, which stays the single
+                         source of the value (hidden) so every reader of addActAircraft is
+                         unchanged. Active + In Retrofit: tails are attended before activation. -->
+                    <div class="act-ac-pick">
+                        <input id="addActAircraftSearch" class="add-sched-input" placeholder="Type a tail, e.g. AQA" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-controls="addActAircraftList" aria-expanded="false">
+                        <ul id="addActAircraftList" class="act-ac-list" role="listbox" hidden></ul>
+                    </div>
+                    <select id="addActAircraft" class="add-sched-input" hidden></select>
                 </div>
                 <div>
                     <label class="add-sched-label">Date</label>
                     <input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" id="addActDate" class="add-sched-input">
+                    <div class="avr-station-picks act-picks" id="addActDatePicks">
+                        <button type="button" class="avr-quick-chip" data-days="-1" onclick="actPickDate(-1)">Yesterday</button>
+                        <button type="button" class="avr-quick-chip" data-days="0" onclick="actPickDate(0)">Today</button>
+                    </div>
                 </div>
             </div>
 
@@ -6598,6 +6623,7 @@
                 <div>
                     <label class="add-sched-label">Location</label>
                     <input id="addActLocation" class="add-sched-input" maxlength="60" placeholder="e.g. Jeddah" autocomplete="off">
+                    <div class="avr-station-picks act-picks" id="addActLocPicks"></div>
                 </div>
                 <div>
                     <label class="add-sched-label">Category</label>
@@ -6605,7 +6631,7 @@
                 </div>
             </div>
 
-            <label class="add-sched-label">Title <span style="text-transform:none; font-weight:400;">— what happened, not which part</span></label>
+            <label class="add-sched-label">Title <span style="text-transform:none; font-weight:400;">— optional; blank shows the category</span></label>
             <input id="addActTitle" class="add-sched-input" maxlength="120" placeholder="What happened" autocomplete="off">
             <div id="addActTitleHint" style="font-size:11.5px; color:#8a939b; margin:-8px 0 4px;"></div>
 
@@ -8077,8 +8103,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.212.1';
-        const APP_BUILD    = '2026.10.06.03';
+        const APP_VERSION  = '2.213.0';
+        const APP_BUILD    = '2026.10.06.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -17588,9 +17614,117 @@
 
         // Everything both entry points need: the pickers built and populated, the
         // one-time listeners bound.
+        // ----- Quick picks (v2.213): Yesterday/Today and Jeddah/Riyadh -----
+        function actPickDate(days) {
+            const d = new Date(); d.setDate(d.getDate() + days);
+            const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            document.getElementById('addActDate').value = toDMY(iso);
+            syncActPicks();
+        }
+        function actPickLocation(st) {
+            document.getElementById('addActLocation').value = st;
+            syncActPicks();
+        }
+        // Light up the chip whose value is in the field, so it reads as a choice made.
+        function syncActPicks() {
+            const dateVal = (document.getElementById('addActDate').value || '').trim();
+            document.querySelectorAll('#addActDatePicks .avr-quick-chip').forEach(b => {
+                const d = new Date(); d.setDate(d.getDate() + Number(b.dataset.days));
+                const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                b.classList.toggle('on', dateVal === toDMY(iso));
+            });
+            const loc = (document.getElementById('addActLocation').value || '').trim().toLowerCase();
+            document.querySelectorAll('#addActLocPicks .avr-quick-chip').forEach(b =>
+                b.classList.toggle('on', loc === String(b.dataset.loc).toLowerCase()));
+        }
+
+        // ----- Aircraft type-to-find picker over the hidden #addActAircraft select -----
+        function actAircraftOptions() {
+            const sel = document.getElementById('addActAircraft');
+            return Array.from(sel.options).map(o => {
+                const a = aircraftData.find(x => x.id === o.value) || {};
+                return { id: o.value, label: o.textContent, type: TYPE_SHORT_LABEL[a.type] || a.type || '',
+                         retro: fleetStatusOf(a) === 'In Retrofit' };
+            });
+        }
+        // The visible box mirrors the select — called whenever code sets acSel.value.
+        function syncActAircraftInput() {
+            const sel = document.getElementById('addActAircraft');
+            const o = sel.options[sel.selectedIndex];
+            document.getElementById('addActAircraftSearch').value = o ? o.textContent : '';
+        }
+        function chooseActAircraft(id) {
+            const sel = document.getElementById('addActAircraft');
+            const changed = sel.value !== id;
+            sel.value = id;
+            syncActAircraftInput();
+            closeActAircraftList();
+            if (changed) sel.dispatchEvent(new Event('change'));   // parts/positions follow the tail
+        }
+        function closeActAircraftList() {
+            const list = document.getElementById('addActAircraftList');
+            list.hidden = true;
+            document.getElementById('addActAircraftSearch').setAttribute('aria-expanded', 'false');
+        }
+        function renderActAircraftList(q) {
+            const list = document.getElementById('addActAircraftList');
+            const needle = String(q || '').trim().toUpperCase().replace(/^HZ-?/, '');
+            const opts = actAircraftOptions().filter(o => !needle
+                || o.id.toUpperCase().includes(needle) || o.type.toUpperCase().includes(needle));
+            // Tails that START with what was typed come first: "AQ" → AQA, AQB… before ASAQ.
+            opts.sort((a, b) => (a.id.toUpperCase().startsWith(needle) ? 0 : 1) - (b.id.toUpperCase().startsWith(needle) ? 0 : 1)
+                || a.id.localeCompare(b.id));
+            list.innerHTML = opts.length
+                ? opts.map((o, i) => `<li role="option" data-id="${escAttr(o.id)}" class="${i === 0 ? 'hl' : ''}">`
+                    + `<b>${escAttr(o.id)}</b><span class="ac-type">${escAttr(o.type)}</span>`
+                    + `${o.retro ? '<span class="ac-tag">IN RETROFIT</span>' : ''}</li>`).join('')
+                : '<li class="none">No aircraft matches</li>';
+            list.hidden = false;
+            document.getElementById('addActAircraftSearch').setAttribute('aria-expanded', 'true');
+        }
+        function initActAircraftPicker() {
+            const input = document.getElementById('addActAircraftSearch');
+            const list = document.getElementById('addActAircraftList');
+            const items = () => Array.from(list.querySelectorAll('li[data-id]'));
+            const move = step => {
+                const it = items(); if (!it.length) return;
+                let i = it.findIndex(li => li.classList.contains('hl'));
+                i = Math.max(0, Math.min(it.length - 1, i + step));
+                it.forEach((li, k) => li.classList.toggle('hl', k === i));
+                it[i].scrollIntoView({ block: 'nearest' });
+            };
+            input.addEventListener('focus', () => { input.select(); renderActAircraftList(''); });
+            input.addEventListener('input', () => renderActAircraftList(input.value));
+            input.addEventListener('keydown', e => {
+                if (e.key === 'ArrowDown') { e.preventDefault(); if (list.hidden) renderActAircraftList(input.value); else move(1); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+                else if (e.key === 'Enter' || (e.key === 'Tab' && !list.hidden && input.value.trim())) {
+                    const hl = list.hidden ? null : list.querySelector('li.hl[data-id]');
+                    if (hl) { if (e.key === 'Enter') e.preventDefault(); chooseActAircraft(hl.dataset.id); }
+                }
+                else if (e.key === 'Escape') { e.stopPropagation(); syncActAircraftInput(); closeActAircraftList(); }
+            });
+            // mousedown, not click: it lands before the input's blur closes the list.
+            list.addEventListener('mousedown', e => {
+                const li = e.target.closest('li[data-id]');
+                e.preventDefault();
+                if (li) chooseActAircraft(li.dataset.id);
+            });
+            // Leaving the box never leaves a half-typed tail: an exact tail is taken,
+            // anything else snaps back to the aircraft still selected.
+            input.addEventListener('blur', () => {
+                const typed = input.value.trim().toUpperCase().replace(/^HZ-?/, '');
+                const hit = actAircraftOptions().find(o => o.id.toUpperCase() === typed);
+                if (hit) chooseActAircraft(hit.id); else { syncActAircraftInput(); closeActAircraftList(); }
+            });
+        }
+
         function prepareActivityModal() {
             const acSel = document.getElementById('addActAircraft');
-            acSel.innerHTML = maintenanceFleet()
+            // Active + In Retrofit: a tail mid-retrofit is attended (maintenance, checks)
+            // before it is activated, so it must be loggable. Scoped to this form only —
+            // maintenanceFleet() still feeds the Active-only views.
+            acSel.innerHTML = hwAircraftFleet().slice().sort((a, b) => a.id.localeCompare(b.id))
                 .map(a => `<option value="${escAttr(a.id)}">${escAttr(a.id)} — ${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</option>`).join('');
 
             const catSel = document.getElementById('addActCategory');
@@ -17601,6 +17735,11 @@
                 acSel.addEventListener('change', syncActParts);
                 document.getElementById('addActPart').addEventListener('change', onActPartChange);
                 document.getElementById('addActPosition').addEventListener('change', () => { prefillRemovedFromOnWing(); syncActRemovedHint(); });
+                initActAircraftPicker();
+                document.getElementById('addActLocPicks').innerHTML = AVR_STATION_PICKS.map(st =>
+                    `<button type="button" class="avr-quick-chip" data-loc="${escAttr(st)}" onclick="actPickLocation('${escAttr(st)}')">${escAttr(st)}</button>`).join('');
+                document.getElementById('addActDate').addEventListener('input', syncActPicks);
+                document.getElementById('addActLocation').addEventListener('input', syncActPicks);
             }
             const err = document.getElementById('addActError');
             err.textContent = ''; err.style.display = 'none';
@@ -17642,6 +17781,7 @@
             const sel = aircraftData.find(a => a.id === acSel.value);
             document.getElementById('addActLocation').value = (sel && (sel.retrofitLocation || aircraftLocationOf(sel))) || '';
             document.getElementById('addActDate').value = toDMY(new Date().toISOString().slice(0, 10));
+            syncActAircraftInput();
             ['addActTitle', 'addActTask', 'addActOutcome', 'addActNotes',
              'addActOldPart', 'addActNewPart', 'addActRemovalReason',
              'addActSoftwareName', 'addActVersion', 'addActModemType', 'addActCommissioningResult']
@@ -17654,8 +17794,11 @@
             if (partSel) partSel.value = '';
             syncActPositions();
             syncActExtras();
+            syncActPicks();
             document.getElementById('addActOverlay').style.display = 'flex';
-            document.getElementById('addActTitle').focus();
+            // Aircraft first: the list is long now, so the cursor lands where typing finds it.
+            const acIn = document.getElementById('addActAircraftSearch');
+            acIn.focus(); acIn.select();
         }
 
         function openEditActivity(id) {
@@ -17677,6 +17820,7 @@
                     `<option value="${escAttr(act.aircraft)}">${escAttr(act.aircraft)}</option>`);
             }
             acSel.value = act.aircraft || '';
+            syncActAircraftInput();
             document.getElementById('addActCategory').value = act.category || 'other';
             set('addActDate', toDMY(act.date));
             set('addActLocation', act.location);
@@ -17703,6 +17847,7 @@
             syncActPositions();
             set('addActPosition', d.position);
             syncActExtras();
+            syncActPicks();
             document.getElementById('addActOverlay').style.display = 'flex';
             document.getElementById('addActTitle').focus();
         }
@@ -17774,8 +17919,10 @@
 
                 Object.keys(entry).forEach(k => { if (entry[k] === '') delete entry[k]; });
 
-                if (!entry.aircraft || !entry.date || !entry.title) {
-                    err.textContent = 'Aircraft, date and title are all required.';
+                // Title is optional (v2.213): every reader falls back to the category label,
+                // and the Timeline sub carries the specifics — "Software Update · Middleware 2.1.0".
+                if (!entry.aircraft || !entry.date) {
+                    err.textContent = 'Aircraft and date are both required.';
                     err.style.display = 'block';
                     return;
                 }
@@ -17887,7 +18034,7 @@
         async function deleteActivity(id) {
             const act = activitiesLive[id];
             if (!act) return;
-            if (!confirm(`Delete this activity?\n\n${act.date} — ${act.title}\n\nIt also disappears from the Timeline.`)) return;
+            if (!confirm(`Delete this activity?\n\n${act.date} — ${act.title || activityCategory(act.category).label}\n\nIt also disappears from the Timeline.`)) return;
             const token = await getIdToken();
             if (!token) return;
             try {

@@ -13,6 +13,13 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.213.0 — Add Activity form: faster entry (2026-10-06)
+Aircraft list = Active + In Retrofit (`hwAircraftFleet()`, this form only — `maintenanceFleet()` unchanged), picked by a
+type-to-find box (`initActAircraftPicker`) over the now-hidden `#addActAircraft` select, which stays the single source
+(starts-with first, IN RETROFIT tag, ↑↓/Enter/Esc, blur snaps to an exact tail or back). Yesterday/Today chips under
+Date, Jeddah/Riyadh (`AVR_STATION_PICKS`) under Location, lit when they match (`syncActPicks`). Title optional — every
+reader already falls back to the category label, so "Software Update · Middleware 2.1.0" is a complete entry.
+
 ### v2.212.1 — Flight rows: right-aligned 🎫 Flight card button (2026-10-06)
 Same place and shape as the AVR report pill, in flight blue; opens the flight card.
 
