@@ -2033,6 +2033,39 @@
 
         .media-widget-fill { height: 100%; border-radius: 10px; }
 
+        /* ===== Fleet Composition cards (v2.220, user 2026-10-06) =====
+           ⚠️ The shared .media-widget rule above sets `border: 1px solid` with NO colour and
+           sits after .fleet-total / .fleet-ssid, so it reset their tints to currentColor —
+           the black borders. Scoped under #fleetWidgets (higher specificity) the tints hold.
+           Wider, softer, more air: 12px radius, light shadow, roomier padding and figures. */
+        #fleetWidgets { gap: 14px; padding: 4px 2px 10px; }
+        #fleetWidgets .media-widget {
+            flex: 0 0 316px; min-width: 0; padding: 14px 18px 13px; border-radius: 12px;
+            border: 1px solid rgba(15, 32, 45, 0.08); border-left-width: 4px;
+            box-shadow: 0 1px 2px rgba(15, 32, 45, 0.04), 0 4px 14px rgba(15, 32, 45, 0.05);
+        }
+        #fleetWidgets .fleet-total { background: #f1f8f3; border-color: #d3eadb; border-left-color: #1e7e34; }
+        #fleetWidgets .fleet-ssid  { background: #f3f7fb; border-color: #d9e5f0; border-left-color: #2f5f8a; }
+        #fleetWidgets .fleet-sys   { background: #f5f4fb; border-color: #e1ddf0; border-left-color: #59468a; }
+        #fleetWidgets .media-widget-label { font-size: 11.5px; letter-spacing: 0.6px; color: #4b5763; }
+        #fleetWidgets .fleet-total .media-size-pill { background: rgba(30,126,52,.09); color: #1e7e34; border-color: rgba(30,126,52,.18); }
+        #fleetWidgets .fleet-ssid  .media-size-pill { background: rgba(47,95,138,.09); color: #2f5f8a; border-color: rgba(47,95,138,.18); }
+        #fleetWidgets .fleet-sys   .media-size-pill { background: rgba(89,70,138,.09); color: #59468a; border-color: rgba(89,70,138,.18); }
+        #fleetWidgets .media-size-pill { font-size: 10.5px; border-radius: 999px; padding: 2px 9px; }
+        #fleetWidgets .ssid-figures { margin: 12px 0 10px; font-size: 12.5px; gap: 20px; }
+        #fleetWidgets .ssid-side b { font-size: 26px; margin-right: 3px; }
+        #fleetWidgets .ssid-side:last-child b { margin-right: 0; margin-left: 3px; }
+        /* A 2px seam between the two shares so each half reads as its own block. */
+        #fleetWidgets .ssid-track { height: 8px; gap: 2px; background: rgba(15, 32, 45, 0.06); }
+        #fleetWidgets .ssid-track > div { border-radius: 99px; }
+        #fleetWidgets .fleet-note { margin-top: 10px; font-size: 11.5px; }
+        /* Eclipse vs Airbus HBC+ — the system colours of the Fleet table's badges. */
+        .sys-ecl-side { color: #2f5f8a; }
+        .sys-hbc-side { color: #59468a; }
+        .sys-fill-ecl { background: linear-gradient(90deg, #4a86b8, #2f5f8a); transition: width 0.5s ease; }
+        .sys-fill-hbc { background: linear-gradient(90deg, #7d68b3, #59468a); transition: width 0.5s ease; }
+        .fleet-note-sys b { color: #59468a; }
+
         /* Station cards keep their registration list, so they need more room than a
            plain figure widget — and the list is clamped by .stat-list already. */
         /* ===== Software tab: one row of three =====
@@ -8104,8 +8137,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.219.0';
-        const APP_BUILD    = '2026.10.06.10';
+        const APP_VERSION  = '2.220.0';
+        const APP_BUILD    = '2026.10.06.11';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12410,12 +12443,38 @@
                     : ''}
             </div>`;
 
+            // Eclipse vs Airbus HBC+ (v2.220, user 2026-10-06): Eclipse = every programme tail
+            // (Active + In Retrofit) on the Eclipse system; HBC+ = the ACTIVE HBC+ tails
+            // (linefit A321XLR) — future/undelivered ones are not in the fleet yet.
+            const eclTails = programmeFleet().filter(a => !isHbcAircraft(a));
+            const eclRetro = eclTails.filter(a => fleetStatusOf(a) === 'In Retrofit').length;
+            const hbcTails = fleetRoster.filter(a => isHbcAircraft(a) && fleetStatusOf(a) === 'Active')
+                .map(a => a.id).sort(tailCompare);
+            const sysTotal = eclTails.length + hbcTails.length;
+            const eclPct = sysTotal ? (eclTails.length / sysTotal) * 100 : 0;
+            const sysCard = `<div class="media-widget fleet-sys">
+                <div class="media-widget-head">
+                    <span class="media-widget-label">IFC System</span>
+                    <span class="media-size-pill">${sysTotal} aircraft</span>
+                </div>
+                <div class="ssid-figures">
+                    <span class="ssid-side sys-ecl-side"><b>${eclTails.length}</b> Eclipse</span>
+                    <span class="ssid-side sys-hbc-side">HBC+ <b>${hbcTails.length}</b></span>
+                </div>
+                <div class="ssid-track" role="img" aria-label="${eclTails.length} Eclipse, ${hbcTails.length} HBC+">
+                    <div class="sys-fill-ecl" style="width:${eclPct}%"></div>
+                    <div class="sys-fill-hbc" style="width:${100 - eclPct}%"></div>
+                </div>
+                <div class="fleet-note fleet-note-sys">Eclipse incl. ${eclRetro} In Retrofit${hbcTails.length ? ` · <b>${hbcTails.join(', ')}</b> HBC+` : ''}</div>
+            </div>`;
+
             // The Out-of-Service widget was removed (user, 2026-09-11): the AOG count pill
             // at the top of the table already carries the same figure, so the tile was
             // redundant. `card` is still used above; opsOutFleet() still drives the pill.
 
             grid.innerHTML =
                   totalCard
+                + sysCard
                 + ssid;
         }
 

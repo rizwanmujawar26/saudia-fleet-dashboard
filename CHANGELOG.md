@@ -13,6 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.220.0 — Fleet Composition: card restyle + IFC System (Eclipse | HBC+) split (2026-10-06)
+⚠️ Root cause of the black borders: the shared `.media-widget { border: 1px solid }` (no colour) sits after
+`.fleet-total`/`.fleet-ssid` and reset their tints to currentColor. Fleet cards now styled under `#fleetWidgets`
+(tinted borders + 4px accent, 12px radius, soft shadow, 316px equal width, roomier figures, 2px seam in the split bar,
+pills tinted per card). New **IFC System** card between IFC Fleet and SSID: Eclipse = programme tails (Active + In
+Retrofit) not HBC+, HBC+ = Active HBC+ tails (`isHbcAircraft`); Fleet-table system colours (#2f5f8a / #59468a); note
+names the HBC+ tails and the Eclipse In-Retrofit count.
+
 ### v2.219.0 — First Connected Flight: install-site From, airport quick picks, AVR flight bar (2026-10-06)
 Flight editor: JED · RUH · DXB chips under From and To fill city + IATA (`FLT_AIRPORTS`, `fltPickAirport`). For kind
 `connected`, From auto-fills from the tail's install site (`retrofitLocation`: Jeddah/Toulouse/Malta/Qatar→DOH/
