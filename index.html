@@ -2064,7 +2064,7 @@
         .sys-hbc-side { color: #59468a; }
         .sys-fill-ecl { background: linear-gradient(90deg, #4a86b8, #2f5f8a); transition: width 0.5s ease; }
         .sys-fill-hbc { background: linear-gradient(90deg, #7d68b3, #59468a); transition: width 0.5s ease; }
-        .fleet-note-sys { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .fleet-note-sys, .fleet-note-retrofit { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .fleet-note-sys b { color: #59468a; }
         .fn-new { display: inline-block; margin-left: 4px; font-size: 9.5px; font-weight: 800; letter-spacing: .4px;
             padding: 1px 7px; border-radius: 999px; background: #59468a; color: #fff; vertical-align: 1px; }
@@ -8148,8 +8148,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.223.0';
-        const APP_BUILD    = '2026.10.06.14';
+        const APP_VERSION  = '2.223.1';
+        const APP_BUILD    = '2026.10.06.15';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -12435,8 +12435,10 @@
             // Name the tails still In Retrofit under the bar — the smaller, incomplete
             // share — rather than leaving the count to speak for itself.
             // Grouped by phase, latest phase first: "AS73 Commissioned · AQK, ASP, ASU Power OFF".
+            // RETROFIT tails only (user, 2026-10-06): a linefit HBC+ tail's journey belongs
+            // to the IFC System card, and the note must stay one line.
             const retroByPhase = FLEET_STATUSES.filter(f => f.phase <= 4).slice().reverse()
-                .map(f => ({ f, tails: fleetRoster.filter(a => fleetStatusOf(a) === f.value).map(a => a.id).sort(tailCompare) }))
+                .map(f => ({ f, tails: fleetRoster.filter(a => fitOf(a) === 'retrofit' && fleetStatusOf(a) === f.value).map(a => a.id).sort(tailCompare) }))
                 .filter(g => g.tails.length);
             const retroTails = retroByPhase.flatMap(g => g.tails);
             const totalCard = `<div class="media-widget fleet-total">
@@ -12511,18 +12513,18 @@
                 .sort((x, y) => dateSortKey(toISODate(inductedOf(x))).localeCompare(dateSortKey(toISODate(inductedOf(y)))) || tailCompare(x, y));
             const sysTotal = eclTails.length + hbcTails.length;
             const eclPct = sysTotal ? (eclTails.length / sysTotal) * 100 : 0;
-            // The note says one useful thing (user, 2026-10-06): the HBC+ tails while there
-            // are few (≤ 4), oldest → newest, the newest flagged NEW with its induction day
-            // when it came in within 30 days; past 4, only the newest induction.
+            // The note says one thing, on one line (user, 2026-10-06): the latest HBC+
+            // induction — "Latest HBC+ ASBC Delivered 05-Oct-2026" — flagged NEW when it
+            // came in within 30 days. Delivery is the induction for a linefit tail; an
+            // undated delivery falls back to its activation day.
             const newest = hbcTails[hbcTails.length - 1];
+            const newSpec = newest ? (fleetSpecsLive[newest] || {}) : {};
+            const newVerb = newSpec.deliveryDate ? 'Delivered' : 'Activated';
             const newIso = newest ? toISODate(inductedOf(newest)) : '';
             const newAge = newIso ? Math.round((Date.now() - Date.parse(newIso + 'T00:00:00Z')) / 86400000) : null;
-            const newTag = newIso && newAge != null && newAge <= 30
-                ? ` <span class="fn-new">NEW · ${escAttr(fmtDate(newIso).slice(0, 6))}</span>` : '';
-            const sysNote = !hbcTails.length ? ''
-                : hbcTails.length <= 4
-                    ? `<div class="fleet-note fleet-note-sys">${hbcTails.map(t => `<b>${escAttr(t)}</b>`).join(' · ')}${newTag}</div>`
-                    : `<div class="fleet-note fleet-note-sys">Newest <b>${escAttr(newest)}</b> · inducted ${escAttr(fmtDate(newIso) || '—')}${newTag ? newTag : ''}</div>`;
+            const newTag = newIso && newAge != null && newAge <= 30 ? ` <span class="fn-new">NEW</span>` : '';
+            const sysNote = !newest ? ''
+                : `<div class="fleet-note fleet-note-sys">Latest HBC+ <b>${escAttr(newest)}</b> ${newIso ? `${newVerb} ${escAttr(fmtDate(newIso))}` : ''}${newTag}</div>`;
             const sysCard = `<div class="media-widget fleet-sys">
                 <div class="media-widget-head">
                     <span class="media-widget-label">IFC System</span>
