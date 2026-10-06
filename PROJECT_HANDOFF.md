@@ -6,7 +6,31 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.206.3–v2.212.1 (2026-10-04 → 10-06).** Special flights, live delivery tracking, MLR charts.
+**Latest — v2.213.0–v2.223.0 (2026-10-06).** Phased connectivity status, faster Activity entry, AVR modems + flights.
+
+- **⚠️ Phased status (v2.222/2.223) — the big one.** `fleetStatus` is now a journey: retrofit Power OFF →
+  Power ON → Software Loading → Commissioned → Commercial; linefit Delivered → Commissioned → Commercial.
+  Commercial = old Active; Commissioned = Activation date (auto, forward only). Gates `isCommercial` (counts)
+  / `isSystemOn` (editing pages; `activeFleet()` renamed `systemOnFleet()`) / `isRetrofitPhase` /
+  `isPreService`. Data migrated (backup `2026-10-06-pre-status-phases`): 48 → Commercial, AS73 Commissioned,
+  AQK/ASP/ASU Power OFF, ASBC Delivered. See *Fleet status*.
+- **Add Activity (v2.213/2.214).** Active + In Retrofit tails (`hwAircraftFleet`), type-to-find picker over the
+  hidden select, Yesterday/Today + Jeddah/Riyadh chips, software name+version chips (most recently logged),
+  Title optional (readers fall back to the category label).
+- **AVR report (v2.215–2.219).** OTA rows show the UTC time (small, before the right-aligned date); new
+  **Modems** strip (Taurus/Hughes Commissioned·Pending from the MODEM register, 4G SIM Active·Faulty, "N of 3
+  active"); dark **First Connected Flight** bar (Live Activity palette) when the tail has a `connected` flight —
+  sits beside a linefit's delivery strip too.
+- **Flights (v2.218/2.219).** New kind `connected` 📶 First Connected Flight; From pre-fills from the install
+  site (`FLT_AIRPORTS`: Qatar→DOH, Jordan→AMM, Hamburg→HAM…) else Jeddah; JED·RUH·DXB chips.
+- **Media (v2.217).** Light Media accepts the portal string `(ME-SVA-UGO-0526-LIGHTCONTENT)`, stored plain.
+- **Fleet Composition (v2.220/2.221).** ⚠️ Black borders were the shared `.media-widget {border:1px solid}`
+  resetting tints — cards now styled under `#fleetWidgets`. New **IFC System** card (Eclipse | HBC+), note =
+  HBC+ tails by induction with a NEW pill (≤30 d); collapses to the newest once > 4.
+- **Open (user):** Power ON *date* field (deferred "later"); auto-flip to Commercial on Mod end (offered, no
+  answer); Fleet table ~33px over its wrapper at 1280 (pre-existing 14px + COMMISSIONED badge).
+
+**Before that — v2.206.3–v2.212.1 (2026-10-04 → 10-06).** Special flights, live delivery tracking, MLR charts.
 
 - **Special flights — new node `/flights` (v2.210).** Rules + backup/restore/verify lists; seeded with the four
   HBC+ deliveries (ASBA SV9010, ASBB SV9016, ASBE SV9020, ASBC SV9022). ＋ Add → ✈️ **Add Flight** form
@@ -101,7 +125,10 @@ Light Media Timeline title de-duplicated.
     from `.hw-modem-table`. See *Satcom* under Tabs.
   - The `#sim` page is kept **dormant** (user: redirect, keep code), awaiting a retire decision.
     Hardware > MODMAN (the /units serial view) is untouched.
-- **Programme = fleetStatus, not `fit` (v2.185).** `inProgramme(a)` (Active or In Retrofit)
+- **⚠️ v2.222–2.223: `fleetStatus` is now a phased journey** (Power OFF → Power ON → Software
+  Loading → Commissioned → Commercial; linefit Delivered → Commissioned → Commercial). The
+  Active/In Retrofit wording in the bullets below is historical — see *Fleet status*.
+- **Programme = fleetStatus, not `fit` (v2.185).** `inProgramme(a)` (any phase; was Active or In Retrofit)
   now drives `programmeFleet()`/`projectScope()`, the IFC Fleet widget and `hwAircraftFleet()`.
   ⚠️ ASAA/AS73 are In Retrofit with **no `fit`**. The old `a.fit` test made the nav read 47
   against the widget's 49.
@@ -1004,7 +1031,7 @@ adding it to the rules first.
 | `fit` | `retrofit` \| `linefit` (ASBA, ASBB), **or absent**. How WiFi got onto the airframe, not where it is in the programme — an aircraft can be `fit: retrofit` *and* `fleetStatus: In Retrofit`. **Absent = not fitted** (the 55 imported airframes, v2.89.0). ⚠️ **`fit` stays `retrofit`/`linefit` ONLY** — `programmeFleet()`/`projectScope()` count "a `fit` on record", so overloading it with scope/status values would corrupt every scope figure. Scope and In-Retrofit are separate fields (below). |
 | `scope` | `in` \| `no`, **or absent** (v2.98.0). Whether the airframe *will* get connectivity. Surfaces in the **Fit column** for not-yet-fitted aircraft only — a fitted one reads Retrofit/Linefit and is self-evidently in scope. `fitview` precedence: `In Retrofit` (status) → `retrofit`/`linefit` (fit) → `no-scope`/`in-scope` (scope) → `none` (Not Started). Editable via the single Fit dropdown, which maps the pick back to fit/scope/fleetStatus in `handleFleetEdit`. |
 | `system` | `Eclipse` \| `HBC+` \| `GX` \| `Inmarsat` \| `Viasat` \| `Thales` \| `SITA`, **or absent** (v2.98.0; list widened + `Rave`→`HBC+` v2.101.0). Connectivity hardware / service line. Read-only cell **derives** the default from `fit` when unset (`systemDefault()`: retrofit→Eclipse, linefit→HBC+); an explicit value overrides. Badge class is `sys-${sysSlug(name)}` — `sysSlug` drops non-alphanumerics so `HBC+`→`sys-hbc` (a valid selector). Shown in the Connectivity column group. `FLEET_SYSTEMS` is the one list; the Edit modal's opts derive from it. |
-| `fleetStatus` | **WiFi installation status** — one of `Planned`, `In Retrofit`, `Installed`, `Commissioned`, `Active`, `Decommissioned`, **or absent**. Exact strings, defined once in `FLEET_STATUSES`. ⚠️ **Absent no longer defaults to `Active`** (v2.89.0) — `fleetStatusOf` returns `''`, so a not-started airframe stays out of `activeFleet()` and every derived count. `programmeFleet()` (a `fit` on record) is the WiFi-programme scope; `projectScope()` counts it |
+| `fleetStatus` | **Connectivity journey phase** (v2.222/2.223) — retrofit `Power OFF` → `Power ON` → `Software Loading` → `Commissioned` → `Commercial`; linefit `Delivered` → `Commissioned` → `Commercial`; **or absent** (not started). Exact strings in `FLEET_STATUSES`; rules accept only these. Legacy Active/In Retrofit read through `normFleetStatus`. Never compare the string — use `isCommercial` / `isSystemOn` / `isRetrofitPhase` / `isPreService` / `inProgramme` (see *Fleet status*) |
 | `config` | cabin/IFE **configuration code** (`32U`, `32N`, `321`, `323`, `324`, `33R`, `333`, `33D`, …), **or absent** (v2.126.0). Points at a `/configs/{code}` record — the aircraft's IFE class. `setFleetRoster` carries it into `aircraftData`, and `ifeSystemOf(a)` reads `configsLive[a.config]`. |
 | `comments` | free text |
 
@@ -1483,67 +1510,46 @@ endpoint, not tighter rules here.
 
 ## Fleet status — one field, not two
 
-`fleetStatus` on `/fleet/{tail}` is the **only** status field. A request once came
-in for a separate `installationStatus` with a richer enum; rather than run two
-status fields that would drift, the existing one was widened to those exact six
-values. `FLEET_STATUSES` defines them once — value and label are the same string
-because those strings are what the database stores.
+`fleetStatus` on `/fleet/{tail}` is the **only** status field. Since **v2.222/2.223**
+it is a **phased journey**, not Active/In Retrofit (those, plus Planned / Installed /
+Decommissioned, are retired; the rules accept only the new values; legacy strings still
+read through `normFleetStatus()`):
 
-`activeFleet()` is `fleetStatus === 'Active'`. **An aircraft mid-retrofit is in the
-programme but is not operational**, so it is out of Maintenance and Hardware scope
-by definition. The Fleet page opens on the Active view (`FLEET_DEFAULT_STATUS`).
+| journey | phases (`FLEET_STATUSES`, phase no.) |
+|---|---|
+| retrofit | Power OFF (1) → Power ON (2) → Software Loading (3) → Commissioned (4) → Commercial (5) |
+| linefit  | Delivered (2, `line:true`) → Commissioned (4) → Commercial (5) |
 
-Note `fit: 'retrofit'` and `fleetStatus: 'In Retrofit'` mean different things and
-can both be true: `fit` is how WiFi got onto the airframe (retrofitted vs linefit
-from the factory), `fleetStatus` is where it is in the programme *right now*.
+Mod start = arrives and powers down (Power OFF). Power ON = first power-up, loading can
+begin. **Commissioned = the Activation date** (first time on the network). **Commercial
+= the old Active** — in commercial service. Mod end and the First Connected Flight
+(`/flights` kind `connected`) follow.
 
-**The Fleet page opens on everything.** `FLEET_DEFAULT_STATUS` is `''` — no status is
-preselected, because this page is the whole roster rather than an operational view.
-`FLEET_DEFAULT_SORT` orders it by **Activation Date, oldest first**; that column is
-second, right after `#`. Undated aircraft sort to the end (`dateSortKey` gives them
-`99999999`).
+**Never compare the string — use the gate helpers:**
 
-**Both Fleet pill rows filter more than one axis, and the values say which.**
-
-| row | pills | resolves to |
+| helper | true for | drives |
 |---|---|---|
-| FIT | All Fit / Retrofit / Linefit / **In Retrofit** | `fit`, except `status:In Retrofit` → `fleetStatus` |
-| STATUS | All / Active / **Inactive** / Hidden / Public | `fleetStatus`, except `ssid:*` → `wifiVisibility` |
+| `isCommercial` / `commercialFleet()` | Commercial | every in-service COUNT: IFC Fleet left half, SSID Visibility, KPIs, Active pill |
+| `isSystemOn` / `systemOnFleet()` | phase ≥ 2 (Power ON, Software Loading, Delivered, Commissioned, Commercial) | every EDITING page: Software, Media, Hardware, Maintenance/Activity, Timeline. ⚠️ `activeFleet()` was **renamed** to this in v2.222 |
+| `isRetrofitPhase` | phase 1–4, **not linefit** | "on ground under mod": Fit column `IN RETROFIT`, Hardware "Mod start" header |
+| `isPreService` | phase 1–4, any fit | IFC Fleet right half (**In Progress**), activity-picker tag |
+| `inProgramme` | phase ≥ 1 | programme population (`programmeFleet()`, nav badge, IFC System card HBC+) |
 
-**The Fit and Status columns are VIEWS, like the Software tab's Status column.**
+**Activation ⇒ Commissioned, forward only** (`statusAfterActivation`): an Activation
+date on an aircraft at phase 1–3 (incl. linefit Delivered) moves it to Commissioned, on
+all three save paths — Fleet table (staged visibly before Save), Edit modal, Maintenance
+page. Commercial is always a deliberate manual step.
 
-| column | shows | derived from |
-|---|---|---|
-| Fit | `RETROFIT` / `LINEFIT` / **`IN RETROFIT`** | `fleetStatus === 'In Retrofit'` wins, else `fit` |
-| Status | `ACTIVE` / **`INACTIVE`** | `fleetStatus === 'Active'` |
+**Fleet table.** Status = one coloured badge per phase (grey / amber / blue / purple
+Delivered / teal / green Commercial); the edit select offers `statusOptionsFor(a)` —
+the aircraft's own journey by `fit`. The Status filter lists the phases. The default
+sort (Activation, newest first) floats **pre-service tails to the top** with the
+sentinel `9999999<phase>` (same 8 digits as a real key; most advanced first).
+⚠️ At 1280px the table was already ~14px over its wrapper; `COMMISSIONED` adds ~19px.
 
-The exact stored status is in the Inactive badge's tooltip. Each row carries
-`data-fitview` — what its Fit cell actually says — and the Fit pills match **that**, so
-a filter always selects exactly the rows whose cell reads the same label. The three
-fits therefore sum to the roster: 39 + 2 + 3 = 44.
-
-**Edit mode still shows the real fields**: Fit is `Retrofit`/`Linefit` and Status is the
-full `FLEET_STATUSES` enum. Set an aircraft to `In Retrofit` there and its Fit column
-switches on its own — and switches back when it goes Active, because `fit` never
-changed. Nothing to remember.
-
-⚠️ **`fit` is still only ever `retrofit` or `linefit` in the data.** The In Retrofit
-button filters on `fleetStatus` rather than making "In Retrofit" a third fit. That was
-a deliberate call (2026-08-23): an aircraft being retrofitted *is* a retrofit
-aircraft, so a third fit value would turn `fit` from a permanent fact into a progress
-field somebody has to advance by hand — and, because `fitOf()` treats anything
-non-linefit as retrofit, forgetting would break nothing visibly. Keeping it as-is also
-keeps **FIT → Retrofit answering 42**, the in-progress aircraft included.
-
-`Inactive` is derived as `fleetStatus !== 'Active'`, not a stored value, so the four
-statuses nobody uses today still land in the right bucket. `FLEET_STATUSES` is
-untouched — all six remain settable from the edit dropdown.
-
-**The Status pill row filters two axes.** `All / Active / In Retrofit / Hidden / Public`
-— the first two are `fleetStatus`, the last two are `wifiVisibility`, namespaced as
-`ssid:hidden` / `ssid:public` so one filter variable can carry both without `Active`
-and `public` ever being mistaken for each other. `FLEET_STATUSES` still defines all six
-statuses for the **edit dropdown**; only the filter row was trimmed.
+`fit` (retrofit/linefit — how WiFi got on) and `fleetStatus` (where it is in the journey
+now) stay independent. Picking **In Retrofit** in the Fit view sets Power OFF (a tail
+already mid-mod keeps its phase); picking a fit clears a retrofit-phase status.
 
 **`activationAge()`** renders the `1y 26d` pill beside each activation date. Calendar
 aware — whole anniversaries, then days since the last one — not days/365, so an
@@ -1593,31 +1599,21 @@ the pending design decision, not a bug.
 
 ### Three populations, one definition each
 
-Two axes decide who counts, and **both** matter:
-
-| | meaning |
-|---|---|
-| `fleetStatus` | only `Active` is operational. In Retrofit has no middleware and no media yet, so counting it drags every percentage down against work that has not started |
-| `fit` | the A321XLR linefit pair (ASBA/ASBB) run different software, carry no media and have their own hardware — tracked by SBC configuration, never mixed into retrofit figures |
-
-⚠️ **v2.185.0: the programme is decided by `fleetStatus` alone** — `inProgramme(a)` is
-Active or In Retrofit; `programmeFleet()`/`projectScope()`, the IFC Fleet widget and
-`hwAircraftFleet()` all use it. It used to be "has a `fit`", and two In-Retrofit tails
-with no fit (ASAA, AS73) split the nav badge (47) from the widget (49). The figures
-below are historical; read them live.
+Two axes decide who counts: `fleetStatus` (phase — see *Fleet status*) and `fit`
+(linefit A321XLR run HBC+/SBC software, carry no media, own hardware).
 
 ```
-projectScope()  44   whole programme  — Fleet page only
-activeFleet()   41   Active, any fit  — Maintenance, Hardware, Timeline
-swFleet()       39   Active + retrofit — Software, Media, and every widget of theirs
-hbcFleet()       2   Active + linefit  — HBC+ / SBC only
+projectScope()      whole programme (phase ≥ 1)         — Fleet page, nav badge
+systemOnFleet()     system ON (phase ≥ 2), any fit      — Maintenance, Hardware, Timeline, editing
+swFleet()           system ON + retrofit                — Software, Media and their widgets
+hbcFleet()          system ON + linefit                 — HBC+ / SBC only
+commercialFleet()   Commercial only                     — in-service counts / KPIs
 ```
 
-`middlewareScope()`, `mediaScope()` and `hbcScope()` are just the lengths of those.
-**There are no inline `isLinefit` filters left** — every caller goes through a
-helper, so the definition cannot drift page to page. Scope numbers are counted,
-never hardcoded: changing an aircraft's status moves every table, filter and
-percentage at once.
+⚠️ Since v2.222 a Power ON tail is IN `swFleet()`, so Software/Media percentages count
+it as pending until its loads are entered — deliberate (that is the gate the user
+wanted). `middlewareScope()`, `mediaScope()`, `hbcScope()` are the lengths. No inline
+`isLinefit` filters — every caller goes through a helper. Read figures live.
 
 **Timeline rows carry no repeated words.** Two rules do it:
 
@@ -1635,9 +1631,8 @@ read "e.g. KRFU Replacement", which taught people to put the part in the title a
 guaranteed it read twice. It now prompts for the symptom or task per category, with
 a hint saying the part is captured separately.
 
-**The Timeline is Active-only too**, on all three of its sources. `inScope()` in
-`timelineActivities()` is the single line to relax if retrofit-in-progress work
-should ever be visible before activation.
+**The Timeline follows the system-on gate** (v2.222): `inScope()` in
+`timelineActivities()` is `isSystemOn`, so a tail's work shows from Power ON.
 
 Note the software widget counts aircraft *on the latest middleware*, while
 completion additionally requires a location — they can legitimately differ by
@@ -2239,7 +2234,7 @@ the individual triggers and the collapsed one rendered at once.
   the sheet is pinned to the bottom and anchored to nothing, so dismissing it on
   a stray scroll would be a bug.
 - **`fbTypeOptions()` guards against a non-array.** The scope helpers are a mix:
-  `swFleet()`/`activeFleet()` return arrays but **`projectScope()` returns a
+  `swFleet()`/`systemOnFleet()` (was `activeFleet()`) return arrays but **`projectScope()` returns a
   COUNT**. Passing the number in threw inside the popover build, which left the
   trigger looking open with nothing under it. The Fleet bar uses `fleetRoster`.
 
@@ -2589,7 +2584,7 @@ re-applies a column sort *only if the user clicked one*; the date header clears
   **All four carry a programme pill**, because the scope differs and the reader
   should not have to know that: `Retrofit` on Software and on **Media** (both count
   `mediaScope()`/`swFleet()` — Active retrofit), `Linefit` on SBC, and **`Fleet Wide`**
-  on Maintenance, which counts `activeFleet()` — every Active aircraft, both
+  on Maintenance, which counts `systemOnFleet()` (was `activeFleet()`) — every system-on aircraft, both
   programmes. "Retrofit + Linefit" says the same thing in 18 characters and stops
   reading as a subtle label on a 165px card; `Fleet Wide` is ~62px and states the
   scope outright.
