@@ -13,6 +13,16 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.223.0 — Linefit journey: Delivered → Commissioned → Commercial (2026-10-06)
+New status `Delivered` (linefit only, phase 2 — system on, editable, not in service). `statusOptionsFor(a)` gives
+linefit Delivered/Commissioned/Commercial and retrofit its five, in the Fleet table select. Activation ⇒ Commissioned now
+applies to linefit too. `isRetrofitPhase` excludes linefit (Fit column never reads In Retrofit for one); new
+`isPreService` (programme, not Commercial) drives the IFC Fleet right half — renamed **In Progress** — and the activity
+picker tag. HBC+ (IFC System card + HBC+ pill) = HBC+ tails in the programme, so a Delivered linefit still counts.
+Fleet table default sort: pre-service tails float to the top (sentinel `9999999<phase>`, most advanced first). AVR:
+the v2.219 First Connected Flight bar already sits beside a linefit's delivery-flight strip — verified on ASBE.
+Data: ASBC → Delivered.
+
 ### v2.222.0 — Phased connectivity status: Power OFF → Power ON → Software Loading → Commissioned → Commercial (2026-10-06)
 `FLEET_STATUSES` replaced (Planned/Installed/Decommissioned/Active/In Retrofit retired; legacy values read through
 `normFleetStatus`). Three gates, one helper each: `isCommercial` (in-service COUNTS — IFC Fleet, SSID, HBC+ active,

@@ -108,7 +108,7 @@
         "fit":         { ".validate": "newData.isString() && newData.val().matches(/^(linefit|retrofit)$/)" },
         "scope":       { ".validate": "newData.isString() && newData.val().matches(/^(in|no)$/)" },
         "system":      { ".validate": "newData.isString() && newData.val().matches(/^(Eclipse|Rave)$/)" },
-        "fleetStatus": { ".validate": "newData.isString() && newData.val().matches(/^(Power OFF|Power ON|Software Loading|Commissioned|Commercial)$/)" },
+        "fleetStatus": { ".validate": "newData.isString() && newData.val().matches(/^(Power OFF|Power ON|Software Loading|Delivered|Commissioned|Commercial)$/)" },
         "comments":    { ".validate": "newData.isString() && newData.val().length <= 500" },
 
         "delivered":   { ".validate": "newData.isBoolean()" },
