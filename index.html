@@ -8104,8 +8104,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.214.0';
-        const APP_BUILD    = '2026.10.06.05';
+        const APP_VERSION  = '2.215.0';
+        const APP_BUILD    = '2026.10.06.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14340,6 +14340,11 @@
             const { a, spec, linefit, system, retro, retroSpan, media } = avrDossierData(tail);
             const ota = (a.otaPatchUTC || '').slice(0, 10);
             const ota3 = (a.otaPatch3UTC || '').slice(0, 10);
+            const otaWithTime = (d, stamp) => {
+                if (!d) return '';
+                const t = String(stamp || '').slice(11, 16);
+                return (fmtDate(d) || d) + (/^\d{2}:\d{2}$/.test(t) ? ` · ${t} UTC` : '');
+            };
             const del = spec.deliveryDate ? `${deliveryLong(spec.deliveryDate)}${deliveryAge(spec.deliveryDate) ? ' · ' + deliveryAge(spec.deliveryDate) : ''}` : '';
             // Human-readable cabin: "Business 20 · Economy 145 · Total 165", falling back to
             // the raw config code (C20Y145) only when the split seats are not recorded.
@@ -14408,8 +14413,9 @@
             const softwareRows = isHbcAircraft(a) ? hbcSoftwareRows(a).concat([wifiRow]) : [
                 [linefit ? '' : 'Middleware', linefit ? '' : (a.swVersion || '')],
                 [linefit ? '' : 'Middleware loaded', linefit ? '' : [a.completionLocation, a.completionDate].filter(Boolean).join(' · ')],
-                ['OTA Patch #2', ota ? (fmtDate(ota) || ota) : ''],
-                ['OTA Patch #3', ota3 ? (fmtDate(ota3) || ota3) : ''],
+                // Date + the UTC time it was pushed (v2.215, user 2026-10-06) — "05-Oct-2026 · 14:32 UTC".
+                ['OTA Patch #2', otaWithTime(ota, a.otaPatchUTC)],
+                ['OTA Patch #3', otaWithTime(ota3, a.otaPatch3UTC)],
                 ['Media cycle', media.mediaCycle ? cycleToDisplay(media.mediaCycle) : ''],
                 ['UGO / Tiles', [a.ugoVersion && `UGO ${a.ugoVersion}`, a.tilesVersion && `Tiles ${a.tilesVersion}`].filter(Boolean).join(' · ')],
                 wifiRow,
@@ -15456,7 +15462,13 @@
             // Software & Media split into two short cards so the four spec cards pair up
             // 2 × 2: what is LOADED (middleware + OTA patches) and what the passenger SEES.
             const swLabels = ['Middleware', 'Middleware loaded', 'OTA Patch #2', 'OTA Patch #3'];
-            let softwareCard = specCard('Software', softwareRows.filter(r => swLabels.includes(r[0])));
+            // OTA rows: date bold, "· 22:44 UTC" muted beside it, kept on one line.
+            const otaRow = r => {
+                const m = /^(.*?) · (\d{2}:\d{2} UTC)$/.exec(r[1] || '');
+                return m ? [r[0], `<span class="vv-nw">${escAttr(m[1])}<span class="vv-time"> · ${m[2]}</span></span>`, 'raw'] : r;
+            };
+            let softwareCard = specCard('Software', softwareRows.filter(r => swLabels.includes(r[0]))
+                .map(r => /^OTA Patch/.test(r[0]) ? otaRow(r) : r));
             let mediaCard = specCard('Media &amp; Connectivity', softwareRows.filter(r => !swLabels.includes(r[0])));
             // HBC+ (v2.201.0): one full-width "Software & Connectivity" card, its four facts
             // two-up — FLS6 · SBC config / Local config · WiFi visibility. Each version reads
@@ -15573,7 +15585,27 @@
                 ${chipsLeft || chipsEnd ? `<div class="cfg-top">${chipsLeft}<span class="sp"></span>${chipsEnd}</div>` : ''}
                 ${dlvFlight || inWindowTrack || msTrack}
             </div>` : '';
-            const specCards = [airframeCard, modmanPrint, softwareCard, mediaCard].filter(Boolean);
+            // CONNECTIVITY STRIP (v2.215, user 2026-10-06): the three links on one line —
+            // Taurus and Hughes commissioning straight from the MODEM register (done / to-do),
+            // and the 4G SIM, which is good by default while a card is on wing (a fitted card
+            // flagged faulty reads red). HBC+ has none of these, so it draws no strip.
+            let connCard = '';
+            if (!isHbcAc) {
+                const comm = c => c === 'done' ? ['ok', 'Commissioned'] : c === 'todo' ? ['warn', 'To-Do'] : ['na', 'N/A'];
+                const simOn = simCards().find(x => x.tailShown === v.aircraft && (x.status === 'active' || x.status === 'fault'));
+                const links = [
+                    ['Taurus', modman ? comm(modman.commTaurus) : ['na', 'No MODMAN']],
+                    ['Hughes', modman ? comm(modman.commHughes) : ['na', 'No MODMAN']],
+                    ['4G SIM', !simOn ? ['na', 'Not fitted'] : simOn.status === 'fault' ? ['bad', 'Fault'] : ['ok', 'On wing']],
+                ];
+                const ICO = { ok: '\u2713', warn: '!', bad: '\u2715', na: '\u2013' };
+                const PILL = { ok: 'pill-green', warn: 'pill-amber', bad: 'pill-red', na: 'pill-grey' };
+                const okN = links.filter(l => l[1][0] === 'ok').length;
+                const sum = `<span class="sh-r"><span class="pill ${okN === links.length ? 'pill-green' : 'pill-amber'}">${okN} of ${links.length} active</span></span>`;
+                connCard = `<div class="spec-card spec-wide conn-card"><div class="spec-head">Connectivity${sum}</div><div class="conn-row">${links.map(([name, [k, label]]) =>
+                    `<div class="conn-item conn-${k}"><span class="conn-ico">${ICO[k]}</span><span class="conn-name">${name}</span><span class="pill ${PILL[k]} conn-st">${label}</span></div>`).join('')}</div></div>`;
+            }
+            const specCards = [airframeCard, modmanPrint, softwareCard, mediaCard, connCard].filter(Boolean);
             const configSection = `<div class="sec">Aircraft &amp; Configuration</div>
                 ${cfgStrip}
                 ${ifcNotePrint}
@@ -15720,6 +15752,20 @@
   .kv-grid .kv { border-top:1px solid #eef2f6; }
   .kv-grid .kv:nth-child(-n+2) { border-top:none; }
   .kv-grid .kv:nth-child(odd) { border-right:1px solid #eef2f6; }
+  /* Connectivity strip (v2.215): Taurus · Hughes · 4G SIM on one line, each a status tile. */
+  .spec-head .sh-r { float:right; text-transform:none; letter-spacing:0; margin-top:-1px; }
+  .kv .vv-nw { white-space:nowrap; }
+  .kv .vv-time { color:var(--muted); font-weight:600; }
+  .conn-row { display:grid; grid-template-columns:repeat(3, 1fr); }
+  .conn-item { display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12px; min-width:0; }
+  .conn-item + .conn-item { border-left:1px solid #eef2f6; }
+  .conn-ico { flex:0 0 auto; width:17px; height:17px; border-radius:50%; display:inline-flex; align-items:center;
+    justify-content:center; font-size:10.5px; font-weight:900; color:#fff; background:#aab3bc; }
+  .conn-ok .conn-ico { background:#0b7a3b; }
+  .conn-warn .conn-ico { background:#c27a1a; }
+  .conn-bad .conn-ico { background:#a52834; }
+  .conn-name { font-weight:800; color:var(--ink); }
+  .conn-st { margin-left:auto; white-space:nowrap; }
   .kv .vv-ver { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; font-weight:700; letter-spacing:.2px; }
   .kv .vv-date { color:var(--muted); font-weight:600; margin-left:8px; font-size:11.5px; }
   .kv .vv-date::before { content:"· "; }

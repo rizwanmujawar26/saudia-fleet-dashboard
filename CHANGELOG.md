@@ -13,6 +13,13 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.215.0 — AVR report: OTA times + Connectivity strip (2026-10-06)
+OTA Patch #2/#3 rows read "05-Oct-2026 · 22:44 UTC" (`otaWithTime` in `avrDossierRows`, so the on-screen dossier gets
+it too; the report mutes the time and keeps it on one line). New full-width single-line **Connectivity** card under
+the 2×2 spec cards: Taurus · Hughes commissioning from the MODEM register (`commTaurus`/`commHughes`: done→green
+Commissioned, todo→amber To-Do, na→grey) and 4G SIM (green On wing while a card is fitted, red Fault if the fitted card
+is flagged faulty, grey Not fitted), with an "N of 3 active" summary in the head. Not drawn for HBC+.
+
 ### v2.214.0 — Add Activity: software quick picks (2026-10-06)
 Chips under Software Name/Version fill both fields in one tap. Data-driven (`actSoftwarePicks`): the distinct
 name+version pairs already logged on software_update activities, most recently logged first, max 3 — a new release
