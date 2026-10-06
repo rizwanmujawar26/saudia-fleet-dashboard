@@ -13,6 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.219.0 — First Connected Flight: install-site From, airport quick picks, AVR flight bar (2026-10-06)
+Flight editor: JED · RUH · DXB chips under From and To fill city + IATA (`FLT_AIRPORTS`, `fltPickAirport`). For kind
+`connected`, From auto-fills from the tail's install site (`retrofitLocation`: Jeddah/Toulouse/Malta/Qatar→DOH/
+Jordan→AMM/Hamburg→HAM), Jeddah when none, on type or aircraft change — never over a From the user typed or picked
+(`fltFrom.dataset.auto`). AVR report: a dark single-line **First Connected Flight** bar under the Modems card in the
+Live Activity palette — kind chip · flight · FROM dep ━✈━ arr TO · date · duration · Completed/In flight/Scheduled; no
+header, no tail; drawn only when the tail has a `connected` flight.
+
 ### v2.218.0 — Flights: 📶 First Connected Flight kind (2026-10-06)
 New `/flights` kind `connected` — the first flight after the connectivity mod. Rules regex extended (deployed first),
 `FLIGHT_KINDS` entry (label + 📶), so the Add Flight dropdown, Timeline, Live Activity bar and flight card pick it up.

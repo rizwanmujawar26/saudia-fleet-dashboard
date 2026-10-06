@@ -8104,8 +8104,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.218.0';
-        const APP_BUILD    = '2026.10.06.09';
+        const APP_VERSION  = '2.219.0';
+        const APP_BUILD    = '2026.10.06.10';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -15615,7 +15615,31 @@
                 connCard = `<div class="spec-card spec-wide conn-card"><div class="spec-head">Modems${sum}</div><div class="conn-row">${links.map(([name, [k, label]]) =>
                     `<div class="conn-item conn-${k}"><span class="conn-ico">${ICO[k]}</span><span class="conn-name">${name}</span><span class="pill ${PILL[k]} conn-st">${label}</span></div>`).join('')}</div></div>`;
             }
-            const specCards = [airframeCard, modmanPrint, softwareCard, mediaCard, connCard].filter(Boolean);
+            // FIRST CONNECTED FLIGHT BAR (v2.219, user 2026-10-06): one dark line under Modems,
+            // the Live Activity strip's look — kind · flight · FROM ━✈━ TO · date · duration ·
+            // status. No header, no tail (the report is already about this aircraft). Drawn
+            // only when the tail has such a flight.
+            let fcfBar = '';
+            const fcf = flightEntries().filter(f => f.tail === v.aircraft && f.kind === 'connected').pop();
+            const fd = fcf && flightPhaseOf(fcf);
+            if (fd) {
+                const total = fd.arrMs - fd.depMs;
+                const durTxt = `${Math.floor(total / 3600000)}h ${String(Math.round(total / 60000) % 60).padStart(2, '0')}m`;
+                const pct = fd.phase === 'landed' ? 100 : fd.phase === 'enroute' ? Math.max(0, Math.min(100, (fd.now - fd.depMs) / total * 100)) : 0;
+                const st = fd.phase === 'landed' ? 'Completed' : fd.phase === 'enroute' ? 'In flight' : 'Scheduled';
+                const plane = '<svg viewBox="0 0 24 24" width="15" height="15"><path transform="rotate(90 12 12)" fill="currentColor" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>';
+                fcfBar = `<div class="fcf-bar">
+                    <span class="fcf-kind"><i></i>First Connected Flight</span>
+                    <span class="fcf-flt">${escAttr(fcf.flight || '')}</span>
+                    <span class="fcf-end"><b>${escAttr(fcf.fromIata || '')}</b><small>${fd.depHM}Z</small></span>
+                    <span class="fcf-track"><span class="fcf-fill" style="width:${pct.toFixed(1)}%"></span><span class="fcf-plane" style="left:${pct.toFixed(1)}%">${plane}</span></span>
+                    <span class="fcf-end"><b>${escAttr(fcf.toIata || '')}</b><small>${fd.arrHM}Z</small></span>
+                    <span class="fcf-date">${escAttr(fmtDate(toISODate(fcf.date)) || fcf.date || '')}</span>
+                    <span class="fcf-dur">${durTxt}</span>
+                    <span class="fcf-st fcf-st-${fd.phase}">${st}</span>
+                </div>`;
+            }
+            const specCards = [airframeCard, modmanPrint, softwareCard, mediaCard, connCard, fcfBar].filter(Boolean);
             const configSection = `<div class="sec">Aircraft &amp; Configuration</div>
                 ${cfgStrip}
                 ${ifcNotePrint}
@@ -15776,6 +15800,27 @@
   .conn-bad .conn-ico { background:#a52834; }
   .conn-name { font-weight:800; color:var(--ink); }
   .conn-st { margin-left:auto; white-space:nowrap; }
+  /* First Connected Flight bar (v2.219) — the Live Activity strip's palette, one line, no header. */
+  .fcf-bar { grid-column:1 / -1; display:flex; align-items:center; gap:9px; padding:7px 12px; border-radius:8px; min-width:0; overflow:hidden;
+    background:linear-gradient(120deg, #0b1f3a 0%, #123a63 55%, #0f4c5c 100%); color:#e8f1fb;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; break-inside:avoid; }
+  .fcf-kind { display:inline-flex; align-items:center; gap:5px; font-size:9px; font-weight:800; letter-spacing:.04em;
+    text-transform:uppercase; color:#fff; background:rgba(61,220,132,.18); border:1px solid rgba(61,220,132,.5);
+    border-radius:999px; padding:2px 8px 2px 6px; white-space:nowrap; flex:none; }
+  .fcf-kind i { width:7px; height:7px; border-radius:50%; background:#3ddc84; }
+  .fcf-flt { font-size:13px; font-weight:800; color:#fff; letter-spacing:.02em; flex:none; }
+  .fcf-end { display:inline-flex; align-items:baseline; gap:4px; line-height:1; flex:none; }
+  .fcf-end b { font-size:13px; font-weight:800; color:#fff; letter-spacing:.04em; }
+  .fcf-end small { font-size:9.5px; font-weight:700; color:#9fb7cf; }
+  .fcf-track { position:relative; flex:1 1 auto; min-width:56px; height:4px; border-radius:999px; background:rgba(255,255,255,.16); }
+  .fcf-fill { position:absolute; left:0; top:0; bottom:0; border-radius:999px; background:linear-gradient(90deg, #3ddc84, #7fd3ff); }
+  .fcf-plane { position:absolute; top:50%; transform:translate(-50%, -50%); color:#fff; line-height:0; }
+  .fcf-date { font-size:11.5px; font-weight:700; color:#dbe7f3; white-space:nowrap; flex:none; }
+  .fcf-dur { font-size:11.5px; font-weight:800; color:#7fd3ff; white-space:nowrap; flex:none; }
+  .fcf-st { font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; padding:2px 8px; border-radius:999px; white-space:nowrap; flex:none; }
+  .fcf-st-landed { background:rgba(61,220,132,.18); color:#7ef0ad; border:1px solid rgba(61,220,132,.45); }
+  .fcf-st-enroute { background:rgba(127,211,255,.18); color:#a9e2ff; border:1px solid rgba(127,211,255,.45); }
+  .fcf-st-scheduled { background:rgba(255,255,255,.08); color:#cfe0f1; border:1px dashed rgba(255,255,255,.35); }
   .kv .vv-ver { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; font-weight:700; letter-spacing:.2px; }
   .kv .vv-date { color:var(--muted); font-weight:600; margin-left:8px; font-size:11.5px; }
   .kv .vv-date::before { content:"· "; }
@@ -18615,9 +18660,9 @@
                         <span class="fld-hint">ETA while flying; the next day is understood when earlier than departure.</span></div>
                     <div class="ac-edit-field"><label>Distance km (optional)</label>
                         <input id="fltKm" type="text" inputmode="numeric" maxlength="5" placeholder="e.g. 4244" value="${v.distanceKm || ''}"></div>
-                    <div class="ac-edit-field"><label>From — city</label><input id="fltFrom" type="text" maxlength="40" value="${escAttr(v.from || '')}"></div>
+                    <div class="ac-edit-field"><label>From — city</label><input id="fltFrom" type="text" maxlength="40" value="${escAttr(v.from || '')}">${fltPicksHTML('from')}</div>
                     <div class="ac-edit-field"><label>From — IATA</label><input id="fltFromIata" type="text" maxlength="3" placeholder="TLS" value="${escAttr(v.fromIata || '')}" style="text-transform:uppercase"></div>
-                    <div class="ac-edit-field"><label>To — city</label><input id="fltTo" type="text" maxlength="40" value="${escAttr(v.to || '')}"></div>
+                    <div class="ac-edit-field"><label>To — city</label><input id="fltTo" type="text" maxlength="40" value="${escAttr(v.to || '')}">${fltPicksHTML('to')}</div>
                     <div class="ac-edit-field"><label>To — IATA</label><input id="fltToIata" type="text" maxlength="3" placeholder="JED" value="${escAttr(v.toIata || '')}" style="text-transform:uppercase"></div>
                     <div class="ac-edit-field full"><label>Flightradar24 link (optional)</label>
                         <input id="fltFr24" type="text" maxlength="200" placeholder="https://www.flightradar24.com/data/aircraft/hz-asbc#41fb9ee5" value="${escAttr(fr24)}">
@@ -18626,6 +18671,48 @@
                         <textarea id="fltNote" maxlength="500" placeholder="e.g. 4th A321XLR — factory delivery">${escAttr(v.note || '')}</textarea></div>
                 </div>`;
             document.getElementById('flightEditOverlay').style.display = 'flex';
+            // First Connected Flight departs from the install site: fill From when the type
+            // or the aircraft changes — unless the user has typed or picked a From themselves.
+            const fromIn = document.getElementById('fltFrom'), fromIata = document.getElementById('fltFromIata');
+            const markManual = () => { fromIn.dataset.auto = ''; };
+            fromIn.addEventListener('input', markManual); fromIata.addEventListener('input', markManual);
+            if (isNew) fromIn.dataset.auto = '1';
+            document.getElementById('fltKind').addEventListener('change', fltAutoFrom);
+            document.getElementById('fltTail').addEventListener('change', fltAutoFrom);
+        }
+        // Airport for a city / install-site name. The install sites on record are Jeddah,
+        // Toulouse, Malta, Qatar, Jordan and Hamburg — the country names map to their airport city.
+        const FLT_AIRPORTS = {
+            jeddah: ['Jeddah', 'JED'], riyadh: ['Riyadh', 'RUH'], dubai: ['Dubai', 'DXB'],
+            toulouse: ['Toulouse', 'TLS'], hamburg: ['Hamburg', 'HAM'], malta: ['Malta', 'MLA'],
+            qatar: ['Doha', 'DOH'], doha: ['Doha', 'DOH'], jordan: ['Amman', 'AMM'], amman: ['Amman', 'AMM'],
+        };
+        const FLT_QUICK = ['jeddah', 'riyadh', 'dubai'];
+        function fltPicksHTML(end) {
+            return `<div class="avr-station-picks">${FLT_QUICK.map(k =>
+                `<button type="button" class="avr-quick-chip" onclick="fltPickAirport('${end}','${k}')" title="${FLT_AIRPORTS[k][0]}">${FLT_AIRPORTS[k][1]}</button>`).join('')}</div>`;
+        }
+        function fltPickAirport(end, key) {
+            const ap = FLT_AIRPORTS[key]; if (!ap) return;
+            const pre = end === 'from' ? 'fltFrom' : 'fltTo';
+            document.getElementById(pre).value = ap[0];
+            document.getElementById(pre + 'Iata').value = ap[1];
+            if (end === 'from') document.getElementById('fltFrom').dataset.auto = '';
+        }
+        function fltAutoFrom() {
+            const fromIn = document.getElementById('fltFrom');
+            if (document.getElementById('fltKind').value !== 'connected' || fromIn.dataset.auto !== '1') return;
+            const tail = document.getElementById('fltTail').value;
+            const a = aircraftData.find(x => x.id === tail) || {};
+            const site = String(a.retrofitLocation || '').trim();
+            const ap = FLT_AIRPORTS[site.toLowerCase()] || (site ? [site, ''] : FLT_AIRPORTS.jeddah);
+            fromIn.value = ap[0];
+            document.getElementById('fltFromIata').value = ap[1];
+            // The factory-delivery default (→ Jeddah) does not apply; leave To for the user.
+            const toIn = document.getElementById('fltTo');
+            if (toIn.value === 'Jeddah' && document.getElementById('fltToIata').value === 'JED' && ap[1] === 'JED') {
+                toIn.value = ''; document.getElementById('fltToIata').value = '';
+            }
         }
         async function saveFlight() {
             if (!canEdit()) { requireSignIn(); return; }
