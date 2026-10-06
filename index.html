@@ -8148,8 +8148,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.223.2';
-        const APP_BUILD    = '2026.10.06.16';
+        const APP_VERSION  = '2.224.0';
+        const APP_BUILD    = '2026.10.06.17';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -16005,40 +16005,57 @@
   .pill-navy { background:var(--navy); color:#fff; border:1px solid var(--navy); }
   /* Delivery flight (v2.204) — a linefit's ferry flight drawn in the milestone strip:
      departure ⟶ arc with the aircraft at its apex ⟶ arrival, all times UTC. */
-  .dlv { margin-top:10px; }
-  .dlv-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  /* Delivery flight (v2.204; dark tracker band v2.224) — the Live Activity / flight-card
+     palette: navy→teal band, green→sky route arc, glowing aircraft. Colours forced to print. */
+  .dlv { margin-top:10px; padding:11px 16px 12px; border-radius:10px; color:#e8f1fb;
+    background:linear-gradient(120deg, #0b1f3a 0%, #123a63 55%, #0f4c5c 100%);
+    box-shadow:0 6px 18px rgba(11,31,58,.18);
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; break-inside:avoid; }
+  .dlv-head { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
   .dlv-head .sp { flex:1 1 auto; }
-  .dlv-tag { font-size:9.5px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); }
-  .dlv-fn { font-size:13px; font-weight:800; color:var(--navy); letter-spacing:.3px; }
-  .dlv-cs { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:11px; color:var(--muted); }
-  .dlv-fr24 { font-size:11px; font-weight:700; color:#2f5f8a; text-decoration:none; border:1px solid #c4dcf2;
-    background:#eaf2fb; border-radius:99px; padding:1px 10px; white-space:nowrap; }
-  .dlv-fr24:hover { background:#dcebfa; }
-  .dlv-route { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:14px; margin-top:6px; }
+  .dlv-tag { display:inline-flex; align-items:center; gap:5px; font-size:9px; font-weight:800; letter-spacing:.04em;
+    text-transform:uppercase; color:#fff; background:rgba(61,220,132,.18); border:1px solid rgba(61,220,132,.5);
+    border-radius:999px; padding:2px 8px 2px 6px; white-space:nowrap; }
+  .dlv-tag i { width:7px; height:7px; border-radius:50%; background:#3ddc84; }
+  .dlv-fn { font-size:16px; font-weight:800; color:#fff; letter-spacing:.03em; }
+  .dlv-cs { font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:11px; font-weight:600; color:#a9c3dc; }
+  .dlv-st { font-size:9.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:999px; white-space:nowrap; }
+  .dlv-st-landed { background:rgba(61,220,132,.18); color:#7ef0b0; border:1px solid rgba(61,220,132,.45); }
+  .dlv-st-enroute { background:rgba(255,77,79,.18); color:#ffb3b3; border:1px solid rgba(255,107,107,.45); }
+  .dlv-st-scheduled { background:rgba(127,211,255,.16); color:#bfe6ff; border:1px solid rgba(127,211,255,.4); }
+  .dlv-fr24 { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#0b1f3a; text-decoration:none;
+    background:#fff6d6; border:1px solid #f3d873; border-radius:999px; padding:2px 10px 2px 6px; white-space:nowrap; }
+  .dlv-fr24 svg { width:13px; height:13px; fill:#e0a800; display:block; }
+  .dlv-fr24:hover { background:#ffefb3; }
+  .dlv-route { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:14px; margin-top:8px; }
   .dlv-end { display:flex; flex-direction:column; line-height:1.2; min-width:0; }
   .dlv-arr { text-align:right; align-items:flex-end; }
-  .dlv-k { font-size:9.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); }
-  .dlv-iata { font-size:24px; font-weight:800; color:var(--navy); letter-spacing:.5px; line-height:1.1; }
-  .dlv-city { font-size:11.5px; font-weight:600; color:var(--muted); }
-  .dlv-time { font-size:14px; font-weight:800; color:var(--ink); margin-top:4px; font-variant-numeric:tabular-nums; }
-  .dlv-time small { font-size:9.5px; font-weight:700; color:var(--muted); margin-left:3px; letter-spacing:.3px; }
-  .dlv-time sup { font-size:9.5px; font-weight:800; color:#8a5312; margin-left:2px; }
-  .dlv-date { font-size:11px; font-weight:600; color:var(--muted); }
+  .dlv-k { font-size:9.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#8fa9c4; }
+  .dlv-iata { font-size:28px; font-weight:800; color:#fff; letter-spacing:.04em; line-height:1.05; }
+  .dlv-city { font-size:11.5px; font-weight:600; color:#bcd3ea; }
+  .dlv-time { font-size:14px; font-weight:800; color:#fff; margin-top:5px; font-variant-numeric:tabular-nums; }
+  .dlv-time small { font-size:9.5px; font-weight:700; color:#9fb7cf; margin-left:3px; letter-spacing:.3px; }
+  .dlv-time sup { font-size:9.5px; font-weight:800; color:#ffd27a; margin-left:2px; }
+  .dlv-date { font-size:11px; font-weight:600; color:#9fb7cf; }
   .dlv-path { position:relative; height:100px; min-width:120px; }
   .dlv-arc { position:absolute; left:0; right:0; top:4px; width:100%; height:64px; overflow:visible; }
-  .dlv-arc path { fill:none; stroke:var(--navy); stroke-width:2; stroke-dasharray:5 5; stroke-linecap:round; }
-  .dlv-pin { position:absolute; top:57.5px; width:9px; height:9px; border-radius:50%; background:var(--navy); }
+  .dlv-arc path { fill:none; stroke-linecap:round; }
+  .dlv-arc-glow { stroke:rgba(127,211,255,.22); stroke-width:7; }
+  .dlv-arc-line { stroke:url(#dlvArcGrad); stroke-width:2.5; }
+  .dlv-pin { position:absolute; top:57.5px; width:9px; height:9px; border-radius:50%; background:#3ddc84; box-shadow:0 0 0 3px rgba(61,220,132,.25); }
   .dlv-pin-l { left:calc(4 / 300 * 100% - 4.5px); }
-  .dlv-pin-r { right:calc(4 / 300 * 100% - 4.5px); background:var(--green); box-shadow:0 0 0 3px #d4ecdd; }
-  .dlv-plane { position:absolute; left:50%; top:30px; width:26px; height:26px; transform:translate(-50%, -50%);
-    fill:var(--navy); background:#fff; border-radius:50%; padding:3px; box-shadow:0 0 0 1px var(--line); }
+  .dlv-pin-r { right:calc(4 / 300 * 100% - 4.5px); background:#7fd3ff; box-shadow:0 0 0 3px rgba(127,211,255,.28); }
+  .dlv-plane { position:absolute; left:50%; top:30px; width:28px; height:28px; transform:translate(-50%, -50%);
+    fill:#fff; padding:4px; border-radius:50%; background:rgba(127,211,255,.16); border:1px solid rgba(127,211,255,.45);
+    filter:drop-shadow(0 0 6px rgba(127,211,255,.85)); }
   .dlv-stats { position:absolute; left:50%; top:50px; transform:translateX(-50%); text-align:center; white-space:nowrap; line-height:1.25; }
-  .dlv-dur { display:block; font-size:15px; font-weight:800; color:var(--navy); font-variant-numeric:tabular-nums; }
-  .dlv-sub { display:block; font-size:10.5px; font-weight:600; color:var(--muted); }
-  .dlv-foot { margin-top:4px; padding-top:7px; border-top:1px dashed var(--line); font-size:11.5px; color:var(--muted); }
-  .dlv-foot b { color:var(--green); font-weight:800; }
+  .dlv-dur { display:block; font-size:16px; font-weight:800; color:#fff; font-variant-numeric:tabular-nums; }
+  .dlv-sub { display:block; font-size:10.5px; font-weight:700; color:#7fd3ff; }
+  .dlv-foot { margin-top:6px; padding-top:8px; border-top:1px solid rgba(255,255,255,.12); font-size:11.5px; color:#bcd3ea; }
+  .dlv-foot b { color:#7ef0b0; font-weight:800; }
   .dlv-time, .dlv-date { white-space:nowrap; }
   @media screen and (max-width:600px) {
+    .dlv { padding:10px 12px 11px; }
     .dlv-route { gap:8px; align-items:start; }
     .dlv-iata { font-size:20px; }
     .dlv-time { font-size:13px; }
@@ -23169,18 +23186,26 @@
                 </div>`;
             // Material "flight" glyph (Apache-2.0), drawn pointing right along the arc.
             const plane = '<svg class="dlv-plane" viewBox="0 0 24 24" aria-hidden="true"><path transform="rotate(90 12 12)" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>';
+            // Dark flight-tracker band (v2.224, user 2026-10-06): the Live Activity / flight
+            // card / First Connected Flight palette — navy→teal, green→sky route, glowing
+            // aircraft, status pill and the yellow FR24 playback button.
+            const ph = (flightPhaseOf(f, (spec || {}).deliveryDate) || {}).phase || 'landed';
+            const st = ph === 'landed' ? 'Delivered' : ph === 'enroute' ? 'In flight' : 'Scheduled';
             return `<div class="dlv">
                 <div class="dlv-head">
-                    <span class="dlv-tag">Delivery flight</span>
+                    <span class="dlv-tag"><i></i>Delivery Flight</span>
                     <b class="dlv-fn">${escAttr(f.flight)}</b>${f.callsign ? `<span class="dlv-cs">${escAttr(f.callsign)}</span>` : ''}
                     <span class="sp"></span>
-                    <a class="dlv-fr24" href="${escAttr(url)}" target="_blank" rel="noopener" title="Open this flight's playback on Flightradar24">Flightradar24 ↗</a>
+                    <span class="dlv-st dlv-st-${ph}">${st}</span>
+                    <a class="dlv-fr24" href="${escAttr(url)}" target="_blank" rel="noopener" title="Open this flight's playback on Flightradar24">${FR24_ICON}Flight playback</a>
                 </div>
                 <div class="dlv-route">
                     ${end('dep', 'Departed', f.fromIata, f.from, f.dep, depDate, 0)}
                     <div class="dlv-path">
                         <svg class="dlv-arc" viewBox="0 0 300 64" preserveAspectRatio="none" aria-hidden="true">
-                            <path d="M4,58 Q150,-6 296,58" vector-effect="non-scaling-stroke"/>
+                            <defs><linearGradient id="dlvArcGrad" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#3ddc84"/><stop offset="1" stop-color="#7fd3ff"/></linearGradient></defs>
+                            <path class="dlv-arc-glow" d="M4,58 Q150,-6 296,58" vector-effect="non-scaling-stroke"/>
+                            <path class="dlv-arc-line" d="M4,58 Q150,-6 296,58" vector-effect="non-scaling-stroke"/>
                         </svg>
                         <span class="dlv-pin dlv-pin-l"></span><span class="dlv-pin dlv-pin-r"></span>
                         ${plane}
