@@ -8201,8 +8201,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.225.2';
-        const APP_BUILD    = '2026.10.06.21';
+        const APP_VERSION  = '2.226.0';
+        const APP_BUILD    = '2026.10.07.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -11253,14 +11253,40 @@
         function isHbcAircraft(a) {
             return !!a && (isLinefit(a) || (a.system || systemDefault(fitOf(a))) === 'HBC+');
         }
+        // HBC+ software as loaded: FLS6 · SBC config · Local config. Each is the NEWER of the
+        // value on /aircraft (AVR form / Fleet editor) and the latest Software Update
+        // activity whose Software name matches (v2.226, user 2026-10-07) — so an entry
+        // "SBC · A.27" shows on the report without re-typing it. Same date: /aircraft wins.
+        const HBC_SW = [
+            ['fls6',  'fls6Version', 'fls6Date',        /^\s*fls\s*-?\s*6/i],
+            ['sbc',   'sbcConfig',   'sbcConfigDate',   /^\s*(sbc|beam\s*config)/i],
+            ['local', 'localConfig', 'localConfigDate', /^\s*local\s*config/i],
+        ];
+        function hbcSoftwareOf(tail, a) {
+            a = a || {};
+            const acts = Object.values(activitiesLive || {}).filter(x => x && x.aircraft === tail
+                && x.category === 'software_update' && x.details && x.details.softwareName && x.details.version);
+            const out = {};
+            HBC_SW.forEach(([k, vk, dk, re]) => {
+                let best = a[vk] ? { v: a[vk], d: a[dk] || '' } : null;
+                acts.filter(x => re.test(x.details.softwareName)).forEach(x => {
+                    if (!best || (toISODate(x.date || '') || '') > (toISODate(best.d) || '')) best = { v: x.details.version, d: x.date || '' };
+                });
+                out[k] = best || { v: '', d: '' };
+            });
+            return out;
+        }
+        // SBC done = a version recorded anywhere, or the older beamcfgStatus flag.
+        function hbcSbcDone(a) { return !!a && (a.beamcfgStatus === 'done' || !!hbcSoftwareOf(a.id, a).sbc.v); }
         // "A.13 · 25-Sep-2026" — a loaded version with the date it went on. SBC config falls
         // back to the older beamcfgStatus flag (Done / Pending) until a version is recorded.
-        function hbcSoftwareRows(a) {
-            const verDate = (v, d) => v ? [v, d].filter(Boolean).join(' · ') : '';
+        function hbcSoftwareRows(a, tail) {
+            const sw = hbcSoftwareOf(tail || a.id, a);
+            const verDate = x => x.v ? [x.v, x.d].filter(Boolean).join(' · ') : '';
             return [
-                ['FLS6', verDate(a.fls6Version, a.fls6Date)],
-                ['SBC config', verDate(a.sbcConfig, a.sbcConfigDate) || (a.beamcfgStatus === 'done' ? 'Done' : 'Pending')],
-                ['Local config', verDate(a.localConfig, a.localConfigDate)],
+                ['FLS6', verDate(sw.fls6)],
+                ['SBC config', verDate(sw.sbc) || (a.beamcfgStatus === 'done' ? 'Done' : 'Pending')],
+                ['Local config', verDate(sw.local)],
             ];
         }
 
@@ -13749,7 +13775,7 @@
                 cell('Aircraft Type', escAttr(a.type)),
                 cell('Install Site', locVal),
                 linefit
-                    ? cell('SBC Config A.13', a.beamcfgStatus === 'done' ? 'Done' : 'Pending')
+                    ? cell('SBC Config', hbcSbcDone(a) ? 'Done' : 'Pending')
                     : cell('Middleware', swVersionOf(a)),
                 linefit
                     ? cell('Software Scope', 'HBC+ — outside MSP scope')
@@ -14616,7 +14642,7 @@
                 a.wifiVisibility === 'hidden' ? 'pill-red' : (a.wifiVisibility === 'public' ? 'pill-green' : '')];
             // HBC+: FLS6 · SBC config · Local config, then WiFi visibility — nothing else of
             // the retrofit software/media stack applies to it.
-            const softwareRows = isHbcAircraft(a) ? hbcSoftwareRows(a).concat([wifiRow]) : [
+            const softwareRows = isHbcAircraft(a) ? hbcSoftwareRows(a, tail).concat([wifiRow]) : [
                 [linefit ? '' : 'Middleware', linefit ? '' : (a.swVersion || '')],
                 [linefit ? '' : 'Middleware loaded', linefit ? '' : [a.completionLocation, a.completionDate].filter(Boolean).join(' · ')],
                 // Date + the UTC time it was pushed (v2.215, user 2026-10-06) — "05-Oct-2026 · 14:32 UTC".
@@ -15683,13 +15709,14 @@
             // an amber Pending pill (a green Done pill from the older status flag).
             if (isHbcAc) {
                 const ar0 = acRec || {};
+                const sw0 = hbcSoftwareOf(v.aircraft, ar0);
                 const ver = (vv, dd) => vv ? `<span class="vv-ver">${escAttr(vv)}</span>${dd ? `<span class="vv-date">${escAttr(dd)}</span>` : ''}` : '';
-                const sbcHtml = ver(ar0.sbcConfig, ar0.sbcConfigDate)
+                const sbcHtml = ver(sw0.sbc.v, sw0.sbc.d)
                     || (ar0.beamcfgStatus === 'done' ? '<span class="pill pill-green">Done</span>' : '<span class="pill pill-amber">Pending</span>');
                 const rows = [
-                    ['FLS6', ver(ar0.fls6Version, ar0.fls6Date), 'raw'],
+                    ['FLS6', ver(sw0.fls6.v, sw0.fls6.d), 'raw'],
                     ['SBC config', sbcHtml, 'raw'],
-                    ['Local config', ver(ar0.localConfig, ar0.localConfigDate), 'raw'],
+                    ['Local config', ver(sw0.local.v, sw0.local.d), 'raw'],
                     rowOf(softwareRows, 'WiFi visibility') || ['WiFi visibility', ''],
                 ];
                 softwareCard = `<div class="spec-card spec-wide"><div class="spec-head">Software &amp; Connectivity</div><div class="kv-grid">${rows.map(kvRow).join('')}</div></div>`;
@@ -25853,7 +25880,7 @@
             setWidth('metricSwBar', swRate + '%');
 
             // --- Global widget 2: linefit / SBC configuration on the HBC+ pair ---
-            const sbcDone = hbcFleet().filter(a => a.beamcfgStatus === 'done').length;
+            const sbcDone = hbcFleet().filter(hbcSbcDone).length;
             const sbcScope = hbcScope() || 1;
             const sbcRate = Math.round((sbcDone / sbcScope) * 1000) / 10;
             setText('metricSbcValue', sbcDone);
