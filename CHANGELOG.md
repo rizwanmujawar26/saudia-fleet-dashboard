@@ -13,6 +13,11 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.217.0 — Media loaded: accept the portal's Light Media string as pasted (2026-10-06)
+`parseMediaEntry` takes "2026-10-06 03:56:13 (ME-SVA-UGO-0526-LIGHTCONTENT)" and stores the plain
+`ME-SVA-UGO-0526` (suffix `-LIGHT…` stripped, case-insensitive, only when the cycle IS the Light Media cycle), so
+cycle matching and every reader are unchanged. A monthly cycle with that suffix still errors.
+
 ### v2.216.0 — AVR report: Modems bar wording + OTA date alignment (2026-10-06)
 Strip renamed **Modems**. Reader-facing states only: Taurus/Hughes Commissioned · Pending (register `todo` shown as
 Pending), 4G SIM Active · Faulty. OTA rows keep the date in the right-hand corner, in line with the other dates, with the
