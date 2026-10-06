@@ -13,6 +13,11 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.221.0 — IFC System note: only what matters (2026-10-06)
+Note under the Eclipse | HBC+ split is one line: the HBC+ tails oldest → newest by induction (activation, else
+delivery date), the newest flagged with a purple `NEW · 05-Oct` pill when inducted ≤ 30 days ago. Past 4 HBC+ tails it
+collapses to "Newest ASBx · inducted DD-Mon-YYYY". The Eclipse In-Retrofit text was dropped (IFC Fleet shows it).
+
 ### v2.220.0 — Fleet Composition: card restyle + IFC System (Eclipse | HBC+) split (2026-10-06)
 ⚠️ Root cause of the black borders: the shared `.media-widget { border: 1px solid }` (no colour) sits after
 `.fleet-total`/`.fleet-ssid` and reset their tints to currentColor. Fleet cards now styled under `#fleetWidgets`
