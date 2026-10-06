@@ -253,7 +253,7 @@
         ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
 
         "tail":       { ".validate": "newData.isString() && newData.val().length <= 12" },
-        "kind":       { ".validate": "newData.isString() && newData.val().matches(/^(delivery|test|vip|ferry|other)$/)" },
+        "kind":       { ".validate": "newData.isString() && newData.val().matches(/^(delivery|connected|test|vip|ferry|other)$/)" },
         "flight":     { ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{2,10}$/)" },
         "callsign":   { ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{2,10}$/)" },
         "date":       { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Z][a-z]{2}-[0-9]{4}$/)" },

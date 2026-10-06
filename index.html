@@ -8104,8 +8104,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.217.0';
-        const APP_BUILD    = '2026.10.06.08';
+        const APP_VERSION  = '2.218.0';
+        const APP_BUILD    = '2026.10.06.09';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -11632,6 +11632,8 @@
         // worth tracking; the label reads on the Timeline and the Live Activity bar.
         const FLIGHT_KINDS = [
             { value: 'delivery', label: 'Delivery flight', icon: '🛬' },
+            // The first flight after the connectivity mod (v2.218, user 2026-10-06).
+            { value: 'connected', label: 'First Connected Flight', icon: '📶' },
             { value: 'test',     label: 'Test flight',     icon: '🧪' },
             { value: 'vip',      label: 'VIP flight',      icon: '⭐' },
             { value: 'ferry',    label: 'Ferry flight',    icon: '🛫' },
@@ -18587,7 +18589,7 @@
             const v = isNew ? { kind: 'delivery', from: 'Toulouse', fromIata: 'TLS', to: 'Jeddah', toIata: 'JED' } : { id, ...flightsLive[id] };
             const dp = isNew ? null : flightPhaseOf(v);
             document.getElementById('flightEditTitle').textContent = isNew ? 'Add flight' : `Edit flight — ${v.flight || ''} · ${v.tail || ''}`;
-            document.getElementById('flightEditSub').textContent = 'A delivery, test, VIP or ferry flight. Times are UTC. While it is in the air it shows on the Home page Live Activity bar.';
+            document.getElementById('flightEditSub').textContent = 'A delivery, first connected, test, VIP or ferry flight. Times are UTC. While it is in the air it shows on the Home page Live Activity bar.';
             const err = document.getElementById('flightEditError'); err.textContent = ''; err.style.display = 'none';
             document.getElementById('flightDeleteBtn').style.display = isNew ? 'none' : '';
             const roster = aircraftData.slice().sort((a, b) => a.id.localeCompare(b.id));

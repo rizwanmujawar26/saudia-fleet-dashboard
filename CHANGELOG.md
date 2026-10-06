@@ -13,6 +13,10 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.218.0 — Flights: 📶 First Connected Flight kind (2026-10-06)
+New `/flights` kind `connected` — the first flight after the connectivity mod. Rules regex extended (deployed first),
+`FLIGHT_KINDS` entry (label + 📶), so the Add Flight dropdown, Timeline, Live Activity bar and flight card pick it up.
+
 ### v2.217.0 — Media loaded: accept the portal's Light Media string as pasted (2026-10-06)
 `parseMediaEntry` takes "2026-10-06 03:56:13 (ME-SVA-UGO-0526-LIGHTCONTENT)" and stores the plain
 `ME-SVA-UGO-0526` (suffix `-LIGHT…` stripped, case-insensitive, only when the cycle IS the Light Media cycle), so
