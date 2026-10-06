@@ -13,6 +13,11 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.214.0 — Add Activity: software quick picks (2026-10-06)
+Chips under Software Name/Version fill both fields in one tap. Data-driven (`actSoftwarePicks`): the distinct
+name+version pairs already logged on software_update activities, most recently logged first, max 3 — a new release
+appears by itself once entered once; `Middleware 2.1.0` is the fallback with no history. Lit when they match.
+
 ### v2.213.0 — Add Activity form: faster entry (2026-10-06)
 Aircraft list = Active + In Retrofit (`hwAircraftFleet()`, this form only — `maintenanceFleet()` unchanged), picked by a
 type-to-find box (`initActAircraftPicker`) over the now-hidden `#addActAircraft` select, which stays the single source

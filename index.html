@@ -6694,6 +6694,7 @@
                         <input id="addActVersion" class="add-sched-input" maxlength="40" placeholder="e.g. 2.1.0" autocomplete="off">
                     </div>
                 </div>
+                <div class="avr-station-picks act-picks" id="addActSwPicks"></div>
             </div>
 
             <div class="act-extra" id="actExtraModem">
@@ -8103,8 +8104,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.213.0';
-        const APP_BUILD    = '2026.10.06.04';
+        const APP_VERSION  = '2.214.0';
+        const APP_BUILD    = '2026.10.06.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -17621,6 +17622,35 @@
             document.getElementById('addActDate').value = toDMY(iso);
             syncActPicks();
         }
+        // Software quick picks: the name+version pairs already logged, most recently
+        // logged first — so a new release appears here by itself once it is entered once.
+        const ACT_SW_DEFAULT_PICKS = [['Middleware', '2.1.0']];
+        function actSoftwarePicks() {
+            const seen = new Map();
+            activityEntries()
+                .filter(a => a.category === 'software_update' && a.details && a.details.softwareName && a.details.version)
+                .sort((a, b) => String(b.loggedAt || '').localeCompare(String(a.loggedAt || '')))
+                .forEach(a => {
+                    const k = (a.details.softwareName + ' ' + a.details.version).toLowerCase();
+                    if (!seen.has(k)) seen.set(k, [a.details.softwareName, a.details.version]);
+                });
+            const picks = Array.from(seen.values()).slice(0, 3);
+            return picks.length ? picks : ACT_SW_DEFAULT_PICKS;
+        }
+        function renderActSoftwarePicks() {
+            const box = document.getElementById('addActSwPicks');
+            if (!box) return;
+            box.innerHTML = actSoftwarePicks().map(([n, v], i) =>
+                `<button type="button" class="avr-quick-chip" data-name="${escAttr(n)}" data-ver="${escAttr(v)}" onclick="actPickSoftware(${i})">${escAttr(n)} ${escAttr(v)}</button>`).join('');
+        }
+        function actPickSoftware(i) {
+            const b = document.querySelectorAll('#addActSwPicks .avr-quick-chip')[i];
+            if (!b) return;
+            document.getElementById('addActSoftwareName').value = b.dataset.name;
+            document.getElementById('addActVersion').value = b.dataset.ver;
+            syncActPicks();
+        }
+
         function actPickLocation(st) {
             document.getElementById('addActLocation').value = st;
             syncActPicks();
@@ -17636,6 +17666,10 @@
             const loc = (document.getElementById('addActLocation').value || '').trim().toLowerCase();
             document.querySelectorAll('#addActLocPicks .avr-quick-chip').forEach(b =>
                 b.classList.toggle('on', loc === String(b.dataset.loc).toLowerCase()));
+            const swN = (document.getElementById('addActSoftwareName').value || '').trim().toLowerCase();
+            const swV = (document.getElementById('addActVersion').value || '').trim().toLowerCase();
+            document.querySelectorAll('#addActSwPicks .avr-quick-chip').forEach(b =>
+                b.classList.toggle('on', swN === b.dataset.name.toLowerCase() && swV === b.dataset.ver.toLowerCase()));
         }
 
         // ----- Aircraft type-to-find picker over the hidden #addActAircraft select -----
@@ -17740,7 +17774,10 @@
                     `<button type="button" class="avr-quick-chip" data-loc="${escAttr(st)}" onclick="actPickLocation('${escAttr(st)}')">${escAttr(st)}</button>`).join('');
                 document.getElementById('addActDate').addEventListener('input', syncActPicks);
                 document.getElementById('addActLocation').addEventListener('input', syncActPicks);
+                document.getElementById('addActSoftwareName').addEventListener('input', syncActPicks);
+                document.getElementById('addActVersion').addEventListener('input', syncActPicks);
             }
+            renderActSoftwarePicks();   // every open: picks follow what has been logged since
             const err = document.getElementById('addActError');
             err.textContent = ''; err.style.display = 'none';
         }
