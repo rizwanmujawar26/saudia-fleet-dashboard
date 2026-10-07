@@ -6,6 +6,24 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
+**Latest — v2.223.1–v2.226.0 (2026-10-06 → 10-07).** Widget notes, flight theming, flight form, HBC+ software.
+
+- **Fleet Composition notes are ONE line (v2.223.1/2).** IFC Fleet lists RETROFIT tails only (`fitOf`), with
+  past-tense words on the widget only ("Powered OFF"; stored values stay "Power OFF"). IFC System says
+  "Latest HBC+ <tail> Delivered <date>" + NEW (≤ 30 d). Notes 11px — the IFC Fleet note exactly fills 275px at
+  1280, so it will ellipsis if it grows.
+- **AVR delivery flight (v2.224–2.225.2).** Dark Live-Activity band (navy→teal, green→sky arc, glowing plane);
+  no callsign, no status pills (user); labelled yellow **Flight playback** pill (`.dlv-fr24.dlv-pb`). The First
+  Connected Flight row ends in the bare yellow FR24 mark (`.dlv-fr24`) instead of its status pill.
+- **Flight form redesign (v2.225).** See *`/flights/{id}`*. ⚠️ A new class collided with an existing one of the
+  same name (`.flt-route` = timeline pill) and drew a ghost shape — grep `git show HEAD:index.html` for every new
+  class name.
+- **HBC+ software reads activities (v2.226).** `hbcSoftwareOf(tail, a)` = the newer of the `/aircraft`
+  FLS6/SBC/Local fields and the latest `software_update` activity whose Software name matches (`HBC_SW`
+  regexes; same date → `/aircraft` wins). `hbcSbcDone(a)` feeds the Home SBC widget and the profile cell.
+- **Open (user):** ASBC FLS6 not yet entered (no activity) — user told how; ASBB has only `beamcfgStatus`
+  (its "ISP VM Reload" entry has FLS6 as the *version*, so it is not matched).
+
 **Latest — v2.213.0–v2.223.0 (2026-10-06).** Phased connectivity status, faster Activity entry, AVR modems + flights.
 
 - **⚠️ Phased status (v2.222/2.223) — the big one.** `fleetStatus` is now a journey: retrofit Power OFF →
@@ -1124,6 +1142,14 @@ Polled and in the initial fetch. Arrival is derived (`flightPhaseOf`: scheduled 
 `deliveryFlightOf(tail)` prefers a `kind: delivery` record here over `/fleetSpecs/{tail}/deliveryFlight`, which is
 superseded but kept (not deleted). Seeded 2026-10-05 with ASBA/ASBB/ASBE/ASBC.
 
+**Form (v2.225).** Kind chips (`fltSetKind`, default `connected`); type-to-search aircraft (`fltBindAircraft`,
+hidden `#fltTail`); callsign auto SV#### → SVA#### until typed over (`data-auto`); DEPARTURE / ARRIVAL cards
+(city + IATA + date + time) — arrival date optional: blank = same day, or +1 when the time is earlier
+(`fltReadTimes`); airports from `fltAirportIndex()` (built-ins + every `/flights` record, most used first, ties
+JED·RUH·DXB·TLS) feed a datalist + four quick chips; `FLT_COORDS` gives an auto great-circle distance
+(`fltGreatCircle`) — add a line there for a new airport; live summary strip (`fltRefresh`). Known cities are
+saved in canonical spelling. **Stored shape unchanged** (date + dep + durMin).
+
 ### `/aircraft/{tail}` — per-aircraft state
 
 | field | values |
@@ -1191,7 +1217,8 @@ to mean the same thing operationally, collapse them — do not keep both in sync
 clobber the other.
 
 **HBC+ software (v2.201.0).** For an HBC+ / linefit tail (`isHbcAircraft`) Middleware,
-OTA patches, Media, UGO/Tiles and SIM do not apply. Its software is FLS6 + SBC config +
+OTA patches, Media, UGO/Tiles and SIM do not apply. (v2.226: readers go through `hbcSoftwareOf`, which also
+takes the latest matching `software_update` activity.) Its software is FLS6 + SBC config +
 Local config, normally set from the **AVR form's HBC+ Software block** (`#avrHbcWrap`,
 `AVR_HBC_FIELDS`): prefilled from `/aircraft`, only CHANGED values are PATCHed, dated the
 visit end. The Fleet ✎ editor carries the same six fields for corrections.

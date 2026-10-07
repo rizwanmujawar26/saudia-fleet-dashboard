@@ -13,6 +13,21 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.226.0 — HBC+ software reads Software Update activities (2026-10-07)
+`hbcSoftwareOf` merges `/aircraft` FLS6/SBC/Local with the latest matching `software_update` activity (newer
+wins); `hbcSbcDone` for the Home SBC widget + profile. ASBA/ASBC SBC A.27 + Local 006 now show.
+
+### v2.225.0–v2.225.2 — Flight form redesign; FR24 buttons (2026-10-06)
+Kind chips (default First Connected), type-to-search aircraft, auto callsign, DEPARTURE/ARRIVAL cards with
+optional arrival date, most-used airport chips + datalist, auto great-circle distance, live summary. AVR: FCF
+row ends in the bare FR24 mark; delivery panel keeps the labelled pill; no callsign on the report.
+
+### v2.224.0–v2.224.1 — AVR delivery flight in the Live Activity theme (2026-10-06)
+Dark navy→teal band, green→sky arc, glowing plane; status pills removed from it and from the FCF row.
+
+### v2.223.1–v2.223.2 — Fleet widget notes on one line (2026-10-06)
+IFC Fleet = retrofit tails only, "Powered OFF" wording on the widget; IFC System = latest HBC+ induction + NEW.
+
 ### v2.223.0 — Linefit journey: Delivered → Commissioned → Commercial (2026-10-06)
 New status `Delivered` (linefit only, phase 2 — system on, editable, not in service). `statusOptionsFor(a)` gives
 linefit Delivered/Commissioned/Commercial and retrofit its five, in the Fleet table select. Activation ⇒ Commissioned now
