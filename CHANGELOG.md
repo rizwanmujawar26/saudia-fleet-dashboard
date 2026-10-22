@@ -13,6 +13,11 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.227.0 — OTA Patch #4 (2026-10-21)
+New `otaPatch4UTC` on `/aircraft/{tail}` (rule added): Software table column after PATCH#3 (same date/age/UTC
+stack + edit input), fourth completion card, AVR Software row, Timeline event, `AC_MOVE_AC`. To keep 1280px
+fitting: Comments min-width 180→168, `.sw-strip .media-widget` 320→270.
+
 ### v2.226.0 — HBC+ software reads Software Update activities (2026-10-07)
 `hbcSoftwareOf` merges `/aircraft` FLS6/SBC/Local with the latest matching `software_update` activity (newer
 wins); `hbcSbcDone` for the Home SBC widget + profile. ASBA/ASBC SBC A.27 + Local 006 now show.

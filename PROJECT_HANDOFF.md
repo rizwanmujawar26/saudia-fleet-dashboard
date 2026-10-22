@@ -1930,7 +1930,7 @@ via `tlEclPill()`, on the dual-identity MODMAN and IFE-server rows):
 |---|---|---|
 | **Activation** | `/aircraft` — every Active aircraft that has one. Title is `Entered Service` | `activatedDate` |
 | **Operational** | `/aircraft/{tail}/ops` for the open period, `opsLog` for closed ones. A closed period yields **two** rows — going out, and `Returned to service` on its `until`. **Plus `Aircraft Delivered` (v2.173)** — a whole-roster pass emitting one row per tail from `/fleetSpecs/{tail}.deliveryDate`, gated to `DELIVERY_TIMELINE_FROM` (`'2024-01-01'`), carried on the same kind. It sets `delivery:true` so `renderRow`/`renderRepoRow` mark it 🛬 with **no** `tl-ops-out` red accent and no location pill, source tag "Fleet" | `ops.since` · `opsLog.since` / `.until` · `deliveryDate` |
-| Software | `/aircraft` completion fields — `Middleware {swVersion}` for retrofit, `SBC Configuration A.13` for the linefit pair when `beamcfgStatus === 'done'`; **plus `OTA Patch #2`/`#3`** (v2.106, below) | `completionDate` · `otaPatchUTC` · `otaPatch3UTC` |
+| Software | `/aircraft` completion fields — `Middleware {swVersion}` for retrofit, `SBC Configuration A.13` for the linefit pair when `beamcfgStatus === 'done'`; **plus `OTA Patch #2`/`#3`/`#4`** (v2.106, #4 v2.227) | `completionDate` · `otaPatchUTC` · `otaPatch3UTC` · `otaPatch4UTC` |
 | Media | `/aircraft/{tail}/media` | `loadedDateUTC` |
 | **Commission** (v2.108) | `/activities` with `category === 'modem_commissioning'` | `date` |
 | **Modification** (v2.110) | `/aircraft` retrofit window — **NOT an activity**. A **MOD START** row on `retrofitStart` and a **MOD END** row on `retrofitEnd` carrying the days grounded (`groundedDaysLabel`). Both carry `retrofitLocation` as the location pill (install site). Line-fits skipped; a start with no end reads **ONGOING** (one row) | `retrofitStart` · `retrofitEnd` |
@@ -1990,7 +1990,7 @@ service yields up to two Hardware rows naming the unit's S/N:
   initial baseline fit of each box IS a row here — ~95 rows across the roster's history,
   spread over their real dates and folded behind the 7-day window on Home.
 - **OTA patches (v2.106)** — a pass over `aircraftData` emitting one **Software**-kind row
-  per patch stamp: `OTA Patch #2` from `otaPatchUTC`, `OTA Patch #3` from `otaPatch3UTC`
+  per patch stamp: `OTA Patch #2` from `otaPatchUTC`, `OTA Patch #3` from `otaPatch3UTC`, `OTA Patch #4` from `otaPatch4UTC` (v2.227)
   (both full UTC timestamps; sub is the `hh:mm UTC` time). Location-independent, like a
   media load.
 
@@ -3287,6 +3287,20 @@ fix, for the same reason, as the Modem tab stacking its dates above their pills.
 40 aircraft carry a patch, which is exactly `swFleet()`. The four without are the two
 linefit (own table) and the two In Retrofit — so the column has no blanks today, and
 the "Not set" branch is what a newly activated aircraft will show.
+
+**OTA PATCH#3 and OTA PATCH#4 are columns 3 and 4** — `otaPatch3UTC` / `otaPatch4UTC`
+(#4 added v2.227.0, user 2026-10-21), each a copy of the #2 column in every respect:
+ISO stamp, fourteen-nine sentinel, sliced date/age/time stack, `readOtaField` edit,
+own `.validate` rule in `database.rules.json`. The table is now **11 columns**
+(Aircraft → 5 … Comments → 10). A new patch reaches **eight places** — rule, header,
+row cell, `handleAircraftEdit` field test, `AC_MOVE_AC` re-key list, `renderSwVersionWidgets`
+card, `avrDossierRows` + `swLabels` (AVR), and the Timeline OTA pass — `fn.sh --grep
+otaPatch4` lists them. ⚠️ **#4 tipped both widths at 1280px**: the table measured 1164px
+in a 1163px wrapper (fixed by `#aircraftTable .col-comment` min-width 180→168) and four
+completion cards at 320px measured 1320px in a 1165px strip (fixed in
+**`.sw-strip .media-widget`**, 320→270 — the rule that pins the width; `.sw-split`'s
+min-width is overridden by it and changing it does nothing). A fifth patch will need
+both re-measured.
 
 ⚠️ **The label says "Installation" but the field is the software COMPLETION date.**
 On this tab that reads correctly — it is when the middleware was installed — but do
