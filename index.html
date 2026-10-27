@@ -8206,8 +8206,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.227.0';
-        const APP_BUILD    = '2026.10.21.01';
+        const APP_VERSION  = '2.228.0';
+        const APP_BUILD    = '2026.10.27.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -8249,6 +8249,7 @@
         }
 
         function rebuildAircraftData() {
+            autoDeliverLanded();   // before the map, so a landed FUTURE tail reads delivered
             aircraftData = fleetRoster.map(s => {
                 const live = aircraftLive[s.id] || {};
                 const a = { ...s, ...live };
@@ -8298,6 +8299,7 @@
 
         function renderAll() {
             if (reportTookOver) return;   // the tab is showing a report, not the dashboard
+            autoDeliverLanded();          // FUTURE → delivered once its delivery flight lands
             if (editMode) {
                 // Freeze the Software table while someone is mid-edit so incoming
                 // live updates can't overwrite their staged changes. Everything else
@@ -8532,6 +8534,7 @@
                 } catch (e) { /* a missed poll is harmless; the next one catches up */ }
             }
 
+            autoDeliverLanded();          // /flights or /fleetSpecs may have moved; an editor may have signed in
             if (changed) {
                 markDataSync();
                 renderHardwarePage();
@@ -11867,6 +11870,52 @@
         }
         function deliveryPhase(id) {
             return flightPhaseOf(deliveryFlightOf(id), (fleetSpecsLive[id] || {}).deliveryDate);
+        }
+        // A Future aircraft whose recorded delivery flight has landed IS delivered
+        // (user, 2026-10-27 — ASBF sat on FUTURE after its delivery flight). Every
+        // viewer sees it at once (local mirror: delivered, linefit, Programme Status
+        // Delivered, Delivery Date = the flight's date when none is recorded); a
+        // signed-in editor's page also writes it to /fleet + /fleetSpecs, once per tail.
+        // Fit / status already set are kept. Runs on every renderAll, so it is
+        // idempotent and re-applies over a stale poll until the write streams back.
+        const autoDeliverPending = new Map();   // tail → { fleetBody, date } mirrored, not yet written
+        const autoDeliverSending = new Set();
+        function autoDeliverLanded() {
+            fleetRoster.forEach(a => {
+                if (a.delivered !== false) return;
+                const d = deliveryPhase(a.id);
+                if (!d || d.phase !== 'landed') return;
+                const fleetBody = { delivered: null };
+                if (!a.fit) fleetBody.fit = 'linefit';
+                if (!a.fleetStatus) fleetBody.fleetStatus = 'Delivered';
+                const spec = fleetSpecsLive[a.id] || {};
+                const date = spec.deliveryDate ? '' : (fmtDate(toISODate(d.f.date || '')) || fmtDate(d.arrISO) || '');
+                delete a.delivered;
+                if (fleetBody.fit) a.fit = fleetBody.fit;
+                if (fleetBody.fleetStatus) a.fleetStatus = fleetBody.fleetStatus;
+                if (date) fleetSpecsLive[a.id] = { ...spec, deliveryDate: date };
+                autoDeliverPending.set(a.id, { fleetBody, date });
+            });
+            // The write: only from an editor's page (the rules enforce it anyway), once
+            // per tail; kept pending so an editor who signs in later still persists it.
+            if (!authUser) return;
+            autoDeliverPending.forEach(({ fleetBody, date }, id) => {
+                if (autoDeliverSending.has(id)) return;
+                autoDeliverSending.add(id);
+                (async () => {
+                    const token = await getIdToken();
+                    if (!token) return;
+                    await acPatch('fleet/' + id, fleetBody, token);
+                    if (date) await acPatch('fleetSpecs/' + id, { deliveryDate: date }, token);
+                    autoDeliverPending.delete(id);
+                    setSyncStatus(`✅ ${id} marked Delivered — its delivery flight has landed`, '#28a745');
+                })().catch(e => {
+                    // Dropped, not retried every redraw: the next /fleet load re-queues it.
+                    autoDeliverPending.delete(id);
+                    console.warn('auto-deliver ' + id + ' failed:', e);
+                })
+                    .finally(() => autoDeliverSending.delete(id));
+            });
         }
         // Re-render once at the next scheduled departure/arrival on the roster, so the
         // badge flips Scheduled → In flight → In Service on its own with the page open.

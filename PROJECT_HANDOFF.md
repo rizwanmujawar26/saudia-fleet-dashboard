@@ -1562,6 +1562,11 @@ begin. **Commissioned = the Activation date** (first time on the network). **Com
 | `isPreService` | phase 1–4, any fit | IFC Fleet right half (**In Progress**), activity-picker tag |
 | `inProgramme` | phase ≥ 1 | programme population (`programmeFleet()`, nav badge, IFC System card HBC+) |
 
+**Delivery flight landed ⇒ delivered** (v2.228, `autoDeliverLanded`): a Future tail
+(`delivered: false`) whose delivery flight has landed reads delivered for everyone and an
+editor's page writes it once — linefit + Delivered if blank, Delivery Date from the flight
+if none. No manual "Delivery → Delivered" step for a linefit with a recorded flight.
+
 **Activation ⇒ Commissioned, forward only** (`statusAfterActivation`): an Activation
 date on an aircraft at phase 1–3 (incl. linefit Delivered) moves it to Commissioned, on
 all three save paths — Fleet table (staged visibly before Save), Edit modal, Maintenance

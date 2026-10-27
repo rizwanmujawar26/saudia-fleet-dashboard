@@ -13,6 +13,16 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.228.0 — Auto-deliver a Future aircraft once its delivery flight lands (2026-10-27)
+`autoDeliverLanded()`: a `/fleet` tail with `delivered: false` whose delivery flight (`deliveryPhase`) has
+**landed** reads as delivered for every viewer at once (local mirror), and a signed-in editor's page writes it once:
+`/fleet` `delivered` cleared, `fit` → linefit and `fleetStatus` → Delivered **only if blank**, and
+`/fleetSpecs` `deliveryDate` = the flight's date **only if none is recorded**. Runs in `renderAll`,
+`rebuildAircraftData` and after every low-traffic poll (the initial fetch and poll bypass `renderAll`, so hooking it
+there alone missed the first load). Unsaved flips stay pending until an editor is signed in; a failed write is dropped
+and re-queued by the next `/fleet` load, never retried per redraw. Trigger: ASBF sat on FUTURE after its 26-Oct
+delivery flight. ⚠️ Setting a landed tail back to Future is undone by the next editor page load.
+
 ### v2.227.0 — OTA Patch #4 (2026-10-21)
 New `otaPatch4UTC` on `/aircraft/{tail}` (rule added): Software table column after PATCH#3 (same date/age/UTC
 stack + edit input), fourth completion card, AVR Software row, Timeline event, `AC_MOVE_AC`. To keep 1280px
