@@ -13,6 +13,18 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.229.3 — MODMAN removal date sets status; reason editable in Unit History (2026-10-29)
+A removal date typed into **Hardware › MODMAN** (`saveModmanField`) wrote only the date — AS79 m055 (486862002) sat
+`removalDate` 29-Oct + raw `status: active`, so it never reached the Removed / Shop queue, the only place its Reason
+for removal could be typed. Now the date also PATCHes `status: removed` (clearing it → `active`), and any MODMAN field
+save self-heals a record with a removal date but stale status. The MODMAN removal queue and its "Replaced by" lookup
+read `removalDate` as well as raw status. **Unit History** shows an editable Reason for removal to editors (MODMAN →
+`/modmans` via `saveModmanField`, other LRUs → `/units` fitment via `saveRemovalReason`); both saves repaint the open
+modal (`unitHistOpenId`). Data (backups `2026-10-29-as79-activity`, `-as79-reason`): logged the missing Maintenance
+entry `amvtp7isl0qi2n` (AS79 hardware_rr modman, 29-Oct, both serials in notes) and wrote the user's reason (IRS 3 no
+data, short at MODMAN ARINC pin G11) to m055 + the activity; m055 status → removed. ⚠️ Register edits (a date, ↻ Refit)
+log NO Maintenance activity — only a Maintenance R&R does.
+
 ### v2.229.2 — Maintenance MODMAN R&R writes the MODMAN register directly (2026-10-29)
 A NEW hardware R&R on `modman`/`lf_modman` builds `modmanSwapPlan()` before any write and, after the activity
 saves, sends one multi-path PATCH to `/modmans.json`: the **Removed S/N must be the box on wing** (gains

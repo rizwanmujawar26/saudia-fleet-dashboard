@@ -6,7 +6,13 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.229.0–v2.229.2 (2026-10-29).** Refit repaired equipment; MODMAN R&R → `/modmans`.
+**Latest — v2.229.0–v2.229.3 (2026-10-29).** Refit repaired equipment; MODMAN R&R → `/modmans`.
+
+- **Removal date sets status (v2.229.3).** A removal date typed on Hardware › MODMAN now also stores
+  `status: removed` (AS79 m055 had sat `active`, hidden from the Shop queue so no reason could be entered); queue +
+  Replaced-by also read `removalDate`. Unit History's "Removed for" is editable for editors. AS79 swap
+  (486862002 off, 484230001 on, 29-Oct) logged as activity `amvtp7isl0qi2n` with the user's reason.
+  ⚠️ Register edits (date / ↻ Refit) create no Maintenance entry — steer swaps through Maintenance R&R.
 
 - **Refit (v2.229.0).** Removed + shop Repaired/NFF = blue **SERVICEABLE**; Hardware Edit mode shows
   **↻ Refit on [tail] [date]** on MODMAN and every `/units` LRU. MODMAN refit = a NEW `/modmans` record (IDs copied,
