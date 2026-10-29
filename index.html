@@ -3856,6 +3856,7 @@
         .uh-dates { color: #55606a; font-variant-numeric: tabular-nums; }
         .uh-field { font-size: 12.5px; color: #333; margin-top: 4px; white-space: pre-line; }
         .uh-field b { display: inline-block; min-width: 86px; color: #6b7780; font-weight: 600; }
+        .uh-field .uh-reason-input { width: calc(100% - 96px); min-width: 180px; box-sizing: border-box; }
 
         /* ===== Serials tab ===== */
         .sr-state {
@@ -8215,8 +8216,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.229.2';
-        const APP_BUILD    = '2026.10.29.03';
+        const APP_VERSION  = '2.229.3';
+        const APP_BUILD    = '2026.10.29.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -21969,7 +21970,7 @@
             // Queue is built from that node — the same list the table shows, as cards with an
             // editable Reason for removal (saved straight to /modmans via saveModmanField).
             const mmRemovals = Object.entries(modmansLive || {}).map(([id, m]) => ({ id, ...m }))
-                .filter(m => m.status === 'removed')
+                .filter(m => m.status === 'removed' || !!m.removalDate)
                 .sort((a, b) => dateSortKey(toISODate(b.removalDate)).localeCompare(dateSortKey(toISODate(a.removalDate))));
             const mmOpenShop = mmRemovals.filter(m => { const s = m.shopStatus || 'pending'; return s === 'pending' || s === 'in_shop'; }).length;
             const mmRefit = {};
@@ -21983,7 +21984,7 @@
                 const ss = m.shopStatus || 'pending';
                 const acType = m.aircraft ? (aircraftData.find(a => a.id === m.aircraft) || {}).type : '';
                 // The box on wing now on that tail — the one that took its place.
-                const repl = m.aircraft ? Object.values(modmansLive || {}).find(o => o.aircraft === m.aircraft && o.status !== 'removed') : null;
+                const repl = m.aircraft ? Object.values(modmansLive || {}).find(o => o.aircraft === m.aircraft && o.status !== 'removed' && !o.removalDate) : null;
                 const replacedBy = repl ? ((repl.astronicsSn && !repl.kontronSn) ? repl.astronicsSn : repl.kontronSn) : '';
                 const reasonField = editable
                     ? `<input type="text" maxlength="200" autocomplete="off" class="hw-reason-input" value="${escAttr(m.removalReason || '')}" placeholder="e.g. No RF output after power cycle" data-mm="${escAttr(m.id)}" data-field="removalReason" onchange="saveModmanField(this)">`
@@ -23550,6 +23551,7 @@
                 if (!value) delete f.removalReason; else f.removalReason = value;
                 renderHardwarePage();
                 renderMaintenancePage();
+                if (unitHistOpenId) openUnitHistory(unitHistOpenId);
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (ex) {
                 setSyncStatus(`🔴 Could not save reason — ${ex.message}`, '#dc3545');
@@ -23849,6 +23851,7 @@
         // serial. modmanUnit() folds every record sharing that serial into a unit-shaped
         // object (id 'mm:<recordId>') so the Unit History modal and ↻ chip read it
         // exactly like a /units box. Read-only: nothing is written back.
+        let unitHistOpenId = null;   // the box the Unit History modal shows, so a save can repaint it
         function modmanUnit(mmId) {
             const rows = satcomRows();
             const me = rows.find(r => r.id === mmId);
@@ -23882,6 +23885,17 @@
             const total = unitDaysOnWing(u);
             const removals = fits.filter(f => !fitmentIsOn(f)).length;
             const fld = (k, v) => v ? `<div class="uh-field"><b>${k}</b>${escAttr(v)}</div>` : '';
+            // Reason for removal is editable here for an editor — this modal is where a
+            // removed box is looked up, so it is where a missing reason gets noticed.
+            // MODMAN fitments are /modmans records (fitment id = record id); others are
+            // /units fitments. Read-only viewers see the reason or "not recorded".
+            const reasonFld = f => {
+                if (!canEdit()) return `<div class="uh-field"><b>Removed for</b>${f.removalReason ? escAttr(f.removalReason) : '<span class="hw-none">not recorded</span>'}</div>`;
+                const target = isMm
+                    ? `data-mm="${escAttr(f.id)}" data-field="removalReason" onchange="saveModmanField(this)"`
+                    : `data-unit="${escAttr(u.id || unitId)}" data-fitment="${escAttr(f.id)}" onchange="saveRemovalReason(this)"`;
+                return `<div class="uh-field"><b>Removed for</b><input type="text" maxlength="200" autocomplete="off" class="hw-reason-input uh-reason-input" value="${escAttr(f.removalReason || '')}" placeholder="Reason for removal — e.g. No RF output after power cycle" ${target}></div>`;
+            };
             const item = f => {
                 const on = fitmentIsOn(f);
                 const d = fitmentDaysOnWing(f);
@@ -23893,7 +23907,7 @@
                         ${on ? '<span class="uh-state on_wing">ON WING</span>'
                              : `<span class="status-badge shop-badge shop-${escAttr(ss)}">${escAttr(shopStatusLabel(ss))}</span>`}
                     </div>
-                    ${on ? '' : fld('Removed for', f.removalReason)}
+                    ${on ? '' : reasonFld(f)}
                     ${fld('Shop ref', f.shopRef)}
                     ${fld('Shop finding', f.shopFinding)}
                 </li>`;
@@ -23908,8 +23922,10 @@
                     · ${removals} removal${removals === 1 ? '' : 's'}${total == null ? '' : ` · ${total} days on wing in total`}</p>
                 <ul class="uh-list">${fits.map(item).join('') || '<li class="hw-none">No fitments recorded.</li>'}</ul>`;
             ov.style.display = 'flex';
+            unitHistOpenId = unitId;
         }
         function closeUnitHistory() {
+            unitHistOpenId = null;
             const ov = document.getElementById('unitHistOverlay');
             if (ov) ov.style.display = 'none';
         }
@@ -23987,18 +24003,29 @@
             } else {
                 value = el.value.trim();
             }
+            // A removal date IS the removal: the raw status must follow it, or every list
+            // that reads status (Removed / Shop queue, Replaced-by, on-wing lookups) keeps
+            // treating the box as on wing — AS79's m055 sat as 'active' with a removal date.
+            const body = { [field]: value || null };
+            if (field === 'removalDate') {
+                if (value) body.status = 'removed';
+                else if (m.status === 'removed') body.status = 'active';
+            }
+            // Self-heal an older record that has a removal date but a stale status.
+            else if (m.removalDate && m.status !== 'removed') body.status = 'removed';
             const token = await getIdToken();
             if (!token) return;
             el.disabled = true;
             try {
                 const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/modmans/${id}.json?auth=${token}`, {
-                    method: 'PATCH', body: JSON.stringify({ [field]: value || null }),
+                    method: 'PATCH', body: JSON.stringify(body),
                 });
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
-                if (!value) delete m[field]; else m[field] = value;
+                Object.entries(body).forEach(([k, v]) => { if (v == null) delete m[k]; else m[k] = v; });
                 renderHardwarePage();
                 if (typeof renderSatcomPage === 'function') renderSatcomPage();
+                if (unitHistOpenId) openUnitHistory(unitHistOpenId);
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (ex) {
                 setSyncStatus(`🔴 Could not save — ${ex.message}`, '#dc3545');
