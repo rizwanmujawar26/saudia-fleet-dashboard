@@ -1859,6 +1859,36 @@ The two-pane shell reuses the `.maint-*` classes — they style a generic
 list/detail layout and the prefix is historical. Worth unifying under a neutral
 name when something else needs the same shell.
 
+### AIRCRAFT header — milestone timeline (v2.231–v2.235)
+
+Each By-Aircraft card header is a white card: **tail (19px, the largest text)** · matched
+`.hw-tag` pair (type keeps its case, fit) in a fixed 164px slot · **`hwAcMilestoneTrack(a)`**
+centred · On-Wing / Removed in the right corner. Linefit (no `retrofitStart`) keeps the plain
+Activated label + `hwSiteChip()`.
+
+- **Points at true dates**, each tail on its own scale: Mod start → Mod end → Activated in
+  date order (an activation inside the window sits inside it). Mod start / Mod end captions
+  are **always below**, each pinned to its own dot (end mirrored: date, then label);
+  **Activated always above**. Green beacon = activation; days in service / in mod in a tile.
+- **Install site rides on the rail**, centred on the window, joined to its length:
+  `[📍 Jeddah | 13d mod]` — Jeddah muted, any other site amber, blank dashed "—" (never a
+  guessed Jeddah). The source is `/fleet/{tail}/retrofitLocation`.
+- **In mod: progress against a nominal 30 days** (`HW_MOD_NOMINAL_DAYS`, never shown): the
+  window is drawn to the 30-day mark, the amber bar fills days/30; past 33 days
+  (`HW_MOD_OVERRUN_DAYS`) everything turns coral.
+- ⚠️ **Collision handling is measured, not guessed.** Fixed caption widths (`--w1/--w2/--w3`
+  on `.hw-ms-track`) let CSS `max()` keep Mod end clear of Mod start; **`hwMsFit()`** runs after
+  `renderHwContent` and on resize to flip a squeezed Mod end to start at its dot, lift a site
+  chip that covers a dot, drop its day count, and re-anchor the Activated caption if they
+  still clash. A window too short for any of that (AS61) slides just clear.
+- ⚠️ **Testing it in the hidden Browser pane:** viewport emulation sends **no** `resize` event,
+  and a hidden pane runs no rAF / ResizeObserver callbacks — so a re-fit never fires there.
+  Dispatch `new Event('resize')` (or call `hwMsFit()`) and then audit. Audit every row at
+  375 / 1000 / 1300 / 1600px for caption overlaps, out-of-track text and dot alignment; one
+  screenshot is not proof.
+- ⚠️ **Don't animate on insert** (the removed grow-in): the page re-renders on every live data
+  change, so an entry animation replays constantly — and screenshots catch it half-drawn.
+
 ---
 
 ## Operational state — the second axis, and why it is not a third status
