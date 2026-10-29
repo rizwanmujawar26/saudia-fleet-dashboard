@@ -13,6 +13,19 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.229.0 — Refit a repaired box on another aircraft, MODMAN first, every LRU (2026-10-29)
+A removed box whose shop report reads **Repaired / No Fault Found** now reads **SERVICEABLE** (blue) and, in Hardware
+Edit mode, its row carries **↻ Refit on [tail] [dd-mm-yyyy]**. **MODMAN** (`hwRefitModman`): a serviceable box gets a
+**new `/modmans` record** on the new tail (one record per fitment, as `modmanUnit` already assumed) carrying Kontron /
+Eclipse / Astronics S/N, Taurus MG-ID/TID and Hughes chassis/ESN/MAC; Taurus + Hughes commissioning start **To-Do**;
+the old record stays `ex-TAIL` with its shop report and reads **↻ refitted TAIL · date** (also on its Removed card).
+Never-fitted spares get the same picker (assigned in place). `satcomRows()` derives `refittedTo` / `serviceable`;
+`modmanBoxRows()` (one per physical box) feeds the Satcom widgets, sub-tab badge and "On wing / total". Picker offers
+only in-programme tails of the box's supplier (Astronics → A321XLR) with no MODMAN on wing. **Every other LRU**
+(`/units`): the box's last removal row reads SERVICEABLE and refits via the generalised `hwAssignSpare` (now gated by
+`serialReuse`, supports CWAP positions as `TAIL|POS`). Add MODMAN's duplicate-serial error points at Refit. No rules
+change. Picker + date stack so every equipment table still fits at 1024px.
+
 ### v2.228.0 — Auto-deliver a Future aircraft once its delivery flight lands (2026-10-27)
 `autoDeliverLanded()`: a `/fleet` tail with `delivered: false` whose delivery flight (`deliveryPhase`) has
 **landed** reads as delivered for every viewer at once (local mirror), and a signed-in editor's page writes it once:

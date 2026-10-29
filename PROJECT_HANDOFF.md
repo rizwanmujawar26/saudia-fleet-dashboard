@@ -1411,7 +1411,10 @@ Activity's Old/New part fields now write to `/units` via `unitWritesForActivity(
 ⚠️ **Read through `satcomRows()`, which exposes a FIXED field list** — add any new field
 there or it reads blank everywhere (v2.201.1: `removalReason`). A box's Unit History is
 **derived** by `modmanUnit(id)` (v2.202.1): every record sharing the primary serial becomes
-one fitment of an `'mm:<id>'` unit-shaped object. **HBC+ (Astronics) records carry
+one fitment of an `'mm:<id>'` unit-shaped object. **Refit (v2.229.0):** a repaired box going back on
+an aircraft is a NEW record with the same serial (`hwRefitModman`); `satcomRows()` marks the older record
+`refittedTo`, and a removed + Repaired/NFF + not-refitted one `serviceable`. ⚠️ Count physical boxes with
+`modmanBoxRows()`, never `Object.keys(modmansLive)` — a refitted box has two records. **HBC+ (Astronics) records carry
 placeholder `kontronSn` `'0'`/`'N/A'`** (ASBA, ASBB) — never display Kontron for them
 (v2.204.1); the stored values are left as-is pending the user's call.
 

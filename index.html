@@ -3870,6 +3870,15 @@
 
         .sr-state.on   { background: #e3f3ea; color: #0a5c34; }
         .sr-state.off  { background: #fdeff0; color: #a52834; }
+        /* A removed box back from the shop Repaired / No Fault Found — ready to refit. */
+        .sr-state.svc  { background: #e6f0fb; color: #1c5b96; }
+        /* Refit a repaired box (v2.229.0): a compact "↻ Refit on [tail] [date]" line
+           under the tail of a serviceable or spare row, edit mode only. */
+        .hw-refit { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 4px; row-gap: 2px; margin-top: 3px; max-width: 104px; }
+        .hw-refit-mark { color: #1c5b96; font-weight: 700; font-size: 11px; grid-row: span 2; }
+        .hw-refit .edit-select { width: 100%; min-width: 0; font-size: 11px; padding: 1px 2px; }
+        .hw-refit .hw-date-input { width: 100%; min-width: 0; box-sizing: border-box; }
+        .hw-refit-note { display: block; margin-top: 2px; font-size: 10.5px; color: #1c5b96; font-weight: 600; white-space: nowrap; }
 
         /* A date that has not been collected yet is the thing this tab exists to fix,
            so it reads as an actionable blank, not as an em dash to skim past. */
@@ -8206,8 +8215,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.228.0';
-        const APP_BUILD    = '2026.10.27.01';
+        const APP_VERSION  = '2.229.0';
+        const APP_BUILD    = '2026.10.29.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -20319,7 +20328,7 @@
         // One row object per modman, with any staged edit already applied so the table
         // reads the pending value before Save.
         function satcomRows() {
-            return Object.entries(modmansLive || {}).map(([id, m]) => {
+            const rows = Object.entries(modmansLive || {}).map(([id, m]) => {
                 const staged = pendingSatcom[id] || {};
                 const pick = k => staged[k] !== undefined ? staged[k] : (m[k] || '');
                 const rawStatus = pick('status') || 'spare';
@@ -20383,6 +20392,58 @@
                     tailLabel: !aircraft ? '' : (status === 'removed' ? 'ex-' + aircraft : aircraft),
                 };
             });
+            // REFIT (v2.229.0). A MODMAN is one record per fitment: a repaired box going
+            // back on an aircraft is a NEW record with the same serial (modmanUnit folds
+            // them into one history). So a removed record whose serial was fitted again on
+            // or after its removal date is history — refittedTo names where it went — and
+            // a removed record that came back Repaired / No Fault Found and has NOT been
+            // refitted yet is serviceable: the box is sitting on the shelf, ready to go.
+            const keyOf = r => modmanBoxKey(r);
+            rows.forEach(r => {
+                r.refittedTo = ''; r.refitDate = ''; r.serviceable = false;
+                if (r.status !== 'removed') return;
+                const k = keyOf(r);
+                if (!k) return;
+                const rem = toISODate(r.removalDate || '') || '';
+                const later = rows.filter(s => s.id !== r.id && s.aircraft && keyOf(s) === k
+                        && (toISODate(s.installDate || '') || '9999-12-31') >= rem)
+                    .sort((a, b) => (toISODate(a.installDate || '') || '9999').localeCompare(toISODate(b.installDate || '') || '9999'))[0];
+                if (later) { r.refittedTo = later.aircraft; r.refitDate = later.installDate || ''; return; }
+                r.serviceable = r.shopStatus === 'repaired' || r.shopStatus === 'no_fault';
+            });
+            return rows;
+        }
+        // The serial that identifies a physical MODMAN box: Astronics on an XLR box,
+        // Kontron on the legacy build. Read from the stored fields, not from the aircraft,
+        // so a spare (no aircraft) Astronics box still has its key.
+        function modmanBoxKey(r) {
+            const k = normSerialKey((r && (r.astronicsSn || r.kontronSn)) || '');
+            // Placeholder serials ('0', 'N/A' on the HBC+ records) identify no box.
+            return /^(0+|n\/?a|-+)$/.test(k) ? '' : k;
+        }
+        function modmanIsAstroBox(r) { return !!(r && r.astronicsSn && !r.kontronSn); }
+        // One row per PHYSICAL box — a refitted box's old record is history, so it is not
+        // counted a second time in the register totals.
+        function modmanBoxRows() { return satcomRows().filter(r => !r.refittedTo); }
+        // Aircraft a MODMAN box can go on now: in the programme, of the box's supplier
+        // (Astronics → A321XLR only, Eclipse/Kontron → every other airframe), with no box
+        // on wing (an active or fault box still occupies the slot — record its removal).
+        function modmanFreeTails(r) {
+            const astro = modmanIsAstroBox(r);
+            const busy = new Set(satcomRows().filter(x => x.aircraft && (x.status === 'active' || x.status === 'fault')).map(x => x.aircraft));
+            return hwAircraftFleet().filter(a => (a.type === 'A321XLR') === astro && !busy.has(a.id))
+                .map(a => a.id).sort();
+        }
+        // The inline "↻ Refit on [tail] [dd-mm-yyyy]" control shared by the MODMAN table
+        // and the /units equipment tables. opts = [{value, label}]; data = the data-*
+        // attributes the save handler reads; onchange = the handler name.
+        function hwRefitControl(opts, data, onchange, verb) {
+            const list = opts.map(o => `<option value="${escAttr(o.value)}">${escAttr(o.label)}</option>`).join('');
+            return `<div class="hw-refit"><span class="hw-refit-mark">↻</span>`
+                + `<select class="edit-select hw-spare-tail" ${data} title="${escAttr(verb)} — pick the aircraft, then enter the Fitted date" onchange="${onchange}(this)">`
+                + `<option value="">${list ? escAttr(verb) + ' on…' : 'no aircraft free'}</option>${list}</select>`
+                + `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="hw-date-input hw-spare-date" ${data} onchange="${onchange}(this)">`
+                + `</div>`;
         }
 
         function satcomScope(status) {
@@ -20392,7 +20453,7 @@
         function renderSatcomWidgets() {
             const strip = document.getElementById('satcomWidgets');
             if (!strip) return;
-            const rows = satcomRows();
+            const rows = modmanBoxRows();   // one per physical box (a refit is not a 2nd box)
             const active = rows.filter(r => r.status === 'active');
             const n = st => rows.filter(r => r.status === st).length;
             // One row of cards. The register counts (Active/Spare/Removed) are against
@@ -20622,7 +20683,7 @@
             renumberVisibleRows('satcomTable');
             const shown = Array.from(document.querySelectorAll('#satcomTableBody tr'))
                 .filter(r => r.style.display !== 'none').length;
-            const total = satcomRows().length;
+            const total = satcomRows().length;   // table rows, refit history included
             setTableCount('satcomCount', shown, total, 'MODMANs');
         }
 
@@ -20888,7 +20949,11 @@
                 if (!idVal) { err.textContent = `A ${idLabel} is required.`; err.style.display = 'block'; return; }
                 // One identifying serial is one physical box; a duplicate would list it twice.
                 const clash = Object.values(modmansLive || {}).find(m => m[idField] === idVal);
-                if (clash) { err.textContent = `${idVal} is already in the register.`; err.style.display = 'block'; return; }
+                if (clash) {
+                    err.textContent = `${idVal} is already in the register — to put a repaired box back on an aircraft, `
+                        + `set its shop report to Repaired / No Fault Found, then use ↻ Refit on its row (Hardware › MODMAN, Edit mode).`;
+                    err.style.display = 'block'; return;
+                }
 
                 const entry = { status,
                     addedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z') };
@@ -21029,7 +21094,7 @@
         // How many unit records the register holds for a group (on-wing + removed + spare)
         // — the count shown in the sub-tab badge.
         function groupRecordCount(group) {
-            if (group.id === 'modman') return Object.keys(modmansLive || {}).length;   // MODMAN reads /modmans
+            if (group.id === 'modman') return modmanBoxRows().length;   // MODMAN reads /modmans — one per physical box
             const ids = groupLruIds(group);
             return unitEntries().filter(u => ids.includes(u.lruId)).length;
         }
@@ -21537,7 +21602,7 @@
             const pnMatch = !!rec.partNumber && rec.partNumber.toLowerCase().includes(qLow);
 
             const counts = isMm
-                ? { fitted: satcomRows().filter(r => r.status === 'active').length, total: Object.keys(modmansLive || {}).length }
+                ? { fitted: satcomRows().filter(r => r.status === 'active').length, total: modmanBoxRows().length }
                 : groupFittedCount(group);
             const { fitted, total } = counts;
 
@@ -21612,20 +21677,33 @@
                     placeholder="Comment" data-unit="${escAttr(unit.id)}" data-fitment="${escAttr(fitment ? fitment.id : '')}" onchange="saveHwNotes(this)">`;
             };
 
+            // REFIT (v2.229.0): a box whose LAST removal came back Repaired / No Fault
+            // Found is serviceable. Its removal row (on the tail it came off) reads
+            // SERVICEABLE and, in edit mode, carries the refit picker — any slot of the same
+            // LRU with nothing on wing. hwAssignSpare then adds a fitment to THIS unit.
+            const freeSlotsFor = lruId => editable ? groupSlots(group).filter(sl => sl.lruId === lruId
+                    && !unitsAtSlot(sl.lruId, sl.aircraft.id, sl.position).some(h => fitmentIsOn(h.fitment)))
+                .map(sl => ({ value: sl.aircraft.id + (sl.position ? '|' + sl.position : ''),
+                              label: sl.aircraft.id + (sl.position ? ' · ' + posLabel(sl) : (group.shape === 'pair' ? ' · ' + posLabel(sl) : '')) }))
+                .sort((x, y) => x.label.localeCompare(y.label)) : [];
             const unitRow = (slot, hit) => {
                 const a = slot.aircraft, off = !fitmentIsOn(hit.fitment);
+                const life = off ? unitLifecycle(hit.unit) : null;
+                const isLast = !!life && !!life.fitment && life.fitment.id === (hit.fitment && hit.fitment.id);
+                const svc = isLast && life.state === 'serviceable';
+                const refit = svc && editable ? hwRefitControl(freeSlotsFor(hit.unit.lruId), `data-unit="${escAttr(hit.unit.id)}"`, 'hwAssignSpare', 'Refit') : '';
                 const days = fitmentDaysOnWing(hit.fitment);
                 const roamVal = (hit.fitment && hit.fitment.roaming) || hit.unit.roaming || '';
                 return `<tr class="${off ? 'hw-row-off' : ''}">
                     ${numTd}
-                    <td${ds(a.id)}><strong>${escAttr(a.id)}</strong></td>
+                    <td${ds(a.id)}><strong>${escAttr(a.id)}</strong>${refit}</td>
                     ${posCell(slot)}
                     <td${ds((hit.unit.serial || '').toLowerCase())}>${hwSerialField(hit.unit)}</td>
                     ${dual ? `<td${ds((hit.unit.altSerial || '').toLowerCase())}>${hwAltField(hit.unit, slot.lru)}</td>` : ''}
                     ${isSim ? `<td${ds(roamVal)}>${roamCell(hit.unit, hit.fitment)}</td>` : ''}
                     <td${ds(dkey(hit.fitment && hit.fitment.fittedDate))}>${hwDateField(hit.unit, hit.fitment, 'fittedDate')}</td>
                     <td${ds(dkey(hit.fitment && hit.fitment.removedDate))}>${hwDateField(hit.unit, hit.fitment, 'removedDate')}</td>
-                    <td${ds(off ? 1 : 0)}>${hwStatusBadge(hit)}</td>
+                    <td${ds(svc ? 0.5 : (off ? 1 : 0))}>${svc ? '<span class="sr-state svc" title="Back from the shop Repaired / No Fault Found — ready to refit">SERVICEABLE</span>' : hwStatusBadge(hit)}</td>
                     <td class="sr-days"${ds(days == null ? -1 : days)}>${days == null ? dash : days + 'd'}</td>
                     ${isSim ? `<td class="hw-note-col"${ds(((hit.fitment && hit.fitment.notes) || '').toLowerCase())}>${notesCell(hit.unit, hit.fitment)}</td>` : ''}
                 </tr>`;
@@ -21773,6 +21851,8 @@
                 .filter(m => m.status === 'removed')
                 .sort((a, b) => dateSortKey(toISODate(b.removalDate)).localeCompare(dateSortKey(toISODate(a.removalDate))));
             const mmOpenShop = mmRemovals.filter(m => { const s = m.shopStatus || 'pending'; return s === 'pending' || s === 'in_shop'; }).length;
+            const mmRefit = {};
+            satcomRows().forEach(r => { if (r.refittedTo) mmRefit[r.id] = r.refittedTo + (r.refitDate ? ' · ' + r.refitDate : ''); });
             const modmanRemovalCard = m => {
                 const isAstro = !!m.astronicsSn && !m.kontronSn;
                 const serial = (isAstro ? m.astronicsSn : m.kontronSn) || '—';
@@ -21797,6 +21877,7 @@
                     <div class="hw-removal-body">
                         <div class="hw-issue-field"><b>Reason for removal</b>${reasonField}</div>
                         ${replacedBy ? `<div class="hw-issue-field"><b>Replaced by</b>${escAttr(replacedBy)}</div>` : ''}
+                        ${mmRefit[m.id] ? `<div class="hw-issue-field"><b>Refitted</b>${escAttr(mmRefit[m.id])}</div>` : ''}
                         ${!isAstro && m.eclipseSn ? `<div class="hw-issue-field"><b>Eclipse S/N</b>${escAttr(eclipseSnDisplay(m.eclipseSn))}</div>` : ''}
                         ${m.shopRef ? `<div class="hw-issue-field"><b>Shop reference</b>${escAttr(m.shopRef)}</div>` : ''}
                         ${m.shopFinding ? `<div class="hw-issue-field"><b>Shop finding</b>${escAttr(m.shopFinding)}</div>` : ''}
@@ -22066,6 +22147,7 @@
                 return `<input type="text" inputmode="numeric" maxlength="10" placeholder="dd-mm-yyyy" autocomplete="off" class="hw-date-input" value="${escAttr(toDMY(val))}" data-mm="${escAttr(r.id)}" data-field="${fld}" onchange="saveModmanField(this)">`;
             };
             const statusCell = r => {
+                if (r.serviceable) return '<span class="sr-state svc" title="Back from the shop Repaired / No Fault Found — ready to refit">SERVICEABLE</span>';
                 const map = { active: ['ON WING', 'on'], removed: ['REMOVED', 'off'], fault: ['FAULT', 'off'], spare: ['SPARE', ''] };
                 const m = map[r.status] || ['—', ''];
                 return m[0] === '—' ? '<span class="hw-none">—</span>' : `<span class="sr-state ${m[1]}">${m[0]}</span>`;
@@ -22073,7 +22155,14 @@
             const body = rows.map(r => {
                 const off = r.status === 'removed';
                 const days = dateSpan(r.installDate, r.removalDate || '');
-                const tail = r.aircraft ? `<strong>${escAttr(r.tailLabel)}</strong>` : '<span class="hw-none">spare</span>';
+                // A serviceable box (removed, repaired, not yet refitted) or a never-fitted
+                // spare gets the refit picker in edit mode; a refitted record says where the
+                // box went, so its old row reads as history.
+                const canRefit = editable && (r.serviceable || (r.status === 'spare' && !r.aircraft));
+                const refit = canRefit ? hwRefitControl(modmanFreeTails(r).map(t => ({ value: t, label: t })),
+                        `data-mm="${escAttr(r.id)}"`, 'hwRefitModman', r.serviceable ? 'Refit' : 'Fit') : '';
+                const went = r.refittedTo ? `<span class="hw-refit-note" title="This box was refitted">↻ refitted ${escAttr(r.refittedTo)}${r.refitDate ? ' · ' + escAttr(r.refitDate) : ''}</span>` : '';
+                const tail = (r.aircraft ? `<strong>${escAttr(r.tailLabel)}</strong>` : '<span class="hw-none">spare</span>') + went + refit;
                 const tailSort = r.aircraft ? String(r.aircraft) : '~spare';
                 const primarySort = (r.isAstronics ? r.astronicsSn : r.kontronSn) || '';
                 return `<tr class="${off ? 'hw-row-off' : ''}">
@@ -22083,7 +22172,7 @@
                     <td${ds(String(r.eclipseSn || '').toLowerCase())}>${snCell(r, 'eclipse')}</td>
                     <td${ds(dkey(r.installDate))}>${dateCell(r, 'installDate')}</td>
                     <td${ds(dkey(r.removalDate))}>${dateCell(r, 'removalDate')}</td>
-                    <td${ds(rank[r.status] === undefined ? 9 : rank[r.status])}>${statusCell(r)}</td>
+                    <td${ds(r.serviceable ? 2.5 : (rank[r.status] === undefined ? 9 : rank[r.status]))}>${statusCell(r)}</td>
                     <td class="sr-days"${ds(dnum(days))}>${days ? escAttr(days) : '<span class="hw-none">—</span>'}</td>
                 </tr>`;
             }).join('');
@@ -23350,21 +23439,86 @@
         // Fit a spare unit (no fitment on any aircraft) to an aircraft: one new on-wing
         // fitment on the spare's OWN record, carrying its roaming plan into the period of
         // service. Needs both the tail and a dd-mm-yyyy Fitted date from the spare row.
+        // REFIT A MODMAN (v2.229.0). A never-fitted spare is assigned in place (its one
+        // record gains aircraft + install date). A serviceable box — removed, back from
+        // the shop Repaired / No Fault Found — gets a NEW record on the new tail carrying
+        // the box's identity (Kontron / Eclipse / Astronics S/N, Taurus MG-ID/TID, Hughes
+        // chassis/ESN/MAC); the old record stays as ex-TAIL history with its shop report.
+        // Taurus + Hughes commissioning start at To-Do on the new aircraft (user, 29-Oct-2026).
+        async function hwRefitModman(el) {
+            const row = el.closest('tr');
+            const id = el.dataset.mm;
+            const m = modmansLive[id];
+            const r = satcomRows().find(x => x.id === id);
+            if (!row || !m || !r) return;
+            const tailEl = row.querySelector('.hw-spare-tail'), dateEl = row.querySelector('.hw-spare-date');
+            const tail = tailEl ? tailEl.value : '';
+            const fitted = dateEl && dateEl.value.trim() ? readDateField(dateEl) : '';
+            const sn = m.astronicsSn || m.kontronSn || m.eclipseSn || 'this MODMAN';
+            if (fitted === false) { setSyncStatus('🔴 Fitted date must be dd-mm-yyyy', '#dc3545'); return; }
+            if (!tail || !fitted) {
+                setSyncStatus(tail ? `🟡 Enter the Fitted date to fit ${sn} on ${tail}` : `🟡 Pick the aircraft to fit ${sn} on`, '#b8860b');
+                return;
+            }
+            const isSpare = r.status === 'spare' && !r.aircraft;
+            if (!isSpare && !r.serviceable) { setSyncStatus(`🔴 ${sn} is not ready to refit — its shop report must read Repaired or No Fault Found`, '#dc3545'); return; }
+            if (!modmanFreeTails(r).includes(tail)) { setSyncStatus(`🔴 ${tail} already has a MODMAN on wing — record its removal first`, '#dc3545'); return; }
+            if (!isSpare && toISODate(fitted) < (toISODate(r.removalDate || '') || '')) {
+                setSyncStatus(`🔴 ${sn} came off ${r.aircraft} on ${r.removalDate} — it cannot be fitted again before that`, '#dc3545');
+                return;
+            }
+            const token = await getIdToken();
+            if (!token) return;
+            [tailEl, dateEl].forEach(x => { if (x) x.disabled = true; });
+            const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+            let newId = id, body, method;
+            if (isSpare) {
+                body = { aircraft: tail, installDate: fitted, status: 'active', commTaurus: 'todo', commHughes: 'todo' };
+                method = 'PATCH';
+            } else {
+                body = { aircraft: tail, installDate: fitted, status: 'active', commTaurus: 'todo', commHughes: 'todo', addedAt: stamp };
+                ['kontronSn', 'eclipseSn', 'astronicsSn', 'taurusOldMgId', 'taurusOldTid', 'taurusNewMgId', 'taurusNewTid',
+                 'hnsChassisId', 'hnsEsn', 'hnsMac'].forEach(k => { if (m[k]) body[k] = m[k]; });
+                newId = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                method = 'PUT';
+            }
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/modmans/${newId}.json?auth=${token}`, {
+                    method, body: JSON.stringify(body),
+                });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                // /modmans is polled — mirror locally or the refit looks like it vanished.
+                if (isSpare) Object.assign(m, body); else modmansLive[newId] = body;
+                renderHardwarePage();
+                if (typeof renderSatcomPage === 'function') renderSatcomPage();
+                if (typeof renderMaintenancePage === 'function') renderMaintenancePage();
+                setSyncStatus(`🟢 ${sn} fitted on ${tail} from ${fitted} — commissioning To-Do · synced with your team`, '#28a745');
+            } catch (ex) {
+                setSyncStatus(`🔴 Could not fit ${sn} — ${ex.message}`, '#dc3545');
+                [tailEl, dateEl].forEach(x => { if (x) x.disabled = false; });
+            }
+        }
         async function hwAssignSpare(el) {
             const row = el.closest('tr');
             const unitId = el.dataset.unit;
             const u = unitsLive[unitId];
             if (!row || !u) return;
             const tailEl = row.querySelector('.hw-spare-tail'), dateEl = row.querySelector('.hw-spare-date');
-            const tail = tailEl ? tailEl.value : '';
+            // The picker value is "TAIL" or "TAIL|POSITION" (CWAP 1/5…, v2.229.0).
+            const [tail, position] = String(tailEl ? tailEl.value : '').split('|');
             const fitted = dateEl && dateEl.value.trim() ? readDateField(dateEl) : '';
             if (fitted === false) { setSyncStatus('🔴 Fitted date must be dd-mm-yyyy', '#dc3545'); return; }
             if (!tail || !fitted) {
-                setSyncStatus(tail ? `🟡 Enter the Fitted date to assign ${u.serial} to ${tail}` : '🟡 Pick the aircraft to assign this spare to', '#b8860b');
+                setSyncStatus(tail ? `🟡 Enter the Fitted date to fit ${u.serial} on ${tail}` : `🟡 Pick the aircraft to fit ${u.serial} on`, '#b8860b');
                 return;
             }
-            if (Object.values(u.fitments || {}).some(f => f.aircraft)) { setSyncStatus(`🔴 ${u.serial} is no longer a spare`, '#dc3545'); return; }
-            const onWing = unitsAtSlot(u.lruId, tail, undefined).find(h => fitmentIsOn(h.fitment));
+            // A never-fitted spare or a serviceable (repaired) box — the same lifecycle gate
+            // every install path uses: not on wing elsewhere, not scrapped, not fitted
+            // before its last removal.
+            const reuse = serialReuse(u.lruId, u.serial, { fitted, tail });
+            if (reuse && reuse.block) { setSyncStatus(`🔴 ${reuse.block}`, '#dc3545'); return; }
+            const onWing = unitsAtSlot(u.lruId, tail, position || undefined).find(h => fitmentIsOn(h.fitment));
             if (onWing) {
                 setSyncStatus(`🔴 ${tail} already has ${onWing.unit.serial} on wing — record its removal first`, '#dc3545');
                 return;
@@ -23375,6 +23529,7 @@
             const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
             const fitId = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
             const fitment = { aircraft: tail, state: 'on_wing', fittedDate: fitted, loggedAt: stamp };
+            if (position) fitment.position = position;
             if (u.roaming) fitment.roaming = u.roaming;
             try {
                 const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/units/${unitId}/fitments/${fitId}.json?auth=${token}`, {
