@@ -3966,6 +3966,50 @@
         .hw-ac-act-label { font-size: 9px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: #98a4ad; }
         .hw-ac-act { font-size: 12.5px; font-weight: 700; color: #17324b; white-space: nowrap; }
         .hw-ac-act.none { color: #b3bcc4; font-weight: 600; }
+        /* Header milestone track (v2.231.0) — see hwAcMilestoneTrack(). The track takes the
+           free middle of the row; captions sit below (first/last) or above (middle). */
+        /* Fixed widths on tail / type / fit so every row's track starts and ends at the
+           same x — the tracks read as one column down the page. */
+        .hw-ac-head .hw-ac-reg { min-width: 44px; }
+        .hw-ac-head > .tl-pill { min-width: 70px; box-sizing: border-box; text-align: center; }
+        .hw-ac-head > .status-badge { min-width: 110px; box-sizing: border-box; text-align: center; }
+        .hw-ac-head .hw-ac-right { min-width: 262px; justify-content: flex-end; }
+        @media (max-width: 760px) {
+            .hw-ac-head { flex-wrap: wrap; }
+            .hw-ac-head .hw-ac-right { min-width: 0; }
+            .hw-ac-mswrap { order: 9; flex-basis: 100%; margin: 0 4px; }
+            .hw-ac-mswrap { gap: 6px; }
+            .hw-ac-dslot { flex-basis: 38px; }
+            .hw-ms-cap { font-size: 10px; letter-spacing: -0.1px; }
+            .hw-ms-cap b { font-size: 7.5px; letter-spacing: 0.2px; }
+            .hw-ms-cc { display: none; }
+        }
+        .hw-ac-mswrap { flex: 1 1 auto; min-width: 230px; max-width: 640px; display: flex; align-items: center; gap: 10px; margin: 0 6px; }
+        .hw-ms { flex: 1 1 auto; min-width: 0; }
+        .hw-ac-dslot { flex: 0 0 44px; display: flex; justify-content: flex-start; }
+        .hw-ms-track { position: relative; display: block; height: 40px; }
+        .hw-ms-seg { position: absolute; top: 19px; height: 0; border-top: 2.5px solid #17324b; }
+        .hw-ms-seg.open { border-top: 2px dashed #c47f1c; }
+        .hw-ms-seg.gap  { border-top: 2px dashed #aab4be; }
+        .hw-ms-seg.live { border-top-color: #0a5c34; }
+        .hw-ms-node { position: absolute; top: 15px; width: 9px; height: 9px; }
+        .hw-ms-dot { display: block; width: 9px; height: 9px; border-radius: 50%; box-sizing: border-box; background: #fff; border: 4.5px solid #17324b; }
+        .hw-ms-node.open .hw-ms-dot { border: 2.5px solid #c47f1c; }
+        .hw-ms-node.pending .hw-ms-dot { border: 2.5px solid #b8c1ca; }
+        .hw-ms-node.live .hw-ms-dot { border-color: #0a5c34; box-shadow: 0 0 0 2.5px #d4ecdd; }
+        .hw-ms-cap { position: absolute; white-space: nowrap; font-size: 11px; font-weight: 700; color: #17324b; line-height: 1; }
+        .hw-ms-cap b { font-size: 8.5px; font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase; color: #98a4ad; margin-right: 1px; }
+        .hw-ms-cc { font-style: normal; }
+        .hw-ms-node.live .hw-ms-cap { color: #0a5c34; }
+        .hw-ms-node.open .hw-ms-cap { color: #8a5312; }
+        .hw-ms-node.pending .hw-ms-cap { color: #98a4ad; font-weight: 600; }
+        .hw-ms-cap.first, .hw-ms-cap.last { top: 15px; }
+        .hw-ms-cap.first { left: 0; }
+        .hw-ms-cap.last  { right: 0; }
+        .hw-ms-cap.up-l, .hw-ms-cap.up-c, .hw-ms-cap.up-r { bottom: 15px; }
+        .hw-ms-cap.up-l { left: 0; }
+        .hw-ms-cap.up-c { left: 50%; transform: translateX(-50%); }
+        .hw-ms-cap.up-r { right: 0; }
         .hw-ac-days { font-size: 10.5px; font-weight: 700; background: #eef2f5; color: #5a6b78; border-radius: 999px; padding: 1px 7px; white-space: nowrap; font-variant-numeric: tabular-nums; }
         /* Eclipse serial pill — a blue "ECL 000" chip so an Eclipse S/N reads distinctly
            from a Kontron/primary serial wherever the two sit side by side (MODMAN, SERVER). */
@@ -8434,8 +8478,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.230.1';
-        const APP_BUILD    = '2026.10.30.01';
+        const APP_VERSION  = '2.231.0';
+        const APP_BUILD    = '2026.10.30.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -23392,6 +23436,68 @@
         // The By-Aircraft view: a COLLAPSIBLE block per tail — the header shows the tail,
         // type and how many units are on record; click it to expand the full editable fit.
         // A Type filter + universal search (tail · serial · part number) narrow the list.
+        // Hardware › AIRCRAFT header milestone track (v2.231.0) — the AVR PDF's milestone
+        // strip shrunk to fit the header row: Mod start, Mod end and Activated as dots at
+        // their TRUE date positions (each aircraft on its own scale), in date order, so an
+        // activation inside the mod window sits inside it and a long wait for service
+        // reads as a long dashed gap. Navy = mod window, amber dashed = still ongoing
+        // (drawn to today), grey dashed = waiting for service, green = system live.
+        // First caption hangs below-left, last below-right, a middle one rides above —
+        // so captions never collide however close the dates are. A tail with no Mod start
+        // (linefit) returns '' and the caller keeps the plain Activated label.
+        function hwAcMilestoneTrack(a) {
+            const startIso = toISODate(a.retrofitStart || '');
+            if (!startIso || isLinefit(a)) return '';
+            const todayIso = new Date().toISOString().slice(0, 10);
+            const endIso = toISODate(a.retrofitEnd || '');
+            const actIso = toISODate(a.activatedDate || '');
+            const open = !endIso;
+            const dayN = iso => Math.round(new Date(iso + 'T00:00:00Z') / 86400000);
+            const short = iso => fmtDate(iso) || iso;
+            const nodes = [{ iso: startIso, k: 'Mod start', cls: 'done' }];
+            nodes.push(open ? { iso: todayIso < startIso ? startIso : todayIso, k: 'Ongoing', v: `${Math.max(0, dayN(todayIso) - dayN(startIso))}d so far`, cls: 'open' }
+                            : { iso: endIso, k: 'Mod end', cls: 'done' });
+            if (actIso) nodes.push({ iso: actIso, k: 'Activated', cls: 'live' });
+            nodes.sort((x, y) => x.iso < y.iso ? -1 : x.iso > y.iso ? 1 : (x.cls === 'live' ? 1 : -1));
+            const winEnd = open ? nodes.find(n => n.cls === 'open').iso : endIso;
+            let pending = false;
+            if (!actIso && !open) pending = true;
+            // Fractions by date; a pending activation gets a fixed 18% stub after Mod end.
+            const d0 = dayN(nodes[0].iso), d1 = dayN(nodes[nodes.length - 1].iso);
+            const span = Math.max(1, d1 - d0);
+            let fr = nodes.map(n => (dayN(n.iso) - d0) / span);
+            if (pending) { fr = fr.map(f => f * 0.82); nodes.push({ iso: '', k: 'Activation', v: 'Pending', cls: 'pending' }); fr.push(1); }
+            // Keep distinct dates at least 7% apart so their dots stay separate, then rescale.
+            for (let i = 1; i < fr.length; i++) if (nodes[i].iso !== nodes[i - 1].iso && fr[i] - fr[i - 1] < 0.07) fr[i] = fr[i - 1] + 0.07;
+            const top = fr[fr.length - 1] || 1;
+            fr = fr.map(f => Math.min(1, f / top));
+            const at = f => `calc((100% - 9px) * ${f.toFixed(4)})`;
+            const segs = [];
+            for (let i = 0; i < nodes.length - 1; i++) {
+                const A = nodes[i], B = nodes[i + 1];
+                let cls;
+                if (B.cls === 'pending' || (A.iso >= winEnd && A.iso !== startIso)) cls = 'gap';
+                else if (actIso && A.iso >= actIso) cls = 'live';
+                else cls = open ? 'open' : 'win';
+                if (fr[i + 1] > fr[i]) segs.push(`<span class="hw-ms-seg ${cls}" style="left:calc(${at(fr[i])} + 4.5px);width:calc((100% - 9px) * ${(fr[i + 1] - fr[i]).toFixed(4)});"></span>`);
+            }
+            const last = nodes.length - 1;
+            const dots = nodes.map((n, i) => {
+                const pos = i === 0 ? 'first' : i === last ? 'last' : (fr[i] < 0.28 ? 'up-l' : fr[i] > 0.72 ? 'up-r' : 'up-c');
+                // The century sits in its own span so a phone can hide it (04-Feb-25).
+                const val = n.v ? escAttr(n.v) : escAttr(short(n.iso)).replace(/-(\d{2})(\d{2})$/, '-<i class="hw-ms-cc">$1</i>$2');
+                return `<span class="hw-ms-node ${n.cls}" style="left:${at(fr[i])};"><span class="hw-ms-dot"></span><span class="hw-ms-cap ${pos}"><b>${escAttr(n.k)}</b> ${val}</span></span>`;
+            }).join('');
+            const days = (x, y) => (x && y) ? dayN(y) - dayN(x) : null;
+            const win = days(startIso, winEnd), gap = (actIso && endIso) ? days(endIso, actIso) : null;
+            const tip = [
+                win != null ? `Mod window ${win} day${win === 1 ? '' : 's'}${open ? ' so far' : ''}` : '',
+                gap != null ? (gap >= 0 ? `activated ${gap} day${gap === 1 ? '' : 's'} after mod end` : `activated ${-gap} day${gap === -1 ? '' : 's'} before mod end`) : '',
+                actIso ? `${days(actIso, todayIso)} days in service` : '',
+            ].filter(Boolean).join(' · ');
+            return `<span class="hw-ms" title="${escAttr(tip)}"><span class="hw-ms-track">${segs.join('')}${dots}</span></span>`;
+        }
+
         function renderHwByAircraft() {
             const editable = hwEditable();
             const pill = c => `background:${c.bg}; color:${c.fg}; border-color:${c.bd}`;
@@ -23614,6 +23720,7 @@
                     : (actRaw
                         ? `<span class="hw-ac-act">${escAttr(fmtDate(actRaw) || actRaw)}</span>${(days != null && days >= 0) ? ` <span class="hw-ac-days">${days}d</span>` : ''}`
                         : `<span class="hw-ac-act none">—</span>`);
+                const msTrack = hwAcMilestoneTrack(a);
                 const fitBadge = inRetrofit
                     ? `<span class="status-badge fit-in-retrofit">IN RETROFIT</span>`
                     : `<span class="status-badge fit-${fit}">${fit === 'linefit' ? 'LINEFIT' : 'RETROFIT'}</span>`;
@@ -23623,7 +23730,9 @@
                         <span class="hw-ac-reg">${escAttr(a.id)}</span>
                         <span class="tl-pill" style="${pill(TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL)}">${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</span>
                         ${fitBadge}
-                        <span class="hw-ac-actwrap"><span class="hw-ac-act-label">${inRetrofit ? 'Mod start' : 'Activated'}</span>${actCell}</span>
+                        ${msTrack
+                            ? `<span class="hw-ac-mswrap">${msTrack}<span class="hw-ac-dslot">${(!inRetrofit && actRaw && days != null && days >= 0) ? `<span class="hw-ac-days" title="Days in service">${days}d</span>` : ''}</span></span>`
+                            : `<span class="hw-ac-actwrap"><span class="hw-ac-act-label">${inRetrofit ? 'Mod start' : 'Activated'}</span>${actCell}</span>`}
                         <span class="hw-ac-right">
                             ${locPill}
                             <span class="hw-ac-counts">

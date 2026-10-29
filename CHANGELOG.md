@@ -13,6 +13,16 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.231.0 — Hardware › AIRCRAFT header milestone track (2026-10-30)
+The AIRCRAFT header's lone "Activated" date became a compact proportional track (`hwAcMilestoneTrack`): Mod start,
+Mod end and Activated as dots at their true dates (each tail on its own scale), in date order — an activation inside
+the mod window sits inside it. Navy = mod window, amber dashed = ongoing (drawn to today, "Nd so far"), grey dashed =
+wait for service, green = live; pending activation gets an 18% stub. First caption below-left, last below-right,
+middle above, so captions never collide; distinct dates kept ≥7% apart. Tail/type/fit cells and the right group got
+fixed widths so every track lines up in one column; days-in-service pill sits in a fixed slot after it; tooltip gives
+window length, gap to service and days in service. Linefit / no Mod start keep the plain Activated label. Phones: the
+track wraps to its own line and drops the century (04-Feb-25).
+
 ### v2.230.1 — Timeline rows inside a day follow newest-first (2026-10-30)
 Rows within one day were in tail order. They now follow the Newest/Oldest toggle: rows with a UTC time
 (`hm` — OTA patch stamps, flight departures) sort by it, date-only rows follow in tail order. Shared
