@@ -3985,6 +3985,181 @@
 
         .hw-group-head { display: flex; align-items: center; gap: 10px; padding: 2px 2px 10px; }
         .hw-group-name { font-size: 16px; font-weight: 800; color: #17324b; letter-spacing: 0.02em; }
+        /* ===== Hardware › REMOVALS dashboard (v2.230.0) =====
+           Colour = identity: Thinkom blue #2a78d6, Kontron orange #eb6834 (validated pair).
+           Shop outcomes use the status set and always carry a label or legend. */
+        .rm-head { flex-wrap: wrap; }
+        .rm-head-note { font-size: 12.5px; color: #6b7785; flex-basis: 100%; margin-top: -2px; }
+        .rm-wrap { display: grid; gap: 14px; margin-top: 4px; min-width: 0; }
+        .rm-wrap button { font-family: inherit; }
+        .rm-card { background: #fff; border: 1px solid #e3e8ec; border-radius: 12px; padding: 14px 16px; min-width: 0; }
+        .rm-card h3 { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #17324b; margin: 0 0 2px; }
+        .rm-sub { font-size: 12px; color: #6b7785; margin-bottom: 12px; }
+        .rm-muted { color: #8a939b; font-size: 11.5px; }
+        .rm-empty { color: #8a939b; font-size: 13px; padding: 14px 0; text-align: center; }
+        .rm-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; flex: none; }
+        .rm-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr)); gap: 14px; }
+        .rm-grid-trend { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; }
+        @media (max-width: 900px) { .rm-grid-trend { grid-template-columns: minmax(0, 1fr); } }
+
+        /* controls */
+        .rm-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .rm-seg { display: inline-flex; background: #f1f3f5; border-radius: 10px; padding: 3px; gap: 2px; }
+        .rm-seg button { border: none; background: transparent; padding: 7px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 700; color: #4a5866; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .rm-seg button b { font-weight: 800; color: #8a939b; font-size: 11.5px; }
+        .rm-seg button.on { background: #fff; color: #17324b; box-shadow: 0 1px 3px rgba(16, 40, 60, 0.15); }
+        .rm-seg button.on b { color: #0a5c34; }
+        .rm-select, .rm-search { border: 1px solid #dde1e5; border-radius: 8px; padding: 7px 10px; font-size: 12.5px; background: #fff; color: #17324b; font-family: inherit; }
+        .rm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .rm-chip { border: 1px solid #b9d3c4; background: #eaf4ee; color: #0a5c34; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+        .rm-chip span { margin-left: 4px; opacity: 0.7; }
+        .rm-reset { border: 1px solid #dde1e5; background: #fff; color: #4a5866; border-radius: 8px; padding: 7px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        .rm-reset:hover { background: #f6f8f9; }
+
+        /* KPI tiles */
+        .rm-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        .rm-kpi { background: #fff; border: 1px solid #e3e8ec; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .rm-kpi:focus-visible { outline: 2px solid #0a5c34; outline-offset: 2px; }
+        .rm-kpi-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #6b7785; }
+        .rm-kpi-value { font-size: 28px; font-weight: 800; color: #17324b; line-height: 1.05; font-variant-numeric: tabular-nums; }
+        .rm-kpi-value small { font-size: 16px; color: #8a939b; font-weight: 700; }
+        .rm-kpi-sub { font-size: 11.5px; color: #6b7785; }
+        .rm-kpi-sub b { color: #17324b; }
+        .rm-split, .rm-prog { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: #eef1f4; gap: 2px; }
+        .rm-split i, .rm-prog i { display: block; height: 100%; }
+        .rm-delta { font-weight: 800; color: #6b7785; }
+        .rm-delta.up { color: #d03b3b; }
+        .rm-delta.down { color: #0a7a0a; }
+
+        /* insights */
+        .rm-insights ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 8px; }
+        .rm-insights button { width: 100%; text-align: left; display: flex; gap: 10px; align-items: flex-start; border: 1px solid #edf0f3; background: #fafbfc; border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #33414e; line-height: 1.4; cursor: pointer; }
+        .rm-insights button:hover { border-color: #b9d3c4; background: #f3f9f5; }
+        .rm-insights button.on { border-color: #0a5c34; background: #eaf4ee; }
+        .rm-insights b { color: #17324b; }
+        .rm-ins-icon { font-size: 16px; line-height: 1.2; }
+
+        /* supplier scoreboards */
+        .rm-supplier { border-top: 4px solid var(--sup); transition: opacity 0.15s; }
+        .rm-supplier.dim { opacity: 0.45; }
+        .rm-sup-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 10px; }
+        .rm-sup-name { border: none; background: none; padding: 0; font-size: 17px; font-weight: 900; letter-spacing: 0.08em; color: var(--sup); cursor: pointer; }
+        .rm-sup-stats { display: flex; gap: 14px; font-size: 12px; color: #6b7785; flex-wrap: wrap; }
+        .rm-sup-stats b { color: #17324b; font-size: 14px; }
+        .rm-sc-row { display: grid; grid-template-columns: minmax(96px, 1.1fr) minmax(90px, 2fr) 62px 46px minmax(80px, 1.3fr); align-items: center; gap: 10px; padding: 6px 4px; border-radius: 8px; }
+        .rm-sc-row + .rm-sc-row { border-top: 1px solid #f1f3f5; }
+        .rm-sc-row.on { background: #f3f9f5; box-shadow: inset 3px 0 0 #0a5c34; }
+        .rm-sc-headrow { font-size: 10px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #8a939b; padding-top: 0; }
+        .rm-sc-name { border: none; background: none; text-align: left; padding: 0; cursor: pointer; font-size: 13px; font-weight: 800; color: #17324b; display: flex; flex-direction: column; }
+        .rm-sc-name small { font-size: 10.5px; color: #8a939b; font-weight: 600; }
+        .rm-sc-bar { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .rm-sc-bar b { font-size: 14px; color: #17324b; min-width: 16px; font-variant-numeric: tabular-nums; }
+        .rm-bar { flex: 1; height: 12px; background: #f1f3f5; border-radius: 0 4px 4px 0; overflow: hidden; display: block; }
+        .rm-bar i { display: block; height: 100%; border-radius: 0 4px 4px 0; min-width: 0; }
+        .rm-sc-num { font-size: 12.5px; font-weight: 700; color: #33414e; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        @media (max-width: 560px) {
+            .rm-sc-row { grid-template-columns: minmax(84px, 1fr) minmax(80px, 1.6fr) 58px; }
+            .rm-sc-nff, .rm-sc-shop { display: none; }
+        }
+
+        /* outcome stacks */
+        .rm-ostack { display: flex; gap: 2px; height: 10px; border-radius: 4px; overflow: hidden; background: #f1f3f5; }
+        .rm-ostack.big { height: 28px; border-radius: 6px; margin-bottom: 10px; }
+        .rm-ostack i { display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 12px; font-weight: 800; color: #fff; cursor: pointer; min-width: 3px; }
+        .rm-ostack i:hover, .rm-ostack i.on { filter: brightness(1.12); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.7); }
+        .rm-olegend { list-style: none; padding: 0; margin: 0 0 6px; display: grid; gap: 2px; }
+        .rm-olegend button, .rm-oldest button { width: 100%; display: flex; align-items: center; gap: 8px; border: none; background: none; padding: 5px 6px; border-radius: 6px; font-size: 12.5px; color: #33414e; cursor: pointer; text-align: left; }
+        .rm-olegend button:hover, .rm-oldest button:hover { background: #f6f8f9; }
+        .rm-olegend button.on { background: #eaf4ee; }
+        .rm-olegend i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+        .rm-olegend b, .rm-oldest b { margin-left: auto; color: #17324b; font-variant-numeric: tabular-nums; }
+        .rm-mini-h { font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #6b7785; margin: 12px 0 4px; }
+        .rm-oldest { list-style: none; padding: 0; margin: 0; }
+        .rm-sn { font-family: Consolas, 'SF Mono', Menlo, monospace; font-size: 12px; color: #17324b; }
+
+        /* trend */
+        .rm-legend { display: flex; gap: 14px; font-size: 12px; color: #4a5866; margin: -4px 0 6px; }
+        .rm-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+        .rm-trend { width: 100%; min-height: 210px; }
+        .rm-trend svg { display: block; }
+        .rm-ax { font-size: 10.5px; fill: #8a939b; font-family: inherit; }
+        .rm-ax-strong { fill: #17324b; font-weight: 800; }
+        .rm-hit { cursor: default; outline: none; }
+        .rm-hit:hover, .rm-hit:focus { fill: rgba(23, 50, 75, 0.05); }
+
+        /* category bars */
+        .rm-cbars { display: grid; gap: 4px; }
+        .rm-cbar { display: grid; grid-template-columns: minmax(130px, 0.9fr) minmax(60px, 1.6fr) 28px; align-items: center; gap: 10px; border: none; background: none; padding: 5px 6px; border-radius: 8px; cursor: pointer; text-align: left; font-size: 12.5px; color: #33414e; }
+        .rm-cbar:hover { background: #f6f8f9; }
+        .rm-cbar.on { background: #eaf4ee; box-shadow: inset 3px 0 0 #0a5c34; }
+        .rm-cbar b { color: #17324b; text-align: right; font-variant-numeric: tabular-nums; }
+        .rm-cbar-track { display: block; height: 12px; }
+        .rm-cbar-fill { display: flex; gap: 2px; height: 100%; min-width: 4px; }
+        .rm-cbar-fill i { display: block; height: 100%; }
+        .rm-cbar-fill i:last-child { border-radius: 0 4px 4px 0; }
+        .rm-await { margin-top: 6px; width: 100%; text-align: left; border: 1px dashed #c9d1d9; background: #fafbfc; border-radius: 8px; padding: 7px 10px; font-size: 12.5px; color: #4a5866; cursor: pointer; }
+        .rm-await.on { border-color: #0a5c34; background: #eaf4ee; }
+        .rm-await b { color: #17324b; }
+        .rm-clusters { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+        .rm-clusters li { display: flex; gap: 10px; align-items: flex-start; background: #fafbfc; border: 1px solid #edf0f3; border-radius: 10px; padding: 9px 11px; }
+        .rm-cl-n { font-weight: 900; color: #0a5c34; font-size: 15px; min-width: 26px; }
+        .rm-cl-text { display: block; font-size: 12.5px; color: #33414e; font-style: italic; line-height: 1.4; }
+        .rm-cl-units { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+        .rm-cl-units button { border: 1px solid #e3e8ec; background: #fff; border-radius: 999px; padding: 3px 8px; font-size: 11px; color: #33414e; cursor: pointer; }
+
+        /* heat map */
+        .rm-heat-wrap { overflow-x: auto; }
+        .rm-heat { border-collapse: separate; border-spacing: 3px; font-size: 12px; min-width: 100%; }
+        .rm-heat th { font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; color: #6b7785; text-align: center; padding: 2px 4px; white-space: nowrap; }
+        .rm-heat th button { border: none; background: none; font: inherit; color: inherit; cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+        .rm-heat th button:hover { background: #f1f3f5; color: #17324b; }
+        .rm-heat-sup { color: var(--sup) !important; border-bottom: 3px solid var(--sup); }
+        .rm-heat tbody th { text-align: left; }
+        .rm-heat tbody th button { font-size: 12.5px; font-weight: 800; color: #17324b; display: flex; gap: 6px; align-items: baseline; }
+        .rm-heat tbody th small { font-size: 10px; color: #8a939b; font-weight: 600; }
+        .rm-heat td { height: 30px; min-width: 44px; background: #f6f8f9; border-radius: 6px; text-align: center; padding: 0; }
+        .rm-heat td.grp, .rm-heat th.grp { border-left: 0; }
+        .rm-heat td.grp { box-shadow: -3px 0 0 #fff, -5px 0 0 #e3e8ec; }
+        .rm-heat td button { width: 100%; height: 30px; border: none; border-radius: 6px; font-weight: 800; font-size: 13px; cursor: pointer; }
+        .rm-heat td button:hover { box-shadow: inset 0 0 0 2px #17324b; }
+        .rm-heat td.sel button { box-shadow: inset 0 0 0 2px #0a5c34; }
+        .rm-heat td.tot { background: #eef1f4; color: #17324b; }
+        .rm-heat tr.on th button { color: #0a5c34; }
+        .rm-ramp { display: flex; align-items: center; gap: 3px; justify-content: flex-end; font-size: 10.5px; color: #8a939b; margin-top: 8px; }
+        .rm-ramp i { width: 22px; height: 10px; border-radius: 3px; }
+        .rm-ramp span { margin: 0 4px; }
+
+        /* register */
+        .rm-reg-head { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+        .rm-reg-head > div { flex: 1 1 200px; }
+        .rm-search { flex: 1 1 240px; max-width: 360px; }
+        .rm-reg { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        .rm-reg th { text-align: left; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #6b7785; border-bottom: 1px solid #e3e8ec; padding: 6px 8px; white-space: nowrap; }
+        .rm-reg th button { border: none; background: none; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; padding: 0; }
+        .rm-reg td { border-bottom: 1px solid #f1f3f5; padding: 8px; vertical-align: top; color: #33414e; }
+        .rm-reg tbody tr { cursor: pointer; }
+        .rm-reg tbody tr:hover, .rm-reg tbody tr:focus { background: #f6faf8; outline: none; }
+        .rm-nw { white-space: nowrap; }
+        .rm-num { font-variant-numeric: tabular-nums; }
+        .rm-n { color: #8a939b; font-size: 11px; }
+        .rm-txt { min-width: 220px; max-width: 360px; }
+        .rm-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; margin-top: 3px; }
+        .rm-cat { display: inline-block; font-size: 10.5px; font-weight: 800; color: #17324b; background: #eef1f4; border-radius: 999px; padding: 2px 8px; }
+        .rm-cat.auto { background: #fff; border: 1px dashed #c9d1d9; color: #4a5866; }
+        .rm-repeat { font-size: 10.5px; font-weight: 800; color: #b5350f; background: #fdeee8; border-radius: 999px; padding: 1px 6px; }
+        .rm-edit { color: #8a939b; text-align: center; }
+        .rm-pencil { color: #0a5c34; font-size: 14px; }
+
+        /* tooltip */
+        .rm-tip { position: fixed; z-index: 2000; display: none; pointer-events: none; background: #17324b; color: #dfe7ee; font-size: 12px; line-height: 1.45; padding: 8px 10px; border-radius: 8px; box-shadow: 0 6px 18px rgba(10, 30, 50, 0.25); max-width: 280px; }
+        .rm-tip strong { color: #fff; font-size: 12.5px; display: block; margin-bottom: 2px; }
+
+        /* record editor */
+        .rm-ed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+        .rm-ed-sec { font-size: 11px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #0a5c34; margin: 14px 0 6px; padding-top: 10px; border-top: 1px solid #edf0f3; }
+        .rm-ed-len { float: right; font-size: 11px; color: #8a939b; text-transform: none; font-weight: 600; }
+        .rm-ed-len.over { color: #d03b3b; }
+        @media (max-width: 520px) { .rm-ed-grid { grid-template-columns: 1fr; } }
 
         /* Compact metadata strip (part number / vendor / sw / notes). */
         .hw-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
@@ -7060,6 +7235,49 @@
         </div>
     </div>
 
+    <!-- Removal record (v2.230.0): Hardware › REMOVALS — reason + shop report for one removal. -->
+    <div id="rmEdOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="act-modal" style="max-width:600px;">
+            <h3 style="color:#0a5c34; margin-bottom:4px;" id="rmEdTitle">Removal</h3>
+            <p style="font-size:13px; color:#4a5866; margin-bottom:6px; line-height:1.5;" id="rmEdMeta">—</p>
+
+            <div class="rm-ed-sec">Why it came off</div>
+            <label class="add-sched-label" for="rmEdReason">Reason for removal <span class="rm-ed-len" id="rmEdReasonLen"></span></label>
+            <textarea id="rmEdReason" class="add-sched-input" rows="3" maxlength="200" placeholder="The symptom on the aircraft, e.g. TX issue — stuck on sending CSC" oninput="rmEdCount()"></textarea>
+            <label class="add-sched-label" for="rmEdReasonCat">Reason category</label>
+            <select id="rmEdReasonCat" class="add-sched-input"></select>
+
+            <div class="rm-ed-sec">What the shop found</div>
+            <div class="rm-ed-grid">
+                <div>
+                    <label class="add-sched-label" for="rmEdStatus">Shop status</label>
+                    <select id="rmEdStatus" class="add-sched-input" onchange="rmEdCount()">
+                        <option value="pending">Awaiting Shop</option>
+                        <option value="in_shop">In Shop</option>
+                        <option value="repaired">Repaired</option>
+                        <option value="no_fault">No Fault Found</option>
+                        <option value="scrap">Scrapped</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="add-sched-label" for="rmEdRef">Shop reference</label>
+                    <input id="rmEdRef" class="add-sched-input" maxlength="60" placeholder="e.g. RMA-9509" autocomplete="off">
+                </div>
+            </div>
+            <label class="add-sched-label" for="rmEdFinding">Findings</label>
+            <textarea id="rmEdFinding" class="add-sched-input" rows="3" maxlength="1000" placeholder="What the shop found, and what was done" oninput="rmEdCount()"></textarea>
+            <label class="add-sched-label" for="rmEdFindingCat">Finding category</label>
+            <select id="rmEdFindingCat" class="add-sched-input"></select>
+
+            <div id="rmEdError" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
+            <p id="rmEdSignin" style="display:none; font-size:12.5px; color:#6b7785; margin:4px 0 10px;">Sign in to edit the reason and shop report.</p>
+            <div style="display:flex; gap:10px; margin-top:6px;">
+                <button onclick="closeRmRecord()" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Close</button>
+                <button id="rmEdSave" onclick="saveRmRecord()" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Unit History (v2.199.0): one physical box across every aircraft it has flown on. -->
     <div id="unitHistOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
         <div class="act-modal" style="max-width:560px;">
@@ -8216,8 +8434,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.229.4';
-        const APP_BUILD    = '2026.10.29.05';
+        const APP_VERSION  = '2.230.0';
+        const APP_BUILD    = '2026.10.29.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -20446,6 +20664,8 @@
                     // Reason for removal lives on the /modmans record (saveModmanField) —
                     // the AVR removed-equipment table reads it from here.
                     removalReason: pick('removalReason'),
+                    // Removals dashboard category overrides (v2.230.0) — blank = auto-classified.
+                    reasonCat: pick('reasonCat'), findingCat: pick('findingCat'),
                     notes: pick('notes'),
                     // Shop report lives on the /modmans record itself (openShopReportMm),
                     // so the by-aircraft view and the AVR dossier can show a removed box's
@@ -21607,6 +21827,827 @@
                 }</ul>`;
         }
 
+        // ===== Hardware › REMOVALS — the reliability dashboard (v2.230.0) =====
+        // One page over every unit that came off a RETROFIT ECLIPSE aircraft, split by
+        // supplier: Thinkom (KANDU, KRFU, RX/TX antenna) and Kontron (MODMAN, IFE server,
+        // CWAP). Nothing here is stored twice — the rows are DERIVED from the two places a
+        // removal already lives: a removed /units fitment, and a removed /modmans record
+        // (read through satcomRows(), the MODMAN single source). Edits from this page
+        // PATCH those same records, so Hardware, Unit History and the AVR read the change.
+        //
+        // Categories: a removal's reason and its shop finding are free text. To chart them,
+        // each gets a CATEGORY — auto-derived from the words (RM_REASON_CATS /
+        // rmAutoFinding, first match wins), overridable per record (reasonCat / findingCat
+        // on the fitment or MODMAN record). An override wins; blank means "auto".
+        //
+        // Cross-filtering: every chart filters every other chart, but never itself — a
+        // chart skips its own dimension (rmFilter's `skip`), so a picked bar stays visible
+        // against its siblings, highlighted, instead of being the only bar left.
+        const RM_SUPPLIERS = [
+            { id: 'thinkom', label: 'Thinkom', color: '#2a78d6', lrus: ['kandu', 'krfu', 'rx_antenna', 'tx_antenna'] },
+            { id: 'kontron', label: 'Kontron', color: '#eb6834', lrus: ['modman', 'ife_server', 'cwap'] },
+        ];
+        const RM_LRU_LABEL = {
+            kandu: 'KANDU', krfu: 'KRFU', rx_antenna: 'RX ANTENNA', tx_antenna: 'TX ANTENNA',
+            modman: 'MODMAN', ife_server: 'IFE SERVER', cwap: 'CWAP',
+        };
+        const RM_LRUS = RM_SUPPLIERS.flatMap(s => s.lrus);
+        function rmSupplier(id) { return RM_SUPPLIERS.find(s => s.id === id) || RM_SUPPLIERS[0]; }
+        function rmSupplierOf(lru) { return RM_SUPPLIERS.find(s => s.lrus.includes(lru)) || RM_SUPPLIERS[0]; }
+
+        // Reason-for-removal categories (the SYMPTOM that took the unit off). Order is the
+        // auto-classification precedence: the first pattern that matches wins.
+        const RM_REASON_CATS = [
+            { id: 'troubleshoot', label: 'Troubleshooting swap',     re: /troubleshoot|as part of|recommendation|precaution/i },
+            { id: 'missing',      label: 'Missing / incomplete part', re: /missing|slot was empty/i },
+            { id: 'no_power',     label: 'No power / dead unit',     re: /no power|totally dead|\bdead\b|inoperative|leds? (?:are |is )?off/i },
+            { id: 'discrete',     label: 'Discrete / wiring fault',  re: /discrete|\bpins?\b|\bgnd\b|short circuit|arinc|\bgte\b|wiring/i },
+            { id: 'boot',         label: 'Boot / software fault',    re: /qdl|\bboot|reboot|firmware|software missing|corrupt/i },
+            { id: 'tx_rf',        label: 'TX / RF path fault',       re: /\btx\b|transmit|\bcsc\b|rf path|\bbuc\b|reflected/i },
+            { id: 'signal',       label: 'Signal / commissioning',   re: /rssi|dbm|signal|commission/i },
+            { id: 'offline',      label: 'Offline / no comms',       re: /offline|ethernet|unable to (?:connect|reach|login)|not accessible|no comm|can'?t ping|loss of/i },
+            { id: 'other',        label: 'Other' },
+            { id: 'unrecorded',   label: 'Not recorded' },
+        ];
+        function rmAutoReason(text) {
+            const t = String(text || '').trim();
+            if (!t) return 'unrecorded';
+            const hit = RM_REASON_CATS.find(c => c.re && c.re.test(t));
+            return hit ? hit.id : 'other';
+        }
+        // Shop-finding categories (what the shop found once the unit was opened).
+        const RM_FINDING_CATS = [
+            { id: 'board',       label: 'Board / module failure' },
+            { id: 'cable',       label: 'Cable / connector' },
+            { id: 'install',     label: 'Installation error' },
+            { id: 'missing',     label: 'Missing part' },
+            { id: 'failed',      label: 'Failure confirmed' },
+            { id: 'oem_pending', label: 'Fault seen · OEM pending' },
+            { id: 'lab_nff',     label: 'Lab NFF · OEM pending' },
+            { id: 'nff',         label: 'No fault found' },
+            { id: 'other',       label: 'Other' },
+            { id: 'awaiting',    label: 'Awaiting report' },
+        ];
+        function rmAutoFinding(text, status) {
+            const t = String(text || '').trim();
+            const s = status || 'pending';
+            if (!t) return s === 'no_fault' ? 'nff' : s === 'scrap' ? 'failed' : s === 'repaired' ? 'other' : 'awaiting';
+            if (/installed incorrectly|incorrect(?:ly)? install|mis-?install/i.test(t)) return 'install';
+            if (/missing/i.test(t)) return 'missing';
+            // A split report — the integrator's lab has spoken, the OEM has not yet.
+            if (/pending/i.test(t)) return /no issue|no fault|\bnff\b/i.test(t) ? 'lab_nff' : 'oem_pending';
+            if (/cable|connector|unseated|loose|reconnect/i.test(t)) return 'cable';
+            if (/\bsib\b|board|\bcome\b|computer assy|module|replaced|rework/i.test(t)) return 'board';
+            if (s === 'no_fault' || /\bnff\b|no fault|no issue/i.test(t)) return 'nff';
+            if (/fail|defect|dead|not boot|doesn'?t boot/i.test(t)) return 'failed';
+            return 'other';
+        }
+        function rmCatLabel(list, id) { const c = list.find(x => x.id === id); return c ? c.label : (id || '—'); }
+
+        // Shop outcome = the shopStatus, in the order the stacked bars read. Colours are
+        // the status set; every bar also carries labels/legend, never colour alone.
+        const RM_OUTCOMES = [
+            { id: 'repaired', label: 'Repaired',       color: '#0ca30c' },
+            { id: 'no_fault', label: 'No fault found', color: '#6250d6' },
+            { id: 'scrap',    label: 'Scrapped',       color: '#d03b3b' },
+            { id: 'in_shop',  label: 'In shop',        color: '#eda100' },
+            { id: 'pending',  label: 'Awaiting shop',  color: '#9a998f' },
+        ];
+        const RM_CLOSED = ['repaired', 'no_fault', 'scrap'];
+
+        function rmToday() { return new Date().toISOString().slice(0, 10); }
+        function rmDaysBetween(a, b) {
+            const ms = Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z');
+            return isNaN(ms) ? null : Math.round(ms / 86400000);
+        }
+        // The scope: retrofit aircraft on the Eclipse system, in the programme.
+        function rmScopeFleet() {
+            return aircraftData.filter(a => inProgramme(a) && fitOf(a) === 'retrofit' && fleetSystemOf(a) === 'Eclipse');
+        }
+
+        function rmRecord(x, scope) {
+            const a = scope.get(x.tail) || {};
+            x.type = a.type || '';
+            x.supplier = rmSupplierOf(x.lru).id;
+            x.iso = toISODate(x.removed || '');
+            x.fittedIso = toISODate(x.fitted || '');
+            x.days = (x.iso && x.fittedIso) ? rmDaysBetween(x.fittedIso, x.iso) : null;
+            x.status = x.shopStatus || 'pending';
+            x.rcatAuto = rmAutoReason(x.reason);
+            x.rcat = x.reasonCat || x.rcatAuto;
+            x.fcatAuto = rmAutoFinding(x.shopFinding, x.status);
+            x.fcat = x.findingCat || x.fcatAuto;
+            x.hasReport = RM_CLOSED.includes(x.status) || !!String(x.shopFinding || '').trim();
+            x.age = x.iso ? rmDaysBetween(x.iso, rmToday()) : null;
+            return x;
+        }
+
+        // Every removal in scope, one row each — /units fitments + /modmans records.
+        function rmDataset() {
+            const scope = new Map(rmScopeFleet().map(a => [a.id, a]));
+            const out = [];
+            unitEntries().forEach(u => {
+                if (!RM_LRUS.includes(u.lruId) || u.lruId === 'modman') return;
+                unitFitments(u).forEach(f => {
+                    if (fitmentIsOn(f) || !scope.has(f.aircraft)) return;
+                    out.push(rmRecord({
+                        key: 'u:' + u.id + ':' + f.id, src: 'unit', unitId: u.id, fitmentId: f.id,
+                        lru: u.lruId, tail: f.aircraft, position: f.position || '',
+                        serial: u.serial || '', alt: u.altSerial || '',
+                        fitted: f.fittedDate || '', removed: f.removedDate || '',
+                        reason: f.removalReason || '', reasonCat: f.reasonCat || '',
+                        shopStatus: f.shopStatus || '', shopRef: f.shopRef || '',
+                        shopFinding: f.shopFinding || '', findingCat: f.findingCat || '',
+                    }, scope));
+                });
+            });
+            satcomRows().forEach(m => {
+                if (m.status !== 'removed' || !scope.has(m.aircraft)) return;
+                out.push(rmRecord({
+                    key: 'm:' + m.id, src: 'modman', mmId: m.id,
+                    lru: 'modman', tail: m.aircraft, position: '',
+                    serial: m.kontronSn || m.astronicsSn || '', alt: m.eclipseSn || '',
+                    fitted: m.installDate || '', removed: m.removalDate || '',
+                    reason: m.removalReason || '', reasonCat: m.reasonCat || '',
+                    shopStatus: m.shopStatus || '', shopRef: m.shopRef || '',
+                    shopFinding: m.shopFinding || '', findingCat: m.findingCat || '',
+                }, scope));
+            });
+            // Repeat removals: the same position (tail + equipment + slot) losing a unit
+            // more than once. The nth removal there carries repeatN = n.
+            const slots = {};
+            out.slice().sort((a, b) => (a.iso || '9999').localeCompare(b.iso || '9999')).forEach(r => {
+                const k = r.tail + '|' + r.lru + '|' + r.position;
+                slots[k] = (slots[k] || 0) + 1;
+                r.repeatN = slots[k];
+            });
+            out.forEach(r => { r.slotCount = slots[r.tail + '|' + r.lru + '|' + r.position]; });
+            return out;
+        }
+
+        // ---- filter state ----
+        const rmF = { supplier: '', period: 'all', lru: '', tail: '', rcat: '', fcat: '', outcome: '', q: '' };
+        let rmSort = { key: 'date', dir: -1 };   // dir is a numeric MULTIPLIER, never 'asc'
+        let rmCache = null;
+
+        const RM_PERIODS = [
+            { id: 'all', label: 'All time' }, { id: '12m', label: 'Last 12 months' },
+            { id: '6m', label: 'Last 6 months' }, { id: '90d', label: 'Last 90 days' },
+        ];
+        function rmPeriodFrom(p) {
+            const d = new Date();
+            if (p === '12m') d.setUTCMonth(d.getUTCMonth() - 12);
+            else if (p === '6m') d.setUTCMonth(d.getUTCMonth() - 6);
+            else if (p === '90d') d.setUTCDate(d.getUTCDate() - 90);
+            else return '';
+            return d.toISOString().slice(0, 10);
+        }
+        // Rows passing every active filter except those named in `skip`.
+        function rmFilter(rows, skip) {
+            const sk = new Set(skip || []);
+            const from = sk.has('period') ? '' : rmPeriodFrom(rmF.period);
+            return rows.filter(r => {
+                if (rmF.supplier && !sk.has('supplier') && r.supplier !== rmF.supplier) return false;
+                if (from && (!r.iso || r.iso < from)) return false;
+                if (rmF.lru && !sk.has('lru') && r.lru !== rmF.lru) return false;
+                if (rmF.tail && !sk.has('tail') && r.tail !== rmF.tail) return false;
+                if (rmF.rcat && !sk.has('rcat') && r.rcat !== rmF.rcat) return false;
+                if (rmF.fcat && !sk.has('fcat') && r.fcat !== rmF.fcat) return false;
+                if (rmF.outcome && !sk.has('outcome') && r.status !== rmF.outcome) return false;
+                return true;
+            });
+        }
+        function rmSet(dim, val) {
+            if (dim === 'supplier' || dim === 'period') rmF[dim] = val;
+            else rmF[dim] = rmF[dim] === val ? '' : val;
+            // An equipment pick from the other supplier clears the supplier switch.
+            if (dim === 'lru' && rmF.lru && rmF.supplier && rmSupplierOf(rmF.lru).id !== rmF.supplier) rmF.supplier = '';
+            if (dim === 'supplier' && rmF.lru && rmF.supplier && rmSupplierOf(rmF.lru).id !== rmF.supplier) rmF.lru = '';
+            renderHwContent();
+        }
+        // Heat-map cell: filter to that aircraft AND equipment; a second click clears both.
+        function rmCell(tail, lru) {
+            const sel = rmF.tail === tail && rmF.lru === lru;
+            rmF.tail = sel ? '' : tail;
+            rmF.lru = sel ? '' : lru;
+            if (rmF.lru && rmF.supplier && rmSupplierOf(rmF.lru).id !== rmF.supplier) rmF.supplier = '';
+            renderHwContent();
+        }
+        function rmReset() {
+            Object.assign(rmF, { supplier: '', period: 'all', lru: '', tail: '', rcat: '', fcat: '', outcome: '', q: '' });
+            renderHwContent();
+        }
+
+        // Fleet unit-days in service for these equipment types — the denominator of MTBUR.
+        // The service clock starts at Mod end (retrofitEnd), else the Activation date, and
+        // counts each installed position (CWAP ×3 / ×5) once.
+        function rmExposure(lrus, tail, fromIso) {
+            const today = rmToday();
+            let unitDays = 0, units = 0;
+            rmScopeFleet().forEach(a => {
+                if (tail && a.id !== tail) return;
+                const start = toISODate(a.retrofitEnd || '') || toISODate(a.activatedDate || '');
+                if (!start || start > today) return;
+                const s = fromIso && fromIso > start ? fromIso : start;
+                const d = Math.max(0, rmDaysBetween(s, today) || 0);
+                lrus.forEach(id => {
+                    const l = lruById(lruIdForFit(id, 'retrofit') || id);
+                    const q = l ? lruQtyFor(l, a.type) : 1;
+                    unitDays += d * q; units += q;
+                });
+            });
+            return { unitDays, units };
+        }
+        function rmMtbur(lrus, n) {
+            if (!n) return null;
+            const e = rmExposure(lrus, rmF.tail, rmPeriodFrom(rmF.period));
+            return e.unitDays ? Math.round(e.unitDays / n) : null;
+        }
+        function rmFmtDays(d) {
+            if (d === null || d === undefined) return '—';
+            return d >= 10000 ? Math.round(d / 1000) + 'k d' : d.toLocaleString('en-GB') + ' d';
+        }
+        function rmPct(a, b) { return b ? Math.round(100 * a / b) : 0; }
+        function rmCount(rows, key) {
+            const m = {};
+            rows.forEach(r => { m[r[key]] = (m[r[key]] || 0) + 1; });
+            return m;
+        }
+        function rmLruTag(lru) {
+            const s = rmSupplierOf(lru);
+            return `<span class="rm-dot" style="background:${s.color}"></span>${escAttr(RM_LRU_LABEL[lru] || lru)}`;
+        }
+        function rmTip(lines) { return `data-tip="${escAttr(lines.filter(Boolean).join('\n'))}"`; }
+        function rmClick(dim, val) { return `data-rmf="${escAttr(dim)}" data-rmv="${escAttr(val)}"`; }
+
+        // Recurring shop findings: the same first clause on two or more units.
+        function rmFindingClusters(rows) {
+            const pre = /^\s*(?:eclipse|thinkom|shop|kontron)\s+(?:findings?|report)\s*:\s*/i;
+            const groups = {};
+            rows.forEach(r => {
+                const seg = String(r.shopFinding || '').split(/\n|\|/)[0].replace(pre, '').trim();
+                const k = seg.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+                if (k.length < 8) return;
+                (groups[k] = groups[k] || { text: seg, rows: [] }).rows.push(r);
+            });
+            return Object.values(groups).filter(g => g.rows.length >= 2).sort((a, b) => b.rows.length - a.rows.length);
+        }
+
+        // ---------- page head ----------
+        function rmHead() {
+            const fleet = rmScopeFleet().length;
+            return `<div class="hw-group-head rm-head">
+                <span class="hw-group-name">Removals</span>
+                <span class="hw-fitted">Retrofit · Eclipse · ${fleet} aircraft</span>
+                <span class="rm-head-note">Thinkom &amp; Kontron line-replaceable units — what came off, why, and what the shop found.</span>
+            </div>`;
+        }
+
+        // ---------- the page ----------
+        function rmBody() {
+            const all = rmDataset();
+            rmCache = all;
+            const rows = rmFilter(all);
+            return `<div class="rm-wrap" id="rmWrap">
+                ${rmControls(all)}
+                ${rmKpis(rows, all)}
+                ${rmInsightsCard(rows)}
+                <div class="rm-grid2">${RM_SUPPLIERS.map(s => rmSupplierPanel(s, all)).join('')}</div>
+                <div class="rm-grid-trend">
+                    <section class="rm-card"><h3>Removals per month</h3>
+                        <div class="rm-sub">Stacked by supplier · hover a month for the split</div>
+                        <div class="rm-legend">${RM_SUPPLIERS.map(s => `<span><i style="background:${s.color}"></i>${s.label}</span>`).join('')}</div>
+                        <div id="rmTrend" class="rm-trend"></div>
+                    </section>
+                    ${rmShopCard(all)}
+                </div>
+                <div class="rm-grid2">${rmReasonCard(all)}${rmFindingCard(all)}</div>
+                ${rmHeatmapCard(all)}
+                ${rmRegisterCard()}
+            </div>`;
+        }
+
+        function rmControls(all) {
+            const segBtn = (id, label, n) => `<button class="${rmF.supplier === id ? 'on' : ''}" onclick="rmSet('supplier','${id}')">${label}${n !== undefined ? ` <b>${n}</b>` : ''}</button>`;
+            const base = rmFilter(all, ['supplier', 'lru']);
+            const chips = [];
+            if (rmF.lru) chips.push(['lru', RM_LRU_LABEL[rmF.lru]]);
+            if (rmF.tail) chips.push(['tail', rmF.tail]);
+            if (rmF.rcat) chips.push(['rcat', rmCatLabel(RM_REASON_CATS, rmF.rcat)]);
+            if (rmF.fcat) chips.push(['fcat', rmCatLabel(RM_FINDING_CATS, rmF.fcat)]);
+            if (rmF.outcome) chips.push(['outcome', rmCatLabel(RM_OUTCOMES, rmF.outcome)]);
+            const dirty = chips.length || rmF.supplier || rmF.period !== 'all';
+            return `<div class="rm-controls">
+                <div class="rm-seg" role="group" aria-label="Supplier">
+                    ${segBtn('', 'All', base.length)}
+                    ${RM_SUPPLIERS.map(s => segBtn(s.id, `<span class="rm-dot" style="background:${s.color}"></span>${s.label}`, base.filter(r => r.supplier === s.id).length)).join('')}
+                </div>
+                <select class="rm-select" aria-label="Period" onchange="rmSet('period', this.value)">
+                    ${RM_PERIODS.map(p => `<option value="${p.id}" ${rmF.period === p.id ? 'selected' : ''}>${p.label}</option>`).join('')}
+                </select>
+                <div class="rm-chips">${chips.map(([d, l]) => `<button class="rm-chip" onclick="rmSet('${d}', rmF['${d}'])" title="Remove this filter">${escAttr(l)} <span aria-hidden="true">✕</span></button>`).join('')}</div>
+                ${dirty ? `<button class="rm-reset" onclick="rmReset()">↺ Reset</button>` : ''}
+            </div>`;
+        }
+
+        function rmKpis(rows, all) {
+            const lrus = rmF.lru ? [rmF.lru] : (rmF.supplier ? rmSupplier(rmF.supplier).lrus : RM_LRUS);
+            const n = rows.length;
+            const bySup = rmCount(rows, 'supplier');
+            const mtbur = rmMtbur(lrus, n);
+            // Last 90 days vs the 90 before — period filter ignored for this tile.
+            const nop = rmFilter(all, ['period']);
+            const d90 = rmPeriodFrom('90d');
+            const d180 = (() => { const d = new Date(); d.setUTCDate(d.getUTCDate() - 180); return d.toISOString().slice(0, 10); })();
+            const last90 = nop.filter(r => r.iso && r.iso >= d90).length;
+            const prev90 = nop.filter(r => r.iso && r.iso >= d180 && r.iso < d90).length;
+            const delta = last90 - prev90;
+            const withRep = rows.filter(r => r.hasReport).length;
+            const closed = rows.filter(r => RM_CLOSED.includes(r.status));
+            const nff = closed.filter(r => r.status === 'no_fault').length;
+            const open = rows.filter(r => !RM_CLOSED.includes(r.status));
+            const oldest = open.reduce((m, r) => (r.age !== null && r.age > m ? r.age : m), 0);
+            const repeatSlots = new Set(rows.filter(r => r.slotCount >= 2).map(r => r.tail + '|' + r.lru + '|' + r.position));
+            const tile = (label, value, sub, extra, tip) => `<div class="rm-kpi" ${tip ? rmTip(tip) : ''} tabindex="0">
+                <div class="rm-kpi-label">${label}</div><div class="rm-kpi-value">${value}</div>
+                ${extra || ''}<div class="rm-kpi-sub">${sub}</div></div>`;
+            const split = n ? `<div class="rm-split">${RM_SUPPLIERS.map(s => (bySup[s.id] ? `<i style="flex:${bySup[s.id]};background:${s.color}"></i>` : '')).join('')}</div>` : '';
+            const prog = (v, max, color) => `<div class="rm-prog"><i style="width:${rmPct(v, max)}%;background:${color}"></i></div>`;
+            const arrow = delta > 0 ? `<span class="rm-delta up">▲ ${delta}</span>` : delta < 0 ? `<span class="rm-delta down">▼ ${-delta}</span>` : `<span class="rm-delta">● level</span>`;
+            return `<div class="rm-kpis">
+                ${tile('Removals', n, RM_SUPPLIERS.map(s => `${s.label} <b>${bySup[s.id] || 0}</b>`).join(' · '), split,
+                    ['Removals in view', ...RM_SUPPLIERS.map(s => `${s.label}: ${bySup[s.id] || 0}`)])}
+                ${tile('Fleet MTBUR', rmFmtDays(mtbur), mtbur ? `≈ ${(mtbur / 365).toFixed(1)} years per unit` : 'no removals in view', '',
+                    ['Mean time between unscheduled removals', 'Unit-days in service ÷ removals', 'Clock starts at Mod end (else Activation)'])}
+                ${tile('Last 90 days', last90, `${arrow} vs previous 90 days (${prev90})`, '',
+                    ['Removals in the last 90 days: ' + last90, 'Previous 90 days: ' + prev90])}
+                ${tile('Shop reports', `${withRep}<small>/${n}</small>`, `${rmPct(withRep, n)}% of removals have a report`, prog(withRep, n, '#0a5c34'),
+                    ['A report = a shop verdict (Repaired / NFF / Scrapped) or a written finding'])}
+                ${tile('NFF rate', closed.length ? rmPct(nff, closed.length) + '%' : '—', `${nff} of ${closed.length} closed reports`, prog(nff, closed.length, '#6250d6'),
+                    ['No Fault Found ÷ closed shop reports', 'High NFF points at troubleshooting swaps, not failures'])}
+                ${tile('Open at shop', open.length, open.length ? `oldest ${oldest} days off wing` : 'nothing outstanding', '',
+                    ['Awaiting shop or in shop — no final verdict yet'])}
+                ${tile('Repeat positions', repeatSlots.size, 'same slot removed twice or more', '',
+                    ['Aircraft position (tail + equipment + slot) that lost a unit 2+ times'])}
+            </div>`;
+        }
+
+        function rmInsights(rows) {
+            const out = [];
+            const n = rows.length;
+            if (!n) return out;
+            const byLru = Object.entries(rmCount(rows, 'lru')).sort((a, b) => b[1] - a[1]);
+            if (byLru.length && byLru[0][1] >= 2) {
+                const [id, c] = byLru[0];
+                const m = rmMtbur([id], c);
+                out.push({ icon: '📈', f: ['lru', id], html: `<b>${RM_LRU_LABEL[id]}</b> drives the most removals — <b>${c}</b> of ${n} (${rmPct(c, n)}%)${m ? `, MTBUR ${rmFmtDays(m)}` : ''}.` });
+            }
+            const byTail = Object.entries(rmCount(rows, 'tail')).sort((a, b) => b[1] - a[1]);
+            if (byTail.length && byTail[0][1] >= 3) {
+                const [t, c] = byTail[0];
+                const kinds = new Set(rows.filter(r => r.tail === t).map(r => r.lru)).size;
+                out.push({ icon: '✈️', f: ['tail', t], html: `<b>${escAttr(t)}</b> has had <b>${c}</b> removals across ${kinds} equipment type${kinds === 1 ? '' : 's'} — the most in the fleet.` });
+            }
+            const cl = rmFindingClusters(rows)[0];
+            if (cl) {
+                const lr = [...new Set(cl.rows.map(r => RM_LRU_LABEL[r.lru]))].join(' / ');
+                out.push({ icon: '🔁', f: ['fcat', cl.rows[0].fcat], html: `Same shop finding on <b>${cl.rows.length}</b> units (${escAttr(lr)}): “${escAttr(cl.text.length > 110 ? cl.text.slice(0, 108) + '…' : cl.text)}”` });
+            }
+            const noRep = rows.filter(r => !r.hasReport);
+            if (noRep.length) {
+                const o = noRep.filter(r => r.age !== null).sort((a, b) => b.age - a.age)[0];
+                out.push({ icon: '⏳', f: ['outcome', 'pending'], html: `<b>${noRep.length}</b> removal${noRep.length === 1 ? ' has' : 's have'} no shop report yet${o ? ` — oldest: ${RM_LRU_LABEL[o.lru]} ${escAttr(o.serial)} off ${escAttr(o.tail)}, <b>${o.age}</b> days ago` : ''}.` });
+            }
+            const closed = rows.filter(r => RM_CLOSED.includes(r.status));
+            const nff = closed.filter(r => r.status === 'no_fault').length;
+            if (closed.length >= 3 && nff) {
+                out.push({ icon: '🔍', f: ['outcome', 'no_fault'], html: `<b>${rmPct(nff, closed.length)}%</b> of closed shop reports found no fault (${nff} of ${closed.length}) — units that may not have needed to come off.` });
+            }
+            const rcat = Object.entries(rmCount(rows.filter(r => r.rcat !== 'unrecorded'), 'rcat')).sort((a, b) => b[1] - a[1])[0];
+            if (rcat && rcat[1] >= 2) out.push({ icon: '🩺', f: ['rcat', rcat[0]], html: `Top symptom: <b>${escAttr(rmCatLabel(RM_REASON_CATS, rcat[0]))}</b> — ${rcat[1]} removals (${rmPct(rcat[1], n)}%).` });
+            const unrec = rows.filter(r => r.rcat === 'unrecorded').length;
+            if (unrec) out.push({ icon: '✏️', f: ['rcat', 'unrecorded'], html: `<b>${unrec}</b> removal${unrec === 1 ? ' has' : 's have'} no reason recorded — click to fill ${unrec === 1 ? 'it' : 'them'} in.` });
+            return out.slice(0, 6);
+        }
+        function rmInsightsCard(rows) {
+            const ins = rmInsights(rows);
+            if (!ins.length) return '';
+            return `<section class="rm-card rm-insights"><h3>What stands out</h3>
+                <ul>${ins.map(i => `<li><button ${rmClick(i.f[0], i.f[1])} class="${rmF[i.f[0]] === i.f[1] ? 'on' : ''}"><span class="rm-ins-icon" aria-hidden="true">${i.icon}</span><span>${i.html}</span></button></li>`).join('')}</ul>
+            </section>`;
+        }
+
+        // Outcome mini-stack: one segment per shop outcome, widths by count.
+        function rmOutcomeBar(rows, big) {
+            if (!rows.length) return `<div class="rm-ostack empty"></div>`;
+            const c = rmCount(rows, 'status');
+            return `<div class="rm-ostack ${big ? 'big' : ''}">${RM_OUTCOMES.filter(o => c[o.id]).map(o =>
+                `<i style="flex:${c[o.id]};background:${o.color}" ${rmTip([`${c[o.id]} · ${o.label}`, `${rmPct(c[o.id], rows.length)}% of ${rows.length}`])} ${rmClick('outcome', o.id)} class="${rmF.outcome === o.id ? 'on' : ''}">${big && c[o.id] / rows.length > 0.07 ? c[o.id] : ''}</i>`).join('')}</div>`;
+        }
+
+        function rmSupplierPanel(s, all) {
+            const base = rmFilter(all, ['supplier', 'lru']);
+            const mine = base.filter(r => r.supplier === s.id);
+            const max = Math.max(1, ...RM_LRUS.map(l => base.filter(r => r.lru === l).length));
+            const dim = rmF.supplier && rmF.supplier !== s.id;
+            const sm = rmMtbur(s.lrus, mine.length);
+            const rowsHtml = s.lrus.map(l => {
+                const rs = mine.filter(r => r.lru === l);
+                const exp = rmExposure([l], rmF.tail, '');
+                const m = rmMtbur([l], rs.length);
+                const closed = rs.filter(r => RM_CLOSED.includes(r.status));
+                const nff = closed.filter(r => r.status === 'no_fault').length;
+                const on = rmF.lru === l;
+                return `<div class="rm-sc-row ${on ? 'on' : ''}">
+                    <button class="rm-sc-name" ${rmClick('lru', l)} ${rmTip([RM_LRU_LABEL[l], `${exp.units} installed positions in scope`, 'Click to filter the page'])}>${escAttr(RM_LRU_LABEL[l])}<small>${exp.units} fitted</small></button>
+                    <div class="rm-sc-bar" ${rmClick('lru', l)} ${rmTip([`${rs.length} removals · ${RM_LRU_LABEL[l]}`, `${rmPct(rs.length, base.length)}% of removals in view`])}>
+                        <span class="rm-bar"><i style="width:${(rs.length / max) * 100}%;background:${s.color}"></i></span><b>${rs.length}</b></div>
+                    <div class="rm-sc-num" ${rmTip(['MTBUR · ' + RM_LRU_LABEL[l], m ? `${m.toLocaleString('en-GB')} unit-days per removal` : 'No removals in view'])}>${rmFmtDays(m)}</div>
+                    <div class="rm-sc-num rm-sc-nff" ${rmTip(['NFF · ' + RM_LRU_LABEL[l], `${nff} of ${closed.length} closed reports`])}>${closed.length ? rmPct(nff, closed.length) + '%' : '—'}</div>
+                    <div class="rm-sc-shop">${rmOutcomeBar(rs)}</div>
+                </div>`;
+            }).join('');
+            return `<section class="rm-card rm-supplier ${dim ? 'dim' : ''}" style="--sup:${s.color}">
+                <div class="rm-sup-head">
+                    <button class="rm-sup-name" onclick="rmSet('supplier', rmF.supplier === '${s.id}' ? '' : '${s.id}')">${s.label.toUpperCase()}</button>
+                    <div class="rm-sup-stats"><span><b>${mine.length}</b> removals</span><span><b>${rmPct(mine.length, base.length)}%</b> of total</span><span>MTBUR <b>${rmFmtDays(sm)}</b></span></div>
+                </div>
+                <div class="rm-sc">
+                    <div class="rm-sc-row rm-sc-headrow"><span>Equipment</span><span>Removals</span><span>MTBUR</span><span class="rm-sc-nff">NFF</span><span class="rm-sc-shop">Shop outcome</span></div>
+                    ${rowsHtml}
+                </div>
+            </section>`;
+        }
+
+        function rmShopCard(all) {
+            const rows = rmFilter(all, ['outcome']);
+            const c = rmCount(rows, 'status');
+            const withRep = rows.filter(r => r.hasReport).length;
+            const open = rows.filter(r => !RM_CLOSED.includes(r.status) && r.age !== null).sort((a, b) => b.age - a.age).slice(0, 4);
+            return `<section class="rm-card"><h3>Shop pipeline</h3>
+                <div class="rm-sub"><b>${withRep}</b> of ${rows.length} removals have a shop report</div>
+                ${rmOutcomeBar(rows, true)}
+                <ul class="rm-olegend">${RM_OUTCOMES.map(o => `<li><button ${rmClick('outcome', o.id)} class="${rmF.outcome === o.id ? 'on' : ''}"><i style="background:${o.color}"></i>${o.label}<b>${c[o.id] || 0}</b></button></li>`).join('')}</ul>
+                ${open.length ? `<div class="rm-mini-h">Longest without a verdict</div><ul class="rm-oldest">${open.map(r =>
+                    `<li><button onclick="openRmRecord('${escAttr(r.key)}')">${rmLruTag(r.lru)} <span class="rm-sn">${escAttr(r.serial)}</span> <span class="rm-muted">ex-${escAttr(r.tail)}</span><b>${r.age} d</b></button></li>`).join('')}</ul>` : ''}
+            </section>`;
+        }
+
+        // Horizontal bars per category, stacked by supplier.
+        function rmCatBars(rows, cats, dim) {
+            const counts = cats.map(c => {
+                const rs = rows.filter(r => r[dim === 'rcat' ? 'rcat' : 'fcat'] === c.id);
+                return { c, n: rs.length, by: rmCount(rs, 'supplier') };
+            }).filter(x => x.n && x.c.id !== 'awaiting')
+                // "Not recorded" is a gap in the data, not a symptom — always listed last, grey.
+                .sort((a, b) => (a.c.id === 'unrecorded') - (b.c.id === 'unrecorded') || b.n - a.n);
+            if (!counts.length) return `<div class="rm-empty">No removals in view.</div>`;
+            const max = Math.max(...counts.map(x => x.n));
+            return `<div class="rm-cbars">${counts.map(x => `<button class="rm-cbar ${rmF[dim] === x.c.id ? 'on' : ''}" ${rmClick(dim, x.c.id)}
+                ${rmTip([x.c.label, `${x.n} removals (${rmPct(x.n, rows.length)}%)`, ...RM_SUPPLIERS.map(s => x.by[s.id] ? `${s.label}: ${x.by[s.id]}` : '')])}>
+                <span class="rm-cbar-label">${escAttr(x.c.label)}</span>
+                <span class="rm-cbar-track"><span class="rm-cbar-fill" style="width:${(x.n / max) * 100}%">${x.c.id === 'unrecorded' ? `<i style="flex:1;background:#c9d1d9"></i>` : RM_SUPPLIERS.map(s => x.by[s.id] ? `<i style="flex:${x.by[s.id]};background:${s.color}"></i>` : '').join('')}</span></span>
+                <b>${x.n}</b></button>`).join('')}</div>`;
+        }
+        function rmReasonCard(all) {
+            const rows = rmFilter(all, ['rcat']);
+            return `<section class="rm-card"><h3>Why units come off</h3>
+                <div class="rm-sub">Reason-for-removal category · auto-classified from the reason text, overridable per record</div>
+                ${rmCatBars(rows, RM_REASON_CATS, 'rcat')}
+            </section>`;
+        }
+        function rmFindingCard(all) {
+            const rows = rmFilter(all, ['fcat']);
+            const cl = rmFindingClusters(rows);
+            return `<section class="rm-card"><h3>What the shop found</h3>
+                <div class="rm-sub">Shop-finding category · auto-classified from the findings, overridable per record</div>
+                ${rmCatBars(rows, RM_FINDING_CATS, 'fcat')}
+                ${(() => { const w = rows.filter(r => r.fcat === 'awaiting').length; return w ? `<button class="rm-await ${rmF.fcat === 'awaiting' ? 'on' : ''}" ${rmClick('fcat', 'awaiting')}>⏳ <b>${w}</b> removal${w === 1 ? '' : 's'} still awaiting a shop report — not counted above</button>` : ''; })()}
+                ${cl.length ? `<div class="rm-mini-h">Recurring findings</div><ul class="rm-clusters">${cl.slice(0, 4).map(g => `<li>
+                    <span class="rm-cl-n">×${g.rows.length}</span>
+                    <span><span class="rm-cl-text">“${escAttr(g.text)}”</span>
+                    <span class="rm-cl-units">${g.rows.map(r => `<button onclick="openRmRecord('${escAttr(r.key)}')">${rmLruTag(r.lru)} ${escAttr(r.serial)} · ${escAttr(r.tail)}</button>`).join('')}</span></span>
+                </li>`).join('')}</ul>` : ''}
+            </section>`;
+        }
+
+        // Aircraft × equipment heat map — where the removals concentrate.
+        function rmHeatmapCard(all) {
+            const rows = rmFilter(all, ['tail', 'lru']);
+            const lrus = rmF.supplier ? rmSupplier(rmF.supplier).lrus : RM_LRUS;
+            const sups = RM_SUPPLIERS.filter(s => !rmF.supplier || s.id === rmF.supplier);
+            const tails = Object.entries(rmCount(rows, 'tail')).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+            if (!tails.length) return '';
+            const ramp = n => n <= 0 ? '' : n === 1 ? '#cde2fb' : n === 2 ? '#86b6ef' : n === 3 ? '#3987e5' : '#1c5cab';
+            const typeOf = t => { const a = aircraftData.find(x => x.id === t); return a ? (TYPE_SHORT_LABEL[a.type] || a.type) : ''; };
+            const body = tails.map(([t, tot]) => `<tr class="${rmF.tail === t ? 'on' : ''}">
+                <th scope="row"><button ${rmClick('tail', t)}>${escAttr(t)}<small>${escAttr(typeOf(t))}</small></button></th>
+                ${lrus.map((l, i) => {
+                    const n = rows.filter(r => r.tail === t && r.lru === l).length;
+                    const first = i > 0 && rmSupplierOf(l) !== rmSupplierOf(lrus[i - 1]);
+                    const sel = rmF.tail === t && rmF.lru === l;
+                    return `<td class="${first ? 'grp' : ''} ${n ? 'hit' : ''} ${sel ? 'sel' : ''}">${n ? `<button style="background:${ramp(n)};color:${n >= 3 ? '#fff' : '#17324b'}"
+                        onclick="rmCell('${escAttr(t)}','${l}')"
+                        ${rmTip([`${t} · ${RM_LRU_LABEL[l]}`, `${n} removal${n === 1 ? '' : 's'}`, 'Click to filter'])}>${n}</button>` : ''}</td>`;
+                }).join('')}
+                <td class="grp tot"><b>${tot}</b></td></tr>`).join('');
+            return `<section class="rm-card"><h3>Where removals concentrate</h3>
+                <div class="rm-sub">Aircraft × equipment · darker = more removals · aircraft with no removals are not listed</div>
+                <div class="table-scroll-wrapper rm-heat-wrap"><table class="rm-heat">
+                    <thead><tr><th></th>${sups.map(s => `<th colspan="${s.lrus.length}" class="grp rm-heat-sup" style="--sup:${s.color}">${s.label.toUpperCase()}</th>`).join('')}<th class="grp"></th></tr>
+                    <tr><th>Aircraft</th>${lrus.map((l, i) => `<th class="${i > 0 && rmSupplierOf(l) !== rmSupplierOf(lrus[i - 1]) ? 'grp' : ''}"><button ${rmClick('lru', l)}>${escAttr(RM_LRU_LABEL[l])}</button></th>`).join('')}<th class="grp">Total</th></tr></thead>
+                    <tbody>${body}</tbody>
+                </table></div>
+                <div class="rm-ramp"><span>1</span><i style="background:#cde2fb"></i><i style="background:#86b6ef"></i><i style="background:#3987e5"></i><i style="background:#1c5cab"></i><span>4+</span></div>
+            </section>`;
+        }
+
+        function rmRegisterCard() {
+            return `<section class="rm-card"><div class="rm-reg-head">
+                    <div><h3>Removal register</h3><div class="rm-sub" id="rmRegCount"></div></div>
+                    <input type="search" class="rm-search" placeholder="Search tail, serial, reason or finding" value="${escAttr(rmF.q)}" oninput="rmF.q=this.value; rmRenderRegister()" autocomplete="off">
+                    <button class="rm-reset" onclick="rmExportCsv()">⤓ CSV</button>
+                </div>
+                <div class="table-scroll-wrapper"><table class="rm-reg" id="rmReg"></table></div>
+            </section>`;
+        }
+        const RM_REG_COLS = [
+            { key: 'date', label: 'Removed', v: r => r.iso || '' },
+            { key: 'tail', label: 'Aircraft', v: r => r.tail },
+            { key: 'lru', label: 'Equipment', v: r => RM_LRUS.indexOf(r.lru) },
+            { key: 'serial', label: 'Serial', v: r => r.serial },
+            { key: 'days', label: 'On wing', v: r => r.days === null ? -1 : r.days },
+            { key: 'reason', label: 'Reason for removal', v: r => r.rcat + r.reason },
+            { key: 'shop', label: 'Shop', v: r => RM_OUTCOMES.findIndex(o => o.id === r.status) },
+            { key: 'finding', label: 'Shop finding', v: r => r.fcat + r.shopFinding },
+        ];
+        function rmSortBy(key) {
+            rmSort = rmSort.key === key ? { key, dir: -rmSort.dir } : { key, dir: key === 'date' || key === 'days' ? -1 : 1 };
+            rmRenderRegister();
+        }
+        function rmRegisterRows() {
+            const q = rmF.q.trim().toLowerCase();
+            let rows = rmFilter(rmCache || rmDataset());
+            if (q) rows = rows.filter(r => [r.tail, r.serial, r.alt, r.reason, r.shopFinding, r.shopRef, RM_LRU_LABEL[r.lru],
+                rmCatLabel(RM_REASON_CATS, r.rcat), rmCatLabel(RM_FINDING_CATS, r.fcat)].join(' ').toLowerCase().includes(q));
+            const col = RM_REG_COLS.find(c => c.key === rmSort.key) || RM_REG_COLS[0];
+            return rows.sort((a, b) => {
+                const va = col.v(a), vb = col.v(b);
+                const c = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb));
+                return (c || (b.iso || '').localeCompare(a.iso || '')) * (c ? rmSort.dir : 1);
+            });
+        }
+        function rmRenderRegister() {
+            const t = document.getElementById('rmReg');
+            if (!t) return;
+            const rows = rmRegisterRows();
+            const edit = canEdit();
+            const cnt = document.getElementById('rmRegCount');
+            if (cnt) cnt.textContent = `${rows.length} removal${rows.length === 1 ? '' : 's'} · click a row to ${edit ? 'edit the reason and shop report' : 'see the full record'}`;
+            const pill = s => `<span class="status-badge shop-badge shop-${escAttr(s)}">${escAttr(shopStatusLabel(s))}</span>`;
+            const chip = (list, id, auto) => `<span class="rm-cat ${auto ? 'auto' : ''}" title="${auto ? 'Auto-classified' : 'Set by an editor'}">${escAttr(rmCatLabel(list, id))}</span>`;
+            t.innerHTML = `<thead><tr><th>#</th>${RM_REG_COLS.map(c => `<th><button onclick="rmSortBy('${c.key}')">${c.label}${rmSort.key === c.key ? (rmSort.dir > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('')}<th></th></tr></thead>
+                <tbody>${rows.length ? rows.map((r, i) => `<tr onclick="openRmRecord('${escAttr(r.key)}')" tabindex="0" onkeydown="if(event.key==='Enter')openRmRecord('${escAttr(r.key)}')">
+                    <td class="rm-n">${i + 1}</td>
+                    <td class="rm-nw">${r.removed ? escAttr(r.removed) : '<span class="rm-muted">undated</span>'}</td>
+                    <td class="rm-nw"><b>${escAttr(r.tail)}</b></td>
+                    <td class="rm-nw">${rmLruTag(r.lru)}${r.position ? ` <span class="rm-muted">#${escAttr(r.position)}</span>` : ''}${r.repeatN >= 2 ? ` <span class="rm-repeat" title="Removal no. ${r.repeatN} from this position">↻${r.repeatN}</span>` : ''}</td>
+                    <td class="rm-nw"><span class="rm-sn">${escAttr(r.serial || '—')}</span>${r.alt ? `<br><span class="rm-muted">ECL ${escAttr(r.alt)}</span>` : ''}</td>
+                    <td class="rm-nw rm-num">${r.days === null ? '—' : r.days + ' d'}</td>
+                    <td class="rm-txt">${chip(RM_REASON_CATS, r.rcat, !r.reasonCat)}<div class="rm-clamp">${r.reason ? escAttr(r.reason) : '<span class="rm-muted">not recorded</span>'}</div></td>
+                    <td class="rm-nw">${pill(r.status)}${r.shopRef ? `<br><span class="rm-muted">${escAttr(r.shopRef)}</span>` : ''}</td>
+                    <td class="rm-txt">${chip(RM_FINDING_CATS, r.fcat, !r.findingCat)}<div class="rm-clamp">${r.shopFinding ? escAttr(r.shopFinding) : '<span class="rm-muted">—</span>'}</div></td>
+                    <td class="rm-edit">${edit ? '<span class="rm-pencil" aria-label="Edit">✎</span>' : '›'}</td>
+                </tr>`).join('') : `<tr><td colspan="10" class="rm-empty">No removals match.</td></tr>`}</tbody>`;
+        }
+
+        function rmExportCsv() {
+            const cell = v => { const s = String(v == null ? '' : v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+            const head = ['Removed', 'Aircraft', 'Type', 'Supplier', 'Equipment', 'Position', 'Serial', 'Eclipse S/N', 'Fitted', 'Days on wing',
+                'Reason category', 'Reason for removal', 'Shop status', 'Shop ref', 'Finding category', 'Shop finding'];
+            const body = rmRegisterRows().map(r => [r.removed, r.tail, r.type, rmSupplier(r.supplier).label, RM_LRU_LABEL[r.lru], r.position,
+                r.serial, r.alt, r.fitted, r.days === null ? '' : r.days, rmCatLabel(RM_REASON_CATS, r.rcat), r.reason,
+                shopStatusLabel(r.status), r.shopRef, rmCatLabel(RM_FINDING_CATS, r.fcat), r.shopFinding].map(cell).join(','));
+            const url = URL.createObjectURL(new Blob([[head.join(','), ...body].join('\r\n')], { type: 'text/csv;charset=utf-8;' }));
+            const a = document.createElement('a');
+            a.href = url; a.download = `saudia-removals-${rmToday()}.csv`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // ---------- monthly trend (SVG drawn at the card's real pixel width) ----------
+        function rmDrawTrend() {
+            const host = document.getElementById('rmTrend');
+            if (!host) return;
+            const rows = rmFilter(rmCache || rmDataset()).filter(r => r.iso);
+            const W = Math.max(280, host.clientWidth || 600), H = 210;
+            const pl = 26, pr = 6, pt = 14, pb = 24;
+            const today = rmToday();
+            const from = rmPeriodFrom(rmF.period);
+            const first = from || (rows.length ? rows.map(r => r.iso).sort()[0] : today);
+            const months = [];
+            let y = +first.slice(0, 4), m = +first.slice(5, 7);
+            const endY = +today.slice(0, 4), endM = +today.slice(5, 7);
+            while (y < endY || (y === endY && m <= endM)) {
+                months.push(`${y}-${String(m).padStart(2, '0')}`);
+                m++; if (m > 12) { m = 1; y++; }
+                if (months.length > 60) break;
+            }
+            if (!months.length) months.push(today.slice(0, 7));
+            const data = months.map(k => {
+                const rs = rows.filter(r => r.iso.slice(0, 7) === k);
+                return { k, n: rs.length, by: rmCount(rs, 'supplier') };
+            });
+            const maxN = Math.max(1, ...data.map(d => d.n));
+            const step = maxN <= 5 ? 1 : maxN <= 10 ? 2 : Math.ceil(maxN / 5);
+            const top = Math.ceil(maxN / step) * step;
+            const pw = W - pl - pr, ph = H - pt - pb;
+            const slot = pw / data.length, bw = Math.max(3, Math.min(28, slot * 0.62));
+            const yOf = v => pt + ph - (v / top) * ph;
+            const mLabel = k => MONTH_NAMES[+k.slice(5, 7) - 1] + ' ' + k.slice(2, 4);
+            const every = Math.max(1, Math.ceil(data.length / Math.floor(pw / 46)));
+            let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Removals per month, stacked by supplier">`;
+            for (let v = 0; v <= top; v += step) {
+                svg += `<line x1="${pl}" x2="${W - pr}" y1="${yOf(v)}" y2="${yOf(v)}" stroke="${v ? '#eef1f4' : '#c9d1d9'}" />`
+                    + `<text x="${pl - 6}" y="${yOf(v) + 3.5}" text-anchor="end" class="rm-ax">${v}</text>`;
+            }
+            const peak = data.reduce((p, d) => (d.n > p.n ? d : p), data[0]);
+            data.forEach((d, i) => {
+                const x = pl + i * slot + (slot - bw) / 2;
+                let base = yOf(0);
+                const segs = RM_SUPPLIERS.filter(s => d.by[s.id]);
+                segs.forEach((s, si) => {
+                    const h = (d.by[s.id] / top) * ph;
+                    const isTop = si === segs.length - 1;
+                    const gap = si > 0 ? 2 : 0;
+                    const y0 = base - h, hh = Math.max(1, h - gap);
+                    const r = isTop ? Math.min(4, bw / 2, hh) : 0;
+                    svg += `<path d="M${x},${y0 + hh} V${y0 + r} Q${x},${y0} ${x + r},${y0} H${x + bw - r} Q${x + bw},${y0} ${x + bw},${y0 + r} V${y0 + hh} Z" fill="${s.color}" />`;
+                    base = y0;
+                });
+                if (d === peak && d.n) svg += `<text x="${x + bw / 2}" y="${yOf(d.n) - 4}" text-anchor="middle" class="rm-ax rm-ax-strong">${d.n}</text>`;
+                if (i % every === 0) svg += `<text x="${x + bw / 2}" y="${H - 7}" text-anchor="middle" class="rm-ax">${mLabel(d.k)}</text>`;
+                svg += `<rect x="${pl + i * slot}" y="${pt}" width="${slot}" height="${ph}" fill="transparent" class="rm-hit" tabindex="0"
+                    ${rmTip([`${mLabel(d.k)} · ${d.n} removal${d.n === 1 ? '' : 's'}`, ...RM_SUPPLIERS.map(s => `${s.label}: ${d.by[s.id] || 0}`)])} />`;
+            });
+            svg += `</svg>`;
+            host.innerHTML = svg;
+        }
+
+        // ---------- shared tooltip + click delegation ----------
+        let rmTipEl = null;
+        function rmInitInteractions() {
+            const wrap = document.getElementById('rmWrap');
+            if (!wrap || wrap.dataset.wired) return;
+            wrap.dataset.wired = '1';
+            if (!rmTipEl) {
+                rmTipEl = document.createElement('div');
+                rmTipEl.className = 'rm-tip';
+                rmTipEl.setAttribute('role', 'tooltip');
+                document.body.appendChild(rmTipEl);
+            }
+            const show = (el, x, y) => {
+                const lines = (el.getAttribute('data-tip') || '').split('\n');
+                rmTipEl.textContent = '';
+                lines.forEach((l, i) => { const d = document.createElement(i ? 'div' : 'strong'); d.textContent = l; rmTipEl.appendChild(d); });
+                rmTipEl.style.display = 'block';
+                const r = rmTipEl.getBoundingClientRect();
+                const vw = window.innerWidth, vh = window.innerHeight;
+                let left = x + 14, top = y + 14;
+                if (left + r.width > vw - 8) left = Math.max(8, x - r.width - 14);
+                if (top + r.height > vh - 8) top = Math.max(8, y - r.height - 14);
+                rmTipEl.style.left = left + 'px'; rmTipEl.style.top = top + 'px';
+            };
+            const hide = () => { if (rmTipEl) rmTipEl.style.display = 'none'; };
+            wrap.addEventListener('mousemove', e => {
+                const el = e.target.closest('[data-tip]');
+                if (el && wrap.contains(el)) show(el, e.clientX, e.clientY); else hide();
+            });
+            wrap.addEventListener('mouseleave', hide);
+            wrap.addEventListener('focusin', e => {
+                const el = e.target.closest('[data-tip]');
+                if (!el) return;
+                const b = el.getBoundingClientRect();
+                show(el, b.left + b.width / 2, b.bottom);
+            });
+            wrap.addEventListener('focusout', hide);
+            wrap.addEventListener('click', e => {
+                const el = e.target.closest('[data-rmf]');
+                if (!el || !wrap.contains(el)) return;
+                hide();
+                rmSet(el.getAttribute('data-rmf'), el.getAttribute('data-rmv'));
+            });
+        }
+        let rmResizeT = 0;
+        window.addEventListener('resize', () => {
+            if (hwView !== 'removals') return;
+            clearTimeout(rmResizeT);
+            rmResizeT = setTimeout(rmDrawTrend, 120);
+        });
+        function rmAfterRender() {
+            rmInitInteractions();
+            rmDrawTrend();
+            rmRenderRegister();
+            if (rmTipEl) rmTipEl.style.display = 'none';
+        }
+
+        // ---------- the record editor ----------
+        let rmEditKey = '';
+        function rmFind(key) { return (rmCache || rmDataset()).find(r => r.key === key) || rmDataset().find(r => r.key === key); }
+        function openRmRecord(key) {
+            const r = rmFind(key);
+            if (!r) return;
+            rmEditKey = key;
+            const edit = canEdit();
+            const s = rmSupplier(r.supplier);
+            document.getElementById('rmEdTitle').textContent = `${RM_LRU_LABEL[r.lru]} ${r.serial || ''}`.trim();
+            const meta = document.getElementById('rmEdMeta');
+            meta.innerHTML = `<span class="rm-dot" style="background:${s.color}"></span>${s.label} · removed from <b>${escAttr(r.tail)}</b>${r.position ? ' (position ' + escAttr(r.position) + ')' : ''}
+                ${r.removed ? ' on <b>' + escAttr(r.removed) + '</b>' : ' — <i>removal date not recorded</i>'}${r.days !== null ? ` · ${r.days} days on wing` : ''}${r.alt ? ` · ECL ${escAttr(r.alt)}` : ''}`;
+            const opt = (list, auto, cur, skipIds) => `<option value="">Auto — ${escAttr(rmCatLabel(list, auto))}</option>`
+                + list.filter(c => !(skipIds || []).includes(c.id)).map(c => `<option value="${c.id}" ${cur === c.id ? 'selected' : ''}>${escAttr(c.label)}</option>`).join('');
+            document.getElementById('rmEdReason').value = r.reason || '';
+            document.getElementById('rmEdReasonCat').innerHTML = opt(RM_REASON_CATS, r.rcatAuto, r.reasonCat, ['unrecorded']);
+            document.getElementById('rmEdStatus').value = r.status;
+            document.getElementById('rmEdRef').value = r.shopRef || '';
+            document.getElementById('rmEdFinding').value = r.shopFinding || '';
+            document.getElementById('rmEdFindingCat').innerHTML = opt(RM_FINDING_CATS, r.fcatAuto, r.findingCat, ['awaiting']);
+            ['rmEdReason', 'rmEdReasonCat', 'rmEdStatus', 'rmEdRef', 'rmEdFinding', 'rmEdFindingCat'].forEach(id => { document.getElementById(id).disabled = !edit; });
+            document.getElementById('rmEdSave').style.display = edit ? '' : 'none';
+            document.getElementById('rmEdSignin').style.display = edit ? 'none' : '';
+            const err = document.getElementById('rmEdError'); err.textContent = ''; err.style.display = 'none';
+            rmEdCount();
+            document.getElementById('rmEdOverlay').style.display = 'flex';
+        }
+        // Live: the counter, and the "Auto — …" labels follow what is typed.
+        function rmEdCount() {
+            const t = document.getElementById('rmEdReason');
+            const c = document.getElementById('rmEdReasonLen');
+            if (t && c) { c.textContent = `${t.value.length}/200`; c.classList.toggle('over', t.value.length > 200); }
+            const rs = document.getElementById('rmEdReasonCat');
+            if (rs && rs.options[0]) rs.options[0].textContent = 'Auto — ' + rmCatLabel(RM_REASON_CATS, rmAutoReason(t.value));
+            const fs = document.getElementById('rmEdFindingCat');
+            if (fs && fs.options[0]) fs.options[0].textContent = 'Auto — ' + rmCatLabel(RM_FINDING_CATS,
+                rmAutoFinding(document.getElementById('rmEdFinding').value, document.getElementById('rmEdStatus').value));
+        }
+        function closeRmRecord() {
+            document.getElementById('rmEdOverlay').style.display = 'none';
+            rmEditKey = '';
+        }
+        async function saveRmRecord() {
+            const r = rmFind(rmEditKey);
+            if (!r) return;
+            if (!canEdit()) { requireSignIn(); return; }
+            const err = document.getElementById('rmEdError');
+            const val = id => document.getElementById(id).value.trim();
+            const next = {
+                removalReason: val('rmEdReason'), reasonCat: val('rmEdReasonCat'),
+                shopStatus: val('rmEdStatus'), shopRef: val('rmEdRef'),
+                shopFinding: val('rmEdFinding'), findingCat: val('rmEdFindingCat'),
+            };
+            const cur = {
+                removalReason: r.reason || '', reasonCat: r.reasonCat || '',
+                shopStatus: r.shopStatus || 'pending', shopRef: r.shopRef || '',
+                shopFinding: r.shopFinding || '', findingCat: r.findingCat || '',
+            };
+            // Only what changed goes in the PATCH — an untouched long legacy reason is never
+            // re-sent (the rules cap a reason at 200), and an emptied box writes null.
+            const patch = {};
+            Object.keys(next).forEach(k => { if (next[k] !== cur[k]) patch[k] = next[k] || null; });
+            if (patch.shopStatus === null) patch.shopStatus = 'pending';
+            if (!Object.keys(patch).length) { closeRmRecord(); return; }
+            if (patch.removalReason && patch.removalReason.length > 200) {
+                err.textContent = 'Reason for removal is limited to 200 characters — put the detail in the shop finding.';
+                err.style.display = 'block'; return;
+            }
+            const target = r.src === 'modman' ? (modmansLive || {})[r.mmId] : ((unitsLive[r.unitId] || {}).fitments || {})[r.fitmentId];
+            if (!target) return;
+            const url = r.src === 'modman'
+                ? `${FIREBASE_DB_URL}/modmans/${r.mmId}.json?auth=`
+                : `${FIREBASE_DB_URL}/units/${r.unitId}/fitments/${r.fitmentId}.json?auth=`;
+            const token = await getIdToken();
+            if (!token) return;
+            const btn = document.getElementById('rmEdSave');
+            btn.disabled = true; btn.textContent = 'Saving...';
+            try {
+                const res = await fetchWithTimeout(url + token, { method: 'PATCH', body: JSON.stringify(patch) });
+                const data = await res.json();
+                if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
+                // Both nodes are polled — mirror the write, or the save looks like it vanished.
+                Object.entries(patch).forEach(([k, v]) => { if (v === null) delete target[k]; else target[k] = v; });
+                closeRmRecord();
+                if (r.src === 'modman') populateSatcomTable();
+                renderHardwarePage();
+                renderMaintenancePage();
+                setSyncStatus('🟢 Live — synced with your team', '#28a745');
+            } catch (ex) {
+                err.textContent = `Could not save — ${ex.message}`;
+                err.style.display = 'block';
+            } finally {
+                btn.disabled = false; btn.textContent = 'Save';
+            }
+        }
+
         function renderHardwarePage() {
             renderHwToggle();
             renderHwContent();
@@ -21641,6 +22682,9 @@
             // AIRCRAFT is the whole-fleet view (Active + In Retrofit = 46), moved here from
             // the filter bar; ASSETS second; the LRU groups follow in HW_GROUPS order.
             let html = seg('aircraft', 'AIRCRAFT', hwAircraftFleet().length, hwView === 'aircraft');
+            // REMOVALS (v2.230.0) — the reliability dashboard, between AIRCRAFT and ASSETS (user,
+            // 2026-10-29). Badge = removals in scope (retrofit Eclipse, Thinkom + Kontron LRUs).
+            html += seg('removals', 'REMOVALS', rmDataset().length, hwView === 'removals');
             html += seg('assets', 'ASSETS', assetEntries().length, hwView === 'assets');
             // MODEM (the former Satcom page) sits right after SIM (user, 2026-09-24); its
             // badge is the register's box count, as Satcom's widgets count against.
@@ -21660,6 +22704,15 @@
             const hwBar = document.getElementById('hwFilterBar');
             [head, hwBar, host].forEach(n => { if (n) n.style.display = isModem ? 'none' : ''; });
             if (modem) modem.style.display = isModem ? '' : 'none';
+            // REMOVALS (v2.230.0) is a dashboard with its own controls — the shared filter bar
+            // (Type / search / CSV) steps aside, as it does for MODEM.
+            if (hwView === 'removals') {
+                if (hwBar) hwBar.style.display = 'none';
+                if (head) head.innerHTML = rmHead();
+                host.innerHTML = rmBody();
+                rmAfterRender();
+                return;
+            }
             if (isModem) {
                 const pill = document.getElementById('hwModemFitted');
                 if (pill) {

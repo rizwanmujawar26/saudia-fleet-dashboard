@@ -13,6 +13,22 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.230.0 — Hardware › REMOVALS reliability dashboard (2026-10-29)
+New **REMOVALS** sub-tab between AIRCRAFT and ASSETS. Scope: retrofit **Eclipse** aircraft in the programme
+(`rmScopeFleet`, 52), equipment split **Thinkom** (KANDU, KRFU, RX/TX antenna) vs **Kontron** (MODMAN, IFE server,
+CWAP); SIM and passive parts excluded. Rows are DERIVED (`rmDataset`) from removed `/units` fitments + removed
+`/modmans` records via `satcomRows()` — no new node. Page: supplier switch + period, KPI tiles (removals, fleet
+MTBUR, last-90 vs prior-90, shop-report coverage, NFF rate, open at shop, repeat positions), auto "What stands out"
+callouts, per-supplier scoreboards (removals, MTBUR, NFF, shop-outcome stack), monthly stacked trend (SVG drawn at the
+card's pixel width, redrawn on resize), shop pipeline, reason + finding category bars with recurring-finding
+clusters, aircraft × equipment heat map, and a sortable/searchable removal register (CSV). Everything cross-filters
+(`rmF`; a chart skips its own dimension). **MTBUR** = fleet unit-days in service (clock from `retrofitEnd`, else
+`activatedDate`, × `lruQtyFor` positions) ÷ removals. **Categories**: reason (`RM_REASON_CATS`, first regex wins) and
+finding (`rmAutoFinding`) are auto-classified from the text; editors override per record with new optional fields
+**`reasonCat` / `findingCat`** (rules added on `/units/*/fitments/*` and `/modmans/*`, both `$other:false`; exposed in
+`satcomRows`' field list). The record editor (`openRmRecord` / `saveRmRecord`) edits reason, shop status/ref, finding
+and both categories, PATCHes ONLY changed fields (a legacy >200-char reason is never re-sent) and mirrors locally.
+
 ### v2.229.3 — MODMAN removal date sets status; reason editable in Unit History (2026-10-29)
 A removal date typed into **Hardware › MODMAN** (`saveModmanField`) wrote only the date — AS79 m055 (486862002) sat
 `removalDate` 29-Oct + raw `status: active`, so it never reached the Removed / Shop queue, the only place its Reason
