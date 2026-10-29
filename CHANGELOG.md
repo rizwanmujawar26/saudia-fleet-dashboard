@@ -13,6 +13,18 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.232.0 — AIRCRAFT header milestone band redesign (2026-10-30)
+The v2.231 track remade in the delivery-flight card's language: a navy→teal band per aircraft with a sky
+glowing rail for the mod window, amber marching rail + pulsing "today" point while in mod, dashed wait to
+service, green live rail, and an **activation beacon** (glowing green core + two radar rings, each tail's
+phase offset by a hash of its reg so rows don't pulse in step; off under prefers-reduced-motion).
+Captions are now FIXED by role (user): **Mod start / Mod end always below** — one strip spanning the
+window, start pinned left, end pinned right, so they pack side by side and never collide — and
+**Activated (✈) always above**, or "Activation pending" over a dotted stub. Durations ride on the rail as
+chips when the stretch is ≥24% wide. Right edge: stat panel — days in service (green), days in mod
+(amber) or "not yet live". The separate days pill is gone. Below 1180px the band drops to its own
+full-width line under the tail; phones drop the century from years.
+
 ### v2.231.0 — Hardware › AIRCRAFT header milestone track (2026-10-30)
 The AIRCRAFT header's lone "Activated" date became a compact proportional track (`hwAcMilestoneTrack`): Mod start,
 Mod end and Activated as dots at their true dates (each tail on its own scale), in date order — an activation inside
