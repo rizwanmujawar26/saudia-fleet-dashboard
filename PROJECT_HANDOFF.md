@@ -1414,7 +1414,9 @@ there or it reads blank everywhere (v2.201.1: `removalReason`). A box's Unit His
 one fitment of an `'mm:<id>'` unit-shaped object. **Refit (v2.229.0):** a repaired box going back on
 an aircraft is a NEW record with the same serial (`hwRefitModman`); `satcomRows()` marks the older record
 `refittedTo`, and a removed + Repaired/NFF + not-refitted one `serviceable`. ⚠️ Count physical boxes with
-`modmanBoxRows()`, never `Object.keys(modmansLive)` — a refitted box has two records. **HBC+ (Astronics) records carry
+`modmanBoxRows()`, never `Object.keys(modmansLive)` — a refitted box has two records. **Maintenance R&R (v2.229.2)**
+writes `/modmans` via `modmanSwapPlan()` (new activities only — an edit does not re-write the register) and never
+`/units` (`unitWritesForActivity` returns null for MODMAN). **HBC+ (Astronics) records carry
 placeholder `kontronSn` `'0'`/`'N/A'`** (ASBA, ASBB) — never display Kontron for them
 (v2.204.1); the stored values are left as-is pending the user's call.
 

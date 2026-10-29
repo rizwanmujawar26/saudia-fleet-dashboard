@@ -8215,8 +8215,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.229.1';
-        const APP_BUILD    = '2026.10.29.02';
+        const APP_VERSION  = '2.229.2';
+        const APP_BUILD    = '2026.10.29.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -17930,6 +17930,11 @@
         // as coming off on 23-Sep, when 710350 was the box actually on wing.
         function onWingUnitFor(lruId, tail, pos) {
             if (!lruId || !tail) return null;
+            // MODMAN lives on /modmans — the box on wing is the active/fault record there.
+            if (lruId === 'modman' || lruId === 'lf_modman') {
+                const r = modmanOnWing(tail);
+                return r ? { id: 'mm:' + r.id, mmId: r.id, serial: (modmanIsAstroBox(r) ? r.astronicsSn : r.kontronSn) || '' } : null;
+            }
             let hit = null;
             unitEntries().forEach(u => {
                 if (u.lruId !== lruId) return;
@@ -18423,7 +18428,14 @@
                 // writing — this is exactly the AS61 KANDU mix-up (710342 logged as coming
                 // off when 710350 was fitted), which silently minted a stray fitment. Editing
                 // an existing activity keeps its own reconcile path and is left alone.
-                if (category === 'hardware_rr' && !addActEditingId) {
+                const isMmSwap = category === 'hardware_rr' && ['modman', 'lf_modman'].includes(details.lruId);
+                let mmPlan = null;
+                if (isMmSwap && !addActEditingId) {
+                    mmPlan = modmanSwapPlan(entry.aircraft, entry.date, val('addActOldPart').trim(), val('addActNewPart').trim(),
+                        details.removalReason || '');
+                    if (mmPlan.block) { err.textContent = mmPlan.block; err.style.display = 'block'; return; }
+                }
+                if (category === 'hardware_rr' && !addActEditingId && !isMmSwap) {
                     const oldS = val('addActOldPart').trim();
                     if (oldS) {
                         const onWing = onWingUnitFor(details.lruId, entry.aircraft, details.position || '');
@@ -18446,7 +18458,7 @@
                 // Fitted S/N lifecycle check (v2.199.0): a serial already in the register is
                 // the same box returning from the shop and simply gains a fitment — but not
                 // while it is on wing on another aircraft, nor once it has been scrapped.
-                if (category === 'hardware_rr' && !addActEditingId) {
+                if (category === 'hardware_rr' && !addActEditingId && !isMmSwap) {
                     const newS = val('addActNewPart').trim();
                     const reuse = newS ? serialReuse(details.lruId, newS, { fitted: entry.date, tail: entry.aircraft }) : null;
                     if (reuse && reuse.block) {
@@ -18502,9 +18514,26 @@
                     renderHardwarePage();
                     renderSerialsPage();
                     updateMetrics();                        // the Timeline picks it up here
-                    const mmSwap = ['modman', 'lf_modman'].includes((entry.details || {}).lruId)
-                        && (val('addActOldPart') || val('addActNewPart'));
-                    if (mmSwap) serialWarnings.push('MODMAN serials are kept on Hardware › MODMAN — record the removal and ↻ Refit / Fit there');
+                    if (mmPlan && Object.keys(mmPlan.payload).length) {
+                        const mres = await fetchWithTimeout(`${FIREBASE_DB_URL}/modmans.json?auth=${token}`, {
+                            method: 'PATCH', body: JSON.stringify(mmPlan.payload),
+                        });
+                        const mdata = await mres.json();
+                        if (!mres.ok || (mdata && mdata.error)) {
+                            throw new Error('activity saved, but the MODMAN register was not updated — '
+                                + ((mdata && mdata.error) || 'write failed') + ' — update it on Hardware › MODMAN');
+                        }
+                        mirrorModmanPayload(mmPlan.payload);   // /modmans is polled
+                        renderHardwarePage();
+                        if (typeof renderSatcomPage === 'function') renderSatcomPage();
+                        updateMetrics();
+                        serialWarnings.push(...mmPlan.warns);
+                    }
+                    // Editing a logged MODMAN swap does not re-write the register (no link
+                    // is stored) — say where to correct it.
+                    if (isMmSwap && editing && (val('addActOldPart') || val('addActNewPart'))) {
+                        serialWarnings.push('MODMAN serials are kept on Hardware › MODMAN — correct the box there');
+                    }
                     if (serialWarnings.length) {
                         setSyncStatus('🟡 Saved — ' + serialWarnings[0], '#b8860b');
                     } else {
@@ -20424,7 +20453,96 @@
             // Placeholder serials ('0', 'N/A' on the HBC+ records) identify no box.
             return /^(0+|n\/?a|-+)$/.test(k) ? '' : k;
         }
-        function modmanIsAstroBox(r) { return !!(r && r.astronicsSn && !r.kontronSn); }
+        // Astronics box: has an Astronics S/N and no REAL Kontron one — ASBA/ASBB carry a
+        // placeholder kontronSn '0' / 'N/A' that must not make them read as legacy boxes.
+        function modmanIsAstroBox(r) {
+            return !!(r && r.astronicsSn && (!r.kontronSn || /^(0+|n\/?a|-+)$/i.test(String(r.kontronSn).trim())));
+        }
+        // The MODMAN record on wing on a tail (an active or fault box occupies the slot).
+        function modmanOnWing(tail) {
+            return satcomRows().find(r => r.aircraft === tail && (r.status === 'active' || r.status === 'fault')) || null;
+        }
+        // Does a typed serial name this box? Kontron, Astronics or Eclipse S/N all count
+        // (the Eclipse one with or without its SN_ / ECL prefix).
+        function modmanSerialMatches(r, typed) {
+            const strip = x => normSerialKey(x).replace(/^(sn_|ecl)/, '');
+            const k = strip(typed);
+            if (!k || /^(0+|n\/?a|-+)$/.test(k)) return false;
+            return [r.kontronSn, r.astronicsSn, r.eclipseSn].some(x => x && strip(x) === k);
+        }
+        // A box going back on an aircraft: a NEW /modmans record carrying the box's
+        // identity; commissioning starts at To-Do (user, 29-Oct-2026).
+        function modmanRefitBody(m, tail, fitted, stamp) {
+            const body = { aircraft: tail, installDate: fitted, status: 'active', commTaurus: 'todo', commHughes: 'todo', addedAt: stamp };
+            ['kontronSn', 'eclipseSn', 'astronicsSn', 'taurusOldMgId', 'taurusOldTid', 'taurusNewMgId', 'taurusNewTid',
+             'hnsChassisId', 'hnsEsn', 'hnsMac'].forEach(k => { if (m[k]) body[k] = m[k]; });
+            return body;
+        }
+        function newModmanId() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+        // MODMAN R&R → /modmans (v2.229.2). A NEW Maintenance hardware R&R on a MODMAN
+        // writes the register directly instead of /units: the Removed S/N must be the box
+        // on wing (it gains removalDate + reason + status removed); the Fitted S/N is a
+        // spare (fitted in place), a box back from the shop (a new record on this tail —
+        // the same as ↻ Refit), or a serial never seen (a new record). Returns
+        // { block, warns, payload } — payload is a multi-path PATCH for /modmans.json,
+        // never holding both "x" and "x/field".
+        function modmanSwapPlan(tail, date, oldS, newS, reason) {
+            const out = { block: '', warns: [], payload: {} };
+            const rows = satcomRows();
+            const ac = aircraftData.find(a => a.id === tail);
+            const tailIsXlr = !!ac && ac.type === 'A321XLR';
+            const onWing = modmanOnWing(tail);
+            const iso = toISODate(date || '') || '';
+            const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+            const snOf = r => (modmanIsAstroBox(r) ? r.astronicsSn : r.kontronSn) || r.eclipseSn || '';
+            let removing = null;
+            if (oldS) {
+                if (!onWing) { out.block = `No MODMAN is on wing on ${tail} in the register — leave Removed S/N blank for a first fit, or correct Hardware › MODMAN first.`; return out; }
+                if (!modmanSerialMatches(onWing, oldS)) { out.block = `${oldS} is not the MODMAN on wing on ${tail} — the register has ${snOf(onWing)} there. Correct the Removed S/N, or Hardware › MODMAN.`; return out; }
+                if (iso && toISODate(onWing.installDate || '') && iso < toISODate(onWing.installDate)) { out.block = `${snOf(onWing)} was installed on ${tail} on ${onWing.installDate} — it cannot come off before that.`; return out; }
+                removing = onWing;
+                out.payload[`${onWing.id}/removalDate`] = date;
+                out.payload[`${onWing.id}/status`] = 'removed';
+                if (reason) out.payload[`${onWing.id}/removalReason`] = reason;
+            }
+            if (newS) {
+                if (onWing && !removing) { out.block = `${tail} already has MODMAN ${snOf(onWing)} on wing — enter it as the Removed S/N.`; return out; }
+                const hits = rows.filter(r => !r.refittedTo && modmanSerialMatches(r, newS)
+                        && !(removing && r.id === removing.id))
+                    .sort((a, b) => (toISODate(b.installDate || '') || '').localeCompare(toISODate(a.installDate || '') || ''));
+                const c = hits[0];
+                if (!c) {
+                    const rec = { aircraft: tail, installDate: date, status: 'active', commTaurus: 'todo', commHughes: 'todo', addedAt: stamp };
+                    rec[tailIsXlr ? 'astronicsSn' : 'kontronSn'] = newS;
+                    out.payload[newModmanId()] = rec;
+                    out.warns.push(`${newS} was new to the register — add its ${tailIsXlr ? '' : 'Eclipse, '}Taurus and Hughes IDs on Hardware › MODMAN`);
+                    return out;
+                }
+                if (modmanIsAstroBox(c) !== tailIsXlr) { out.block = `${newS} is ${modmanIsAstroBox(c) ? 'an Astronics (A321XLR)' : 'an Eclipse/Kontron'} box — it cannot go on ${tail}.`; return out; }
+                if ((c.status === 'active' || c.status === 'fault') && c.aircraft) { out.block = `${newS} is on wing on ${c.aircraft}${c.installDate ? ' since ' + c.installDate : ''} — record its removal there first.`; return out; }
+                if (c.status === 'spare' && !c.aircraft) {
+                    Object.assign(out.payload, { [`${c.id}/aircraft`]: tail, [`${c.id}/installDate`]: date, [`${c.id}/status`]: 'active',
+                        [`${c.id}/commTaurus`]: 'todo', [`${c.id}/commHughes`]: 'todo' });
+                    return out;
+                }
+                // removed: back from the shop
+                if (c.shopStatus === 'scrap') { out.block = `${newS} was scrapped after its removal from ${c.aircraft || 'its last aircraft'} — correct its shop report first.`; return out; }
+                if (iso && toISODate(c.removalDate || '') && iso < toISODate(c.removalDate)) { out.block = `${newS} came off ${c.aircraft} on ${c.removalDate} — it cannot be fitted again on ${date}, before that.`; return out; }
+                if (!c.serviceable) out.warns.push(`${newS}'s shop report from ${c.aircraft || 'its removal'} still reads "${shopStatusLabel(c.shopStatus || 'pending')}" — update it to Repaired / No Fault Found`);
+                out.payload[newModmanId()] = modmanRefitBody(modmansLive[c.id] || c, tail, date, stamp);
+            }
+            return out;
+        }
+        // Apply a /modmans multi-path payload to the local mirror (the node is polled).
+        function mirrorModmanPayload(payload) {
+            Object.entries(payload).forEach(([p, v]) => {
+                const [id, field] = p.split('/');
+                if (!field) { modmansLive[id] = v; return; }
+                modmansLive[id] = modmansLive[id] || {};
+                if (v === null) delete modmansLive[id][field]; else modmansLive[id][field] = v;
+            });
+        }
         // One row per PHYSICAL box — a refitted box's old record is history, so it is not
         // counted a second time in the register totals.
         function modmanBoxRows() { return satcomRows().filter(r => !r.refittedTo); }
@@ -23484,10 +23602,8 @@
                 body = { aircraft: tail, installDate: fitted, status: 'active', commTaurus: 'todo', commHughes: 'todo' };
                 method = 'PATCH';
             } else {
-                body = { aircraft: tail, installDate: fitted, status: 'active', commTaurus: 'todo', commHughes: 'todo', addedAt: stamp };
-                ['kontronSn', 'eclipseSn', 'astronicsSn', 'taurusOldMgId', 'taurusOldTid', 'taurusNewMgId', 'taurusNewTid',
-                 'hnsChassisId', 'hnsEsn', 'hnsMac'].forEach(k => { if (m[k]) body[k] = m[k]; });
-                newId = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+                body = modmanRefitBody(m, tail, fitted, stamp);
+                newId = newModmanId();
                 method = 'PUT';
             }
             try {

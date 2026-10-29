@@ -13,6 +13,18 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.229.2 — Maintenance MODMAN R&R writes the MODMAN register directly (2026-10-29)
+A NEW hardware R&R on `modman`/`lf_modman` builds `modmanSwapPlan()` before any write and, after the activity
+saves, sends one multi-path PATCH to `/modmans.json`: the **Removed S/N must be the box on wing** (gains
+`removalDate` = activity date, `removalReason`, `status: removed`); the **Fitted S/N** is a spare (fitted in place), a
+box back from the shop (new record via the shared `modmanRefitBody`, same as ↻ Refit; 🟡 warn if shop report not
+Repaired/NFF), or a serial never seen (new record + 🟡 add IDs). **Blocks:** removed S/N not the on-wing box, no box on
+wing, fit onto an occupied tail without a removal, box on wing elsewhere, scrapped, fitted before its removal, supplier
+mismatch (Astronics ↔ A321XLR). Serial match accepts Kontron / Astronics / Eclipse (SN_/ECL prefix ignored).
+`onWingUnitFor` reads `/modmans` for MODMAN, so the on-wing hint + Removed S/N prefill work. `modmanIsAstroBox` treats
+placeholder `kontronSn` '0'/'N/A' as absent (ASBA read as a legacy box). Editing a logged MODMAN swap still does not
+re-write the register (no link stored) — 🟡 note says correct it on Hardware › MODMAN.
+
 ### v2.229.1 — Maintenance MODMAN swaps no longer write /units; stray records removed (2026-10-29)
 `unitWritesForActivity` returns null for `modman`/`lf_modman`: the AS76 "Modman Replaced" R&R (21-Sep-2026) had minted
 two stray `/units` MODMAN records (484230004 removed, 483704002 fitted) duplicating `/modmans` m003/m005. Data fix
