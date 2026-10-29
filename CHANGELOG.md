@@ -13,6 +13,15 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.233.0 — AIRCRAFT header as one dark surface (2026-10-30)
+User: the dark timeline box inside a white header read as two different themes. Now the WHOLE header
+row is the navy→teal flight band (with sky haze, hover brighten, focus ring) and the milestone timeline
+sits straight on it — no box, border or shadow of its own. Type pill, fit badge (retrofit sky / linefit
+lilac / in-retrofit amber), On-Wing / Removed counts, location pill and the linefit Activated label are
+re-toned as translucent glass. Timeline centred: the counts now sit at the START of their fixed slot
+(location pill trails), so the gap either side of the band is equal (19px) and every row still aligns.
+Expanded aircraft keep the white equipment tables under the dark title bar.
+
 ### v2.232.0 — AIRCRAFT header milestone band redesign (2026-10-30)
 The v2.231 track remade in the delivery-flight card's language: a navy→teal band per aircraft with a sky
 glowing rail for the mod window, amber marching rail + pulsing "today" point while in mod, dashed wait to
