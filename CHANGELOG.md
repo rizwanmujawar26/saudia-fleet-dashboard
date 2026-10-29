@@ -13,6 +13,11 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.230.1 — Timeline rows inside a day follow newest-first (2026-10-30)
+Rows within one day were in tail order. They now follow the Newest/Oldest toggle: rows with a UTC time
+(`hm` — OTA patch stamps, flight departures) sort by it, date-only rows follow in tail order. Shared
+`timelineInDayCmp(dir)` also orders the Maintenance activity repository (always newest first).
+
 ### v2.230.0 — Hardware › REMOVALS reliability dashboard (2026-10-29)
 New **REMOVALS** sub-tab between AIRCRAFT and ASSETS. Scope: retrofit **Eclipse** aircraft in the programme
 (`rmScopeFleet`, 52), equipment split **Thinkom** (KANDU, KRFU, RX/TX antenna) vs **Kontron** (MODMAN, IFE server,

@@ -8434,8 +8434,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.230.0';
-        const APP_BUILD    = '2026.10.29.06';
+        const APP_VERSION  = '2.230.1';
+        const APP_BUILD    = '2026.10.30.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -14343,8 +14343,7 @@
             // Group by date, newest first.
             const groups = {};
             rows.forEach(x => { (groups[x.iso] = groups[x.iso] || []).push(x); });
-            Object.keys(groups).forEach(k => groups[k].sort((a, b) =>
-                a.tail.localeCompare(b.tail) || a.kind.localeCompare(b.kind)));
+            Object.keys(groups).forEach(k => groups[k].sort(timelineInDayCmp(-1)));
             const dateKeys = Object.keys(groups).sort().reverse();
 
             const dayLabel = iso => {
@@ -26301,6 +26300,15 @@
         // record) or an avrId wins, so the surviving row stays manageable; a purely
         // derived duplicate simply drops. Rows with no tail AND no subtitle (a bare
         // milestone) are never merged — they carry too little to be sure they match.
+        // Order of rows inside one day. dir -1 = newest first, 1 = oldest first. Rows
+        // with a UTC time (row.hm 'HH:MM' — OTA stamps, flight departures) sort by it;
+        // rows with only a date follow, in tail order.
+        function timelineInDayCmp(dir) {
+            return (a, b) => (!!b.hm - !!a.hm)
+                || (a.hm && b.hm ? dir * a.hm.localeCompare(b.hm) : 0)
+                || (a.tail || '').localeCompare(b.tail || '') || (a.kind || '').localeCompare(b.kind || '');
+        }
+
         function dedupeTimeline(rows) {
             const norm = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, '');
             const rank = x => (x.actId ? 2 : 0) + (x.avrId ? 1 : 0);
@@ -26469,7 +26477,7 @@
                     : `${route} · ${dp.depHM}Z → ${dp.arrHM}Z · ${done}`;
                 const byT = byTail[f.tail] || aircraftData.find(a => a.id === f.tail) || {};
                 out.push({ iso: toISODate(f.date), kind: 'flight', flightId: f.id, flightKind: f.kind,
-                           flightLive: dp.phase !== 'landed',
+                           flightLive: dp.phase !== 'landed', hm: dp.depHM,
                            tail: f.tail, type: byT.type, title, sub });
             });
 
@@ -26596,7 +26604,7 @@
                     if (!iso) return;
                     const time = stamp.slice(11, 16);
                     out.push({ iso, kind: 'software', tail: a.id, type: a.type || '',
-                               location: '',
+                               location: '', hm: time,
                                title: label, sub: time ? `${time} UTC` : '' });
                 });
             });
@@ -26907,8 +26915,7 @@
 
             const groups = {};
             items.forEach(x => { (groups[x.iso] = groups[x.iso] || []).push(x); });
-            Object.keys(groups).forEach(k => groups[k].sort((a, b) =>
-                a.tail.localeCompare(b.tail) || a.kind.localeCompare(b.kind)));
+            Object.keys(groups).forEach(k => groups[k].sort(timelineInDayCmp(timelineSortDir === 'desc' ? -1 : 1)));
 
             const dateKeys = Object.keys(groups).sort();
             if (timelineSortDir === 'desc') dateKeys.reverse();
