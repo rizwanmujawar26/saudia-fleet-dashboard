@@ -6,7 +6,19 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.223.1–v2.226.0 (2026-10-06 → 10-07).** Widget notes, flight theming, flight form, HBC+ software.
+**Latest — v2.229.0–v2.229.2 (2026-10-29).** Refit repaired equipment; MODMAN R&R → `/modmans`.
+
+- **Refit (v2.229.0).** Removed + shop Repaired/NFF = blue **SERVICEABLE**; Hardware Edit mode shows
+  **↻ Refit on [tail] [date]** on MODMAN and every `/units` LRU. MODMAN refit = a NEW `/modmans` record (IDs copied,
+  commissioning To-Do); the old one reads "↻ refitted TAIL". Count boxes with `modmanBoxRows()`. User already
+  refitted 484569006 → ASAE and 484230001 → AS79 live.
+- **Stray `/units` MODMANs removed (v2.229.1).** The AS76 21-Sep R&R had minted two; m003 got their reason +
+  `status: removed` (raw `active` hid it from the Shop queue). Backup `2026-10-29-before-units-modman-strays`.
+- **Maintenance MODMAN R&R writes `/modmans` (v2.229.2)** via `modmanSwapPlan()` — new activities only.
+  ⚠️ OPEN: editing a logged MODMAN swap does not re-write the register (no activity↔record link stored; adding
+  one needs a `/modmans` rule). Not yet exercised with a real save — the first real MODMAN R&R is the live test.
+
+**Earlier — v2.223.1–v2.226.0 (2026-10-06 → 10-07).** Widget notes, flight theming, flight form, HBC+ software.
 
 - **Fleet Composition notes are ONE line (v2.223.1/2).** IFC Fleet lists RETROFIT tails only (`fitOf`), with
   past-tense words on the widget only ("Powered OFF"; stored values stay "Power OFF"). IFC System says
