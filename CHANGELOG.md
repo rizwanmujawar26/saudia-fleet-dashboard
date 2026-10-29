@@ -13,6 +13,19 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.234.0 — AIRCRAFT header: mirrored Mod end, install site for all, days tile (2026-10-30)
+- **Mod end mirrored** — date, then label — and pinned to its dot's right edge; Mod start pinned to its dot's
+  left edge. Each caption is its own absolutely-placed box of fixed width (`--w1/--w2/--w3` on `.hw-ms-track`),
+  the end one kept clear of the start one with CSS `max()`. A window too short for both: `hwMsFit()` (runs
+  after `renderHwContent` and on resize) flips Mod end to START at its dot; if even that would touch Mod
+  start, it stays slid just clear (only AS61 at desktop widths). The old one-strip layout shoved short-window
+  end captions up to 150px off their dot.
+- **Install site under the tail on every aircraft** (`.hw-ac-id` stack: reg + 📍 site) — no more gaps where the
+  non-Jeddah pill used to be. Blank site shows "—" (AQG), never a guessed Jeddah.
+- **Counts right-aligned** in the corner; location pill removed from that group.
+- **Days in service is a rounded tile** (green when live, amber in mod) instead of a ruled-off column;
+  phones show a compact "158d" chip.
+
 ### v2.233.0 — AIRCRAFT header as one dark surface (2026-10-30)
 User: the dark timeline box inside a white header read as two different themes. Now the WHOLE header
 row is the navy→teal flight band (with sky haze, hover brighten, focus ring) and the milestone timeline

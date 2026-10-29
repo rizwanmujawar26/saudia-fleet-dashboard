@@ -4010,7 +4010,12 @@
         .hw-ms-chip.open { border-color: rgba(245,183,74,0.6); color: #f7c873; }
         .hw-ms-chip.gap  { border-color: rgba(232,241,251,0.28); color: rgba(232,241,251,0.78); }
         /* Captions: Mod start ⟷ Mod end always below, Activated always above. */
-        .hw-ms-below { position: absolute; top: 41px; line-height: 1; display: flex; justify-content: space-between; gap: 14px; min-width: max-content; }
+        .hw-ms-track { --w1: 128px; --w2: 120px; --w3: 70px; }
+        .hw-ms-below { position: absolute; top: 41px; line-height: 1; display: flex; }
+        .hw-ms-below.s { width: var(--w1); }
+        .hw-ms-below.e { width: var(--w2); justify-content: flex-end; }
+        .hw-ms-below.e.o { width: var(--w3); }
+        .hw-ms-below.e.flip { justify-content: flex-start; }
         .hw-ms-above { position: absolute; top: 4px; display: block; line-height: 1; }
         .hw-ms-above.c { transform: translateX(-50%); }
         .hw-ms-above.l { transform: translateX(-6px); }
@@ -4050,7 +4055,7 @@
             .hw-ms-stat b { font-size: 15px; }
             .hw-ms-c > span { font-size: 9.5px; }
             .hw-ms-c em { font-size: 7px; letter-spacing: 0.3px; }
-            .hw-ms-below { gap: 8px; }
+            .hw-ms-track { --w1: 104px; --w2: 96px; --w3: 58px; }
             .hw-ms-cc { display: none; }
         }
         /* ONE dark surface (v2.233.0, user 2026-10-30): the whole AIRCRAFT header row is the
@@ -4086,8 +4091,25 @@
         .hw-ms-chip { background: #10314f; }
         /* Counts sit at the START of their fixed slot (location pill trails them), so the
            gap either side of the timeline is the same and every row still lines up. */
-        .hw-ac-head .hw-ac-right { justify-content: flex-start; }
-        .hw-ac-head .hw-ac-right .hw-ac-counts { order: -1; }
+        /* v2.234.0: counts hug the right corner; install site sits under the tail. */
+        .hw-ac-head .hw-ac-right { justify-content: flex-end; min-width: 196px; }
+        .hw-ac-id { display: inline-flex; flex-direction: column; gap: 3px; min-width: 74px; line-height: 1; }
+        .hw-ac-site { font-size: 9.5px; font-weight: 700; letter-spacing: 0.2px; color: rgba(190,214,240,0.75); white-space: nowrap; }
+        .hw-ac-site.none { color: rgba(190,214,240,0.4); }
+        .hw-ms-c.end { gap: 4px; }
+        /* Days in service as a rounded tile, not a ruled-off column. */
+        .hw-ms .hw-ms-stat { flex: 0 0 auto; min-width: 74px; align-self: center; margin-left: 4px; padding: 7px 12px 6px; gap: 4px;
+            border: 1px solid rgba(232,241,251,0.14); border-radius: 12px; background: rgba(232,241,251,0.06); }
+        .hw-ms .hw-ms-stat.live { border-color: rgba(61,220,132,0.32); background: rgba(61,220,132,0.08); box-shadow: 0 0 14px rgba(61,220,132,0.08); }
+        .hw-ms .hw-ms-stat.open { border-color: rgba(245,183,74,0.36); background: rgba(245,183,74,0.08); }
+        /* Phones: the tile shrinks to a "158d" chip so the timeline keeps room for its dates. */
+        @media (max-width: 760px) {
+            .hw-ms .hw-ms-stat { min-width: 0; padding: 5px 8px; margin-left: 2px; border-radius: 10px; }
+            .hw-ms .hw-ms-stat small { display: none; }
+            .hw-ms .hw-ms-stat b { font-size: 14px; }
+            .hw-ms .hw-ms-stat.live b::after, .hw-ms .hw-ms-stat.open b::after { content: 'd'; font-size: 10px; margin-left: 1px; }
+            .hw-ac-head .hw-ms-track { margin: 0 10px 0 6px; }
+        }
         .hw-ac-head .hw-ac-mswrap { margin: 0 10px; }
         .hw-ac-days { font-size: 10.5px; font-weight: 700; background: #eef2f5; color: #5a6b78; border-radius: 999px; padding: 1px 7px; white-space: nowrap; font-variant-numeric: tabular-nums; }
         /* Eclipse serial pill — a blue "ECL 000" chip so an Eclipse S/N reads distinctly
@@ -8557,8 +8579,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.233.0';
-        const APP_BUILD    = '2026.10.30.04';
+        const APP_VERSION  = '2.234.0';
+        const APP_BUILD    = '2026.10.30.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -22893,7 +22915,29 @@
             // Equipment tables sort/number via the shared DOM sorter — re-apply the stored
             // sort after each re-render, or just number the rows on first paint.
             if (!isAssets && !byAc) applyHwGroupSort();
+            if (byAc) hwMsFit(host);
         }
+        // Milestone band, after layout (v2.234.0): a window too short to hold both captions
+        // pushes Mod end off its dot. Then flip it to START at the dot (reading on to the
+        // right, under the dashed wait) — still edge-aligned to its own point. If even that
+        // would touch Mod start, keep the CSS fallback (slid just clear). Re-run on resize.
+        function hwMsFit(root) {
+            (root || document).querySelectorAll('.hw-ms-below.e').forEach(e => {
+                e.classList.remove('flip'); e.style.left = e.dataset.l;
+                const track = e.parentNode, dotEl = track.querySelector('.hw-ms-pt.w');
+                if (!dotEl) return;
+                const D = dotEl.getBoundingClientRect(), E = e.firstElementChild.getBoundingClientRect();
+                if (E.right <= D.right + 1) return;
+                const S = track.querySelector('.hw-ms-below.s').firstElementChild.getBoundingClientRect();
+                if (D.left < S.right + 10) return;
+                e.classList.add('flip'); e.style.left = e.dataset.fl;
+            });
+        }
+        let hwMsFitTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(hwMsFitTimer);
+            hwMsFitTimer = setTimeout(() => { if (document.querySelector('.hw-ms')) hwMsFit(document.getElementById('hwContent')); }, 120);
+        });
         // AIRCRAFT view header — a title + count, so it matches the equipment tabs' layout.
         function renderHwAircraftHead() {
             let fleet = hwAircraftFleet();
@@ -23577,7 +23621,7 @@
             // Points.
             const dot = (f, cls, extra = '') => `<span class="hw-ms-pt ${cls}" style="left:${at(f)};"${extra}></span>`;
             parts.push(dot(fS, 'mod'));
-            parts.push(dot(fW, open ? 'today' : 'mod'));
+            parts.push(dot(fW, (open ? 'today' : 'mod') + ' w'));
             if (pending) parts.push(dot(1, 'pending'));
             if (fA != null) {
                 // De-synchronise the beacons so 50 rows don't throb in step.
@@ -23585,12 +23629,18 @@
                 const delay = -((h % 30) / 10).toFixed(1);
                 parts.push(`<span class="hw-ms-beacon" style="left:${at(fA)};--d:${delay}s;"><i></i><i></i><b></b></span>`);
             }
-            // Below: Mod start ⟷ Mod end (or Ongoing), one strip spanning the window.
+            // Below: Mod start pinned to its dot's left edge; Mod end (or In mod) mirrored —
+            // date, then label — and pinned to its dot's RIGHT edge. Each caption has a fixed
+            // width (--w1 / --w2, sized to the longest date), so the end one can be kept clear
+            // of the start one with a CSS max(): on a window too short for both it slides right
+            // just enough to clear, instead of the pair being shoved off their dots together.
             const endCap = open
-                ? `<span class="hw-ms-c open"><em>In mod</em><span>today</span></span>`
-                : `<span class="hw-ms-c"><em>Mod end</em><span>${fmt(endIso)}</span></span>`;
-            parts.push(`<span class="hw-ms-below" style="left:calc(${at(fS)} - 5px);width:calc(${len(fS, fW)} + 10px);">`
-                + `<span class="hw-ms-c"><em>Mod start</em><span>${fmt(startIso)}</span></span>${endCap}</span>`);
+                ? `<span class="hw-ms-c open end"><span>today</span><em>In mod</em></span>`
+                : `<span class="hw-ms-c end"><span>${fmt(endIso)}</span><em>Mod end</em></span>`;
+            parts.push(`<span class="hw-ms-below s" style="left:calc(${at(fS)} - 5px);"><span class="hw-ms-c"><em>Mod start</em><span>${fmt(startIso)}</span></span></span>`);
+            const wv = open ? 'var(--w3)' : 'var(--w2)';   // "today · In mod" is shorter
+            const eLeft = `max(calc(${at(fW)} + 5px - ${wv}), calc(${at(fS)} - 5px + var(--w1) + 10px))`;
+            parts.push(`<span class="hw-ms-below e${open ? ' o' : ''}" style="left:${eLeft};" data-l="${eLeft}" data-fl="calc(${at(fW)} - 5px)">${endCap}</span>`);
             // Above: Activated (or pending), anchored to its point and clamped to the band.
             const fUp = fA != null ? fA : 1;
             const align = fUp > 0.78 ? 'r' : fUp < 0.22 ? 'l' : 'c';
@@ -23817,9 +23867,10 @@
                 // done somewhere OTHER than Jeddah (Doha, Amman, Malta …), so a non-standard
                 // install site is visible at a glance and Jeddah stays uncluttered.
                 const site = (a.retrofitLocation || '').trim();
-                const locPill = (site && site !== 'Jeddah')
-                    ? `<span class="tl-loc-pill" style="${pill(LOCATION_PILL_COLORS[site] || NEUTRAL_PILL)}">📍 ${escAttr(site)}</span>`
-                    : '';
+                // v2.234.0: the install site now shows for EVERY aircraft, under the tail, so
+                // no row has a gap where a pill would be (user, 2026-10-30). Blank = "—", never
+                // a guessed Jeddah.
+                const siteLine = `<span class="hw-ac-site${site ? '' : ' none'}" title="Install site">📍 ${escAttr(site || '—')}</span>`;
                 // Activation date (dd-mmm-yyyy) + days-in-service pill, on the left after
                 // Type/Fit. An aircraft still In Retrofit has no activation yet — for it we
                 // show "In Retrofit" and its Mod start date (Fleet retrofitStart) instead,
@@ -23843,14 +23894,13 @@
                 return `<div class="hw-ac-block ${open ? 'open' : ''}">
                     <div class="hw-ac-head" onclick="toggleHwAc('${escAttr(a.id)}')" role="button" tabindex="0" aria-expanded="${open}">
                         <span class="hw-ac-chev" aria-hidden="true">▾</span>
-                        <span class="hw-ac-reg">${escAttr(a.id)}</span>
+                        <span class="hw-ac-id"><span class="hw-ac-reg">${escAttr(a.id)}</span>${siteLine}</span>
                         <span class="tl-pill" style="${pill(TYPE_PILL_COLORS[a.type] || NEUTRAL_PILL)}">${escAttr(TYPE_SHORT_LABEL[a.type] || a.type)}</span>
                         ${fitBadge}
                         ${msTrack
                             ? `<span class="hw-ac-mswrap">${msTrack}</span>`
                             : `<span class="hw-ac-actwrap"><span class="hw-ac-act-label">${inRetrofit ? 'Mod start' : 'Activated'}</span>${actCell}</span>`}
                         <span class="hw-ac-right">
-                            ${locPill}
                             <span class="hw-ac-counts">
                                 <span class="hw-ac-pill on">${recorded} On-Wing</span>
                                 <span class="hw-ac-pill off">${removedCount} Removed</span>
