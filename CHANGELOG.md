@@ -13,6 +13,28 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.236.0 — Design system v3: one look on every page (2026-10-30)
+User: bring every page up to the newer Hardware/Home standard so the dashboard reads as one product.
+- **One block, last in the main stylesheet** ("Design system v3"): tokens on `:root` (`--ds-*`), class-scoped
+  so frozen-head copies match. No layout logic changed.
+- **Font**: `-apple-system, BlinkMacSystemFont, 'Segoe UI', …` — SF Pro on Mac (the old stack fell to Tahoma),
+  Windows unchanged. Buttons/inputs now inherit it. Tables use tabular figures (Fleet excepted, see below).
+- **Tables**: every `.aircraft-table` (Software, Media, Fleet, dormant SIM) takes the `.hw-reg-table` look —
+  pale `#f7f9fb` head, 10.5px grey capitals, 2px head rule, hairline rows, `#f8fbfd` hover; the dark-green head,
+  its hover and the green pinned-head foot line are gone. Fleet's group heads are tinted bands in their own hue
+  with a 2px underline. Green row wash on "completed"/"latest" rows removed (the pill says it). Tail 14px.
+- **Pills**: solid filled status pills → soft tints with an inset 1px ring, same hues (Completed/latest/Commercial
+  green, previous blue, older/in-retrofit amber, light-media violet, none grey). AOG and an open maintenance issue
+  stay the only SOLID pills. Round = status; rounded-rect chips = values. Measured: no row has mismatched pill
+  heights on any page (Software/Media 18px, registers 15px, timeline 20px). Hardware SIM roaming pills now match
+  ON WING; `.sr-state` round.
+- **Fleet still fits 1280**: SF Pro made it 1222px in 1178px; back to 1172px natural via 4px side padding,
+  proportional figures, 0.15px pill tracking, 100px comment clip.
+- **Filter bars**: every control 30px with one `#d7dee5` border (was 26.5–31px, Fleet at 11px text).
+- **Media dates day-first**: Loading Date was `2026-10-29 10:31 UTC`; now `29-Oct-2026` with age + time beneath,
+  the Software OTA layout. `fmtMediaDate()` returns day-first too.
+- **Header title** fitter steps down until it truly fits (last S sat under the clock at 375px).
+
 ### v2.235.0 — AIRCRAFT header: white card, site on the timeline, 30-day mod progress (2026-10-30)
 User: the dark theme was an eyesore; pills were mismatched; location should be prominent and central.
 - **White card** again (`.hw-ac-block` hairline border, soft hover lift); dark band and glass re-tones removed.

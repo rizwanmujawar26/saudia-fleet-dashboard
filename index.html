@@ -6409,6 +6409,160 @@
             }
         }
 
+        /* ===== Design system v3 — one look on every page (v2.236.0) =================
+           The Hardware register (v2.163+) and the Home/Maintenance feed set the house
+           style: white surfaces, a pale table head with small grey capitals, hairline
+           row rules, and SOFT tinted pills whose hue carries the meaning. Software,
+           Media and Fleet still wore the first-generation look — a solid dark-green
+           head and solid filled pills — so the pages read as different products.
+           This block brings them onto the one system. It is deliberately LAST in the
+           sheet so it wins on equal specificity; it changes no layout logic.
+           Principles (user, 2026-10-30): white and clean over dark; the tail is the
+           biggest text on its row; sibling pills match in height and size; the
+           common case is quiet and the exception is loud — so AOG and an open
+           maintenance issue stay the only SOLID pills in the app.
+           ⚠️ Frozen heads copy className, never id — every rule here is by class. */
+        :root {
+            /* SF Pro on a Mac, Segoe UI on Windows (unchanged there) — the old stack
+               fell through to Tahoma on macOS, which is what made the type look dated. */
+            --ds-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Roboto, Arial, sans-serif;
+            --ds-ink: #1f2b33;
+            --ds-ink-2: #4b5763;
+            --ds-muted: #8a97a1;
+            --ds-head-bg: #f7f9fb;
+            --ds-head-rule: #e6ecf1;
+            --ds-row-rule: #eef2f5;
+            --ds-hover: #f8fbfd;
+            --ds-divider: #e1e7ec;
+            --ds-green: #0a5c34;
+        }
+        body { font-family: var(--ds-font); }
+        button, input, select, textarea { font-family: inherit; }
+
+        /* ---- Tables: the .hw-reg-table look on every .aircraft-table ---- */
+        .aircraft-table { color: var(--ds-ink); font-variant-numeric: tabular-nums; }
+        .aircraft-table th {
+            background: var(--ds-head-bg);
+            color: var(--ds-muted);
+            font-size: 10.5px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--ds-head-rule);
+        }
+        .aircraft-table th.sortable-th:hover,
+        .sortable-table.aircraft-table th:hover { background: #eef2f5; color: var(--ds-green); }
+        .aircraft-table td {
+            font-size: 13px;
+            border-bottom: 1px solid var(--ds-row-rule);
+        }
+        .aircraft-table tbody tr:hover { background: var(--ds-hover); }
+        /* The tail is the primary identifier — the biggest, darkest text on its row. */
+        .aircraft-table td > strong:only-child { font-size: 14px; color: var(--ds-ink); letter-spacing: 0.2px; }
+        /* A tint on the COMMON state is noise: when 50 of 50 rows are "completed" the
+           green wash says nothing. The pill already carries it. */
+        .aircraft-table tbody tr.completed,
+        #mediaTable tbody tr.media-row-latest { background: transparent; }
+        #mediaTable tbody tr:hover { background: var(--ds-hover); }
+        /* Roomier tables (Media, the dormant SIM page) — the compact ones keep their
+           own measured padding (sw-compact / fleet-compact / hw-modem-table). */
+        .aircraft-table:not(.sw-compact):not(.fleet-compact):not(.hw-modem-table) th { padding: 10px 12px; }
+        .aircraft-table:not(.sw-compact):not(.fleet-compact):not(.hw-modem-table) td { padding: 9px 12px; }
+        /* "Newest first" under a head label was white-on-green. */
+        .aircraft-table .th-order { color: #a3aeb6; }
+        /* The 1px rule a pinned head paints at its foot (see .table-freeze) was the old
+           dark green; on a pale head it is the head rule. */
+        .table-freeze:not(.is-overflowing) .aircraft-table thead tr:last-child th::after,
+        .table-freeze:not(.is-overflowing) .aircraft-table thead th[rowspan="2"]::after { background: var(--ds-head-rule); }
+
+        /* Grouped heads (Fleet): a tinted band in the group's own colour with a 2px
+           underline, instead of three solid blocks. Hues unchanged — Aircraft green,
+           Connectivity vendor blue, Retrofit slate. */
+        .aircraft-table th.fleet-group {
+            border-left: 2px solid var(--ds-divider);
+            border-bottom: 0;
+            font-weight: 800;
+        }
+        .aircraft-table th.fleet-group-air   { background: #edf5f0; color: #0a5c34; box-shadow: inset 0 -2px 0 #0a5c34; }
+        .aircraft-table th.fleet-group-conn  { background: #eaf2fb; color: #005DAC; box-shadow: inset 0 -2px 0 #005DAC; }
+        .aircraft-table th.fleet-group-retro { background: #f0f0f5; color: #4c4a63; box-shadow: inset 0 -2px 0 #4c4a63; }
+        .aircraft-table thead .fleet-group-start { border-left: 2px solid var(--ds-divider); }
+
+        /* ---- Pills: one soft shape ----
+           Round pill = a STATUS; the rounded-rectangle chips (.ver-badge, .age-pill,
+           .mono) are VALUES. Base size matches the Hardware/Fleet scale; dense tables
+           keep their own smaller overrides. Hues are the house vocabulary: green done,
+           blue available/previous, amber behind, violet light media, grey nothing set. */
+        .status-badge {
+            padding: 2px 9px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        /* Software and Media: the status pill and the version chips beside it share
+           one 18px height. (Not set on the base: Fleet and the registers size theirs
+           by padding, and a base line-height grew them from 15–16px to 19.) */
+        .aircraft-table:not(.fleet-compact):not(.hw-modem-table) .status-badge { line-height: 14px; }
+        /* Hardware registers: a status pill is the ON WING / REMOVED scale. */
+        .hw-reg-table .status-badge { font-size: 9.5px; padding: 2px 7px; letter-spacing: 0.6px; }
+        .sr-state { border-radius: 999px; }
+        /* The AVR visit chip sits beside 20px timeline pills. */
+        .repo-visit-chip { line-height: 14px; }
+        .status-completed,
+        .status-badge.sw-latest,
+        .status-badge.media-latest,
+        .status-badge.fleet-active,
+        .status-badge.fleet-ph-cml   { background: #e2f3e8; color: #0b6534; box-shadow: inset 0 0 0 1px #c3e4cf; }
+        .status-badge.media-previous { background: #e6f0fb; color: #1c5b96; box-shadow: inset 0 0 0 1px #c3dbf3; }
+        .status-badge.sw-old,
+        .status-badge.media-older,
+        .status-badge.fleet-in-retrofit { background: #fdf3e3; color: #8a5a12; box-shadow: inset 0 0 0 1px #efd9ae; }
+        .status-badge.media-light    { background: #efebfa; color: #4f3fa8; box-shadow: inset 0 0 0 1px #d9d1f2; }
+        .status-badge.media-none,
+        .status-not-started          { background: #eef1f4; color: #6b747d; box-shadow: inset 0 0 0 1px #dce1e6; }
+        .status-scheduled            { background: #e3f4f6; color: #0f6b78; box-shadow: inset 0 0 0 1px #bfe3e8; }
+        .status-in-progress          { background: #fdeff0; color: #a52834; box-shadow: inset 0 0 0 1px #f3cdd1; animation: none; }
+        /* Values on the Media row sit beside the cycle pill — same height. */
+        .aircraft-table .ver-badge { padding: 1px 8px; line-height: 14px; font-size: 11px; vertical-align: middle; }
+
+        /* Fleet must still fit 1280 on one screen. SF Pro sets ~4% wider than Tahoma,
+           which took the table from fitting to 1222px in a 1178px wrapper. Measured
+           back to 1172px (natural width) by: proportional figures, 0.15px tracking on
+           its tiny pills, 4px side padding, a 100px comment clip. Re-measure with the
+           table at width:1px if a column is ever added. Class-scoped (frozen head). */
+        .fleet-compact { font-variant-numeric: normal; }
+        .fleet-compact th, .fleet-compact td { padding-left: 4px; padding-right: 4px; }
+        .fleet-compact .status-badge { letter-spacing: 0.15px; }
+        .fleet-compact .type-pill,
+        .fleet-compact .mod-bar { letter-spacing: 0; }
+        .fleet-compact .comment-text { max-width: 100px; }
+
+        /* ---- Filter bars: every control one 30px pill with one soft border ----
+           Measured before: 26.5px quick pills beside 29px triggers on Home, Fleet's
+           11px controls beside 13px quick pills, Hardware's selects at 31px. Active
+           and has-value states keep their green border (they out-specify these). */
+        .fb-trigger, .qf-btn, .fb-search, .hw-search, .hw-type-filter { height: 30px; }
+        .fb-trigger, .qf-btn, .fb-search { border-color: #d7dee5; }
+        @media (min-width: 769px) {
+            .fb-quick-btn { font-size: 13px; }
+            .fb-filters[data-bar="fleet"] .fb-trigger,
+            .fb-filters[data-bar="fleet"] .qf-btn,
+            .fb-filters[data-bar="fleet"] .fb-search { font-size: 13px; padding-left: 12px; padding-right: 12px; }
+            .hw-type-filter { font-size: 13px; }
+        }
+
+        /* ---- Widget labels: one size on every strip ---- */
+        .media-widget-label { font-size: 11.5px; letter-spacing: 0.5px; color: var(--ds-ink-2); }
+
+        @media (max-width: 768px) {
+            .aircraft-table:not(.sw-compact):not(.fleet-compact):not(.hw-modem-table) th,
+            .aircraft-table:not(.sw-compact):not(.fleet-compact):not(.hw-modem-table) td { padding: 8px; }
+            .aircraft-table td { font-size: 12px; }
+            .aircraft-table td > strong:only-child { font-size: 13px; }
+        }
+
     </style>
 </head>
 <body>
@@ -8574,8 +8728,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.235.0';
-        const APP_BUILD    = '2026.10.30.06';
+        const APP_VERSION  = '2.236.0';
+        const APP_BUILD    = '2026.10.30.07';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -9344,7 +9498,7 @@
         function fmtMediaDate(iso) {
             if (!iso) return '';
             const m = iso.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
-            return m ? `${m[1]} ${m[2]} UTC` : iso;
+            return m ? `${fmtDate(m[1]) || m[1]} ${m[2]} UTC` : iso;
         }
 
         // Round-trips a stored record back into the string the editor accepts.
@@ -13524,8 +13678,11 @@
                 const loadedISO = (effective.loadedDateUTC || '').slice(0, 10);
                 const loadedAge = activationAge(loadedISO);
                 const shownDate = fmtMediaDate(effective.loadedDateUTC);
+                // Day-first like every other date in the app, laid out as the Software
+                // OTA cells are: the date, then the age pill and UTC time beneath it.
+                const loadedTime = ((effective.loadedDateUTC || '').match(/T(\d{2}:\d{2})/) || [])[1];
                 const dateCell = shownDate
-                    ? `<span class="fleet-date">${escAttr(shownDate)}</span>${loadedAge ? `<span class="age-pill" title="Time since media load">${loadedAge}</span>` : ''}`
+                    ? `<div class="ota-stack"><span class="fleet-date">${escAttr(fmtDate(loadedISO) || shownDate)}</span><div class="ota-sub">${loadedAge ? `<span class="age-pill age-pill-tight" title="Time since media load">${loadedAge}</span>` : ''}${loadedTime ? `<span class="ota-time">${loadedTime} UTC</span>` : ''}</div></div>`
                     : '<span class="fleet-notset">Not set</span>';
                 // 14 nines, not eight: a real key is a full timestamp (20260808123319),
                 // so a shorter sentinel would sort undated rows to the FRONT.
@@ -28048,7 +28205,12 @@
                     ? max
                     : Math.max(min, Math.floor((avail / needed) * max * 10) / 10);
                 el.style.fontSize = size + 'px';
-                return size;
+                // Glyph widths do not scale exactly linearly (hinting, rounding), so the
+                // ratio can land a few px wide — at 375 the last S sat under the clock.
+                // Step down until it truly fits; a handful of iterations at most.
+                let s = size;
+                while (s > min && el.scrollWidth > avail) { s = Math.round((s - 0.2) * 10) / 10; el.style.fontSize = s + 'px'; }
+                return s;
             };
 
             const title = fit(box.querySelector('h1'), HEADER_TITLE.min, HEADER_TITLE.max);
