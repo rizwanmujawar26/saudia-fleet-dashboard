@@ -8215,8 +8215,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.229.0';
-        const APP_BUILD    = '2026.10.29.01';
+        const APP_VERSION  = '2.229.1';
+        const APP_BUILD    = '2026.10.29.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -18502,6 +18502,9 @@
                     renderHardwarePage();
                     renderSerialsPage();
                     updateMetrics();                        // the Timeline picks it up here
+                    const mmSwap = ['modman', 'lf_modman'].includes((entry.details || {}).lruId)
+                        && (val('addActOldPart') || val('addActNewPart'));
+                    if (mmSwap) serialWarnings.push('MODMAN serials are kept on Hardware › MODMAN — record the removal and ↻ Refit / Fit there');
                     if (serialWarnings.length) {
                         setSyncStatus('🟡 Saved — ' + serialWarnings[0], '#b8860b');
                     } else {
@@ -22788,6 +22791,11 @@
             const d = entry.details || {};
             const lruId = d.lruId;
             if (!lruId || (!oldSerial && !newSerial)) return null;
+            // A MODMAN lives on /modmans, never /units (v2.142–2.143). Logging its swap
+            // here minted stray /units MODMAN records (AS76, 21-Sep-2026; deleted
+            // v2.229.1) — so a MODMAN R&R writes no unit; the box is updated on
+            // Hardware › MODMAN (removal date, ↻ Refit / Fit on the new tail).
+            if (lruId === 'modman' || lruId === 'lf_modman') return null;
 
             const tail = entry.aircraft;
             const pos = d.position || '';

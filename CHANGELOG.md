@@ -13,6 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.229.1 — Maintenance MODMAN swaps no longer write /units; stray records removed (2026-10-29)
+`unitWritesForActivity` returns null for `modman`/`lf_modman`: the AS76 "Modman Replaced" R&R (21-Sep-2026) had minted
+two stray `/units` MODMAN records (484230004 removed, 483704002 fitted) duplicating `/modmans` m003/m005. Data fix
+(backup `2026-10-29-before-units-modman-strays`): m003 gained the stray's `removalReason` and stored `status: removed`
+(it had `removalDate` but raw `active`, so it was missing from the MODMAN Removed / Shop queue, which filters raw
+status); both strays deleted (`/units` 243 → 241, 0 MODMAN). A MODMAN R&R with serials now saves with a 🟡 note to
+update Hardware › MODMAN. Open: have the R&R write `/modmans` directly.
+
 ### v2.229.0 — Refit a repaired box on another aircraft, MODMAN first, every LRU (2026-10-29)
 A removed box whose shop report reads **Repaired / No Fault Found** now reads **SERVICEABLE** (blue) and, in Hardware
 Edit mode, its row carries **↻ Refit on [tail] [dd-mm-yyyy]**. **MODMAN** (`hwRefitModman`): a serviceable box gets a
