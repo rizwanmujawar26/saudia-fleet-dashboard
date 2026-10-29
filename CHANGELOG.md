@@ -13,6 +13,24 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.235.0 — AIRCRAFT header: white card, site on the timeline, 30-day mod progress (2026-10-30)
+User: the dark theme was an eyesore; pills were mismatched; location should be prominent and central.
+- **White card** again (`.hw-ac-block` hairline border, soft hover lift); dark band and glass re-tones removed.
+- **Hierarchy**: tail 19px/800 is the largest thing on the row. Type + fit are a matched pair of `.hw-tag`s
+  (20px tall, 10px/800, radius 6, sized to text — type keeps its case "A321neo") in a fixed 164px slot so
+  every timeline still starts at the same x. Counts 22px pills, right corner.
+- **Install site on the timeline**: `hwSiteChip()` joined to the window length — `[📍 Jeddah | 13d mod]` —
+  centred on the mod window. Jeddah muted grey; any other site warm amber with a soft shadow; blank
+  dashed "—" (ASW has no install site recorded). `hwMsFit()` lifts it above the rail when it would cover a
+  dot (short windows, or an in-window activation — ASF), drops the day count, then re-anchors the Activated
+  caption around its dot if they still clash. Linefit rows show the chip beside the Activated date.
+- **In-mod progress against a nominal 30-day mod** (`HW_MOD_NOMINAL_DAYS`, internal only): window drawn to
+  the 30-day mark (80% of the track, pale dashed), amber marching bar fills days/30 of it (6d → short bar);
+  past 33d (`HW_MOD_OVERRUN_DAYS`) the bar, today dot, caption and tile turn coral. In-mod site chip always
+  sits above the bar, centred on the 30-day window.
+- Re-fit on layout change via ResizeObserver + window resize backstop (timers only — rAF/RO don't run in a
+  hidden tab, which is also why headless resize emulation never re-fits: it sends no resize event).
+
 ### v2.234.0 — AIRCRAFT header: mirrored Mod end, install site for all, days tile (2026-10-30)
 - **Mod end mirrored** — date, then label — and pinned to its dot's right edge; Mod start pinned to its dot's
   left edge. Each caption is its own absolutely-placed box of fixed width (`--w1/--w2/--w3` on `.hw-ms-track`),
