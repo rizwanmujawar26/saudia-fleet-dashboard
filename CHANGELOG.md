@@ -13,6 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.237.0 — Fleet: Commercial first by newest activation, every other status last (2026-10-30)
+User: the Fleet table should open on Commercial aircraft, newest activation first, with the other statuses at the end.
+- Activation Date `data-sort` is now two tiers (`actSortKey` in `populateFleetTable`): Commercial + activation date →
+  the real 8-digit date key; every other status → `phase × 1e6 + YYMMDD` (always below a real date), so under the
+  newest-first default they fall to the bottom as Commissioned → SW Loading → Power ON/Delivered → Power OFF → none,
+  newest date (activation, else Mod start) first within each.
+- Reverses v2.223's "pre-service tails on top" (`'9999999' + phase`).
+
 ### v2.236.0 — Design system v3: one look on every page (2026-10-30)
 User: bring every page up to the newer Hardware/Home standard so the dashboard reads as one product.
 - **One block, last in the main stylesheet** ("Design system v3"): tokens on `:root` (`--ds-*`), class-scoped
