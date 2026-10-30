@@ -6,7 +6,15 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.229.0–v2.229.3 (2026-10-29).** Refit repaired equipment; MODMAN R&R → `/modmans`.
+**Latest — v2.236.0 (2026-10-30).** Design system v3 — one look on every page.
+
+- One class-scoped block, **"Design system v3"**, at the END of the main `<style>` (tokens `--ds-*`). Software,
+  Media and Fleet moved off the dark-green table head and solid pills onto the Hardware/Home look. Details in
+  *Conventions → The house style*. Fleet re-measured: 1172px natural in a 1178px wrapper at 1280.
+- Media Loading Date is day-first (was ISO); header title fitter now steps down until it truly fits at 375px.
+- Before this: v2.231–v2.235 Hardware AIRCRAFT header milestone timeline (own section).
+
+**Earlier — v2.229.0–v2.229.3 (2026-10-29).** Refit repaired equipment; MODMAN R&R → `/modmans`.
 
 - **Removal date sets status (v2.229.3).** A removal date typed on Hardware › MODMAN now also stores
   `status: removed` (AS79 m055 had sat `active`, hidden from the Shop queue so no reason could be entered); queue +
@@ -4017,6 +4025,19 @@ three `apply*Filters()` and `sortTable()` do. A row whose first cell has `colspa
 skipped, so an empty-state row is never numbered.
 
 ## Conventions
+
+- **The house style (v2.236.0, "Design system v3").** Every new UI uses it; never a new dark head or solid pill.
+  - Font `-apple-system, BlinkMacSystemFont, 'Segoe UI', …` — buttons and inputs inherit it.
+  - Tables: pale `#f7f9fb` head, 10.5px/800 grey capitals, 2px `#e6ecf1` head rule, `#eef2f5` row rules,
+    `#f8fbfd` hover. Group heads = tinted band in the group hue + `inset 0 -2px 0` underline. No tint on the
+    common-state row. Style by **class** (frozen-head copies drop the id).
+  - Pills: soft tint + `box-shadow: inset 0 0 0 1px` ring (no size change). Hue = meaning (widget vocabulary).
+    **Only AOG and an open maintenance issue are solid.** Round = status; rounded-rect chip = value.
+  - ⚠️ Never put `line-height` on the base `.status-badge` — Fleet and the registers size theirs by padding,
+    and a base line-height grew them 15→19px. Sibling pills in a row must measure equal (checked v2.236).
+  - Filter controls are all 30px with one `#d7dee5` border.
+  - ⚠️ SF Pro is ~4% wider than Tahoma. Re-measure any fit-to-1280 table with it at `width:1px` (natural width).
+
 
 - **Regex escaping in `database.rules.json` is a trap that fails silently.** The
   file is JSON, so a backslash is written `\\` and *decodes* to one backslash. To
