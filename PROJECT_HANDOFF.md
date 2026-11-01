@@ -6,7 +6,15 @@ under *"RESUME"* below — read this document and `DISASTER-RECOVERY.md`, run
 
 ## Where things stand (read this first)
 
-**Latest — v2.236.0 (2026-10-30).** Design system v3 — one look on every page.
+**Latest — v2.237.0 (2026-10-30).** Fleet table: Commercial first (newest activation), every other status last.
+
+- Activation Date key `actSortKey` in `populateFleetTable` — details in *Fleet status — one field, not two*.
+  Reverses v2.223's pre-service-on-top.
+- Data only (2026-11-01): 8 Nov-2026 (`1126`) loads written to `/mediaLoads` (AS63 AS56 ASP AS53 ASF ASAD AQJ
+  ASAH); 6 others in the same batch were already logged — check `/mediaLoads` for an existing `aircraft`+`cycle`
+  before writing a pasted list. Bulk entry was via `firebase-tools database:update` with a backup first.
+
+**Earlier — v2.236.0 (2026-10-30).** Design system v3 — one look on every page.
 
 - One class-scoped block, **"Design system v3"**, at the END of the main `<style>` (tokens `--ds-*`). Software,
   Media and Fleet moved off the dark-green table head and solid pills onto the Hardware/Home look. Details in
@@ -1606,8 +1614,14 @@ page. Commercial is always a deliberate manual step.
 **Fleet table.** Status = one coloured badge per phase (grey / amber / blue / purple
 Delivered / teal / green Commercial); the edit select offers `statusOptionsFor(a)` —
 the aircraft's own journey by `fit`. The Status filter lists the phases. The default
-sort (Activation, newest first) floats **pre-service tails to the top** with the
-sentinel `9999999<phase>` (same 8 digits as a real key; most advanced first).
+sort (Activation, newest first) puts **Commercial tails with an activation date FIRST**,
+newest first, and **every other status LAST** (user, v2.237.0 — reversing v2.223's
+pre-service-on-top). Key `actSortKey`: Commercial + date → the real 8-digit date key;
+anything else → `phase × 1e6 + YYMMDD` (≤ 7 digits, always below a real date), so the
+tail end reads Commissioned → SW Loading → Power ON/Delivered → Power OFF → none, newest
+date (activation, else Mod start) first within each. ⚠️ A single-column sorter: flip to
+oldest-first and the non-Commercial group comes to the top. A tail with an activation
+date but still **Commissioned** (ASBF) sits at the end until it is set Commercial.
 ⚠️ At 1280px the table was already ~14px over its wrapper; `COMMISSIONED` adds ~19px.
 
 `fit` (retrofit/linefit — how WiFi got on) and `fleetStatus` (where it is in the journey
