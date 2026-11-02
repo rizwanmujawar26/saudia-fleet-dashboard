@@ -6683,16 +6683,6 @@
                              arrow as the row narrows. -->
                         <div class="tl-controls">
                             <div class="fb-filters" data-bar="timeline"></div>
-                            <div class="tl-sort">
-                                <button id="sortOldestBtn" class="qf-btn tl-sort-btn" onclick="setTimelineSort('asc')"
-                                        title="Oldest first" aria-label="Sort oldest first">
-                                    <span class="tl-arrow">↑</span><span class="tl-lab tl-lab-lg">Oldest First</span><span class="tl-lab tl-lab-md">Oldest</span><span class="tl-lab tl-lab-sm">Old</span>
-                                </button>
-                                <button id="sortLatestBtn" class="qf-btn tl-sort-btn active" onclick="setTimelineSort('desc')"
-                                        title="Newest first" aria-label="Sort newest first">
-                                    <span class="tl-arrow">↓</span><span class="tl-lab tl-lab-lg">Newest First</span><span class="tl-lab tl-lab-md">Newest</span><span class="tl-lab tl-lab-sm">New</span>
-                                </button>
-                            </div>
                             <!-- Reset — the shared icon-btn/reset-btn pattern: "↺ Reset" where
                                  there is room, a bare ↺ circle below 700px. Clears the kind, the
                                  search and the sort, which drops the focused view and brings the
@@ -8838,8 +8828,7 @@
             if (!mediaEditMode) populateMediaTable();
             if (!maintEditMode) renderMaintenancePage();
             if (!simEditMode) renderSimPage();
-            if (!hwEditMode) renderHardwarePage();
-            renderSerialsPage();
+            hwSoftRefresh(true);
             updateMetrics();
         }
 
@@ -8987,9 +8976,7 @@
                 rebuildMediaCycles();      // the Media widgets and reports read MEDIA_CYCLES
                 markDataSync();
                 rebuildAircraftData();     // current media is derived from the log
-                renderHardwarePage();      // fitment is derived from units
-                renderMaintenancePage();   // so is Installed Equipment
-                renderSerialsPage();
+                hwSoftRefresh(true);       // fitment + Installed Equipment derive from units
                 populateMediaTable();      // widgets and rows both read the log
                 renderSatcomPage();        // the MODMAN register reads /modmans
                 if (!fleetEditMode) populateFleetTable();  // Aircraft Age column reads /fleetSpecs
@@ -9062,9 +9049,7 @@
             autoDeliverLanded();          // /flights or /fleetSpecs may have moved; an editor may have signed in
             if (changed) {
                 markDataSync();
-                renderHardwarePage();
-                renderMaintenancePage();
-                renderSerialsPage();
+                hwSoftRefresh(true);
                 if (!satcomEditMode) renderSatcomPage();  // MODMAN register reads /modmans
                 if (!fleetEditMode) populateFleetTable();  // Aircraft Age reads /fleetSpecs
                 updateMetrics();          // the Timeline reads activities
@@ -9728,6 +9713,18 @@
         // like the Reset button it collapses to an icon-only circle on a narrow screen (the
         // shared .icon-btn / .ib-label pattern). `activeLabel` is the editing-state word
         // (e.g. "Save", "Done"); any leading emoji in it is stripped, the icon carries it.
+        // ⚠️ The page Edit/Save buttons are .icon-btn with .ib-icon + .ib-label children.
+        // Setting btn.textContent = 'Saving...' DESTROYS those children, so the later
+        // applyEditButton() repaint finds no .ib-label and the button stays "Saving..."
+        // forever. Paint the busy state INTO the label instead; the repaint reverses it.
+        function editBtnSaving(btn) {
+            btn.disabled = true;
+            btn.classList.add('is-saving');
+            const icon = btn.querySelector('.ib-icon'), label = btn.querySelector('.ib-label');
+            if (icon) icon.textContent = '⏳';
+            if (label) label.textContent = 'Saving…'; else btn.textContent = 'Saving…';
+        }
+
         function applyEditButton(btnId, editing, idleLabel, activeLabel) {
             const btn = document.getElementById(btnId);
             if (!btn) return;
@@ -9735,6 +9732,8 @@
             btn.style.display = locked ? 'none' : '';
             if (locked) return;                       // nothing else to paint while hidden
             btn.classList.toggle('save-active', editing);
+            btn.classList.remove('is-saving');
+            btn.disabled = false;
             const activeText = String(activeLabel || 'Save').replace(/^[^\p{L}]+/u, '').trim() || 'Save';
             const icon = btn.querySelector('.ib-icon');
             const label = btn.querySelector('.ib-label');
@@ -10957,6 +10956,7 @@
                     { filter: 'kind', value: 'software', label: 'Software' },
                     { filter: 'kind', value: 'hardware', label: 'Hardware' },
                     { filter: 'kind', value: 'media',    label: 'Media' },
+                    { filter: 'kind', value: 'flight',   label: 'Flight' },
                 ],
                 filters: [
                     { id: 'kind', label: 'Show', single: true,
@@ -11093,7 +11093,7 @@
             if (!token) return;
 
             const btn = document.getElementById('editModeBtn');
-            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+            if (btn) editBtnSaving(btn);
             setSyncStatus('🟡 Saving changes...', '#e0a800');
 
             // One multi-path PATCH so the whole batch lands atomically.
@@ -13430,7 +13430,7 @@
             const token = await getIdToken();
             if (!token) return;
             const btn = document.getElementById('fleetEditBtn');
-            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+            if (btn) editBtnSaving(btn);
             setSyncStatus('🟡 Saving fleet...', '#e0a800');
 
             // activatedDate is a property of the aircraft, not of the roster entry, so it
@@ -14209,7 +14209,7 @@
             if (!token) return;
 
             const btn = document.getElementById('mediaEditBtn');
-            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+            if (btn) editBtnSaving(btn);
             setSyncStatus('🟡 Saving media...', '#e0a800');
 
             const multi = {};
@@ -18438,7 +18438,7 @@
             if (!token) return;
 
             const btn = document.getElementById('maintEditBtn');
-            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+            if (btn) editBtnSaving(btn);
             setSyncStatus('🟡 Saving maintenance...', '#e0a800');
 
             const nowUTC = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -22990,6 +22990,30 @@
             }
         }
 
+        // ⚠️ Hardware inline edits save field-by-field, and every save used to re-render
+        // the whole page — so rows re-sorted under the cursor (the wrong entry got edited)
+        // and any half-typed serial/date in another cell was wiped by a poll or stream
+        // re-render. While the page is in edit mode (or a field in it has focus) a refresh
+        // is DEFERRED: the local stores are already updated, the screen catches up when
+        // the edit closes or focus leaves. `bg` = a background refresh (poll/stream),
+        // which also covers the Serials fallback and the Maintenance mirror.
+        let hwRenderDeferred = false;
+        function hwFieldFocused() {
+            const a = document.activeElement;
+            return !!(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) &&
+                a.closest('#hwContent, #hwHead, #hwModem, #maintenance'));
+        }
+        function hwSoftRefresh(bg) {
+            if (hwEditMode || satcomEditMode || (bg && hwFieldFocused())) { hwRenderDeferred = true; return; }
+            hwRenderDeferred = false;
+            renderHardwarePage();
+            if (!maintEditMode) renderMaintenancePage();
+        }
+        document.addEventListener('focusout', () => {
+            if (!hwRenderDeferred) return;
+            setTimeout(() => { if (hwRenderDeferred && !hwEditMode && !satcomEditMode && !hwFieldFocused()) hwSoftRefresh(); }, 300);
+        });
+
         function renderHardwarePage() {
             renderHwToggle();
             renderHwContent();
@@ -25110,8 +25134,8 @@
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 if (!value) delete f[field]; else f[field] = value;
                 if (field === 'removedDate') f.state = value ? 'removed' : 'on_wing';
-                renderHardwarePage();
-                renderMaintenancePage();
+                hwSoftRefresh();
+
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (ex) {
                 setSyncStatus(`🔴 Could not save date — ${ex.message}`, '#dc3545');
@@ -25140,7 +25164,7 @@
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 if (!value) delete u.altSerial; else u.altSerial = value;
-                renderHardwarePage();
+                hwSoftRefresh();
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (ex) {
                 setSyncStatus(`🔴 Could not save serial — ${ex.message}`, '#dc3545');
@@ -25168,8 +25192,8 @@
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 if (!value) delete f.removalReason; else f.removalReason = value;
-                renderHardwarePage();
-                renderMaintenancePage();
+                hwSoftRefresh();
+
                 if (unitHistOpenId) openUnitHistory(unitHistOpenId);
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (ex) {
@@ -25284,8 +25308,8 @@
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 u.fitments = u.fitments || {};
                 u.fitments[fitId] = fitment;
-                renderHardwarePage();
-                renderMaintenancePage();
+                hwSoftRefresh();
+
                 setSyncStatus(`🟢 ${u.serial} fitted on ${tail} from ${fitted} — synced with your team`, '#28a745');
             } catch (ex) {
                 setSyncStatus(`🔴 Could not assign ${u.serial} — ${ex.message}`, '#dc3545');
@@ -25310,7 +25334,7 @@
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 const target = fitmentId ? (u.fitments || {})[fitmentId] : u;
                 if (target) { if (!value) delete target.roaming; else target.roaming = value; }
-                renderHardwarePage();
+                hwSoftRefresh();
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (ex) {
                 setSyncStatus(`🔴 Could not save roaming — ${ex.message}`, '#dc3545');
@@ -25375,8 +25399,8 @@
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 if (!value) delete u.serial; else u.serial = value;
-                renderHardwarePage();
-                renderMaintenancePage();
+                hwSoftRefresh();
+
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
             } catch (ex) {
                 setSyncStatus(`🔴 Could not save serial — ${ex.message}`, '#dc3545');
@@ -25642,7 +25666,7 @@
                 const data = await res.json();
                 if (!res.ok || (data && data.error)) throw new Error((data && data.error) || 'write failed');
                 Object.entries(body).forEach(([k, v]) => { if (v == null) delete m[k]; else m[k] = v; });
-                renderHardwarePage();
+                hwSoftRefresh();
                 if (typeof renderSatcomPage === 'function') renderSatcomPage();
                 if (unitHistOpenId) openUnitHistory(unitHistOpenId);
                 setSyncStatus('🟢 Live — synced with your team', '#28a745');
@@ -26088,12 +26112,12 @@
         async function commitHwChanges() {
             const ids = Object.keys(pendingHw);
             const tails = Object.keys(pendingRoaming);
-            if (!ids.length && !tails.length) { hwEditMode = false; renderHardwarePage(); return; }
+            if (!ids.length && !tails.length) { hwEditMode = false; hwSoftRefresh(); return; }
             const token = await getIdToken();
             if (!token) return;
 
             const btn = document.getElementById('hwEditBtn');
-            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+            if (btn) editBtnSaving(btn);
             setSyncStatus('🟡 Saving hardware...', '#e0a800');
 
             const multi = {};
@@ -26131,7 +26155,7 @@
                 pendingHw = {};
                 pendingRoaming = {};
                 hwEditMode = false;
-                renderHardwarePage();
+                hwSoftRefresh();
             } catch (e) {
                 setSyncStatus(`🔴 Could not save hardware — ${e.message}`, '#dc3545');
             } finally {
