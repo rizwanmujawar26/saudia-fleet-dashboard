@@ -13,6 +13,11 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.238.0 — OTA Patch #5 (2026-11-02)
+New `otaPatch5UTC` on `/aircraft/{tail}` (rule added), built exactly like #4: Software table column after PATCH#4 (date/age/UTC
+stack + edit input), fifth completion card, AVR Software row, Timeline event, `AC_MOVE_AC`. To keep 1280px fitting:
+Comments min-width 168→156, `.sw-strip .media-widget` 270→224 (five cards).
+
 ### v2.237.0 — Fleet: Commercial first by newest activation, every other status last (2026-10-30)
 User: the Fleet table should open on Commercial aircraft, newest activation first, with the other statuses at the end.
 - Activation Date `data-sort` is now two tiers (`actSortKey` in `populateFleetTable`): Commercial + activation date →

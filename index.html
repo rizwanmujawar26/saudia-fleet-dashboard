@@ -782,7 +782,7 @@
             width: 32%;
             /* 168, not 180 (v2.227.0): the OTA PATCH#4 column made the table 1164px in a
                1163px wrapper at 1280 — a 1px sideways scroll. Measured. */
-            min-width: 168px;
+            min-width: 156px; /* 168→156 (v2.238.0): OTA PATCH#5 column; table was 1187px in 1178px */
             white-space: normal;
             text-align: left;
         }
@@ -2142,9 +2142,11 @@
                cap while the Middleware card sat at its floor. */
             /* 270, not 320 (v2.227.0): OTA Patch #4 made it four cards, and 4 × 320
                plus gaps measured 1320px in a 1165px strip — the fourth hid off the edge. */
-            flex: 0 0 270px;
-            min-width: 270px;
-            max-width: 270px;
+            /* 224 (v2.238.0): OTA Patch #5 made it five cards; 5 × 270 plus gaps
+               measured 1402px in a 1180px strip. */
+            flex: 0 0 224px;
+            min-width: 224px;
+            max-width: 224px;
         }
 
         /* At that width Jeddah's twenty-odd tails would run to five lines and set the
@@ -6738,12 +6740,13 @@
                                 <th class="sortable-th" data-col="2" data-label="OTA PATCH#2" onclick="sortAircraftTable(2)">OTA PATCH#2</th>
                                 <th class="sortable-th" data-col="3" data-label="OTA PATCH#3" onclick="sortAircraftTable(3)">OTA PATCH#3</th>
                                 <th class="sortable-th" data-col="4" data-label="OTA PATCH#4" onclick="sortAircraftTable(4)">OTA PATCH#4</th>
-                                <th class="sortable-th" data-col="5" data-label="Aircraft" onclick="sortAircraftTable(5)">Aircraft</th>
-                                <th class="sortable-th" data-col="6" data-label="Type" onclick="sortAircraftTable(6)">Type</th>
-                                <th class="sortable-th" data-col="7" data-label="Status" onclick="sortAircraftTable(7)">Status</th>
-                                <th class="sortable-th" data-col="8" data-label="Middleware" onclick="sortAircraftTable(8)">Middleware</th>
-                                <th class="sortable-th" data-col="9" data-label="Middleware Site" onclick="sortAircraftTable(9)">Middleware Site</th>
-                                <th class="sortable-th col-comment" data-col="10" data-label="Comments" onclick="sortAircraftTable(10)">Comments</th>
+                                <th class="sortable-th" data-col="5" data-label="OTA PATCH#5" onclick="sortAircraftTable(5)">OTA PATCH#5</th>
+                                <th class="sortable-th" data-col="6" data-label="Aircraft" onclick="sortAircraftTable(6)">Aircraft</th>
+                                <th class="sortable-th" data-col="7" data-label="Type" onclick="sortAircraftTable(7)">Type</th>
+                                <th class="sortable-th" data-col="8" data-label="Status" onclick="sortAircraftTable(8)">Status</th>
+                                <th class="sortable-th" data-col="9" data-label="Middleware" onclick="sortAircraftTable(9)">Middleware</th>
+                                <th class="sortable-th" data-col="10" data-label="Middleware Site" onclick="sortAircraftTable(10)">Middleware Site</th>
+                                <th class="sortable-th col-comment" data-col="11" data-label="Comments" onclick="sortAircraftTable(11)">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="aircraftTableBody">
@@ -8728,8 +8731,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.237.0';
-        const APP_BUILD    = '2026.10.30.08';
+        const APP_VERSION  = '2.238.0';
+        const APP_BUILD    = '2026.11.02.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -9905,7 +9908,7 @@
                 if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy — that is not a date', '#dc3545'); return; }
                 value = v || null;
             }
-            if (field === 'otaPatchUTC' || field === 'otaPatch3UTC' || field === 'otaPatch4UTC') {
+            if (field === 'otaPatchUTC' || field === 'otaPatch3UTC' || field === 'otaPatch4UTC' || field === 'otaPatch5UTC') {
                 const v = readOtaField(el);
                 if (v === false) { setSyncStatus('🔴 Use dd-mm-yyyy hh:mm (UTC) — that is not a date and time', '#dc3545'); return; }
                 value = v || null;
@@ -11270,6 +11273,26 @@
                     ota4Cell = '<span class="fleet-notset">Not set</span>';
                 }
 
+                // OTA Patch #5 (user, 2026-11-02): the fourth over-the-air patch, built
+                // exactly like #2, #3 and #4 — same ISO stamp, sentinel and date/age/time
+                // stack — in the next column along.
+                const ota5 = aircraft.otaPatch5UTC || '';
+                const ota5Sort = ota5 ? dateSortKey(ota5) : '99999999999999';
+                let ota5Cell;
+                if (editMode) {
+                    ota5Cell = `<input type="text" maxlength="16" placeholder="dd-mm-yyyy hh:mm" autocomplete="off" class="edit-date edit-ota" data-id="${aircraft.id}" data-field="otaPatch5UTC" value="${toOtaInput(ota5)}" onchange="handleAircraftEdit(this)" title="UTC. Empty clears the patch date.">`;
+                } else if (ota5) {
+                    const ota5Age = activationAge(ota5.slice(0, 10));
+                    ota5Cell = `<div class="ota-stack">`
+                        + `<span class="fleet-date">${escAttr(fmtDate(ota5.slice(0, 10)) || '')}</span>`
+                        + `<div class="ota-sub">`
+                        + (ota5Age ? `<span class="age-pill age-pill-tight" title="Time since OTA patch">${ota5Age}</span>` : '')
+                        + `<span class="ota-time">${escAttr(ota5.slice(11, 16))} UTC</span>`
+                        + `</div></div>`;
+                } else {
+                    ota5Cell = '<span class="fleet-notset">Not set</span>';
+                }
+
                 const loc = aircraft.completionLocation || '';
                 const locWarning = (swVersionOf(aircraft) === latestSwVersion() && !loc) ? `<div class="loc-warning">⚠ needed to count as done</div>` : '';
                 let locCell;
@@ -11289,6 +11312,7 @@
                     <td data-sort="${otaSort}">${otaCell}</td>
                     <td data-sort="${ota3Sort}">${ota3Cell}</td>
                     <td data-sort="${ota4Sort}">${ota4Cell}</td>
+                    <td data-sort="${ota5Sort}">${ota5Cell}</td>
                     <td data-sort="${aircraft.id}"><strong>${aircraft.id}</strong></td>
                     <td>${TYPE_SHORT_LABEL[aircraft.type] || aircraft.type}</td>
                     <td data-sort="${statusSort}">${statusCell}</td>
@@ -11647,7 +11671,7 @@
             return o;
         }
         const AC_MOVE_FLEET = ['type', 'fit', 'scope', 'system', 'fleetStatus', 'comments', 'delivered'];
-        const AC_MOVE_AC = ['completionDate', 'otaPatchUTC', 'otaPatch3UTC', 'otaPatch4UTC', 'completionLocation', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'note', 'swVersion', 'retrofitLocation', 'retrofitStart', 'retrofitEnd', 'wifiVisibility', 'activatedDate', 'activationLocation', 'simRoaming', 'ugoVersion', 'tilesVersion', 'ops', 'opsLog', 'maintenance', 'modem', 'media'];
+        const AC_MOVE_AC = ['completionDate', 'otaPatchUTC', 'otaPatch3UTC', 'otaPatch4UTC', 'otaPatch5UTC', 'completionLocation', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'note', 'swVersion', 'retrofitLocation', 'retrofitStart', 'retrofitEnd', 'wifiVisibility', 'activatedDate', 'activationLocation', 'simRoaming', 'ugoVersion', 'tilesVersion', 'ops', 'opsLog', 'maintenance', 'modem', 'media'];
         const AC_MOVE_SPEC = ['manufacturer', 'family', 'variant', 'engineMfr', 'engineModel', 'engineQty', 'seatConfig', 'seatBusiness', 'seatEconomy', 'seatTotal', 'deliveryDate', 'msn', 'remark', 'ifcPrevious', 'ifcNote', 'deliveryFlight'];
 
         async function acPatch(path, body, token) {
@@ -11938,6 +11962,7 @@
             const ota2 = otaSplit('otaPatchUTC');
             const ota3 = otaSplit('otaPatch3UTC');
             const ota4 = otaSplit('otaPatch4UTC');
+            const ota5 = otaSplit('otaPatch5UTC');
 
             grid.innerHTML =
                 swCard({
@@ -11957,6 +11982,11 @@
                 }) +
                 swCard({
                     label: 'OTA Patch #4', doneList: ota4.done, pendingList: ota4.pending,
+                    doneWord: 'Applied', doneLabel: 'Applied', pendLabel: 'Not yet',
+                    allDoneMsg: 'Applied across the fleet',
+                }) +
+                swCard({
+                    label: 'OTA Patch #5', doneList: ota5.done, pendingList: ota5.pending,
                     doneWord: 'Applied', doneLabel: 'Applied', pendLabel: 'Not yet',
                     allDoneMsg: 'Applied across the fleet',
                 });
@@ -15192,6 +15222,7 @@
             const ota = (a.otaPatchUTC || '').slice(0, 10);
             const ota3 = (a.otaPatch3UTC || '').slice(0, 10);
             const ota4 = (a.otaPatch4UTC || '').slice(0, 10);
+            const ota5 = (a.otaPatch5UTC || '').slice(0, 10);
             const otaWithTime = (d, stamp) => {
                 if (!d) return '';
                 const t = String(stamp || '').slice(11, 16);
@@ -15269,6 +15300,7 @@
                 ['OTA Patch #2', otaWithTime(ota, a.otaPatchUTC)],
                 ['OTA Patch #3', otaWithTime(ota3, a.otaPatch3UTC)],
                 ['OTA Patch #4', otaWithTime(ota4, a.otaPatch4UTC)],
+                ['OTA Patch #5', otaWithTime(ota5, a.otaPatch5UTC)],
                 ['Media cycle', media.mediaCycle ? cycleToDisplay(media.mediaCycle) : ''],
                 ['UGO / Tiles', [a.ugoVersion && `UGO ${a.ugoVersion}`, a.tilesVersion && `Tiles ${a.tilesVersion}`].filter(Boolean).join(' · ')],
                 wifiRow,
@@ -16314,7 +16346,7 @@
                     : (r[0] === 'Seat configuration' ? (seatHtml ? ['Seats', seatHtml, 'raw'] : ['Seats', r[1]]) : r)));
             // Software & Media split into two short cards so the four spec cards pair up
             // 2 × 2: what is LOADED (middleware + OTA patches) and what the passenger SEES.
-            const swLabels = ['Middleware', 'Middleware loaded', 'OTA Patch #2', 'OTA Patch #3', 'OTA Patch #4'];
+            const swLabels = ['Middleware', 'Middleware loaded', 'OTA Patch #2', 'OTA Patch #3', 'OTA Patch #4', 'OTA Patch #5'];
             // OTA rows (v2.216): the date stays in the right-hand corner, in line with every
             // other date in the card; the UTC time sits small and light just before it.
             const otaRow = r => {
@@ -27103,7 +27135,7 @@
             // carries no pill, like a media load — and the UTC time rides in the subtitle
             // the way the fitment passes carry the S/N.
             aircraftData.forEach(a => {
-                [['otaPatchUTC', 'OTA Patch #2'], ['otaPatch3UTC', 'OTA Patch #3'], ['otaPatch4UTC', 'OTA Patch #4']].forEach(([field, label]) => {
+                [['otaPatchUTC', 'OTA Patch #2'], ['otaPatch3UTC', 'OTA Patch #3'], ['otaPatch4UTC', 'OTA Patch #4'], ['otaPatch5UTC', 'OTA Patch #5']].forEach(([field, label]) => {
                     const stamp = a[field] || '';
                     const iso = toISODate(stamp.slice(0, 10));
                     if (!iso) return;
