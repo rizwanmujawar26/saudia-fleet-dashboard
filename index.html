@@ -8721,8 +8721,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.243.0';
-        const APP_BUILD    = '2026.11.20.04';
+        const APP_VERSION  = '2.243.1';
+        const APP_BUILD    = '2026.11.20.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -26891,7 +26891,8 @@
         // box comes off before the new one goes on), then title (CWAP 1, CWAP 2…).
         const TIMELINE_HW_ORDER = [
             [/\bsim\b/, 1], [/\bmodman\b/, 2], [/\bife server\b|\bserver\b/, 3], [/\bcwaps?\b/, 4],
-            [/\bkandu\b/, 5], [/\bkrfu\b/, 6], [/\brx\b/, 7], [/\btx\b/, 8], [/\bantenna/, 9],
+            // High Reflected Power is a KRFU fault — its T/S and Mod records sit with the KRFU.
+            [/\bkandu\b/, 5], [/\bkrfu\b|reflected power/, 6], [/\brx\b/, 7], [/\btx\b/, 8], [/\bantenna/, 9],
         ];
         function timelineHwRank(x) {
             if (x.kind !== 'hardware') return 0;
