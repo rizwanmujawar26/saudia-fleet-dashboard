@@ -8721,8 +8721,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.241.1';
-        const APP_BUILD    = '2026.11.20.02';
+        const APP_VERSION  = '2.242.0';
+        const APP_BUILD    = '2026.11.20.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -26865,13 +26865,29 @@
         // record) or an avrId wins, so the surviving row stays manageable; a purely
         // derived duplicate simply drops. Rows with no tail AND no subtitle (a bare
         // milestone) are never merged — they carry too little to be sure they match.
-        // Order of rows inside one day. dir -1 = newest first, 1 = oldest first. Rows
-        // with a UTC time (row.hm 'HH:MM' — OTA stamps, flight departures) sort by it;
-        // rows with only a date follow, in tail order.
+        // Order of rows inside one day (v2.242.0, user): rows are CLUBBED by kind — all
+        // software together, then hardware, then media, then the rest of the work — and
+        // the special, milestone entries sit at the BOTTOM of the day, the most important
+        // last (Entered Service is the day's closing line). The order is the same in either
+        // sort direction; only times flip. Within one kind, rows with a UTC time (row.hm
+        // 'HH:MM' — OTA stamps, flight departures) come first and sort by it (dir -1 =
+        // newest first, 1 = oldest first), so Middleware (date only) lands below the OTA
+        // patches; date-only rows follow in tail order. A kind not listed here sits after
+        // the regular work and above the specials.
+        const TIMELINE_DAY_ORDER = {
+            software: 1, hardware: 2, media: 3, commission: 4, maintenance: 5, service: 6, operational: 7,
+            // ── special entries, bottom of the day, by rising importance ──
+            visit: 20, modification: 21, flight: 22, delivery: 22, activation: 23,
+        };
+        function timelineDayRank(x) {
+            const k = x.delivery ? 'delivery' : x.kind;
+            return TIMELINE_DAY_ORDER[k] || 10;
+        }
         function timelineInDayCmp(dir) {
-            return (a, b) => (!!b.hm - !!a.hm)
+            return (a, b) => (timelineDayRank(a) - timelineDayRank(b))
+                || (!!b.hm - !!a.hm)
                 || (a.hm && b.hm ? dir * a.hm.localeCompare(b.hm) : 0)
-                || (a.tail || '').localeCompare(b.tail || '') || (a.kind || '').localeCompare(b.kind || '');
+                || (a.tail || '').localeCompare(b.tail || '');
         }
 
         function dedupeTimeline(rows) {
