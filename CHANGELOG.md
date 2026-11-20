@@ -13,6 +13,11 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.244.0 — Spare SIMs from Hardware › SIM (2026-11-20)
+Add SIM gains "Spare — not on an aircraft": writes a `/units` record with no fitment (reads SPARE) and an optional
+`earmark` tail (new unit-level rule). Spare rows show a "for TAIL" tag, editable in edit mode; the assign picker preselects
+the earmark; fitting a spare clears it (`hwAssignSpare` now one PATCH). Other equipment types unchanged.
+
 ### v2.238.0 — OTA Patch #5 (2026-11-02)
 New `otaPatch5UTC` on `/aircraft/{tail}` (rule added), built exactly like #4: Software table column after PATCH#4 (date/age/UTC
 stack + edit input), fifth completion card, AVR Software row, Timeline event, `AC_MOVE_AC`. To keep 1280px fitting:
