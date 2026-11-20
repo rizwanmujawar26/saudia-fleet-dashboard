@@ -8721,8 +8721,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.242.0';
-        const APP_BUILD    = '2026.11.20.03';
+        const APP_VERSION  = '2.243.0';
+        const APP_BUILD    = '2026.11.20.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -26883,11 +26883,31 @@
             const k = x.delivery ? 'delivery' : x.kind;
             return TIMELINE_DAY_ORDER[k] || 10;
         }
+        // Hardware rows inside the hardware block (v2.243.0, user): SIM always first, then
+        // the Kontron set — MODMAN + IFE Server, then the CWAPs — then the ThinKom set —
+        // KANDU + KRFU, then RX + TX antenna. Matched on the row title, so the derived
+        // fit/remove rows and the /activities R&R records both fall in line; anything
+        // unrecognised goes last. Same equipment: by tail, removed before fitted (the old
+        // box comes off before the new one goes on), then title (CWAP 1, CWAP 2…).
+        const TIMELINE_HW_ORDER = [
+            [/\bsim\b/, 1], [/\bmodman\b/, 2], [/\bife server\b|\bserver\b/, 3], [/\bcwaps?\b/, 4],
+            [/\bkandu\b/, 5], [/\bkrfu\b/, 6], [/\brx\b/, 7], [/\btx\b/, 8], [/\bantenna/, 9],
+        ];
+        function timelineHwRank(x) {
+            if (x.kind !== 'hardware') return 0;
+            const t = String(x.title || '').toLowerCase();
+            const hit = TIMELINE_HW_ORDER.find(([re]) => re.test(t));
+            return hit ? hit[1] : 99;
+        }
         function timelineInDayCmp(dir) {
+            const removedFirst = x => /\bremoved\b/i.test(x.title || '') ? 0 : 1;
             return (a, b) => (timelineDayRank(a) - timelineDayRank(b))
+                || (timelineHwRank(a) - timelineHwRank(b))
                 || (!!b.hm - !!a.hm)
                 || (a.hm && b.hm ? dir * a.hm.localeCompare(b.hm) : 0)
-                || (a.tail || '').localeCompare(b.tail || '');
+                || (a.tail || '').localeCompare(b.tail || '')
+                || (a.kind === 'hardware' ? (removedFirst(a) - removedFirst(b))
+                    || String(a.title || '').localeCompare(String(b.title || ''), undefined, { numeric: true }) : 0);
         }
 
         function dedupeTimeline(rows) {
