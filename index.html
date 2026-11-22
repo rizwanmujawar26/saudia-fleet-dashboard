@@ -8596,6 +8596,10 @@
         // origin and the page already holds three streams. See the connection budget.
         let mediaLoadsLive = {};
         let mediaCyclesLive = {};   // /mediaCycles — the monthly cycles (v2.189.0), polled
+        // v2.249.0: the disk list frozen at each cycle's close moved out of public
+        // /mediaCycles/{c}/disks into this LOCKED node (disk NSG + maker serials).
+        // /mediaCycles/{c}/disksSnapshotAt stays public: it is only the "locked" marker.
+        let mediaCycleDisksLive = {};
         // /fleetSpecs/{tail} — airframe reference data (delivery date, engine, seating,
         // MSN…). Low-traffic; polled with the other reference nodes, not streamed. Read
         // by the Fleet page's Aircraft Age column and its age sort.
@@ -8804,8 +8808,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.248.0';
-        const APP_BUILD    = '2026.11.23.04';
+        const APP_VERSION  = '2.249.0';
+        const APP_BUILD    = '2026.11.23.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -9023,7 +9027,7 @@
         // node returns 401 with {error:"Permission denied"} — fed to r.json() and
         // stored, that error object becomes a fake "unit" called "error". Every read of
         // these nodes goes through lockedReadUrl() and checks res.ok.
-        const LOCKED_NODES = ['units', 'modmans', 'aircraftModem'];
+        const LOCKED_NODES = ['units', 'modmans', 'aircraftModem', 'assets', 'mediaCycleDisks'];
         function isLockedNode(path) { return LOCKED_NODES.includes(String(path).split('/')[0]); }
         function canReadRegisters() { return !!(authUser && (authUser.canEdit || authUser.canView)); }
         // Resolves to the URL to read `path` with, or null when it cannot be read now.
@@ -9038,12 +9042,14 @@
             unitsLive = {};
             modmansLive = {};
             aircraftModemLive = {};
+            assetsLive = {};
+            mediaCycleDisksLive = {};
             LOCKED_NODES.forEach(n => { delete lowTrafficSnapshot[n]; });
         }
         function lockedNoticeHtml() {
             return `<div class="hw-locked-notice"><div class="hw-locked-icon" aria-hidden="true">🔒</div>
                 <div class="hw-locked-title">Sign in to view equipment records</div>
-                <div class="hw-locked-text">Serial numbers, MODMAN / modem identifiers and the SIM register are visible to signed-in team members only. Use <b>Sign in</b> in the status bar.</div></div>`;
+                <div class="hw-locked-text">Serial numbers, MODMAN / modem identifiers, the SIM register and the support-kit assets are visible to signed-in team members only. Use <b>Sign in</b> in the status bar.</div></div>`;
         }
 
         function connectLiveSync() {
@@ -9072,10 +9078,11 @@
             // to LOW_TRAFFIC_POLL_MS late, and since the Media widgets are built from
             // it, every monthly card was missing for the first 25 seconds of each page
             // load — the strip looked broken.
-            Promise.all(['hardware', 'units', 'activities', 'issues', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr', 'configs', 'assets', 'mediaCycles', 'flights', 'aircraftModem'].map(n =>
+            Promise.all(['hardware', 'units', 'activities', 'issues', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr', 'configs', 'assets', 'mediaCycles', 'flights', 'aircraftModem', 'mediaCycleDisks'].map(n =>
                 nodeReadUrl(n).then(u => u ? fetch(u).then(r => r.ok ? r.json() : null) : null).catch(() => null)
-            )).then(([hw, un, ac, is, ml, mm, fs, av, cf, as, mc, fl, am]) => {
+            )).then(([hw, un, ac, is, ml, mm, fs, av, cf, as, mc, fl, am, md]) => {
                 flightsLive    = fl || {};
+                mediaCycleDisksLive = md || {};
                 aircraftModemLive = am || {};
                 hardwareLive   = hw || {};
                 unitsLive      = un || {};
@@ -9146,6 +9153,7 @@
                 mediaCycles: d => { mediaCyclesLive = d || {}; rebuildMediaCycles(); cyclesMoved = true; },
                 flights:    d => { flightsLive = d || {}; },
                 aircraftModem: d => { aircraftModemLive = d || {}; },
+                mediaCycleDisks: d => { mediaCycleDisksLive = d || {}; },
             };
             let changed = false;
             let cyclesMoved = false;
@@ -9197,6 +9205,7 @@
                 mediaCycles: JSON.stringify(Object.keys(mediaCyclesLive).length ? mediaCyclesLive : null),
                 flights:    JSON.stringify(Object.keys(flightsLive).length ? flightsLive : null),
                 aircraftModem: JSON.stringify(Object.keys(aircraftModemLive).length ? aircraftModemLive : null),
+                mediaCycleDisks: JSON.stringify(Object.keys(mediaCycleDisksLive).length ? mediaCycleDisksLive : null),
             };
             setInterval(pollLowTrafficNodes, LOW_TRAFFIC_POLL_MS);
         }
@@ -17511,7 +17520,7 @@
         function mediaDisksForCycle(cycle) {
             const mc = MEDIA_CYCLES[cycle] || {};
             if (mc.disksSnapshotAt) {
-                return Object.entries(mc.disks || {}).map(([id, a]) => ({ id, ...a }))
+                return Object.entries(mediaCycleDisksLive[cycle] || mc.disks || {}).map(([id, a]) => ({ id, ...a }))
                     .sort((a, b) => String(a.nsgSerial || a.id).localeCompare(String(b.nsgSerial || b.id), undefined, { numeric: true }));
             }
             return mediaDisksLive(cycle);
@@ -17566,8 +17575,17 @@
                 mcSnapshotTried.add(c);
                 const patch = { disksSnapshotAt: new Date().toISOString().slice(0, 19) + 'Z' };
                 const disks = mediaDiskSnapshot(c);
-                if (Object.keys(disks).length) patch.disks = disks;
                 try {
+                    // The disk serials go to the LOCKED /mediaCycleDisks first; the public
+                    // marker is written only once they are safe.
+                    if (Object.keys(disks).length) {
+                        const dres = await fetchWithTimeout(`${FIREBASE_DB_URL}/mediaCycleDisks/${c}.json?auth=${token}`, {
+                            method: 'PUT', body: JSON.stringify(disks),
+                        });
+                        const dd = await dres.json();
+                        if (!dres.ok || (dd && dd.error)) throw new Error((dd && dd.error) || 'disk write failed');
+                        mediaCycleDisksLive[c] = disks;   // polled node — mirror locally
+                    }
                     const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/mediaCycles/${c}.json?auth=${token}`, {
                         method: 'PATCH', body: JSON.stringify(patch),
                     });
@@ -17726,7 +17744,7 @@
                 t50: reach(50), t90: reach(90), t100: reach(100),
                 median, daily, peak: { day: peakDay + 1, iso: isoOfDay(peakDay + 1), n: daily[peakDay] || 0 },
                 weeks, busiestWeek, byType, missing, late: lateLoads.length, lateLoads,
-                journey, durations, disks: mediaDisksForCycle(cycle), disksLocked: !!mc.disksSnapshotAt, disksSnapshotAt: mc.disksSnapshotAt || '', disksISO: iso('disksToTeam'),
+                journey, durations, disks: mediaDisksForCycle(cycle), disksHidden: !canReadRegisters(), disksLocked: !!mc.disksSnapshotAt, disksSnapshotAt: mc.disksSnapshotAt || '', disksISO: iso('disksToTeam'),
                 isoOfDay,
             };
         }
@@ -18155,7 +18173,7 @@
             return `<div class="mlr-id">
                 <div><div class="mlr-k">Media cycle</div><div class="mlr-big">${escAttr(d.label)}</div></div>
                 <div><div class="mlr-k">Media size</div><div class="mlr-big">${escAttr(d.size || '—')}</div></div>
-                <div><div class="mlr-k">Media part number</div><div class="mlr-pn">${escAttr(d.partNumber)}</div><div class="mlr-sub">${d.disks.length ? `${mlrPlural(d.disks.length, 'media disk')} prepared` : 'Media disks not tagged yet'}</div></div>
+                <div><div class="mlr-k">Media part number</div><div class="mlr-pn">${escAttr(d.partNumber)}</div><div class="mlr-sub">${d.disksHidden ? 'Media disk details need sign-in' : d.disks.length ? `${mlrPlural(d.disks.length, 'media disk')} prepared` : 'Media disks not tagged yet'}</div></div>
             </div>
             <div class="mlr-prog">
                 <div class="mlr-prog-head">
@@ -18255,7 +18273,9 @@
             const missRows = d.missing.length
                 ? d.missing.map(m => `<tr><td><b>${escAttr(m.tail)}</b></td><td>${escAttr(m.type)}</td><td>${escAttr(m.now)}</td><td class="nowrap">${escAttr(m.activated || '—')}</td></tr>`).join('')
                 : '<tr><td colspan="4">None — every eligible aircraft took this media.</td></tr>';
-            const diskRows = d.disks.length
+            const diskRows = d.disksHidden
+                ? '<tr><td colspan="7">🔒 The media disks are visible to signed-in team members only — sign in on the dashboard to see them.</td></tr>'
+                : d.disks.length
                 ? d.disks.map(k => `<tr><td class="mono"><b>${escAttr(k.nsgSerial || k.id)}</b></td><td>${escAttr(k.type || '—')}</td><td>${escAttr(k.make || '—')}</td><td class="mono">${escAttr(k.mfrSerial || '—')}</td><td>${escAttr(k.totalSize || '—')}</td><td>${escAttr(k.location || '—')}</td><td>${escAttr(k.custodian || '—')}</td></tr>`).join('')
                 : `<tr><td colspan="7">No Media Disks are tagged with ${escAttr(d.label)} yet. Tag them in Hardware › Assets (content "Media ${escAttr(MONTH_NAMES[parseInt(d.cycle.slice(0, 2), 10) - 1])} 20${escAttr(d.cycle.slice(2))}").</td></tr>`;
             const logRows = d.loads.map((l, i) => `<tr><td class="num">${i + 1}</td><td><b>${escAttr(l.tail)}</b></td><td>${escAttr(l.type)}</td><td class="nowrap">${escAttr(mlrStamp(l.at))}</td><td class="num">${l.day}</td><td class="mono">${escAttr(l.source)}</td><td>${l.late ? '<span class="pill pill-amber">Late</span>' : ''}</td></tr>`).join('');
@@ -18401,7 +18421,7 @@
 
     ${cmp ? `<div class="sec">Cycle comparison</div><div class="tbl-card">${cmp}</div>` : ''}
 
-    <div class="sec">Media disks — ${d.disks.length}</div>
+    <div class="sec">Media disks${d.disksHidden ? '' : ` — ${d.disks.length}`}</div>
     <div class="cap" style="margin:-2px 2px 6px;">${d.disksLocked
         ? `Locked at cycle close — the disks as tagged in Hardware › Assets on ${escAttr(fmtDate(d.disksSnapshotAt.slice(0, 10)))}. Later re-tagging does not change this list.`
         : (d.open ? 'Live from Hardware › Assets while loading continues; this list is locked the day after the cycle closes.'
@@ -23496,8 +23516,8 @@
             const isModem = hwView === 'modem';
             const modem = document.getElementById('hwModem');
             const hwBar = document.getElementById('hwFilterBar');
-            // Every Hardware view but ASSETS reads the locked registers.
-            if (!canReadRegisters() && hwView !== 'assets') {
+            // Every Hardware view reads a locked register (ASSETS too since v2.249.0).
+            if (!canReadRegisters()) {
                 if (modem) modem.style.display = 'none';
                 if (hwBar) hwBar.style.display = 'none';
                 if (head) { head.style.display = ''; head.innerHTML = ''; }
