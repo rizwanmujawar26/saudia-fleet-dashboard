@@ -4346,6 +4346,23 @@ constants, `FIREBASE_DB_URL` and `FIREBASE_API_KEY`.
 
 ## Google Sheet feed — daily read-only copy for Raj
 
+**In use now (23-Nov-2026): the LOCAL Excel export.** The user could not complete the Apps
+Script setup, so for now the feed is a file on the Mac:
+
+```bash
+./scripts/export-feed.sh        # → ~/Documents/Saudia Fleet Feed/Saudia-Fleet-Data-DD-Mon-YYYY.xlsx
+```
+
+It reads every node fresh through `backup.sh` (locked nodes as admin), runs the SAME
+`buildTabs()`/`diffTables()` from `feed/Code.gs`, and writes one .xlsx (About, Changes,
+then the 18 data sheets; frozen bold header + filter). `.last-tabs.json` in that folder is
+the previous export — the Changes sheet lists what changed since it; delete it to start
+over. No npm packages: `scripts/export-feed.js` writes SpreadsheetML and zips it with
+`/usr/bin/zip -D` (⚠️ directory entries in the zip upset Excel — keep `-D`). File name uses
+the Mac's local date, never UTC. The workbook holds serials/MACs/ICCIDs — share privately.
+
+The Apps Script route below is built but not installed.
+
 Raj (manager) asked on 23-Nov-2026 for a private, read-only feed with the dashboard's
 content so he can monitor changes. Built as a **Google Apps Script bound to a private
 Google Sheet** in the user's personal Gmail Drive (decision 23-Nov-2026; move to a company
