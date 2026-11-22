@@ -13,6 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### Data — serials stripped from public records (2026-11-23, no page change)
+Admin multi-path update after a private backup. Each value was confirmed held in a locked register before removal:
+two SIM serials on an old R&R activity's `details.oldPart/newPart` (in `/units` via activityId); an old MODMAN R&R's
+`details.newPart` (in that aircraft's `/modmans` notes); one activity note reworded without its MODMAN numbers (in
+`/modmans`); one AVR detailedReport sentence without its KRFU serial (in `/units`). A live re-scan of every public node
+finds no known serial, ICCID, MAC or "S/N" (`/assets` public by choice). ⚠️ Never quote serial values in this repo — it
+is public.
+
 ### v2.246.0 — Legacy modem identifiers locked (2026-11-23)
 `/aircraft/{tail}/modem` (Taurus MG ID/TID/SE4/SE2C, Hughes Chassis ID/ESN — 40 tails, public) moved verbatim to the new
 locked node **`/aircraftModem/{tail}`** (read: editors + viewers), then deleted from `/aircraft` and its rule removed, so a
