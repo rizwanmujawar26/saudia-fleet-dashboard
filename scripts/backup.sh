@@ -23,7 +23,7 @@ STAMP="$(date -u +%Y-%m-%d)"
 # FLEET_BACKUP_DIR lets a caller aim somewhere other than today's folder. restore.sh
 # uses it so a pre-restore safety copy cannot overwrite the snapshot being restored.
 OUT="${FLEET_BACKUP_DIR:-$ROOT/backups/$STAMP}"
-NODES="fleet fleetSpecs configs aircraft activities issues hardware units mediaLoads modmans avr assets mediaCycles visits flights"
+NODES="fleet fleetSpecs configs aircraft activities issues hardware units mediaLoads modmans avr assets mediaCycles visits flights aircraftModem"
 
 mkdir -p "$OUT"
 echo "Backing up $DB"
@@ -69,7 +69,7 @@ files = sorted(f for f in os.listdir(out) if f.endswith('.json') and f != 'manif
 man = {
     'takenAtUTC': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
     'source': db,
-    'note': '/editors and /viewers are not included (backup-secrets.sh holds them). Locked nodes (/units, /modmans) were read as admin.',
+    'note': '/editors and /viewers are not included (backup-secrets.sh holds them). Locked nodes (/units, /modmans, /aircraftModem) were read as admin.',
     'files': {},
 }
 for f in files:

@@ -8517,6 +8517,11 @@
         // from here), and it carries fields /units has no home for (two Taurus sets, a
         // MAC). Polled with the other low-traffic nodes — no seventh EventSource.
         let modmansLive = {};
+        // v2.246.0: the legacy per-aircraft modem identifiers (Taurus MG ID/TID/SE4/SE2C,
+        // Hughes Chassis ID/ESN) moved off public /aircraft/{tail}/modem into this LOCKED
+        // node, keyed by tail: { taurus: {...}, hughes: {...} }. Only the aircraft editor
+        // reads it. /modmans remains the authoritative modem register.
+        let aircraftModemLive = {};
         // ===== Media load history =====
         // One record per load: { aircraft, cycle, loadedAt, source, loggedAt }.
         //
@@ -8738,8 +8743,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.245.0';
-        const APP_BUILD    = '2026.11.23.01';
+        const APP_VERSION  = '2.246.0';
+        const APP_BUILD    = '2026.11.23.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -8957,7 +8962,7 @@
         // node returns 401 with {error:"Permission denied"} — fed to r.json() and
         // stored, that error object becomes a fake "unit" called "error". Every read of
         // these nodes goes through lockedReadUrl() and checks res.ok.
-        const LOCKED_NODES = ['units', 'modmans'];
+        const LOCKED_NODES = ['units', 'modmans', 'aircraftModem'];
         function isLockedNode(path) { return LOCKED_NODES.includes(String(path).split('/')[0]); }
         function canReadRegisters() { return !!(authUser && (authUser.canEdit || authUser.canView)); }
         // Resolves to the URL to read `path` with, or null when it cannot be read now.
@@ -8971,6 +8976,7 @@
         function clearLockedStores() {
             unitsLive = {};
             modmansLive = {};
+            aircraftModemLive = {};
             LOCKED_NODES.forEach(n => { delete lowTrafficSnapshot[n]; });
         }
         function lockedNoticeHtml() {
@@ -9005,10 +9011,11 @@
             // to LOW_TRAFFIC_POLL_MS late, and since the Media widgets are built from
             // it, every monthly card was missing for the first 25 seconds of each page
             // load — the strip looked broken.
-            Promise.all(['hardware', 'units', 'activities', 'issues', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr', 'configs', 'assets', 'mediaCycles', 'flights'].map(n =>
+            Promise.all(['hardware', 'units', 'activities', 'issues', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr', 'configs', 'assets', 'mediaCycles', 'flights', 'aircraftModem'].map(n =>
                 nodeReadUrl(n).then(u => u ? fetch(u).then(r => r.ok ? r.json() : null) : null).catch(() => null)
-            )).then(([hw, un, ac, is, ml, mm, fs, av, cf, as, mc, fl]) => {
+            )).then(([hw, un, ac, is, ml, mm, fs, av, cf, as, mc, fl, am]) => {
                 flightsLive    = fl || {};
+                aircraftModemLive = am || {};
                 hardwareLive   = hw || {};
                 unitsLive      = un || {};
                 activitiesLive = ac || {};
@@ -9077,6 +9084,7 @@
                 assets:     d => { assetsLive = d || {}; },
                 mediaCycles: d => { mediaCyclesLive = d || {}; rebuildMediaCycles(); cyclesMoved = true; },
                 flights:    d => { flightsLive = d || {}; },
+                aircraftModem: d => { aircraftModemLive = d || {}; },
             };
             let changed = false;
             let cyclesMoved = false;
@@ -9127,6 +9135,7 @@
                 assets:     JSON.stringify(Object.keys(assetsLive).length ? assetsLive : null),
                 mediaCycles: JSON.stringify(Object.keys(mediaCyclesLive).length ? mediaCyclesLive : null),
                 flights:    JSON.stringify(Object.keys(flightsLive).length ? flightsLive : null),
+                aircraftModem: JSON.stringify(Object.keys(aircraftModemLive).length ? aircraftModemLive : null),
             };
             setInterval(pollLowTrafficNodes, LOW_TRAFFIC_POLL_MS);
         }
@@ -11641,7 +11650,7 @@
         function acEditCurrent(id) {
             const f = fleetRowOf(id);
             const ac = aircraftLive[id] || {};
-            const modem = ac.modem || {};
+            const modem = aircraftModemLive[id] || {};
             return {
                 id,
                 delivered: f.delivered,
@@ -11747,7 +11756,7 @@
             return o;
         }
         const AC_MOVE_FLEET = ['type', 'fit', 'scope', 'system', 'fleetStatus', 'comments', 'delivered'];
-        const AC_MOVE_AC = ['completionDate', 'otaPatchUTC', 'otaPatch3UTC', 'otaPatch4UTC', 'otaPatch5UTC', 'completionLocation', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'note', 'swVersion', 'retrofitLocation', 'retrofitStart', 'retrofitEnd', 'wifiVisibility', 'activatedDate', 'activationLocation', 'simRoaming', 'ugoVersion', 'tilesVersion', 'ops', 'opsLog', 'maintenance', 'modem', 'media'];
+        const AC_MOVE_AC = ['completionDate', 'otaPatchUTC', 'otaPatch3UTC', 'otaPatch4UTC', 'otaPatch5UTC', 'completionLocation', 'iphoStatus', 'mg101Status', 'beamcfgStatus', 'note', 'swVersion', 'retrofitLocation', 'retrofitStart', 'retrofitEnd', 'wifiVisibility', 'activatedDate', 'activationLocation', 'simRoaming', 'ugoVersion', 'tilesVersion', 'ops', 'opsLog', 'maintenance', 'media'];   // 'modem' moved to /aircraftModem (v2.246.0)
         const AC_MOVE_SPEC = ['manufacturer', 'family', 'variant', 'engineMfr', 'engineModel', 'engineQty', 'seatConfig', 'seatBusiness', 'seatEconomy', 'seatTotal', 'deliveryDate', 'msn', 'remark', 'ifcPrevious', 'ifcNote', 'deliveryFlight'];
 
         async function acPatch(path, body, token) {
@@ -11761,7 +11770,7 @@
         // placeholder flag and any field the rules would reject, then deletes the old key.
         async function rekeyAircraft(oldId, newId, token) {
             const grab = n => fetchWithTimeout(`${FIREBASE_DB_URL}/${n}/${oldId}.json?auth=${token}`).then(r => r.json()).catch(() => null);
-            const [f, ac, sp] = await Promise.all([grab('fleet'), grab('aircraft'), grab('fleetSpecs')]);
+            const [f, ac, sp, md] = await Promise.all([grab('fleet'), grab('aircraft'), grab('fleetSpecs'), grab('aircraftModem')]);
             const put = async (n, rec) => {
                 if (!rec || !Object.keys(rec).length) return;
                 const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/${n}/${newId}.json?auth=${token}`, { method: 'PUT', body: JSON.stringify(rec) });
@@ -11771,7 +11780,8 @@
             await put('fleet', acKeep(f, AC_MOVE_FLEET));          // regUnknown + legacy station dropped — real tail now
             await put('aircraft', acKeep(ac, AC_MOVE_AC));          // pinHash + any $other dropped
             await put('fleetSpecs', acKeep(sp, AC_MOVE_SPEC));
-            for (const n of ['fleet', 'aircraft', 'fleetSpecs']) {
+            if (md && !md.error) await put('aircraftModem', md);
+            for (const n of ['fleet', 'aircraft', 'fleetSpecs', 'aircraftModem']) {
                 const del = await fetchWithTimeout(`${FIREBASE_DB_URL}/${n}/${oldId}.json?auth=${token}`, { method: 'DELETE' });
                 if (!del.ok) throw new Error('cleanup failed');
             }
@@ -11787,6 +11797,10 @@
             fleetRoster.sort((a, b) => a.id.localeCompare(b.id));
             if (ac) aircraftLive[id] = ac; else delete aircraftLive[id];
             if (sp) fleetSpecsLive[id] = sp; else delete fleetSpecsLive[id];
+            // /aircraftModem is locked and polled: mirror it with a token, or the save looks lost.
+            const mu = await nodeReadUrl('aircraftModem/' + id);
+            const md = mu ? await fetchWithTimeout(mu).then(r => r.ok ? r.json() : undefined).catch(() => undefined) : undefined;
+            if (md !== undefined) { if (md) aircraftModemLive[id] = md; else delete aircraftModemLive[id]; }
         }
 
         async function saveAircraftEditor() {
@@ -11839,8 +11853,10 @@
             } else {
                 acBody['maintenance/open'] = null; acBody['maintenance/reason'] = null; acBody['maintenance/flaggedAt'] = null;
             }
-            ['mgId', 'tid', 'se4', 'se2c', 'commissionedDate', 'notes'].forEach(k => { if (c.taurus[k] !== undefined) acBody['modem/taurus/' + k] = c.taurus[k] === '' ? null : c.taurus[k]; });
-            ['chassisId', 'esn', 'commissionedDate', 'notes'].forEach(k => { if (c.hughes[k] !== undefined) acBody['modem/hughes/' + k] = c.hughes[k] === '' ? null : c.hughes[k]; });
+            // Modem identifiers → the LOCKED /aircraftModem/{tail} (v2.246.0), never /aircraft.
+            const modemBody = {};
+            ['mgId', 'tid', 'se4', 'se2c', 'commissionedDate', 'notes'].forEach(k => { if (c.taurus[k] !== undefined) modemBody['taurus/' + k] = c.taurus[k] === '' ? null : c.taurus[k]; });
+            ['chassisId', 'esn', 'commissionedDate', 'notes'].forEach(k => { if (c.hughes[k] !== undefined) modemBody['hughes/' + k] = c.hughes[k] === '' ? null : c.hughes[k]; });
             ['mediaCycle', 'mediaDisplay', 'mediaSource', 'loadedDateUTC', 'comments'].forEach(k => { if (c.media[k] !== undefined) acBody['media/' + k] = c.media[k] === '' ? null : c.media[k]; });
 
             // ── /fleetSpecs ─────────────────────────────────────────────────────────
@@ -11856,6 +11872,7 @@
                 await acPatch('fleet/' + oldId, fleetBody, token);
                 await acPatch('aircraft/' + oldId, acBody, token);
                 await acPatch('fleetSpecs/' + oldId, specBody, token);
+                await acPatch('aircraftModem/' + oldId, modemBody, token);
                 if (rekey) await rekeyAircraft(oldId, newId, token);
                 await acReloadInto(rekey ? newId : oldId);
                 if (rekey) { fleetRoster = fleetRoster.filter(a => a.id !== oldId); delete aircraftLive[oldId]; delete fleetSpecsLive[oldId]; delete pendingFleet[oldId]; }

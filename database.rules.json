@@ -100,6 +100,32 @@
       }
     },
 
+    "aircraftModem": {
+      ".read": "auth != null && (root.child('editors').child(auth.uid).val() === true || root.child('viewers').child(auth.uid).val() === true)",
+
+      "$tail": {
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
+
+        "taurus": {
+          "commissionedDate": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
+          "mgId":             { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "tid":              { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "se4":              { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "se2c":             { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "notes":            { ".validate": "newData.isString() && newData.val().length <= 500" },
+          "$other":           { ".validate": false }
+        },
+        "hughes": {
+          "commissionedDate": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$/)" },
+          "chassisId":        { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "esn":              { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "notes":            { ".validate": "newData.isString() && newData.val().length <= 500" },
+          "$other":           { ".validate": false }
+        },
+        "$other":           { ".validate": false }
+      }
+    },
+
     "fleet": {
       ".read": true,
 
