@@ -1039,7 +1039,8 @@ gap in the record, not a fault. The **SIM register is now the best-populated par
 
 **Public read, authenticated write — except the serial registers.** Anyone can view; only a signed-in
 account listed under `/editors/{uid}` can change data. Since v2.245.0 **`/units` and `/modmans` need a signed-in
-reader** (an editor, or a read-only account in `/viewers/{uid}`, managed like `/editors`): they carry every serial,
+reader** (an editor, or a read-only account in `/viewers/{uid}`, managed like `/editors`) — and since v2.246.0 so does
+`/aircraftModem` (legacy Taurus/Hughes IDs, moved off `/aircraft`). They carry every serial,
 MAC/ESN/Chassis ID, Taurus ID and SIM ICCID. The page reads them through `nodeReadUrl()` (adds `?auth=`, null when
 signed out) and shows a 🔒 notice on Hardware. ⚠️ A new read of either node MUST go through it and check `res.ok` —
 an anonymous 401 body stored as data becomes a fake record. ⚠️ Lock changes deploy **page first, then rules**, or

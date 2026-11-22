@@ -13,6 +13,15 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.246.0 — Legacy modem identifiers locked (2026-11-23)
+`/aircraft/{tail}/modem` (Taurus MG ID/TID/SE4/SE2C, Hughes Chassis ID/ESN — 40 tails, public) moved verbatim to the new
+locked node **`/aircraftModem/{tail}`** (read: editors + viewers), then deleted from `/aircraft` and its rule removed, so a
+modem write to `/aircraft` is now rejected. Only the aircraft Edit modal used it: it reads `aircraftModemLive`, PATCHes
+`aircraftModem/{tail}` (verified by intercepting the body), mirrors after save; rekey moves it; `AC_MOVE_AC` drops
+`modem`. New node → rules + backup/restore/verify lists. Order: rules (additive) → admin copy (compared identical) → page
+(hash) → delete + rule removal. Public scan after: only 2 pre-migration R&R activities (`details.oldPart/newPart`, 16/18-Aug)
+and free-text notes (2 activity, 1 AVR) still mention serials.
+
 ### v2.245.0 — Serial registers locked to signed-in readers (2026-11-23)
 Prompted by a request to restrict serials / MACs / SIM numbers on the public dashboard. `/units` and `/modmans` (every
 serial, Hughes MAC/ESN/Chassis, Taurus TIDs/MG IDs, SIM ICCIDs) now need an editor OR a new read-only **`/viewers/{uid}`**
