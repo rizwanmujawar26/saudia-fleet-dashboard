@@ -6568,6 +6568,31 @@
             .aircraft-table td > strong:only-child { font-size: 13px; }
         }
 
+        /* v2.247.0 — Change Log panel */
+        .audit-panel { max-width: 920px; }
+        .audit-tools { padding: 10px 22px 0; }
+        .audit-tools .hw-search { width: 100%; box-sizing: border-box; }
+        .audit-list { padding: 10px 22px 18px; overflow-y: auto; }
+        .audit-entry { border: 1px solid #e3e8ee; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
+        .audit-entry.is-undone { background: #f6f8fa; opacity: 0.8; }
+        .audit-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12.5px; margin-bottom: 6px; }
+        .audit-when { color: #5b6772; font-variant-numeric: tabular-nums; }
+        .audit-who { font-weight: 700; color: #1f2a33; }
+        .audit-count { color: #7c8894; }
+        .audit-tag { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; }
+        .audit-tag-undo { color: #8a5a00; border: 1px solid #e8c37a; background: #fff8e6; }
+        .audit-undone { color: #8a5a00; font-size: 12px; }
+        .audit-undo-btn { margin-left: auto; border: 1px solid #c9d2db; background: #fff; border-radius: 999px; padding: 3px 12px; font-size: 12px; cursor: pointer; }
+        .audit-undo-btn:hover { background: #f1f4f7; }
+        .audit-change { display: grid; grid-template-columns: minmax(140px, 38%) 1fr; gap: 10px; font-size: 12.5px; padding: 3px 0; border-top: 1px dashed #eef1f4; }
+        .audit-path { color: #3d4a55; word-break: break-word; }
+        .audit-diff { word-break: break-word; }
+        .audit-arrow { color: #7c8894; margin: 0 4px; }
+        .audit-val { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+        .audit-empty, .audit-unknown { color: #9aa5b0; font-style: italic; }
+        .audit-note { color: #5b6772; font-size: 13px; text-align: center; padding: 24px 0; }
+        @media (max-width: 600px) { .audit-change { grid-template-columns: 1fr; gap: 2px; } }
+
         /* v2.245.0 — Hardware views a signed-out visitor cannot read (/units, /modmans locked). */
         .hw-locked-notice { max-width: 520px; margin: 48px auto; padding: 28px 24px; text-align: center;
             background: #fff; border: 1px solid #e3e8ee; border-radius: 14px; color: #1f2a33; }
@@ -7107,6 +7132,14 @@
                 <button type="button" class="sys-chip" id="sysWidgetsChip" onclick="toggleGlobalWidgets()" title="Show or hide the fleet KPI cards">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg>
                     <span>Widgets</span>
+                </button>
+
+                <span class="sys-sep" id="sysChangesSep" style="display:none;"></span>
+
+                <!-- v2.247.0 — the Change Log: who changed what, with Undo (signed-in only). -->
+                <button type="button" class="sys-chip" id="sysChangesChip" style="display:none;" onclick="openChangeLog()" title="Who changed what — with Undo for editors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
+                    <span>Changes</span>
                 </button>
 
                 <span class="sys-sep"></span>
@@ -7798,6 +7831,21 @@
                 <button id="addAcCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="addAcSave" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Add Aircraft</button>
             </div>
+        </div>
+    </div>
+
+    <!-- v2.247.0 — Change Log panel (openChangeLog). Closes only via ✕ / Esc. -->
+    <div id="auditOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1001; align-items:center; justify-content:center;">
+        <div class="ac-edit-panel audit-panel">
+            <div class="ac-edit-head">
+                <div>
+                    <h3 style="color:#0a5c34; margin:0;">Change Log</h3>
+                    <p id="auditSub" class="ac-edit-sub"></p>
+                </div>
+                <button class="ac-edit-x" onclick="closeChangeLog()" title="Close" aria-label="Close">✕</button>
+            </div>
+            <div class="audit-tools"><input id="auditSearch" class="hw-search" placeholder="Search person, tail, field or value" autocomplete="off" oninput="setAuditFilter(this.value)"></div>
+            <div id="auditList" class="ac-edit-body audit-list"></div>
         </div>
     </div>
 
@@ -8743,8 +8791,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.246.0';
-        const APP_BUILD    = '2026.11.23.02';
+        const APP_VERSION  = '2.247.0';
+        const APP_BUILD    = '2026.11.23.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -9691,6 +9739,234 @@
             return authUser.idToken;
         }
 
+        // ===== Change log (v2.247.0) =====
+        // Every database write the page makes passes through window.fetch, so ONE hook
+        // here logs them all — the 65 save sites need no change, and a new one is logged
+        // automatically. For each write it reads the values about to change (the
+        // "before"), lets the write through untouched, and only if it succeeded appends
+        // an entry to /audit: who (uid + email, both checked by the rules against the
+        // token), when (the SERVER's clock, enforced by the rules), and each changed
+        // path with before → after. /audit is append-only — no one can edit or delete an
+        // entry from the page. Undo writes the "before" values back, and is logged too.
+        //
+        // ⚠️ Values are stored as JSON STRINGS ("null", "\"ASAA\"", "{…}"): Firebase
+        // silently drops null-valued fields, so a raw null "before" would vanish and the
+        // entry could no longer say the field was empty. ⚠️ Writes outside the page —
+        // the Firebase console, the admin CLI scripts — are NOT logged.
+        const AUDIT_SKIP_NODES = ['audit', 'visits'];
+        const AUDIT_MAX_PATH_READS = 8;
+        const auditRawFetch = window.fetch.bind(window);
+        let auditUndoOf = null;   // set around an Undo write so its entry names what it reverted
+
+        // Stable JSON: sorted keys, nulls and empty objects dropped — the way Firebase
+        // itself stores a value, so "before" and "after" compare equal when nothing moved.
+        function auditCanon(v) {
+            if (v === undefined || v === null) return 'null';
+            if (typeof v !== 'object') return JSON.stringify(v);
+            if (Array.isArray(v)) return '[' + v.map(auditCanon).join(',') + ']';
+            const keys = Object.keys(v).sort().filter(k => auditCanon(v[k]) !== 'null');
+            if (!keys.length) return 'null';
+            return '{' + keys.map(k => JSON.stringify(k) + ':' + auditCanon(v[k])).join(',') + '}';
+        }
+        function auditParseUrl(url) {
+            const str = String(url || '');
+            if (!str.startsWith(FIREBASE_DB_URL + '/')) return null;
+            const u = new URL(str);
+            const auth = u.searchParams.get('auth');
+            if (!auth) return null;
+            return { auth, path: decodeURIComponent(u.pathname.replace(/^\/+/, '').replace(/\.json$/, '')) };
+        }
+        function auditJoin(a, b) { return [a, b].filter(Boolean).join('/').replace(/\/+/g, '/').replace(/^\/|\/$/g, ''); }
+        function auditPick(obj, rel) {
+            let o = obj;
+            for (const seg of String(rel).split('/').filter(Boolean)) {
+                if (o == null || typeof o !== 'object') return null;
+                o = o[seg];
+            }
+            return o === undefined ? null : o;
+        }
+        async function auditRead(path, auth) {
+            const r = await auditRawFetch(`${FIREBASE_DB_URL}/${path}.json?auth=${encodeURIComponent(auth)}`);
+            if (!r.ok) throw new Error('read ' + r.status);
+            return r.json();
+        }
+
+        window.fetch = async function auditedFetch(input, init) {
+            const method = String((init && init.method) || 'GET').toUpperCase();
+            const t = (method === 'PATCH' || method === 'PUT' || method === 'DELETE')
+                ? auditParseUrl(typeof input === 'string' ? input : (input && input.url)) : null;
+            if (!t || !authUser || AUDIT_SKIP_NODES.includes(t.path.split('/')[0])) return auditRawFetch(input, init);
+            let body = null;
+            try { body = init && init.body ? JSON.parse(init.body) : null; } catch (e) { return auditRawFetch(input, init); }
+            // The paths this write sets, and what it sets each to. A PATCH key is a full
+            // overwrite of that child, exactly like a PUT at it.
+            let sets;
+            if (method === 'PATCH') {
+                if (!body || typeof body !== 'object') return auditRawFetch(input, init);
+                sets = Object.keys(body).map(k => [auditJoin(t.path, k), body[k]]);
+            } else if (method === 'PUT') sets = [[t.path, body]];
+            else sets = [[t.path, null]];
+            const undoOf = auditUndoOf;
+            let before = null;
+            try {
+                if (sets.length <= AUDIT_MAX_PATH_READS) before = await Promise.all(sets.map(([p]) => auditRead(p, t.auth)));
+                else {
+                    const parent = await auditRead(t.path, t.auth);
+                    before = sets.map(([p]) => auditPick(parent, p.slice(t.path.length)));
+                }
+            } catch (e) { before = null; }   // still save; the entry just cannot be undone
+
+            const res = await auditRawFetch(input, init);
+            if (res.ok) {
+                const changes = [];
+                sets.forEach(([p, v], i) => {
+                    const a = auditCanon(v);
+                    const b = before ? auditCanon(before[i]) : undefined;
+                    if (b !== a) changes.push(b === undefined ? { p, a } : { p, a, b });
+                });
+                if (changes.length) auditRecord(method, t, changes, undoOf);
+            }
+            return res;
+        };
+
+        function auditRecord(method, t, changes, undoOf) {
+            if (!authUser) return;
+            const entry = { ts: { '.sv': 'timestamp' }, uid: authUser.uid, email: authUser.email || '', method, path: t.path || '/', changes };
+            if (undoOf) entry.undoOf = undoOf;
+            auditRawFetch(`${FIREBASE_DB_URL}/audit.json?auth=${encodeURIComponent(t.auth)}`, { method: 'POST', body: JSON.stringify(entry) })
+                .then(r => { if (!r.ok) throw new Error(String(r.status)); if (auditPanelOpen()) loadAuditLog(); })
+                .catch(() => setSyncStatus('🟡 Saved — but the change-log entry could not be written.', '#e0a800'));
+        }
+
+        // ── The Change Log panel ──
+        const AUDIT_LIMIT = 300;
+        let auditEntries = {};
+        let auditFilter = '';
+        const AUDIT_NODE_LABEL = {
+            aircraft: 'Software', fleet: 'Fleet', fleetSpecs: 'Fleet spec', configs: 'Config', units: 'Hardware unit',
+            modmans: 'MODMAN', aircraftModem: 'Modem IDs', activities: 'Activity', issues: 'Maintenance issue',
+            mediaLoads: 'Media load', mediaCycles: 'Media cycle', avr: 'Report', assets: 'Asset', flights: 'Flight', hardware: 'Hardware',
+        };
+        function auditPanelOpen() { const o = document.getElementById('auditOverlay'); return !!(o && o.style.display === 'flex'); }
+        function auditWho(e) { return String(e.email || e.uid || '?').split('@')[0]; }
+        function auditWhen(e) { return e.ts ? fmtSysStamp(new Date(e.ts).toISOString()) : '—'; }
+        function auditPathLabel(p) {
+            const seg = String(p).split('/').filter(Boolean);
+            if (!seg.length) return 'Database';
+            const out = [AUDIT_NODE_LABEL[seg[0]] || seg[0]];
+            if (seg[1]) {
+                const u = seg[0] === 'units' ? unitsLive[seg[1]] : null;
+                out.push(u ? `${(u.lruId || '').toUpperCase()} ${u.serial || ''}`.trim() : seg[1]);
+            }
+            return out.concat(seg.slice(2)).join(' › ');
+        }
+        function auditShowVal(str) {
+            if (str === undefined) return '<span class="audit-unknown">not recorded</span>';
+            let v; try { v = JSON.parse(str); } catch (e) { v = str; }
+            if (v === null) return '<span class="audit-empty">empty</span>';
+            const txt = typeof v === 'object' ? JSON.stringify(v) : String(v);
+            const cut = txt.length > 160 ? txt.slice(0, 160) + '…' : txt;
+            return `<span class="audit-val" title="${escAttr(txt)}">${escAttr(cut)}</span>`;
+        }
+        async function loadAuditLog() {
+            const list = document.getElementById('auditList');
+            if (!list) return;
+            const token = await getIdToken();
+            if (!token) { list.innerHTML = '<p class="audit-note">Sign in to see the change log.</p>'; return; }
+            try {
+                const res = await auditRawFetch(`${FIREBASE_DB_URL}/audit.json?orderBy=%22$key%22&limitToLast=${AUDIT_LIMIT}&auth=${encodeURIComponent(token)}`);
+                if (!res.ok) throw new Error(res.status === 401 ? 'this account cannot read the change log' : 'HTTP ' + res.status);
+                auditEntries = (await res.json()) || {};
+                renderAuditLog();
+            } catch (e) {
+                list.innerHTML = `<p class="audit-note">Could not load the change log — ${escAttr(e.message)}</p>`;
+            }
+        }
+        function renderAuditLog() {
+            const list = document.getElementById('auditList');
+            if (!list) return;
+            const undoneBy = {};
+            Object.entries(auditEntries).forEach(([id, e]) => { if (e && e.undoOf) undoneBy[e.undoOf] = { id, e }; });
+            const q = auditFilter.trim().toLowerCase();
+            const ids = Object.keys(auditEntries).sort().reverse();
+            const rows = ids.map(id => {
+                const e = auditEntries[id];
+                if (!e) return '';
+                const changes = Object.values(e.changes || {});
+                const hay = [e.email, e.path, ...changes.map(c => auditPathLabel(c.p) + ' ' + c.a + ' ' + (c.b || ''))].join(' ').toLowerCase();
+                if (q && !hay.includes(q)) return '';
+                const undone = undoneBy[id];
+                const canUndo = canEdit() && !undone && changes.length && changes.every(c => c.b !== undefined);
+                const tag = e.undoOf ? '<span class="audit-tag audit-tag-undo">UNDO</span>' : '';
+                const status = undone ? `<span class="audit-undone">Undone by ${escAttr(auditWho(undone.e))} · ${escAttr(auditWhen(undone.e))}</span>` : '';
+                const btn = canUndo ? `<button class="audit-undo-btn" onclick="undoAuditEntry('${escAttr(id)}')">↶ Undo</button>` : '';
+                const lines = changes.map(c => `<div class="audit-change"><div class="audit-path">${escAttr(auditPathLabel(c.p))}</div>
+                    <div class="audit-diff">${auditShowVal(c.b)} <span class="audit-arrow">→</span> ${auditShowVal(c.a)}</div></div>`).join('');
+                return `<div class="audit-entry${undone ? ' is-undone' : ''}">
+                    <div class="audit-head"><span class="audit-when">${escAttr(auditWhen(e))}</span>
+                    <span class="audit-who">${escAttr(auditWho(e))}</span>${tag}
+                    <span class="audit-count">${changes.length} field${changes.length === 1 ? '' : 's'}</span>${status}${btn}</div>${lines}</div>`;
+            }).filter(Boolean);
+            list.innerHTML = rows.length ? rows.join('') : `<p class="audit-note">${ids.length ? 'No change matches that search.' : 'No changes logged yet. Every save made on the dashboard from now on appears here.'}</p>`;
+            const sub = document.getElementById('auditSub');
+            if (sub) sub.textContent = `Every save made on the dashboard — newest first, last ${AUDIT_LIMIT}. Times are UTC.`;
+        }
+        function openChangeLog() {
+            if (!isSignedIn()) return;
+            document.getElementById('auditOverlay').style.display = 'flex';
+            document.getElementById('auditList').innerHTML = '<p class="audit-note">Loading…</p>';
+            loadAuditLog();
+        }
+        function closeChangeLog() { document.getElementById('auditOverlay').style.display = 'none'; }
+        function setAuditFilter(v) { auditFilter = v || ''; renderAuditLog(); }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && auditPanelOpen()) closeChangeLog(); });
+
+        // Puts every field of one entry back to its "before" value, in ONE multi-path
+        // write at the root, after warning if any of them has been changed again since.
+        async function undoAuditEntry(id) {
+            if (!canEdit()) return;
+            const e = auditEntries[id];
+            if (!e) return;
+            const changes = Object.values(e.changes || {});
+            if (!changes.length || changes.some(c => c.b === undefined)) { alert('This change cannot be undone: its earlier values were not recorded.'); return; }
+            const token = await getIdToken();
+            if (!token) return;
+            let now;
+            try { now = await Promise.all(changes.map(c => auditRead(c.p, token))); }
+            catch (err) { alert('Could not read the current values — nothing was changed.'); return; }
+            const drift = changes.filter((c, i) => auditCanon(now[i]) !== c.a).length;
+            const warn = drift ? `⚠️ ${drift} of these ${changes.length} field(s) changed again after this edit. Undoing puts them back to the value BEFORE this edit, overwriting the newer value.\n\n` : '';
+            if (!confirm(`${warn}Undo ${auditWho(e)}'s change of ${auditWhen(e)} (${changes.length} field${changes.length === 1 ? '' : 's'})?\n\nThe undo is logged too.`)) return;
+            const body = {};
+            changes.forEach(c => { body[c.p] = JSON.parse(c.b); });
+            auditUndoOf = id;
+            try {
+                const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/.json?auth=${token}`, { method: 'PATCH', body: JSON.stringify(body) });
+                const d = await res.json();
+                if (!res.ok || (d && d.error)) throw new Error((d && d.error) || 'write failed');
+                setSyncStatus('🟢 Change undone — synced with your team', '#28a745');
+            } catch (err) {
+                alert(`Could not undo — ${err.message}. Nothing was changed.`);
+                return;
+            } finally {
+                auditUndoOf = null;
+            }
+            await auditRefreshStores();
+            loadAuditLog();
+        }
+        // An undo can touch any node: re-read them all, so the screen matches at once.
+        async function auditRefreshStores() {
+            Object.keys(lowTrafficSnapshot).forEach(k => { lowTrafficSnapshot[k] = '__stale__'; });
+            LOCKED_NODES.forEach(n => { lowTrafficSnapshot[n] = '__stale__'; });
+            await pollLowTrafficNodes();
+            reloadAircraftStore();
+            try {
+                const f = await auditRawFetch(`${FIREBASE_DB_URL}/fleet.json`).then(r => r.json());
+                setFleetRoster(f);
+            } catch (e) { /* the fleet stream catches up */ }
+            renderAll();
+        }
+
         async function checkEditorAccess() {
             try {
                 const res = await fetch(`${FIREBASE_DB_URL}/editors/${authUser.uid}.json?auth=${authUser.idToken}`);
@@ -9889,6 +10165,10 @@
             const chip = document.getElementById('sysAuthChip');
             const label = document.getElementById('sysAuthLabel');
             if (!chip || !label) return;
+            const ch = document.getElementById('sysChangesChip');
+            if (ch) ch.style.display = isSignedIn() ? '' : 'none';
+            const chs = document.getElementById('sysChangesSep');
+            if (chs) chs.style.display = isSignedIn() ? '' : 'none';
             if (isSignedIn()) {
                 label.textContent = 'Sign out';
                 chip.title = `Signed in as ${authUser.email} — click to sign out`;

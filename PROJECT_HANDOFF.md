@@ -1045,7 +1045,11 @@ MAC/ESN/Chassis ID, Taurus ID and SIM ICCID. The page reads them through `nodeRe
 signed out) and shows a 🔒 notice on Hardware. ⚠️ A new read of either node MUST go through it and check `res.ok` —
 an anonymous 401 body stored as data becomes a fake record. ⚠️ Lock changes deploy **page first, then rules**, or
 signed-in users see empty registers. Add a viewer:
-`firebase database:update /viewers --project saudia-fleet-dashboard --data '{"<uid>": true}'`. The check lives in the database
+`firebase database:update /viewers --project saudia-fleet-dashboard --data '{"<uid>": true}'`.
+
+**Change Log (v2.247.0).** Every write the page makes is logged to the append-only `/audit` node by one
+`window.fetch` hook (who, server time, before → after), viewable from the status bar's **Changes** button, with Undo for
+editors. ⚠️ A write that bypasses `fetch` (or the page entirely) is not logged — keep new writes on `fetch`/`fetchWithTimeout`. The check lives in the database
 rules, so bypassing the UI with a raw REST call gains nothing. (The original
 gate was a shared PIN checked in JavaScript — bypassable with one REST call —
 which is why it was replaced.)

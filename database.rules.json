@@ -106,6 +106,15 @@
       }
     },
 
+    "audit": {
+      ".read": "auth != null && (root.child('editors').child(auth.uid).val() === true || root.child('viewers').child(auth.uid).val() === true)",
+
+      "$entry": {
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true && !data.exists()",
+        ".validate": "newData.hasChildren(['ts', 'uid', 'email', 'method', 'path', 'changes']) && newData.child('uid').val() === auth.uid && newData.child('email').val() === auth.token.email && newData.child('ts').val() === now && newData.child('method').val().matches(/^(PATCH|PUT|DELETE)$/) && newData.child('path').isString()"
+      }
+    },
+
     "fleet": {
       ".read": true,
 

@@ -13,6 +13,18 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.247.0 — Change Log with Undo (2026-11-23)
+Status-bar **Changes** button (signed-in only) opens a Change Log: who, when (UTC), each changed field before → after,
+search, and **↶ Undo** for editors. One hook wraps `window.fetch`, so every dashboard write (PATCH/PUT/DELETE with
+`?auth=`, except `/audit` and `/visits`) is logged with no change to the 65 save sites: it reads the "before" (≤8 paths
+individually, else the parent once), lets the write through, and on success POSTs to the new locked node **`/audit`**.
+Rules: append-only (`!data.exists()`), editors write, editors + viewers read; `uid` must equal `auth.uid`, `email` must
+equal `auth.token.email`, `ts` must equal the server's `now` (sent as `{".sv":"timestamp"}`), so entries cannot be
+forged, back-dated, edited or deleted from the page. ⚠️ Values are stored as JSON strings — Firebase drops null fields,
+and a null "before" must survive. Undo = one root multi-path PATCH of the "before" values, warns if a field changed again
+since, and is logged with `undoOf`. NOT logged: writes outside the page (console, admin CLI scripts). New node → rules +
+backup/restore/verify lists. ⚠️ restore.sh restores `/audit` like any node — restoring an old snapshot rewinds the log.
+
 ### Data — serials stripped from public records (2026-11-23, no page change)
 Admin multi-path update after a private backup. Each value was confirmed held in a locked register before removal:
 two SIM serials on an old R&R activity's `details.oldPart/newPart` (in `/units` via activityId); an old MODMAN R&R's
