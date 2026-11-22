@@ -115,6 +115,27 @@
       }
     },
 
+    "mediaCycleDisks": {
+      ".read": "auth != null && (root.child('editors').child(auth.uid).val() === true || root.child('viewers').child(auth.uid).val() === true)",
+
+      "$cycle": {
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
+        ".validate": "$cycle.matches(/^[0-9]{4}$/)",
+
+        "$disk": {
+          "nsgSerial": { ".validate": "newData.isString() && newData.val().length <= 60" },
+          "type":      { ".validate": "newData.isString() && newData.val().length <= 60" },
+          "make":      { ".validate": "newData.isString() && newData.val().length <= 60" },
+          "mfrSerial": { ".validate": "newData.isString() && newData.val().length <= 60" },
+          "totalSize": { ".validate": "newData.isString() && newData.val().length <= 60" },
+          "location":  { ".validate": "newData.isString() && newData.val().length <= 60" },
+          "custodian": { ".validate": "newData.isString() && newData.val().length <= 60" },
+          "content":   { ".validate": "newData.isString() && newData.val().length <= 60" },
+          "$other":    { ".validate": false }
+        }
+      }
+    },
+
     "fleet": {
       ".read": true,
 
@@ -310,27 +331,12 @@
         "notes":            { ".validate": "newData.isString() && newData.val().length <= 1000" },
         "updatedAt":        { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/)" },
         "disksSnapshotAt":  { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/) && (!data.exists() || newData.val() === data.val())" },
-        "disks": {
-          ".validate": "newData.parent().child('disksSnapshotAt').exists()",
-          "$disk": {
-            "nsgSerial": { ".validate": "newData.isString() && newData.val().length <= 60" },
-            "type":      { ".validate": "newData.isString() && newData.val().length <= 60" },
-            "make":      { ".validate": "newData.isString() && newData.val().length <= 60" },
-            "mfrSerial": { ".validate": "newData.isString() && newData.val().length <= 60" },
-            "totalSize": { ".validate": "newData.isString() && newData.val().length <= 60" },
-            "location":  { ".validate": "newData.isString() && newData.val().length <= 60" },
-            "custodian": { ".validate": "newData.isString() && newData.val().length <= 60" },
-            "content":   { ".validate": "newData.isString() && newData.val().length <= 60" },
-            "$other":    { ".validate": false }
-          }
-        },
-
         "$other":           { ".validate": false }
       }
     },
 
     "assets": {
-      ".read": true,
+      ".read": "auth != null && (root.child('editors').child(auth.uid).val() === true || root.child('viewers').child(auth.uid).val() === true)",
 
       "$id": {
         ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",

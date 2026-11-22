@@ -13,6 +13,16 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.249.0 — Assets and frozen media-disk lists locked (2026-11-23)
+`/assets` (media disks, USBs, laptops — NSG + maker serials) now needs an editor or viewer to read; Hardware › ASSETS
+shows the sign-in notice. The disk list frozen at each media cycle's close moved from public `/mediaCycles/{c}/disks`
+to the new locked **`/mediaCycleDisks/{c}`** (15 disks over 3 cycles, copied verbatim and compared identical, then
+deleted from `/mediaCycles` and the `disks` rule removed; `disksSnapshotAt` stays public as the "locked" marker). The
+snapshot writer saves disks to the locked node first, then the marker. Media Loading Reports keep every loading figure
+for everyone; the disk table and count show a sign-in note when signed out. Live scan: no serial, ICCID or MAC in any
+public node. ⚠️ Commit `version.json` with every page deploy — the page went live once without it, and open tabs
+reload whenever the build they see in version.json differs from their own.
+
 ### v2.248.0 — Self-service password link (2026-11-23)
 Sign-in box: "Forgot password, or first time here?" emails a Firebase set-password link to the typed address
 (`sendPasswordReset` → `accounts:sendOobCode`). Firebase fixes reset-link expiry at ~1 hour (not configurable), so new
