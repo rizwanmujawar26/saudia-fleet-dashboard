@@ -4344,6 +4344,38 @@ constants, `FIREBASE_DB_URL` and `FIREBASE_API_KEY`.
 
 ---
 
+## Google Sheet feed — daily read-only copy for Raj
+
+Raj (manager) asked on 23-Nov-2026 for a private, read-only feed with the dashboard's
+content so he can monitor changes. Built as a **Google Apps Script bound to a private
+Google Sheet** in the user's personal Gmail Drive (decision 23-Nov-2026; move to a company
+Workspace/Shared Drive later if one appears). Code lives in `feed/` (`Code.gs`,
+`appsscript.json`) — the repo copy is the source; the Sheet's script editor holds a pasted
+copy, so re-paste after editing.
+
+- **Schedule:** once a day at 06:00 Asia/Riyadh (user rejected 15-minute refreshes). Each
+  run rewrites every tab in full.
+- **Auth:** no password or key. The script runs as the Sheet owner (same Google account
+  that owns the Firebase project) and reads with `ScriptApp.getOAuthToken()` as
+  `?access_token=` (scopes `firebase.database` + `userinfo.email`). That is an owner/admin
+  read, so it sees the locked registers; the script only ever GETs. ⚠️ If the Sheet moves to
+  an account without a role on the Firebase project, every read returns 401 — that account
+  would need a `/viewers` sign-in instead.
+- **Tabs:** About, Changes, Fleet, Software, Media, Media loads, Media cycles, Media cycle
+  disks, MODMAN, Modem, SIM, Hardware (one row per fitment), Equipment types, Assets,
+  Maintenance issues, Operational history, Activities, Reports, Flights, Edit log (7 days,
+  from `/audit`). Column A of each tab is a stable key.
+- **Changes tab:** before overwriting, each tab is diffed with yesterday's by column A →
+  Added / Removed / Changed (field, before → after); kept 90 days. A failed or empty read
+  throws before anything is written, so a bad night never shows as mass "Removed".
+- **Optional email digest:** set Script Property `DIGEST_TO` to an address.
+- **A new node or field** must be added to `FEED_NODES` / `buildTabs()` too, or the Sheet
+  silently lacks it (add it to the new-node checklist alongside backup/restore/verify).
+- **Test locally:** `buildTabs()` and `diffTables()` are pure — `require('feed/Code.gs')`
+  (copied to a `.js`) in Node against a backup folder.
+- **Sharing:** Raj as **Viewer**, General access **Restricted**. Viewers can't open the
+  bound script.
+
 ## Edit buttons — one implementation, one way in
 
 `applyEditButton(btnId, editing, idleLabel, activeLabel)` renders **every** page's Edit

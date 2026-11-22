@@ -106,7 +106,7 @@ A close-out, not a stopping point: finish what is in flight or name it unfinishe
 
 | | |
 |---|---|
-| A new node needs **four edits** — the rules, and the node lists in `backup.sh`, `restore.sh`, `verify-deployment.sh` | Backups |
+| A new node needs **five edits** — the rules, the node lists in `backup.sh`, `restore.sh`, `verify-deployment.sh`, and `FEED_NODES`/`buildTabs()` in `feed/Code.gs` (Raj's Sheet) | Backups |
 | A "view" that changes what a row **means** must **rebuild**, not re-filter | Media |
 | A write to a **polled** node must be mirrored locally, or the save looks like it vanished | Media / Satcom |
 | A node left out of the **initial fetch** still streams later — so a whole widget strip sat empty for 25 seconds and nothing errored | Live streams |
