@@ -41,6 +41,13 @@ c="$(code "$DB/editors.json")"
 [ "$c" = "401" ] && ok "/editors not anonymously readable" || bad "/editors is READABLE" "HTTP $c"
 c="$(code "$DB/.json")"
 [ "$c" = "401" ] && ok "root not anonymously readable" || bad "root is READABLE" "HTTP $c"
+c="$(code "$DB/viewers.json")"
+[ "$c" = "401" ] && ok "/viewers not anonymously readable" || bad "/viewers is READABLE" "HTTP $c"
+# v2.245.0: serials, MAC/ESN/Chassis, Taurus IDs and SIM ICCIDs live in these two.
+for n in units modmans; do
+  c="$(code "$DB/$n.json?shallow=true")"
+  [ "$c" = "401" ] && ok "/$n locked to signed-in readers" || bad "/$n is ANONYMOUSLY READABLE" "HTTP $c"
+done
 
 printf '"2.1.0"' > "$TMP/v"
 c="$(curl -s -o /dev/null -w '%{http_code}' -X PUT --data-binary @"$TMP/v" "$DB/aircraft/__verify__/swVersion.json")"

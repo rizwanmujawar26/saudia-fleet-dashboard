@@ -6568,6 +6568,12 @@
             .aircraft-table td > strong:only-child { font-size: 13px; }
         }
 
+        /* v2.245.0 — Hardware views a signed-out visitor cannot read (/units, /modmans locked). */
+        .hw-locked-notice { max-width: 520px; margin: 48px auto; padding: 28px 24px; text-align: center;
+            background: #fff; border: 1px solid #e3e8ee; border-radius: 14px; color: #1f2a33; }
+        .hw-locked-icon { font-size: 28px; margin-bottom: 8px; }
+        .hw-locked-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+        .hw-locked-text { font-size: 13px; line-height: 1.5; color: #5b6772; }
     </style>
 </head>
 <body>
@@ -7308,7 +7314,7 @@
             <p style="font-size:13px; color:#666; margin-bottom:16px;">Add a card to the register — as a <b>Spare</b> in hand, or fitted to an aircraft straight away. A spare can be assigned later from the table.</p>
 
             <label class="add-sched-label">SIM Number</label>
-            <input id="addSimSerial" class="add-sched-input" maxlength="60" placeholder="e.g. 899660117002235903" autocomplete="off">
+            <input id="addSimSerial" class="add-sched-input" maxlength="60" placeholder="e.g. 899660000000005903" autocomplete="off">
 
             <label class="add-sched-label">Status</label>
             <select id="addSimStatus" class="add-sched-input" onchange="syncAddSimStatus()">
@@ -8618,8 +8624,8 @@
         // A serial identifies one box WITHIN its equipment type — two different LRUs may
         // legitimately carry the same number.
         // Match on the serial with ALL whitespace stripped, not just trimmed: a SIM S/N
-        // typed "899660 117002 235902" is the same physical box as the stored
-        // "899660117002235902", and treating them as different is exactly what minted a
+        // typed "899660 000000 005902" is the same physical box as the stored
+        // "899660000000005902", and treating them as different is exactly what minted a
         // duplicate unit from a hand-logged swap. Internal spacing is never significant
         // in a serial, so it is removed before comparing.
         function normSerialKey(serial) {
@@ -8732,8 +8738,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.244.0';
-        const APP_BUILD    = '2026.11.20.06';
+        const APP_VERSION  = '2.245.0';
+        const APP_BUILD    = '2026.11.23.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -8943,6 +8949,36 @@
             return 'live';
         }
 
+        // ===== Locked registers (v2.245.0) =====
+        // /units and /modmans hold every serial, the Hughes MAC/ESN/Chassis IDs, the
+        // Taurus TIDs and every SIM ICCID. Their database rules require a signed-in
+        // editor or viewer to READ them, so the page asks with a token, and a
+        // signed-out visitor never asks at all. ⚠️ An unauthenticated read of a locked
+        // node returns 401 with {error:"Permission denied"} — fed to r.json() and
+        // stored, that error object becomes a fake "unit" called "error". Every read of
+        // these nodes goes through lockedReadUrl() and checks res.ok.
+        const LOCKED_NODES = ['units', 'modmans'];
+        function isLockedNode(path) { return LOCKED_NODES.includes(String(path).split('/')[0]); }
+        function canReadRegisters() { return !!(authUser && (authUser.canEdit || authUser.canView)); }
+        // Resolves to the URL to read `path` with, or null when it cannot be read now.
+        async function nodeReadUrl(path) {
+            if (!isLockedNode(path)) return `${FIREBASE_DB_URL}/${path}.json`;
+            if (!canReadRegisters()) return null;
+            const token = await getIdToken();
+            return token ? `${FIREBASE_DB_URL}/${path}.json?auth=${token}` : null;
+        }
+        // Signing out drops the locked stores at once, so no serial lingers on screen.
+        function clearLockedStores() {
+            unitsLive = {};
+            modmansLive = {};
+            LOCKED_NODES.forEach(n => { delete lowTrafficSnapshot[n]; });
+        }
+        function lockedNoticeHtml() {
+            return `<div class="hw-locked-notice"><div class="hw-locked-icon" aria-hidden="true">🔒</div>
+                <div class="hw-locked-title">Sign in to view equipment records</div>
+                <div class="hw-locked-text">Serial numbers, MODMAN / modem identifiers and the SIM register are visible to signed-in team members only. Use <b>Sign in</b> in the status bar.</div></div>`;
+        }
+
         function connectLiveSync() {
             fetch(`${FIREBASE_DB_URL}/aircraft.json`)
                 .then(r => r.json())
@@ -8970,7 +9006,7 @@
             // it, every monthly card was missing for the first 25 seconds of each page
             // load — the strip looked broken.
             Promise.all(['hardware', 'units', 'activities', 'issues', 'mediaLoads', 'modmans', 'fleetSpecs', 'avr', 'configs', 'assets', 'mediaCycles', 'flights'].map(n =>
-                fetch(`${FIREBASE_DB_URL}/${n}.json`).then(r => r.json()).catch(() => null)
+                nodeReadUrl(n).then(u => u ? fetch(u).then(r => r.ok ? r.json() : null) : null).catch(() => null)
             )).then(([hw, un, ac, is, ml, mm, fs, av, cf, as, mc, fl]) => {
                 flightsLive    = fl || {};
                 hardwareLive   = hw || {};
@@ -9047,7 +9083,13 @@
 
             for (const [node, assign] of Object.entries(nodes)) {
                 try {
-                    const res = await fetchWithTimeout(`${FIREBASE_DB_URL}/${node}.json`, {}, 15000);
+                    const url = await nodeReadUrl(node);
+                    if (!url) {
+                        // Locked and not signed in: make sure nothing of it is held.
+                        if (lowTrafficSnapshot[node] !== undefined) { delete lowTrafficSnapshot[node]; assign(null); changed = true; }
+                        continue;
+                    }
+                    const res = await fetchWithTimeout(url, {}, 15000);
                     if (!res.ok) continue;
                     const text = await res.text();
                     if (lowTrafficSnapshot[node] === text) continue;   // nothing moved
@@ -9565,8 +9607,11 @@
             // simEditMode was missing here — the SIM page stayed in Edit Mode across a
             // sign-out, showing inputs nobody could save. satcomEditMode had the same gap.
             simEditMode = satcomEditMode = false;
+            clearLockedStores();
             updateAuthUI();
             renderAll();
+            hwSoftRefresh();
+            if (typeof updateMetrics === 'function') updateMetrics();   // Timeline drops unit rows
         }
 
         function authErrorMessage(data) {
@@ -9600,6 +9645,9 @@
                 canEdit: false,
             };
             authUser.canEdit = await checkEditorAccess();
+            // A viewer (/viewers/{uid}) signs in read-only: the locked registers become
+            // readable, nothing becomes editable.
+            authUser.canView = authUser.canEdit || await checkViewerAccess();
             saveAuthSession();
             return authUser;
         }
@@ -9644,6 +9692,18 @@
             }
         }
 
+        async function checkViewerAccess() {
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/viewers/${authUser.uid}.json?auth=${authUser.idToken}`);
+                if (!res.ok) return false;
+                return (await res.json()) === true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function isSignedIn() { return canReadRegisters(); }
+
         function promptSignIn() {
             return new Promise(resolve => {
                 const overlay = document.getElementById('signInModalOverlay');
@@ -9679,8 +9739,8 @@
                     submitBtn.textContent = 'Signing in...';
                     try {
                         await signIn(email, password);
-                        if (!authUser.canEdit) {
-                            errorBox.textContent = 'Signed in, but this account is not authorised to edit. Ask the fleet lead for access.';
+                        if (!authUser.canEdit && !authUser.canView) {
+                            errorBox.textContent = 'Signed in, but this account has no access to the dashboard. Ask the fleet lead for access.';
                             errorBox.style.display = 'block';
                             signOut();
                             return;
@@ -9820,13 +9880,13 @@
             const chip = document.getElementById('sysAuthChip');
             const label = document.getElementById('sysAuthLabel');
             if (!chip || !label) return;
-            if (canEdit()) {
+            if (isSignedIn()) {
                 label.textContent = 'Sign out';
                 chip.title = `Signed in as ${authUser.email} — click to sign out`;
                 chip.classList.add('sys-chip-auth-on');
             } else {
                 label.textContent = 'Sign in';
-                chip.title = 'Sign in to edit — Activity and Hardware appear once you do';
+                chip.title = 'Sign in to edit, or to see equipment serials, MODMAN and SIM records';
                 chip.classList.remove('sys-chip-auth-on');
             }
         }
@@ -9834,7 +9894,7 @@
         // The status-bar sign-in chip: sign in when signed out, sign out (with a
         // confirm) when signed in.
         function footerAuthClick() {
-            if (canEdit()) {
+            if (isSignedIn()) {
                 if (confirm(`Sign out of ${authUser.email}?\n\nAny page still in Edit Mode will close, and unsaved changes are lost.`)) signOut();
             } else {
                 signInForTabs();
@@ -9850,6 +9910,9 @@
             // until some other event fired updateAuthUI. updateAuthUI() calls
             // applyTabVisibility() itself, so this still reveals the restricted tabs.
             updateAuthUI();
+            // The locked registers were not readable a moment ago: fetch them now rather
+            // than leaving Hardware on its sign-in notice until the next 25 s poll.
+            if (canReadRegisters()) { LOCKED_NODES.forEach(n => { lowTrafficSnapshot[n] = '__stale__'; }); pollLowTrafficNodes(); hwSoftRefresh(); }
         }
 
         function canEdit() {
@@ -9876,7 +9939,7 @@
         function updateSysUserChip() {
             const chip = document.getElementById('sysUserChip');
             const sep = document.getElementById('sysUserSep');
-            const on = canEdit();
+            const on = isSignedIn();
             if (chip) {
                 chip.style.display = on ? '' : 'none';
                 chip.title = on ? `Signed in as ${authUser.email}` : '';
@@ -16255,7 +16318,7 @@
             };
             const todayIso = new Date().toISOString().slice(0, 10);
             const eqPos = r => r.position ? ` <span class="eq-pos">${escAttr(r.position)}/${escAttr(r.qty)}</span>` : '';
-            // A SIM serial reads far easier in three six-digit groups (899660 117003 092837),
+            // A SIM serial reads far easier in three six-digit groups (899660 000000 002837),
             // the same grouping the 4G SIM tab uses (user, 2026-09-14).
             const eqSerial = r => escAttr((r.lru && SIM_LRU_IDS.includes(r.lru.id) ? formatSimSerial(r.serial) : r.serial) || '—');
             const equipInstalled = equip.filter(r => r.serial && !r.vacant);
@@ -19108,7 +19171,7 @@
                             throw new Error('activity saved, but the serials did not reach the register — '
                                 + ((udata && udata.error) || 'write failed'));
                         }
-                        await fetch(`${FIREBASE_DB_URL}/units.json`).then(r => r.json())
+                        await fetch(`${FIREBASE_DB_URL}/units.json?auth=${token}`).then(r => r.ok ? r.json() : Promise.reject())
                             .then(d => { unitsLive = d || {}; }).catch(() => {});
                     }
                     maintSelectedId = entry.aircraft;      // land on the aircraft just logged
@@ -23083,6 +23146,15 @@
             const isModem = hwView === 'modem';
             const modem = document.getElementById('hwModem');
             const hwBar = document.getElementById('hwFilterBar');
+            // Every Hardware view but ASSETS reads the locked registers.
+            if (!canReadRegisters() && hwView !== 'assets') {
+                if (modem) modem.style.display = 'none';
+                if (hwBar) hwBar.style.display = 'none';
+                if (head) { head.style.display = ''; head.innerHTML = ''; }
+                host.style.display = '';
+                host.innerHTML = lockedNoticeHtml();
+                return;
+            }
             [head, hwBar, host].forEach(n => { if (n) n.style.display = isModem ? 'none' : ''; });
             if (modem) modem.style.display = isModem ? '' : 'none';
             // REMOVALS (v2.230.0) is a dashboard with its own controls — the shared filter bar
@@ -26958,7 +27030,7 @@
         //
         // The signature is what a reader would call "the same event": same day, same
         // aircraft, same kind, same title, same subtitle — with the subtitle compared on
-        // alphanumerics only, so "S/N 899660 117002 235902" and "S/N 899660117002235902"
+        // alphanumerics only, so "S/N 899660 000000 005902" and "S/N 899660000000005902"
         // are one. When rows collapse, the one carrying an actId (an editable /activities
         // record) or an avrId wins, so the surviving row stays manageable; a purely
         // derived duplicate simply drops. Rows with no tail AND no subtitle (a bare

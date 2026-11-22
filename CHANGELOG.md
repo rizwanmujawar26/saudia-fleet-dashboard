@@ -13,6 +13,21 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.245.0 — Serial registers locked to signed-in readers (2026-11-23)
+Prompted by a request to restrict serials / MACs / SIM numbers on the public dashboard. `/units` and `/modmans` (every
+serial, Hughes MAC/ESN/Chassis, Taurus TIDs/MG IDs, SIM ICCIDs) now need an editor OR a new read-only **`/viewers/{uid}`**
+account to READ — the rules enforce it, the page only follows. Page: `nodeReadUrl()` adds `?auth=` for `LOCKED_NODES`
+and returns null when signed out (⚠️ a 401 body fed to r.json() would store `{error:…}` as a fake unit — every read
+checks `res.ok`); `signOut` → `clearLockedStores()`; sign-in re-polls at once; viewers may sign in read-only
+(`canView`, `isSignedIn()` drives the status-bar chip). Hardware shows a 🔒 sign-in notice on every view but ASSETS.
+Public effect: Home Timeline loses the unit-derived hardware rows (they print S/Ns); Fleet/Software/Media unchanged;
+public AVR PDFs lose equipment tables. Deployed **page first, then rules** (reverse of usual). `backup.sh` falls back to
+an admin CLI read for locked nodes; `backup-secrets.sh` captures `/viewers`; `verify-deployment.sh` asserts both nodes
+401 anonymously. Real ICCIDs used as examples in code comments/placeholder and the handoff replaced with fakes (still in
+git history). ⚠️ Still public: legacy `/aircraft/{tail}/modem` (Taurus TID/MG ID, Hughes chassis/ESN on 40 tails) and
+free-text serials in 3 activities/AVR notes; `/assets` (media disk / USB / laptop serials) left public — the Media
+Loading Report counts disks from it.
+
 ### v2.244.0 — Spare SIMs from Hardware › SIM (2026-11-20)
 Add SIM gains "Spare — not on an aircraft": writes a `/units` record with no fitment (reads SPARE) and an optional
 `earmark` tail (new unit-level rule). Spare rows show a "for TAIL" tag, editable in edit mode; the assign picker preselects

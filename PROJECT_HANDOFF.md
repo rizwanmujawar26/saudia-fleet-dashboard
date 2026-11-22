@@ -446,7 +446,7 @@ the load-bearing shape:
   Local/Global as plain text and shipped once.
 - **Equipment is two concise tables** (`.eqtbl`) below Software & Media — **Installed** (serial ·
   installed · on-wing days) and **Removed** (serial · installed · removed · in-service days).
-  SIM serials are grouped in six-digit blocks with `formatSimSerial` (899660 117003 092837).
+  SIM serials are grouped in six-digit blocks with `formatSimSerial` (899660 000000 002837).
 - **Work Carried Out includes other visits/remote sessions for the tail** (v2.153.0): the base
   filter now keeps `kind:'visit'` entries whose `avrId !== v.id` (any date; only THIS report's own
   visit is skipped), so a 14-Sep report lists the 13-Sep remote session. Each Details cell puts the
@@ -1037,8 +1037,14 @@ gap in the record, not a fault. The **SIM register is now the best-populated par
 
 ## Security model
 
-**Public read, authenticated write.** Anyone can view; only a signed-in account
-listed under `/editors/{uid}` can change data. The check lives in the database
+**Public read, authenticated write — except the serial registers.** Anyone can view; only a signed-in
+account listed under `/editors/{uid}` can change data. Since v2.245.0 **`/units` and `/modmans` need a signed-in
+reader** (an editor, or a read-only account in `/viewers/{uid}`, managed like `/editors`): they carry every serial,
+MAC/ESN/Chassis ID, Taurus ID and SIM ICCID. The page reads them through `nodeReadUrl()` (adds `?auth=`, null when
+signed out) and shows a 🔒 notice on Hardware. ⚠️ A new read of either node MUST go through it and check `res.ok` —
+an anonymous 401 body stored as data becomes a fake record. ⚠️ Lock changes deploy **page first, then rules**, or
+signed-in users see empty registers. Add a viewer:
+`firebase database:update /viewers --project saudia-fleet-dashboard --data '{"<uid>": true}'`. The check lives in the database
 rules, so bypassing the UI with a raw REST call gains nothing. (The original
 gate was a shared PIN checked in JavaScript — bypassable with one REST call —
 which is why it was replaced.)
@@ -1396,7 +1402,7 @@ grids (Record Installed, bulk removal) deliberately keep the strict check.
 300084790, COMe replaced, repaired), fitted ASL 25-Sep-2026; the "483220010 EX / 050
 EX" workaround record was merged into it.
 
-**The worked example is SIM `899660 117003 092859`** (2026-08-25) — the only unit in
+**The worked example is SIM `899660 000000 002859`** (2026-08-25) — the only unit in
 the register with more than one fitment, and the only one fitted to more than one
 airframe. It was on **ASK** 18-Mar-2025 → 16-Apr-2025, came off, and is now on **ASC**
 from 10-Apr-2026. Two fitments on one unit, and every surface reads it correctly
@@ -2762,7 +2768,7 @@ from it exactly the way the old duplicated status fields did.
 `simLatestFitment()`, so a card that moved between airframes showed its current posting
 and silently dropped every aircraft it had been on. Searching `ASK` returned two rows
 when three cards had served it. A card now appears **once per period it served** —
-`899660 117003 092859` is ACTIVE on ASC *and* REMOVED `ex-ASK` with its closed 29-day
+`899660 000000 002859` is ACTIVE on ASC *and* REMOVED `ex-ASK` with its closed 29-day
 span. **A spare has no fitment and is still exactly one row**; there is nothing to
 expand and it must not fall out of the register.
 
@@ -2823,7 +2829,7 @@ Media columns are unaffected.
 column rather than an em dash: the absence of a date *is* the statement that it is
 still on the aircraft.
 
-**Serials render grouped in sixes** (`899660 117002 235903`) — 18 digits in one run
+**Serials render grouped in sixes** (`899660 000000 005903`) — 18 digits in one run
 cannot be checked against a physical card. Two functions, and the difference matters:
 
 | | |
@@ -4595,7 +4601,7 @@ live.
 ### Closed this session — do not re-raise
 
 ✅ **The client write path to `/units` is PROVEN** (2026-08-25). The user added SIM
-`899660117002235940` through Add SIM — the stored record carries the `addedAt` and
+`899660000000005940` through Add SIM — the stored record carries the `addedAt` and
 `roaming` that dialog writes — and edited a fitment's removal date from the SIM table.
 Both landed against the live rules engine. The caveat that stood since v2.12.0 is
 closed; `roaming`, `condition` and the fitment date/state writes all go through it.

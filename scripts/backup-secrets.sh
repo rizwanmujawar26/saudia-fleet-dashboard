@@ -41,6 +41,15 @@ d = json.load(open('$OUT/editors-$STAMP.json')) or {}
 print(len(d))")"
 echo "  ok editors            $n uid(s)"
 
+# Read-only accounts (v2.245.0): may see the locked registers, cannot edit.
+npx --yes firebase-tools database:get /viewers --project "$PROJECT" 2>/dev/null \
+  > "$OUT/viewers-$STAMP.json"
+n="$(python3 -c "
+import json
+d = json.load(open('$OUT/viewers-$STAMP.json')) or {}
+print(len(d))")"
+echo "  ok viewers            $n uid(s)"
+
 # Accounts, minus anything secret — enough to rebuild the allowlist, not enough to
 # impersonate anyone.
 TMPU="$(mktemp)"
@@ -62,5 +71,5 @@ print(f"  ok accounts           {len(safe)} account(s), no password material")
 PY
 rm -f "$TMPU"
 
-chmod 600 "$OUT"/editors-"$STAMP".json "$OUT"/accounts-"$STAMP".json
+chmod 600 "$OUT"/editors-"$STAMP".json "$OUT"/viewers-"$STAMP".json "$OUT"/accounts-"$STAMP".json
 echo "Done. Keep this directory out of any repo and off shared storage."

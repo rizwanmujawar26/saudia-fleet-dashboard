@@ -5,11 +5,19 @@
 # machine, a CI runner, a future host. That is deliberate: a backup that depends on
 # a secret is one expired token away from silently not happening.
 #
-# NOT captured: /editors. It is readable only by the account it belongs to, by
-# design. Keep the editor uid list somewhere else; see DISASTER-RECOVERY.md.
+# NOT captured: /editors and /viewers. Each is readable only by the account it
+# belongs to, by design — backup-secrets.sh captures them; see DISASTER-RECOVERY.md.
+#
+# ⚠️ LOCKED NODES (v2.245.0): /units and /modmans need a signed-in reader, so an
+# anonymous read returns 401. For those (and any node that later locks) the script
+# falls back to an ADMIN read through the firebase CLI, which is already logged in on
+# this Mac. On a machine without that login those nodes FAIL LOUDLY — never silently
+# skipped — so a snapshot missing the serial registers cannot look complete.
 set -euo pipefail
 
 DB="${FLEET_DB_URL:-https://saudia-fleet-dashboard-default-rtdb.firebaseio.com}"
+# The admin fallback needs the project id; derive it from the DB URL unless given.
+PROJECT="${FLEET_PROJECT:-$(echo "$DB" | sed -E 's#https://([^.]+)-default-rtdb.*#\1#')}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STAMP="$(date -u +%Y-%m-%d)"
 # FLEET_BACKUP_DIR lets a caller aim somewhere other than today's folder. restore.sh
@@ -25,6 +33,13 @@ fail=0
 for node in $NODES; do
   body="$(mktemp)"
   code="$(curl -sS -o "$body" -w '%{http_code}' "$DB/$node.json?print=pretty")"
+  via=""
+  if [ "$code" = "401" ]; then
+    # Locked node: read it as admin instead.
+    if npx --yes firebase-tools database:get "/$node" --project "$PROJECT" > "$body" 2>/dev/null; then
+      code=200; via=" (admin read — locked node)"
+    fi
+  fi
   if [ "$code" != "200" ]; then
     echo "  !! $node — HTTP $code" >&2; fail=1; rm -f "$body"; continue
   fi
@@ -39,7 +54,7 @@ for node in $NODES; do
 import json,sys
 d=json.load(open(sys.argv[1]))
 print(len(d) if isinstance(d,(dict,list)) else ('empty' if d is None else 1))" "$OUT/$node.json")"
-  printf '  ok %-12s %s records\n' "$node" "$n"
+  printf '  ok %-12s %s records%s\n' "$node" "$n" "$via"
 done
 
 # The rules are part of the system's state — a restore without them is half a restore.
@@ -54,7 +69,7 @@ files = sorted(f for f in os.listdir(out) if f.endswith('.json') and f != 'manif
 man = {
     'takenAtUTC': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
     'source': db,
-    'note': '/editors is not included: it is not anonymously readable by design.',
+    'note': '/editors and /viewers are not included (backup-secrets.sh holds them). Locked nodes (/units, /modmans) were read as admin.',
     'files': {},
 }
 for f in files:

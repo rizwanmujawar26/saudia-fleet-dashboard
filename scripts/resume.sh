@@ -96,7 +96,8 @@ except Exception: print('  mediaLoads: unreadable'); raise SystemExit
 c=collections.Counter(v.get('cycle') or 'DEV/none' for v in d.values())
 print('  media loads   %d  —  %s' % (len(d), ', '.join('%d x %s'%(n,k) for k,n in c.most_common())))
 " 2>/dev/null
-curl -s --max-time 30 "$DB/units.json" | python3 -c "
+# /units is locked (v2.245.0) — read it as admin through the firebase CLI.
+npx --yes firebase-tools database:get /units --project saudia-fleet-dashboard 2>/dev/null | python3 -c "
 import json,sys,collections
 try: d=json.load(sys.stdin) or {}
 except Exception: print('  units: unreadable'); raise SystemExit
