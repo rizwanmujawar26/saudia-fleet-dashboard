@@ -6568,6 +6568,12 @@
             .aircraft-table td > strong:only-child { font-size: 13px; }
         }
 
+        /* v2.248.0 — sign-in box: self-service password link */
+        .signin-forgot { margin: -4px 0 14px; }
+        .signin-forgot button { border: none; background: none; padding: 0; color: #0a5c34; font-size: 12.5px; text-decoration: underline; cursor: pointer; }
+        .signin-forgot button:disabled { color: #9aa5b0; cursor: default; text-decoration: none; }
+        #signInInfo { margin-top: 8px; font-size: 12.5px; line-height: 1.45; color: #1f5f3a; background: #eef7f1; border-radius: 6px; padding: 8px 10px; }
+
         /* v2.247.0 — Change Log panel */
         .audit-panel { max-width: 920px; }
         .audit-tools { padding: 10px 22px 0; }
@@ -7787,11 +7793,18 @@
 
     <div id="signInModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
         <div style="background:white; border-radius:10px; padding:28px; width:90%; max-width:360px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-            <h3 style="color:#0a5c34; margin-bottom:8px;">Sign in to edit</h3>
-            <p style="font-size:13px; color:#666; margin-bottom:16px;">Editing requires an authorised account. Ask the fleet lead if you need access.</p>
+            <h3 style="color:#0a5c34; margin-bottom:8px;">Sign in</h3>
+            <p style="font-size:13px; color:#666; margin-bottom:16px;">For team members: edit, or see equipment records and the Change Log. Ask the fleet lead if you need access.</p>
             <input type="email" id="signInEmail" placeholder="Email" autocomplete="username" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ccc; border-radius:6px; font-size:15px; margin-bottom:10px;">
             <input type="password" id="signInPassword" placeholder="Password" autocomplete="current-password" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ccc; border-radius:6px; font-size:15px; margin-bottom:12px;">
             <div id="signInError" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
+            <!-- v2.248.0 — self-service password link. Firebase reset links expire after ~1 hour and that cannot be
+                 configured, so a person asks for a fresh one when they are ready to use it. The reply never says
+                 whether an address has an account. -->
+            <div class="signin-forgot">
+                <button type="button" id="signInForgot" onclick="sendPasswordReset()">Forgot password, or first time here?</button>
+                <div id="signInInfo" style="display:none;"></div>
+            </div>
             <div style="display:flex; gap:10px;">
                 <button id="signInCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="signInSubmit" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Sign in</button>
@@ -8791,8 +8804,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.247.0';
-        const APP_BUILD    = '2026.11.23.03';
+        const APP_VERSION  = '2.248.0';
+        const APP_BUILD    = '2026.11.23.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -9977,6 +9990,44 @@
             }
         }
 
+        // Emails a set-your-password link to the address typed in the sign-in box.
+        let resetCooldownUntil = 0;
+        async function sendPasswordReset() {
+            const email = (document.getElementById('signInEmail').value || '').trim();
+            const info = document.getElementById('signInInfo');
+            const err = document.getElementById('signInError');
+            const btn = document.getElementById('signInForgot');
+            err.style.display = 'none';
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+                err.textContent = 'Type your email address above first, then press this again.';
+                err.style.display = 'block';
+                return;
+            }
+            if (Date.now() < resetCooldownUntil) return;
+            btn.disabled = true;
+            try {
+                const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${FIREBASE_API_KEY}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requestType: 'PASSWORD_RESET', email }),
+                });
+                const data = await res.json().catch(() => ({}));
+                const code = (data && data.error && data.error.message) || '';
+                // EMAIL_NOT_FOUND reads the same as success: the box must not reveal who has an account.
+                if (!res.ok && !code.startsWith('EMAIL_NOT_FOUND')) {
+                    throw new Error(code.startsWith('TOO_MANY_ATTEMPTS') ? 'Too many requests — wait a few minutes and try again.' : 'Could not send the email. Check your connection and try again.');
+                }
+                info.textContent = `If ${email} has an account, a link to set your password is on its way. Use it within an hour, and check your junk folder if it is not in your inbox.`;
+                info.style.display = 'block';
+                resetCooldownUntil = Date.now() + 60000;
+                setTimeout(() => { btn.disabled = false; }, 60000);
+                return;
+            } catch (e) {
+                err.textContent = e.message;
+                err.style.display = 'block';
+            }
+            btn.disabled = false;
+        }
+
         async function checkViewerAccess() {
             try {
                 const res = await fetch(`${FIREBASE_DB_URL}/viewers/${authUser.uid}.json?auth=${authUser.idToken}`);
@@ -10001,6 +10052,8 @@
                 pwInput.value = '';
                 errorBox.textContent = '';
                 errorBox.style.display = 'none';
+                const infoBox = document.getElementById('signInInfo');
+                if (infoBox) infoBox.style.display = 'none';
                 overlay.style.display = 'flex';
                 (emailInput.value ? pwInput : emailInput).focus();
 

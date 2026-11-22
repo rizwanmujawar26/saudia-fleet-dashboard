@@ -13,6 +13,12 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.248.0 — Self-service password link (2026-11-23)
+Sign-in box: "Forgot password, or first time here?" emails a Firebase set-password link to the typed address
+(`sendPasswordReset` → `accounts:sendOobCode`). Firebase fixes reset-link expiry at ~1 hour (not configurable), so new
+people request a fresh link when ready. EMAIL_NOT_FOUND reads as success (no account enumeration); 60 s cooldown. Box
+retitled "Sign in" (viewers sign in too).
+
 ### v2.247.0 — Change Log with Undo (2026-11-23)
 Status-bar **Changes** button (signed-in only) opens a Change Log: who, when (UTC), each changed field before → after,
 search, and **↶ Undo** for editors. One hook wraps `window.fetch`, so every dashboard write (PATCH/PUT/DELETE with
