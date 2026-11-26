@@ -553,8 +553,30 @@
 
     "viewers": {
       "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        ".write": false
+        ".read": "auth != null && (auth.uid === $uid || root.child('editors').child(auth.uid).val() === true)",
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true && root.child('passcodes').child($uid).exists()",
+        ".validate": "newData.val() === true"
+      }
+    },
+
+    "passcodes": {
+      ".read": "auth != null && root.child('editors').child(auth.uid).val() === true",
+      "$uid": {
+        ".write": "auth != null && root.child('editors').child(auth.uid).val() === true",
+        ".validate": "newData.hasChildren(['name', 'nameKey', 'code', 'email', 'active', 'createdAt'])",
+        "name":      { ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 60" },
+        "nameKey":   { ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 60" },
+        "code":      { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{6}$/)" },
+        "email":     { ".validate": "newData.isString() && newData.val().matches(/^v-[0-9a-f]{24}@passcode\\.invalid$/)" },
+        "active":    { ".validate": "newData.isBoolean()" },
+        "note":      { ".validate": "newData.isString() && newData.val().length <= 120" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "createdBy": { ".validate": "newData.isString() && newData.val().length <= 120" },
+        "lastSeen":  {
+          ".write": "auth != null && auth.uid === $uid && root.child('viewers').child($uid).val() === true",
+          ".validate": "newData.val() === now"
+        },
+        "$other":    { ".validate": false }
       }
     }
   }

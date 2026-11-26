@@ -43,6 +43,8 @@ c="$(code "$DB/.json")"
 [ "$c" = "401" ] && ok "root not anonymously readable" || bad "root is READABLE" "HTTP $c"
 c="$(code "$DB/viewers.json")"
 [ "$c" = "401" ] && ok "/viewers not anonymously readable" || bad "/viewers is READABLE" "HTTP $c"
+c="$(code "$DB/passcodes.json")"
+[ "$c" = "401" ] && ok "/passcodes not anonymously readable" || bad "/passcodes is READABLE" "HTTP $c"
 # v2.245.0: serials, MAC/ESN/Chassis, Taurus IDs and SIM ICCIDs live in these two.
 for n in units modmans aircraftModem audit assets mediaCycleDisks; do
   c="$(code "$DB/$n.json?shallow=true")"

@@ -6605,6 +6605,71 @@
         .hw-locked-icon { font-size: 28px; margin-bottom: 8px; }
         .hw-locked-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
         .hw-locked-text { font-size: 13px; line-height: 1.5; color: #5b6772; }
+
+        /* ===== v2.250.0 — Sign in (passcode + team email) and Passcode access ===== */
+        .signin-card { background: #fff; border-radius: 12px; padding: 24px; width: 92%; max-width: 360px; max-height: 94vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); box-sizing: border-box; }
+        .signin-tabs { display: flex; gap: 4px; padding: 3px; background: #eef2ef; border-radius: 9px; margin-bottom: 14px; }
+        .signin-tab { flex: 1; border: none; background: transparent; padding: 8px 6px; border-radius: 7px; font-size: 13.5px; font-weight: 600; color: #5b6770; cursor: pointer; }
+        .signin-tab.active { background: #fff; color: #0a5c34; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        .signin-lead { font-size: 13px; color: #666; margin: 0 0 12px; line-height: 1.4; }
+        .signin-label { display: block; font-size: 12px; font-weight: 600; color: #4a5560; margin: 0 0 5px; }
+        .signin-input { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        #pcName { margin-bottom: 12px; }
+        .pc-dots-wrap { position: relative; margin-bottom: 12px; }
+        .pc-dots { display: flex; justify-content: center; gap: 12px; padding: 13px 10px; border: 1px solid #ccc; border-radius: 8px; background: #fafbfa; transition: border-color .15s, box-shadow .15s; }
+        .pc-dots span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #9aa5b0; box-sizing: border-box; transition: background .1s, border-color .1s, transform .1s; }
+        .pc-dots span.filled { background: #0a5c34; border-color: #0a5c34; transform: scale(1.08); }
+        .pc-dots-wrap.focus .pc-dots { border-color: #0a5c34; box-shadow: 0 0 0 3px rgba(10,92,52,0.15); }
+        .pc-dots-wrap.busy .pc-dots span.filled { animation: pcPulse 0.9s ease-in-out infinite; }
+        .pc-dots-wrap.shake .pc-dots { animation: pcShake 0.4s; border-color: #dc3545; }
+        @keyframes pcPulse { 50% { opacity: .35; } }
+        @keyframes pcShake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
+        /* The real input sits invisibly over the dots: a click focuses it, typing and pasting just
+           work on a computer, and the keypad writes into it on a phone. 16px stops iOS zooming. */
+        .pc-code-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; font-size: 16px; cursor: pointer; caret-color: transparent; }
+        .pc-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+        .pc-keypad button { height: 52px; border: 1px solid #dfe4e1; border-radius: 10px; background: #f7f9f8; font-size: 22px; font-weight: 600; color: #1f2a30; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
+        .pc-keypad button:active { background: #e3eee8; transform: scale(0.97); }
+        .pc-keypad .pc-key-fn { font-size: 14px; font-weight: 600; color: #5b6770; background: #fff; }
+        @media (pointer: coarse) { .pc-keypad button { height: 58px; } }
+        @media (max-height: 640px) { .pc-keypad button { height: 44px; } .signin-card { padding: 18px; } }
+        .signin-keep { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #4a5560; margin-bottom: 12px; cursor: pointer; }
+        .signin-keep input { width: 16px; height: 16px; accent-color: #0a5c34; }
+
+        .pcm-card { background: #fff; border-radius: 12px; padding: 22px; width: 94%; max-width: 560px; max-height: 92vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); box-sizing: border-box; }
+        .pcm-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .pcm-head h3 { color: #0a5c34; margin: 0; }
+        .pcm-x { border: none; background: none; font-size: 26px; line-height: 1; color: #6b7680; cursor: pointer; padding: 0 4px; }
+        .pcm-lead { font-size: 13px; color: #666; margin: 0 0 14px; line-height: 1.45; }
+        .pcm-new { display: grid; gap: 8px; padding: 12px; background: #f5f8f6; border: 1px solid #e3eae6; border-radius: 10px; }
+        .pcm-code-row { display: flex; gap: 8px; }
+        .pcm-code-row .signin-input { flex: 1; letter-spacing: 3px; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace; }
+        .pcm-code-row .signin-input::placeholder { letter-spacing: normal; font-family: inherit; }
+        #signInSubmit:disabled { opacity: .5; cursor: default; }
+        .pcm-btn { border: 1px solid #cfd8d3; background: #fff; border-radius: 7px; padding: 7px 11px; font-size: 13px; font-weight: 600; color: #2b3a33; cursor: pointer; white-space: nowrap; }
+        .pcm-btn:hover { background: #f0f5f2; }
+        .pcm-btn:disabled { opacity: .55; cursor: default; }
+        .pcm-primary { background: #0a5c34; border-color: #0a5c34; color: #fff; padding: 10px; }
+        .pcm-primary:hover { background: #0c6b3d; }
+        .pcm-danger { color: #b02a37; }
+        .pcm-msg { font-size: 13px; margin: 10px 0 0; display: none; padding: 9px 11px; border-radius: 8px; line-height: 1.4; }
+        .pcm-msg.ok { display: block; background: #e8f5ee; color: #0a5c34; }
+        .pcm-msg.err { display: block; background: #fdecee; color: #b02a37; font-weight: 600; }
+        .pcm-list { margin-top: 14px; display: grid; gap: 10px; }
+        .pcm-empty { font-size: 13px; color: #7a858e; text-align: center; padding: 16px; }
+        .pcm-item { border: 1px solid #e3e8e5; border-radius: 10px; padding: 11px 12px; }
+        .pcm-item.off { background: #fafafa; }
+        .pcm-item.off .pcm-name { color: #7a858e; }
+        .pcm-row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .pcm-name { font-weight: 700; font-size: 15px; color: #1f2a30; }
+        .pcm-pill { font-size: 10.5px; font-weight: 700; letter-spacing: .4px; padding: 2px 8px; border-radius: 999px; border: 1px solid; }
+        .pcm-pill.on { color: #0a5c34; border-color: rgba(10,92,52,.35); background: rgba(10,92,52,.06); }
+        .pcm-pill.off { color: #6b7680; border-color: #cfd5d9; background: #f1f3f4; }
+        .pcm-code { margin-left: auto; font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace; font-size: 15px; letter-spacing: 2px; color: #1f2a30; border: none; background: none; cursor: pointer; padding: 2px 4px; border-radius: 5px; }
+        .pcm-code:hover { background: #eef2ef; }
+        .pcm-meta { font-size: 12px; color: #6b7680; margin: 4px 0 8px; line-height: 1.4; }
+        .pcm-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .pcm-actions .pcm-btn { padding: 5px 9px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -7146,6 +7211,12 @@
                 <button type="button" class="sys-chip" id="sysChangesChip" style="display:none;" onclick="openChangeLog()" title="Who changed what — with Undo for editors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
                     <span>Changes</span>
+                </button>
+
+                <!-- v2.250.0 — Passcode access (editors only): hand out name + 6-digit codes for view-only access. -->
+                <button type="button" class="sys-chip" id="sysAccessChip" style="display:none;" onclick="openPasscodeManager()" title="Passcodes — give people view-only access with a name and a 6-digit code">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 21 2"/><path d="m16 7 3 3"/><path d="m19 4 2 2"/></svg>
+                    <span>Access</span>
                 </button>
 
                 <span class="sys-sep"></span>
@@ -7791,24 +7862,77 @@
         </div>
     </div>
 
+    <!-- v2.250.0 — Sign in, two ways. PASSCODE (default): a name + 6-digit code the fleet lead
+         hands out, for read-only viewers across the airline; entered on an on-screen keypad on a
+         phone, typed on a computer. EMAIL: the team accounts, unchanged. A passcode is a real
+         Firebase account underneath (email derived from the name, password = the code) listed in
+         /viewers, so the database rules gate it exactly like any other viewer. -->
     <div id="signInModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-        <div style="background:white; border-radius:10px; padding:28px; width:90%; max-width:360px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-            <h3 style="color:#0a5c34; margin-bottom:8px;">Sign in</h3>
-            <p style="font-size:13px; color:#666; margin-bottom:16px;">For team members: edit, or see equipment records and the Change Log. Ask the fleet lead if you need access.</p>
-            <input type="email" id="signInEmail" placeholder="Email" autocomplete="username" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ccc; border-radius:6px; font-size:15px; margin-bottom:10px;">
-            <input type="password" id="signInPassword" placeholder="Password" autocomplete="current-password" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #ccc; border-radius:6px; font-size:15px; margin-bottom:12px;">
-            <div id="signInError" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
-            <!-- v2.248.0 — self-service password link. Firebase reset links expire after ~1 hour and that cannot be
-                 configured, so a person asks for a fresh one when they are ready to use it. The reply never says
-                 whether an address has an account. -->
-            <div class="signin-forgot">
-                <button type="button" id="signInForgot" onclick="sendPasswordReset()">Forgot password, or first time here?</button>
-                <div id="signInInfo" style="display:none;"></div>
+        <div class="signin-card" role="dialog" aria-modal="true" aria-labelledby="signInTitle">
+            <h3 id="signInTitle" style="color:#0a5c34; margin-bottom:12px;">Sign in</h3>
+            <div class="signin-tabs" role="tablist">
+                <button type="button" role="tab" id="signInTabPasscode" class="signin-tab" onclick="setSignInMode('passcode')">Passcode</button>
+                <button type="button" role="tab" id="signInTabEmail" class="signin-tab" onclick="setSignInMode('email')">Team email</button>
             </div>
+
+            <div id="signInPanePasscode" class="signin-pane">
+                <p class="signin-lead">Enter the name and passcode you were given to see the full dashboard (view only).</p>
+                <label class="signin-label" for="pcName">Name</label>
+                <input id="pcName" class="signin-input" type="text" placeholder="Your name" maxlength="60" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="next">
+                <label class="signin-label" for="pcCode">Passcode</label>
+                <div class="pc-dots-wrap" id="pcDotsWrap">
+                    <div class="pc-dots" id="pcDots" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                    <input id="pcCode" class="pc-code-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" aria-label="6-digit passcode" enterkeyhint="go">
+                </div>
+                <div class="pc-keypad" id="pcKeypad">
+                    <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+                    <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+                    <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+                    <button type="button" data-k="clear" class="pc-key-fn" aria-label="Clear passcode">Clear</button><button type="button" data-k="0">0</button><button type="button" data-k="back" class="pc-key-fn" aria-label="Delete last digit">⌫</button>
+                </div>
+                <label class="signin-keep"><input type="checkbox" id="pcKeep" checked> Keep me signed in on this device</label>
+            </div>
+
+            <div id="signInPaneEmail" class="signin-pane" hidden>
+                <p class="signin-lead">For team members: edit, or see equipment records and the Change Log. Ask the fleet lead if you need access.</p>
+                <input type="email" id="signInEmail" placeholder="Email" autocomplete="username" class="signin-input" style="margin-bottom:10px;">
+                <input type="password" id="signInPassword" placeholder="Password" autocomplete="current-password" class="signin-input" style="margin-bottom:12px;">
+                <!-- v2.248.0 — self-service password link. Firebase reset links expire after ~1 hour and that cannot be
+                     configured, so a person asks for a fresh one when they are ready to use it. The reply never says
+                     whether an address has an account. -->
+                <div class="signin-forgot">
+                    <button type="button" id="signInForgot" onclick="sendPasswordReset()">Forgot password, or first time here?</button>
+                    <div id="signInInfo" style="display:none;"></div>
+                </div>
+            </div>
+
+            <div id="signInError" role="alert" style="display:none; font-size:12.5px; color:#dc3545; margin-bottom:12px; font-weight:600;"></div>
             <div style="display:flex; gap:10px;">
                 <button id="signInCancel" style="flex:1; padding:10px; border:1px solid #ccc; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
                 <button id="signInSubmit" style="flex:1; padding:10px; border:none; background:#0a5c34; color:white; border-radius:6px; cursor:pointer; font-weight:600;">Sign in</button>
             </div>
+        </div>
+    </div>
+
+    <!-- v2.250.0 — Passcode access (editors only): create, share, switch off, change, delete. -->
+    <div id="passcodeOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div class="pcm-card" role="dialog" aria-modal="true" aria-labelledby="pcmTitle">
+            <div class="pcm-head">
+                <h3 id="pcmTitle">Passcode access</h3>
+                <button type="button" class="pcm-x" onclick="closePasscodeManager()" aria-label="Close">×</button>
+            </div>
+            <p class="pcm-lead">Give someone a name and a 6-digit passcode and they can sign in to see the whole dashboard, view only — they cannot edit anything. Switch a passcode off and that person loses access within five minutes.</p>
+            <div class="pcm-new">
+                <input id="pcmName" class="signin-input" type="text" placeholder="Name, e.g. Ahmed Al-Harbi" maxlength="60" autocomplete="off">
+                <div class="pcm-code-row">
+                    <input id="pcmCode" class="signin-input" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit passcode" autocomplete="off">
+                    <button type="button" class="pcm-btn" onclick="pcmGenerate()" title="Pick a random passcode">🎲 Random</button>
+                </div>
+                <input id="pcmNote" class="signin-input" type="text" placeholder="Note (optional) — e.g. Saudia Engineering, Jeddah" maxlength="120" autocomplete="off">
+                <button type="button" id="pcmCreateBtn" class="pcm-btn pcm-primary" onclick="pcmCreate()">＋ Create passcode</button>
+            </div>
+            <div id="pcmMsg" class="pcm-msg" role="status"></div>
+            <div id="pcmList" class="pcm-list"></div>
         </div>
     </div>
 
@@ -8808,8 +8932,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.249.0';
-        const APP_BUILD    = '2026.11.23.05';
+        const APP_VERSION  = '2.250.0';
+        const APP_BUILD    = '2026.11.27.01';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -9667,18 +9791,25 @@
 
         function loadAuthSession() {
             try {
-                const stored = sessionStorage.getItem(AUTH_SESSION_KEY);
+                // A passcode viewer may ask to stay signed in (localStorage); everyone else is
+                // signed in for this tab only (sessionStorage), as before.
+                const stored = sessionStorage.getItem(AUTH_SESSION_KEY) || localStorage.getItem(AUTH_SESSION_KEY);
                 if (stored) authUser = JSON.parse(stored);
             } catch (e) { authUser = null; }
         }
 
         function saveAuthSession() {
-            try { sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(authUser)); } catch (e) { /* non-fatal */ }
+            try {
+                const json = JSON.stringify(authUser);
+                if (authUser && authUser.persist) { localStorage.setItem(AUTH_SESSION_KEY, json); sessionStorage.removeItem(AUTH_SESSION_KEY); }
+                else { sessionStorage.setItem(AUTH_SESSION_KEY, json); localStorage.removeItem(AUTH_SESSION_KEY); }
+            } catch (e) { /* non-fatal */ }
         }
 
         function signOut() {
             authUser = null;
             sessionStorage.removeItem(AUTH_SESSION_KEY);
+            try { localStorage.removeItem(AUTH_SESSION_KEY); } catch (e) { /* non-fatal */ }
             // Every page drops out of Edit Mode with the session — otherwise a tab left
             // open in Edit Mode would still be showing inputs nobody can save.
             editMode = mediaEditMode = false;
@@ -9705,14 +9836,19 @@
             return code ? `Sign-in failed (${code}).` : 'Sign-in failed. Check your connection and try again.';
         }
 
-        async function signIn(email, password) {
+        // opts (v2.250.0): { passcodeName, persist } for a passcode sign-in.
+        async function signIn(email, password, opts = {}) {
             const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, returnSecureToken: true }),
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(authErrorMessage(data));
+            if (!res.ok) {
+                const err = new Error(authErrorMessage(data));
+                err.code = (data && data.error && data.error.message) || '';
+                throw err;
+            }
 
             authUser = {
                 uid: data.localId,
@@ -9722,6 +9858,9 @@
                 // Renew a minute early so a long save can't expire mid-flight.
                 expiresAt: Date.now() + (Number(data.expiresIn || 3600) - 60) * 1000,
                 canEdit: false,
+                passcode: !!opts.passcodeName,
+                displayName: opts.passcodeName || '',
+                persist: !!(opts.passcodeName && opts.persist),
             };
             authUser.canEdit = await checkEditorAccess();
             // A viewer (/viewers/{uid}) signs in read-only: the locked registers become
@@ -9775,7 +9914,7 @@
         // silently drops null-valued fields, so a raw null "before" would vanish and the
         // entry could no longer say the field was empty. ⚠️ Writes outside the page —
         // the Firebase console, the admin CLI scripts — are NOT logged.
-        const AUDIT_SKIP_NODES = ['audit', 'visits'];
+        const AUDIT_SKIP_NODES = ['audit', 'visits', 'passcodes'];   // passcodes: codes must never reach /audit (viewers read it)
         const AUDIT_MAX_PATH_READS = 8;
         const auditRawFetch = window.fetch.bind(window);
         let auditUndoOf = null;   // set around an Undo write so its entry names what it reverted
@@ -9866,7 +10005,7 @@
         let auditFilter = '';
         const AUDIT_NODE_LABEL = {
             aircraft: 'Software', fleet: 'Fleet', fleetSpecs: 'Fleet spec', configs: 'Config', units: 'Hardware unit',
-            modmans: 'MODMAN', aircraftModem: 'Modem IDs', activities: 'Activity', issues: 'Maintenance issue',
+            modmans: 'MODMAN', aircraftModem: 'Modem IDs', viewers: 'Viewer access', activities: 'Activity', issues: 'Maintenance issue',
             mediaLoads: 'Media load', mediaCycles: 'Media cycle', avr: 'Report', assets: 'Asset', flights: 'Flight', hardware: 'Hardware',
         };
         function auditPanelOpen() { const o = document.getElementById('auditOverlay'); return !!(o && o.style.display === 'flex'); }
@@ -10049,67 +10188,539 @@
 
         function isSignedIn() { return canReadRegisters(); }
 
+        // ===== Sign-in box (v2.250.0): Passcode ⇄ Team email =====
+        // PASSCODE — a name + 6-digit code the fleet lead hands out. Underneath it is an ordinary
+        // Firebase email/password account: the email is derived from the NAME (see passcodeEmail),
+        // the password IS the code, and the account is listed in /viewers. So the database rules
+        // gate it exactly like any other viewer, and Firebase's own throttling slows guessing.
+        // ⚠️ The keypad writes into a real <input> laid over the dots. On a phone (coarse pointer
+        // only) that input gets inputmode="none" so the system keyboard never covers the keypad;
+        // on a computer it stays numeric, so typing, pasting and Backspace just work.
+        const PASSCODE_LEN = 6;
+        const SIGNIN_MODE_KEY = 'fleetSignInMode';
+        const PASSCODE_NAME_STORE = 'fleetPasscodeName';
+        let signInMode = 'passcode';
+        let pcBusy = false;
+        let signInSubmitHook = null;   // set by promptSignIn while the box is open
+
+        function pcTouchOnly() {
+            return window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(any-pointer: fine)').matches;
+        }
+        function pcShowError(msg) {
+            const box = document.getElementById('signInError');
+            box.textContent = msg || '';
+            box.style.display = msg ? 'block' : 'none';
+        }
+        function renderPcDots() {
+            const n = document.getElementById('pcCode').value.length;
+            document.querySelectorAll('#pcDots span').forEach((s, i) => s.classList.toggle('filled', i < n));
+            const btn = document.getElementById('signInSubmit');
+            if (signInMode === 'passcode' && !pcBusy) btn.disabled = n !== PASSCODE_LEN;
+        }
+        function focusPcCode() {
+            const el = document.getElementById('pcCode');
+            el.inputMode = pcTouchOnly() ? 'none' : 'numeric';
+            el.focus({ preventScroll: true });
+        }
+        function onPcCodeInput() {
+            const el = document.getElementById('pcCode');
+            const clean = el.value.replace(/\D/g, '').slice(0, PASSCODE_LEN);
+            if (clean !== el.value) el.value = clean;
+            pcShowError('');
+            renderPcDots();
+            // Six digits = go. A short pause lets the last dot fill before it starts checking.
+            if (clean.length === PASSCODE_LEN && signInSubmitHook) setTimeout(() => { if (document.getElementById('pcCode').value.length === PASSCODE_LEN) signInSubmitHook(); }, 140);
+        }
+        function pcKeypadPress(k) {
+            if (pcBusy) return;
+            const el = document.getElementById('pcCode');
+            if (k === 'back') el.value = el.value.slice(0, -1);
+            else if (k === 'clear') el.value = '';
+            else if (/^\d$/.test(k) && el.value.length < PASSCODE_LEN) el.value += k;
+            if (navigator.vibrate && pcTouchOnly()) { try { navigator.vibrate(8); } catch (e) { /* not supported */ } }
+            onPcCodeInput();
+        }
+        function initPasscodeSignIn() {
+            const code = document.getElementById('pcCode');
+            const wrap = document.getElementById('pcDotsWrap');
+            code.addEventListener('input', onPcCodeInput);
+            code.addEventListener('focus', () => { code.inputMode = pcTouchOnly() ? 'none' : 'numeric'; wrap.classList.add('focus'); });
+            code.addEventListener('blur', () => wrap.classList.remove('focus'));
+            document.getElementById('pcKeypad').addEventListener('click', e => {
+                const b = e.target.closest('button[data-k]');
+                if (b) pcKeypadPress(b.dataset.k);
+            });
+            // Keep the focus (and the desktop caret) in the code field while the keypad is clicked.
+            document.getElementById('pcKeypad').addEventListener('mousedown', e => { if (!pcTouchOnly()) { e.preventDefault(); focusPcCode(); } });
+            document.getElementById('pcName').addEventListener('keydown', e => {
+                if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); focusPcCode(); }
+            });
+            document.getElementById('pcName').addEventListener('input', () => pcShowError(''));
+            try { signInMode = localStorage.getItem(SIGNIN_MODE_KEY) === 'email' ? 'email' : 'passcode'; } catch (e) { /* default */ }
+        }
+
+        function setSignInMode(mode, opts) {
+            signInMode = mode === 'email' ? 'email' : 'passcode';
+            try { localStorage.setItem(SIGNIN_MODE_KEY, signInMode); } catch (e) { /* non-fatal */ }
+            const isPc = signInMode === 'passcode';
+            [['signInTabPasscode', isPc], ['signInTabEmail', !isPc]].forEach(([id, on]) => {
+                const t = document.getElementById(id);
+                t.classList.toggle('active', on);
+                t.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            document.getElementById('signInPanePasscode').hidden = !isPc;
+            document.getElementById('signInPaneEmail').hidden = isPc;
+            pcShowError('');
+            const info = document.getElementById('signInInfo');
+            if (info) info.style.display = 'none';
+            const btn = document.getElementById('signInSubmit');
+            btn.disabled = false;
+            if (isPc) renderPcDots();
+            if (opts && opts.noFocus) return;
+            if (isPc) {
+                const name = document.getElementById('pcName');
+                // On a phone, focusing an empty name would throw the keyboard up at once — fine;
+                // with the name remembered, go straight to the keypad (no keyboard at all).
+                if (name.value.trim()) focusPcCode(); else name.focus();
+            } else {
+                const email = document.getElementById('signInEmail');
+                (email.value ? document.getElementById('signInPassword') : email).focus();
+            }
+        }
+
         function promptSignIn() {
             return new Promise(resolve => {
                 const overlay = document.getElementById('signInModalOverlay');
                 const emailInput = document.getElementById('signInEmail');
                 const pwInput = document.getElementById('signInPassword');
-                const errorBox = document.getElementById('signInError');
+                const pcName = document.getElementById('pcName');
+                const pcCode = document.getElementById('pcCode');
+                const wrap = document.getElementById('pcDotsWrap');
                 const submitBtn = document.getElementById('signInSubmit');
                 const cancelBtn = document.getElementById('signInCancel');
 
                 pwInput.value = '';
-                errorBox.textContent = '';
-                errorBox.style.display = 'none';
-                const infoBox = document.getElementById('signInInfo');
-                if (infoBox) infoBox.style.display = 'none';
+                pcCode.value = '';
+                if (!pcName.value) { try { pcName.value = localStorage.getItem(PASSCODE_NAME_STORE) || ''; } catch (e) { /* none */ } }
+                pcBusy = false;
+                submitBtn.textContent = 'Sign in';
                 overlay.style.display = 'flex';
-                (emailInput.value ? pwInput : emailInput).focus();
+                setSignInMode(signInMode);
 
                 function cleanup(result) {
                     overlay.style.display = 'none';
                     pwInput.value = '';
+                    pcCode.value = '';
+                    renderPcDots();
+                    signInSubmitHook = null;
+                    submitBtn.disabled = false;
                     submitBtn.removeEventListener('click', onSubmit);
                     cancelBtn.removeEventListener('click', onCancel);
                     overlay.removeEventListener('keydown', onKeydown);
                     resolve(result);
                 }
-                async function onSubmit() {
+                function onSubmit() { return signInMode === 'passcode' ? submitPasscode() : submitEmail(); }
+
+                async function submitEmail() {
                     const email = emailInput.value.trim();
                     const password = pwInput.value;
-                    if (!email || !password) {
-                        errorBox.textContent = 'Enter both your email and password.';
-                        errorBox.style.display = 'block';
-                        return;
-                    }
+                    if (!email || !password) { pcShowError('Enter both your email and password.'); return; }
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Signing in...';
                     try {
                         await signIn(email, password);
                         if (!authUser.canEdit && !authUser.canView) {
-                            errorBox.textContent = 'Signed in, but this account has no access to the dashboard. Ask the fleet lead for access.';
-                            errorBox.style.display = 'block';
                             signOut();
+                            pcShowError('Signed in, but this account has no access to the dashboard. Ask the fleet lead for access.');
                             return;
                         }
                         cleanup(true);
                     } catch (err) {
-                        errorBox.textContent = err.message;
-                        errorBox.style.display = 'block';
+                        pcShowError(err.message);
                     } finally {
                         submitBtn.disabled = false;
                         submitBtn.textContent = 'Sign in';
                     }
                 }
+
+                async function submitPasscode() {
+                    if (pcBusy) return;
+                    const name = pcName.value.trim().replace(/\s+/g, ' ');
+                    const code = pcCode.value;
+                    if (passcodeNameKey(name).length < 2) {
+                        pcShowError('Type your name first, as it was given to you.');
+                        pcName.focus();
+                        return;
+                    }
+                    if (code.length !== PASSCODE_LEN) { pcShowError(`Enter all ${PASSCODE_LEN} digits.`); focusPcCode(); return; }
+                    pcBusy = true;
+                    wrap.classList.add('busy');
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Checking…';
+                    let ok = false;
+                    try {
+                        const email = await passcodeEmail(name);
+                        await signIn(email, code, { passcodeName: name, persist: document.getElementById('pcKeep').checked });
+                        if (!authUser.canView && !authUser.canEdit) {
+                            signOut();
+                            throw new Error('This passcode is switched off at the moment. Ask the fleet lead to turn it back on.');
+                        }
+                        try { localStorage.setItem(PASSCODE_NAME_STORE, name); } catch (e) { /* non-fatal */ }
+                        passcodeTouch(true);
+                        ok = true;
+                    } catch (err) {
+                        const c = err.code || '';
+                        let msg = err.message;
+                        if (/^(INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND)/.test(c)) msg = 'That name and passcode don’t match. Check both and try again.';
+                        else if (c.startsWith('TOO_MANY_ATTEMPTS')) msg = 'Too many tries. Wait a few minutes, then try again.';
+                        else if (c.startsWith('USER_DISABLED')) msg = 'This passcode has been switched off. Ask the fleet lead.';
+                        pcShowError(msg);
+                        pcCode.value = '';
+                        wrap.classList.remove('shake'); void wrap.offsetWidth; wrap.classList.add('shake');
+                        setTimeout(() => wrap.classList.remove('shake'), 450);
+                    } finally {
+                        pcBusy = false;
+                        wrap.classList.remove('busy');
+                        submitBtn.textContent = 'Sign in';
+                        renderPcDots();
+                    }
+                    if (ok) cleanup(true); else focusPcCode();
+                }
+
                 function onCancel() { cleanup(false); }
                 function onKeydown(e) {
-                    if (e.key === 'Enter') onSubmit();
-                    if (e.key === 'Escape') onCancel();
+                    if (e.key === 'Escape') { onCancel(); return; }
+                    if (e.key !== 'Enter') return;
+                    if (e.target && e.target.closest && e.target.closest('.signin-tabs')) return;
+                    onSubmit();
                 }
+                signInSubmitHook = onSubmit;
                 submitBtn.addEventListener('click', onSubmit);
                 cancelBtn.addEventListener('click', onCancel);
                 overlay.addEventListener('keydown', onKeydown);
             });
+        }
+
+        // ===== Passcode viewers (v2.250.0) =====
+        // A passcode = { name, 6-digit code } handed out by an editor for VIEW-ONLY access.
+        //   • Account: Firebase email/password. email = v-<24 hex of SHA-256(name key)>@passcode.invalid
+        //     (.invalid can never receive mail; nobody ever sees it), password = the code.
+        //   • Access:  /viewers/{uid} = true — the same allowlist the rules already check.
+        //   • Record:  /passcodes/{uid} = { name, nameKey, code, email, active, note, createdAt,
+        //     createdBy, lastSeen } — readable/writable by editors only; the viewer may stamp only
+        //     its own lastSeen. The code is kept so an editor can re-share it.
+        // ⚠️ 'passcodes' is in AUDIT_SKIP_NODES: /audit is readable by every viewer, so a code
+        //   must never be written into it. The /viewers grant itself IS logged.
+        // ⚠️ The name is matched case-, space- and punctuation-insensitively (passcodeNameKey):
+        //   "Ahmed Al-Harbi" = "ahmed al harbi". It is the account's identity, so changing a name
+        //   means delete + create; changing a CODE is in place (and signs the old holder out
+        //   within the hour, when Firebase refuses to renew their token).
+        const PASSCODE_DOMAIN = 'passcode.invalid';
+        const PASSCODE_CHECK_MS = 5 * 60 * 1000;
+
+        function passcodeNameKey(name) {
+            return String(name || '').normalize('NFKC').toLowerCase()
+                .replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+        }
+        async function passcodeEmail(name) {
+            if (!(window.crypto && crypto.subtle)) throw new Error('This browser cannot sign in with a passcode (it needs a secure https page). Try another browser.');
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('saudia-fleet|' + passcodeNameKey(name)));
+            const hex = Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('').slice(0, 24);
+            return `v-${hex}@${PASSCODE_DOMAIN}`;
+        }
+        function passcodeWeakReason(code) {
+            if (!/^\d{6}$/.test(code)) return 'A passcode is exactly 6 digits.';
+            if (/^(\d)\1{5}$/.test(code)) return 'Six of the same digit is too easy to guess.';
+            if ('0123456789012'.includes(code) || '9876543210987'.includes(code)) return 'A straight run of digits is too easy to guess.';
+            if (/^(\d\d)\1\1$/.test(code) || /^(\d{3})\1$/.test(code)) return 'A repeating pattern is too easy to guess.';
+            return '';
+        }
+        function authLabel() {
+            return authUser ? (authUser.displayName || authUser.email || '') : '';
+        }
+
+        // The viewer stamps "last seen" (at most every 30 min) so the editor can see who uses it.
+        function passcodeTouch(force) {
+            if (!authUser || !authUser.passcode) return;
+            if (!force && authUser.lastTouch && Date.now() - authUser.lastTouch < 30 * 60 * 1000) return;
+            authUser.lastTouch = Date.now();
+            saveAuthSession();
+            getIdToken().then(tok => {
+                if (!tok) return;
+                fetch(`${FIREBASE_DB_URL}/passcodes/${authUser.uid}/lastSeen.json?auth=${encodeURIComponent(tok)}`, {
+                    method: 'PUT', body: JSON.stringify({ '.sv': 'timestamp' }),
+                }).catch(() => { /* cosmetic */ });
+            });
+        }
+
+        // A kept-signed-in passcode survives restarts, so check it is still switched on: at load,
+        // every few minutes, and whenever the tab comes back into view. A network failure is NOT
+        // a revocation — only a definite "not on the list" signs the person out.
+        async function passcodeSessionCheck() {
+            if (!authUser || !authUser.passcode) return;
+            const tok = await getIdToken();
+            if (!tok || !authUser) return;          // getIdToken signed out on a refused renewal
+            let allowed;
+            try {
+                const r = await fetch(`${FIREBASE_DB_URL}/viewers/${authUser.uid}.json?auth=${encodeURIComponent(tok)}`);
+                if (!r.ok) { if (r.status !== 401 && r.status !== 403) return; allowed = false; }
+                else allowed = (await r.json()) === true;
+            } catch (e) { return; }
+            if (!allowed) {
+                signOut();
+                setSyncStatus('🔒 Your passcode has been switched off — ask the fleet lead if you still need access.', '#e0a800');
+                return;
+            }
+            passcodeTouch(false);
+        }
+        function startPasscodeWatch() {
+            passcodeSessionCheck();
+            setInterval(passcodeSessionCheck, PASSCODE_CHECK_MS);
+            document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') passcodeSessionCheck(); });
+        }
+
+        // ── Passcode access panel (editors) ──
+        let pcmData = {};
+        let pcmRevealed = new Set();
+
+        function pcEsc(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        function pcStamp(ms) {
+            if (!ms) return '';
+            const d = new Date(ms);
+            const M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
+            return `${String(d.getDate()).padStart(2, '0')}-${M}-${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+        function pcAgo(ms) {
+            if (!ms) return 'never signed in';
+            const s = (Date.now() - ms) / 1000;
+            if (s < 90) return 'seen just now';
+            if (s < 3600) return `seen ${Math.round(s / 60)} min ago`;
+            if (s < 86400) return `seen ${Math.round(s / 3600)} h ago`;
+            return 'last seen ' + pcStamp(ms).slice(0, 11);
+        }
+        function pcmSay(msg, kind) {
+            const el = document.getElementById('pcmMsg');
+            el.className = 'pcm-msg' + (msg ? ' ' + (kind || 'ok') : '');
+            el.innerHTML = msg || '';
+        }
+
+        async function pcIdtk(endpoint, body) {
+            const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:${endpoint}?key=${FIREBASE_API_KEY}`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                const e = new Error((data.error && data.error.message) || ('HTTP ' + res.status));
+                e.code = e.message;
+                throw e;
+            }
+            return data;
+        }
+        async function pcDb(method, path, body) {
+            const tok = await getIdToken();
+            if (!tok) throw new Error('Your session has expired — sign in again.');
+            const init = { method };
+            if (body !== undefined) init.body = JSON.stringify(body);
+            const res = await fetch(`${FIREBASE_DB_URL}/${path}.json?auth=${encodeURIComponent(tok)}`, init);
+            if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? 'Permission denied — only editors can manage passcodes.' : `The save failed (HTTP ${res.status}).`);
+            return res.json().catch(() => null);
+        }
+        // Sign in AS the passcode account (raw REST — the editor's own session is untouched),
+        // to change its password or delete it. Needs the current code, which is why it is kept.
+        async function pcAccountToken(rec) {
+            return (await pcIdtk('signInWithPassword', { email: rec.email, password: rec.code, returnSecureToken: true })).idToken;
+        }
+
+        async function openPasscodeManager() {
+            if (!canEdit()) { requireSignIn(); return; }
+            document.getElementById('passcodeOverlay').style.display = 'flex';
+            pcmSay('');
+            document.getElementById('pcmList').innerHTML = '<div class="pcm-empty">Loading…</div>';
+            document.addEventListener('keydown', pcmKeydown);
+            await pcmLoad();
+            document.getElementById('pcmName').focus();
+        }
+        function closePasscodeManager() {
+            document.getElementById('passcodeOverlay').style.display = 'none';
+            document.removeEventListener('keydown', pcmKeydown);
+            pcmRevealed = new Set();
+        }
+        function pcmKeydown(e) {
+            if (e.key === 'Escape') closePasscodeManager();
+            if (e.key === 'Enter' && e.target && ['pcmName', 'pcmCode', 'pcmNote'].includes(e.target.id)) pcmCreate();
+        }
+        async function pcmLoad() {
+            try {
+                pcmData = (await pcDb('GET', 'passcodes')) || {};
+            } catch (e) {
+                pcmData = {};
+                pcmSay(pcEsc(e.message), 'err');
+            }
+            pcmRender();
+        }
+        function pcmRender() {
+            const list = document.getElementById('pcmList');
+            const ids = Object.keys(pcmData).sort((a, b) => {
+                const A = pcmData[a], B = pcmData[b];
+                if (!!A.active !== !!B.active) return A.active ? -1 : 1;
+                return String(A.name).localeCompare(String(B.name));
+            });
+            if (!ids.length) { list.innerHTML = '<div class="pcm-empty">No passcodes yet. Create the first one above.</div>'; return; }
+            const on = ids.filter(id => pcmData[id].active).length;
+            list.innerHTML = `<div class="pcm-meta" style="margin:0;">${on} active · ${ids.length - on} switched off</div>` + ids.map(id => {
+                const r = pcmData[id];
+                const shown = pcmRevealed.has(id);
+                return `<div class="pcm-item${r.active ? '' : ' off'}">
+                    <div class="pcm-row1">
+                        <span class="pcm-name">${pcEsc(r.name)}</span>
+                        <span class="pcm-pill ${r.active ? 'on' : 'off'}">${r.active ? 'ACTIVE' : 'OFF'}</span>
+                        <button type="button" class="pcm-code" onclick="pcmReveal('${id}')" title="${shown ? 'Hide' : 'Show'} the passcode">${shown ? pcEsc(r.code) : '••••••'}</button>
+                    </div>
+                    <div class="pcm-meta">${r.note ? pcEsc(r.note) + ' · ' : ''}${pcEsc(pcAgo(r.lastSeen))} · created ${pcEsc(pcStamp(r.createdAt).slice(0, 11))}${r.createdBy ? ' by ' + pcEsc(String(r.createdBy).split('@')[0]) : ''}</div>
+                    <div class="pcm-actions">
+                        <button type="button" class="pcm-btn" onclick="pcmShare('${id}')">📋 Copy invite</button>
+                        <button type="button" class="pcm-btn" onclick="pcmToggle('${id}')">${r.active ? '⏸ Switch off' : '▶ Switch on'}</button>
+                        <button type="button" class="pcm-btn" onclick="pcmChangeCode('${id}')">🔁 New code</button>
+                        <button type="button" class="pcm-btn pcm-danger" onclick="pcmDelete('${id}')">🗑 Delete</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        function pcmReveal(id) {
+            if (pcmRevealed.has(id)) pcmRevealed.delete(id); else pcmRevealed.add(id);
+            pcmRender();
+        }
+        function pcmRandomCode() {
+            const used = new Set(Object.values(pcmData).map(r => r.code));
+            for (let i = 0; i < 200; i++) {
+                const n = crypto.getRandomValues(new Uint32Array(1))[0] % 1000000;
+                const c = String(n).padStart(6, '0');
+                if (!passcodeWeakReason(c) && !used.has(c)) return c;
+            }
+            return '';
+        }
+        function pcmGenerate() {
+            document.getElementById('pcmCode').value = pcmRandomCode();
+        }
+        function pcmInviteText(r) {
+            const url = location.origin + location.pathname;
+            return `Saudia Connectivity Fleet Status\n${url}\n\nTo sign in: tap “Sign in” in the bar at the foot of the page, choose Passcode, then enter\nName: ${r.name}\nPasscode: ${r.code}\n\nThis passcode is for you only — please don’t share it.`;
+        }
+        async function pcmShare(id) {
+            const r = pcmData[id];
+            if (!r) return;
+            const text = pcmInviteText(r);
+            try {
+                await navigator.clipboard.writeText(text);
+                pcmSay(`Invite for <b>${pcEsc(r.name)}</b> copied — paste it into an email, Teams or WhatsApp.`);
+            } catch (e) {
+                window.prompt('Copy this invite:', text);
+            }
+        }
+
+        async function pcmCreate() {
+            const btn = document.getElementById('pcmCreateBtn');
+            if (btn.disabled) return;
+            const name = document.getElementById('pcmName').value.trim().replace(/\s+/g, ' ');
+            const code = document.getElementById('pcmCode').value.trim();
+            const note = document.getElementById('pcmNote').value.trim();
+            const key = passcodeNameKey(name);
+            if (key.length < 2) { pcmSay('Type the person’s name (at least 2 letters).', 'err'); document.getElementById('pcmName').focus(); return; }
+            const clash = Object.values(pcmData).find(r => r.nameKey === key);
+            if (clash) { pcmSay(`There is already a passcode for <b>${pcEsc(clash.name)}</b>. Names must differ by more than case or punctuation — add a surname or initial.`, 'err'); return; }
+            const weak = passcodeWeakReason(code);
+            if (weak) { pcmSay(pcEsc(weak) + ' Press 🎲 Random for a good one.', 'err'); document.getElementById('pcmCode').focus(); return; }
+            btn.disabled = true;
+            btn.textContent = 'Creating…';
+            pcmSay('');
+            try {
+                const email = await passcodeEmail(name);
+                let uid;
+                try {
+                    uid = (await pcIdtk('signUp', { email, password: code, returnSecureToken: true })).localId;
+                } catch (e) {
+                    if (!String(e.code).startsWith('EMAIL_EXISTS')) {
+                        if (String(e.code).startsWith('OPERATION_NOT_ALLOWED') || String(e.code).startsWith('ADMIN_ONLY_OPERATION')) throw new Error('Firebase Authentication refused to create the account: "sign-up" is switched off for this project.');
+                        throw new Error(`Could not create the account (${e.code}).`);
+                    }
+                    // An account for this name is left over (e.g. a delete that could not finish).
+                    // Reclaim it only if the same code still opens it.
+                    try { uid = (await pcIdtk('signInWithPassword', { email, password: code, returnSecureToken: true })).localId; }
+                    catch (e2) { throw new Error(`The name “${name}” is still tied to an older account. Use a slightly different name — add a surname or initial.`); }
+                }
+                const rec = { name, nameKey: key, code, email, active: true, createdAt: { '.sv': 'timestamp' }, createdBy: (authUser && authUser.email) || '' };
+                if (note) rec.note = note;
+                await pcDb('PUT', `passcodes/${uid}`, rec);
+                await pcDb('PUT', `viewers/${uid}`, true);
+                ['pcmName', 'pcmCode', 'pcmNote'].forEach(i => { document.getElementById(i).value = ''; });
+                await pcmLoad();
+                pcmRevealed.add(uid);
+                pcmRender();
+                pcmSay(`Passcode for <b>${pcEsc(name)}</b> is ready. <button type="button" class="pcm-btn" style="margin-left:6px;" onclick="pcmShare('${uid}')">📋 Copy invite</button>`);
+            } catch (e) {
+                pcmSay(pcEsc(e.message), 'err');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '＋ Create passcode';
+            }
+        }
+
+        async function pcmToggle(id) {
+            const r = pcmData[id];
+            if (!r) return;
+            try {
+                if (r.active) {
+                    await pcDb('DELETE', `viewers/${id}`);              // access first: this is what the rules read
+                    await pcDb('PATCH', `passcodes/${id}`, { active: false });
+                    pcmSay(`<b>${pcEsc(r.name)}</b> is switched off. They are signed out within five minutes.`);
+                } else {
+                    await pcDb('PATCH', `passcodes/${id}`, { active: true });
+                    await pcDb('PUT', `viewers/${id}`, true);
+                    pcmSay(`<b>${pcEsc(r.name)}</b> is switched back on — the same passcode works again.`);
+                }
+            } catch (e) { pcmSay(pcEsc(e.message), 'err'); }
+            await pcmLoad();
+        }
+
+        async function pcmChangeCode(id) {
+            const r = pcmData[id];
+            if (!r) return;
+            const suggestion = pcmRandomCode();
+            const input = window.prompt(`New 6-digit passcode for ${r.name}.\n\nTheir old code stops working now, and anyone signed in with it is signed out within the hour.`, suggestion);
+            if (input == null) return;
+            const code = input.trim();
+            const weak = passcodeWeakReason(code);
+            if (weak) { pcmSay(pcEsc(weak), 'err'); return; }
+            if (code === r.code) { pcmSay('That is the same code as now.', 'err'); return; }
+            try {
+                const tok = await pcAccountToken(r);
+                await pcIdtk('update', { idToken: tok, password: code, returnSecureToken: false });
+                await pcDb('PATCH', `passcodes/${id}`, { code });
+                pcmRevealed.add(id);
+                pcmSay(`New passcode for <b>${pcEsc(r.name)}</b> saved. <button type="button" class="pcm-btn" style="margin-left:6px;" onclick="pcmShare('${id}')">📋 Copy invite</button>`);
+            } catch (e) {
+                pcmSay(pcEsc(String(e.code || '').startsWith('TOO_MANY_ATTEMPTS') ? 'Firebase is pausing sign-ins to that account after repeated tries — wait a few minutes and try again.' : 'Could not change the code: ' + e.message), 'err');
+            }
+            await pcmLoad();
+        }
+
+        async function pcmDelete(id) {
+            const r = pcmData[id];
+            if (!r) return;
+            if (!confirm(`Delete the passcode for ${r.name}?\n\nThey lose access within five minutes, and the passcode cannot be brought back — you would create a new one.\n\nTo stop access for a while instead, use Switch off.`)) return;
+            let leftover = false;
+            try {
+                if (r.active) await pcDb('DELETE', `viewers/${id}`);
+                try { await pcIdtk('delete', { idToken: await pcAccountToken(r) }); } catch (e) { leftover = true; }
+                await pcDb('DELETE', `passcodes/${id}`);
+                pcmRevealed.delete(id);
+                pcmSay(leftover
+                    ? `<b>${pcEsc(r.name)}</b> no longer has access. (Its sign-in account could not be removed just now; it is harmless, but that exact name can only be reused with the same code.)`
+                    : `Passcode for <b>${pcEsc(r.name)}</b> deleted.`);
+            } catch (e) { pcmSay(pcEsc(e.message), 'err'); }
+            await pcmLoad();
         }
 
         // ===== Edit buttons: one implementation, three states =====
@@ -10231,9 +10842,11 @@
             if (ch) ch.style.display = isSignedIn() ? '' : 'none';
             const chs = document.getElementById('sysChangesSep');
             if (chs) chs.style.display = isSignedIn() ? '' : 'none';
+            const acc = document.getElementById('sysAccessChip');
+            if (acc) acc.style.display = canEdit() ? '' : 'none';
             if (isSignedIn()) {
                 label.textContent = 'Sign out';
-                chip.title = `Signed in as ${authUser.email} — click to sign out`;
+                chip.title = `Signed in as ${authLabel()}${authUser.passcode ? ' (passcode, view only)' : ''} — click to sign out`;
                 chip.classList.add('sys-chip-auth-on');
             } else {
                 label.textContent = 'Sign in';
@@ -10246,7 +10859,7 @@
         // confirm) when signed in.
         function footerAuthClick() {
             if (isSignedIn()) {
-                if (confirm(`Sign out of ${authUser.email}?\n\nAny page still in Edit Mode will close, and unsaved changes are lost.`)) signOut();
+                if (confirm(`Sign out of ${authLabel()}?\n\nAny page still in Edit Mode will close, and unsaved changes are lost.`)) signOut();
             } else {
                 signInForTabs();
             }
@@ -10293,10 +10906,10 @@
             const on = isSignedIn();
             if (chip) {
                 chip.style.display = on ? '' : 'none';
-                chip.title = on ? `Signed in as ${authUser.email}` : '';
+                chip.title = on ? `Signed in as ${authLabel()}${authUser.passcode ? ' (passcode, view only)' : ''}` : '';
             }
             if (sep) sep.style.display = on ? '' : 'none';
-            if (on) setText('sysUser', authUser.email);
+            if (on) setText('sysUser', authLabel());
         }
 
         // ===== Live editing (writes are authenticated; rules enforce who may write) =====
@@ -29169,6 +29782,8 @@
         // Initialize on page load
         window.addEventListener('load', function() {
             loadAuthSession();
+            initPasscodeSignIn();
+            startPasscodeWatch();
             renderHeaderClock();
             setInterval(renderHeaderClock, 1000);
             initStickyHeader();
