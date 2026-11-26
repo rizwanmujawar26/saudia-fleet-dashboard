@@ -8933,8 +8933,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.252.0';
-        const APP_BUILD    = '2026.11.27.03';
+        const APP_VERSION  = '2.252.1';
+        const APP_BUILD    = '2026.11.27.04';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -10889,7 +10889,11 @@
         // confirm) when signed in.
         function footerAuthClick() {
             if (isSignedIn()) {
-                if (confirm(`Sign out of ${authLabel()}?\n\nAny page still in Edit Mode will close, and unsaved changes are lost.`)) signOut();
+                // v2.252.1 — the Edit Mode warning is for editors only; a viewer has nothing unsaved.
+                const msg = canEdit()
+                    ? `Sign out of ${authLabel()}?\n\nAny page still in Edit Mode will close, and unsaved changes are lost.`
+                    : `Sign out, ${authLabel()}?${authUser.passcode ? '\n\nYou will need your name and passcode to sign back in.' : ''}`;
+                if (confirm(msg)) signOut();
             } else {
                 signInForTabs();
             }
