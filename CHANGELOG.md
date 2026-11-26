@@ -13,6 +13,27 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.251.0–v2.253.0 — Passcode follow-ups and an admin access log (2026-11-27)
+- **v2.251.0:** passcodes can store an optional `contactEmail` (with a rule). **✉️ Email invite** opens the editor's own
+  mail app through `mailto:`, because the page has no mail server.
+- **v2.252.0:** `/audit` is readable by **editors only** (the rules changed, and the Changes chip is hidden for
+  viewers). Viewer-access entries show the passcode name. **v2.252.1:** for viewers, the sign-out confirm drops the
+  Edit Mode warning.
+- **v2.253.0:** a new **`/admins`** node, set from the CLI only (Rizwan). It unlocks two things:
+  - **`/presence/{tabId}`**: every signed-in tab sends a heartbeat every 60 s using the server clock. A tab counts as
+    live if it was seen in the last 2.5 min. A closed tab removes its own record on `pagehide`. The admin view deletes
+    records left behind after 24 h.
+  - **`/accessLog`**: signin, open (once per tab) and signout events.
+
+  Both nodes are readable by admins only. The admin sees an **"N online"** chip, and the Change Log gets
+  **Changes | Access** tabs. ⚠️ Visitors who are not signed in are not counted (that would need anonymous writes).
+  ⚠️ `presence` and `accessLog` are in `AUDIT_SKIP_NODES`, or the heartbeats would flood the Change Log. Where each
+  node is kept:
+  - `accessLog`: in backup, restore and verify.
+  - `admins`: in backup-secrets.
+  - `presence`: not backed up (it is live data).
+  - None of the three are in the Raj feed.
+
 ### v2.250.0 — Passcode sign-in for view-only access (2026-11-27)
 The sign-in box now has two tabs: **Passcode** (the default) and **Team email** (unchanged). A passcode is a name plus
 a 6-digit code that an editor hands out. It is entered on an on-screen keypad on a phone (the code field gets
