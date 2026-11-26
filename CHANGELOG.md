@@ -13,6 +13,24 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
+### v2.250.0 — Passcode sign-in for view-only access (2026-11-27)
+The sign-in box now has two tabs: **Passcode** (the default) and **Team email** (unchanged). A passcode is a name plus
+a 6-digit code that an editor hands out. It is entered on an on-screen keypad on a phone (the code field gets
+`inputmode="none"`, so the system keyboard stays hidden) or typed and pasted on a computer. It signs in on its own once
+the 6th digit is entered, remembers the name, and can keep the person signed in on that device (localStorage, passcode
+viewers only). Underneath, each passcode is a normal Firebase email/password account: email
+`v-<24 hex of SHA-256(name key)>@passcode.invalid`, password = the code, listed in `/viewers`. So the existing read
+rules gate it with no change. Names match whatever the case, spacing or punctuation. A new editor-only
+**`/passcodes/{uid}`** record (name, nameKey, code, email, active, note, createdAt, createdBy, lastSeen) feeds the
+**Access** chip in the status bar (editors only). From there an editor can create (with 🎲 random and a weak-code
+check), copy an invite, switch off or on, set a new code, or delete. Rules: editors may now write `/viewers/{uid}`
+(only `true`) and only for uids that have a `/passcodes` record, so email viewers such as Raj cannot be touched; the
+viewer itself may write only its own `lastSeen`. ⚠️ `passcodes` is in `AUDIT_SKIP_NODES`, because `/audit` is readable
+by viewers and a code must never land there. The `/viewers` grant is still logged. The page re-checks access every 5
+minutes and whenever the tab comes back into view. A new code ends old sessions within the hour (Firebase refuses to
+renew the token). `/passcodes` is in `backup-secrets.sh`, NOT `backup.sh`, the restore script or the Raj feed
+(deliberate: it holds codes). `verify-deployment.sh` checks it returns 401 to anonymous readers.
+
 ### v2.249.0 — Assets and frozen media-disk lists locked (2026-11-23)
 `/assets` (media disks, USBs, laptops — NSG + maker serials) now needs an editor or viewer to read; Hardware › ASSETS
 shows the sign-in notice. The disk list frozen at each media cycle's close moved from public `/mediaCycles/{c}/disks`
