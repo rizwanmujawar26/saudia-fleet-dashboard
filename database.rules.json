@@ -570,6 +570,7 @@
         "email":     { ".validate": "newData.isString() && newData.val().matches(/^v-[0-9a-f]{24}@passcode\\.invalid$/)" },
         "active":    { ".validate": "newData.isBoolean()" },
         "note":      { ".validate": "newData.isString() && newData.val().length <= 120" },
+        "contactEmail": { ".validate": "newData.isString() && newData.val().length <= 120 && newData.val().matches(/^[^@ ]+@[^@ ]+$/)" },
         "createdAt": { ".validate": "newData.isNumber()" },
         "createdBy": { ".validate": "newData.isString() && newData.val().length <= 120" },
         "lastSeen":  {

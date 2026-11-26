@@ -7928,6 +7928,7 @@
                     <input id="pcmCode" class="signin-input" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit passcode" autocomplete="off">
                     <button type="button" class="pcm-btn" onclick="pcmGenerate()" title="Pick a random passcode">🎲 Random</button>
                 </div>
+                <input id="pcmEmail" class="signin-input" type="email" placeholder="Email (optional) — to send them the invite" maxlength="120" autocomplete="off">
                 <input id="pcmNote" class="signin-input" type="text" placeholder="Note (optional) — e.g. Saudia Engineering, Jeddah" maxlength="120" autocomplete="off">
                 <button type="button" id="pcmCreateBtn" class="pcm-btn pcm-primary" onclick="pcmCreate()">＋ Create passcode</button>
             </div>
@@ -8932,8 +8933,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.250.0';
-        const APP_BUILD    = '2026.11.27.01';
+        const APP_VERSION  = '2.251.0';
+        const APP_BUILD    = '2026.11.27.02';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -10549,7 +10550,7 @@
         }
         function pcmKeydown(e) {
             if (e.key === 'Escape') closePasscodeManager();
-            if (e.key === 'Enter' && e.target && ['pcmName', 'pcmCode', 'pcmNote'].includes(e.target.id)) pcmCreate();
+            if (e.key === 'Enter' && e.target && ['pcmName', 'pcmCode', 'pcmEmail', 'pcmNote'].includes(e.target.id)) pcmCreate();
         }
         async function pcmLoad() {
             try {
@@ -10578,8 +10579,9 @@
                         <span class="pcm-pill ${r.active ? 'on' : 'off'}">${r.active ? 'ACTIVE' : 'OFF'}</span>
                         <button type="button" class="pcm-code" onclick="pcmReveal('${id}')" title="${shown ? 'Hide' : 'Show'} the passcode">${shown ? pcEsc(r.code) : '••••••'}</button>
                     </div>
-                    <div class="pcm-meta">${r.note ? pcEsc(r.note) + ' · ' : ''}${pcEsc(pcAgo(r.lastSeen))} · created ${pcEsc(pcStamp(r.createdAt).slice(0, 11))}${r.createdBy ? ' by ' + pcEsc(String(r.createdBy).split('@')[0]) : ''}</div>
+                    <div class="pcm-meta">${r.contactEmail ? '✉️ ' + pcEsc(r.contactEmail) + ' · ' : ''}${r.note ? pcEsc(r.note) + ' · ' : ''}${pcEsc(pcAgo(r.lastSeen))} · created ${pcEsc(pcStamp(r.createdAt).slice(0, 11))}${r.createdBy ? ' by ' + pcEsc(String(r.createdBy).split('@')[0]) : ''}</div>
                     <div class="pcm-actions">
+                        <button type="button" class="pcm-btn" onclick="pcmEmailInvite('${id}')">✉️ Email invite</button>
                         <button type="button" class="pcm-btn" onclick="pcmShare('${id}')">📋 Copy invite</button>
                         <button type="button" class="pcm-btn" onclick="pcmToggle('${id}')">${r.active ? '⏸ Switch off' : '▶ Switch on'}</button>
                         <button type="button" class="pcm-btn" onclick="pcmChangeCode('${id}')">🔁 New code</button>
@@ -10620,13 +10622,37 @@
             }
         }
 
+        // ✉️ Email invite (v2.251.0) — the page has no mail server, so it opens the editor's own
+        // mail app (mailto:) with the invite written in; they press Send. No address on file →
+        // ask for one and keep it on the record (contactEmail) for next time.
+        function pcValidEmail(v) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) && v.length <= 120; }
+        async function pcmEmailInvite(id) {
+            const r = pcmData[id];
+            if (!r) return;
+            let to = r.contactEmail || '';
+            if (!to) {
+                const typed = window.prompt(`Email address for ${r.name}:`, '');
+                if (typed == null) return;
+                to = typed.trim();
+                if (!pcValidEmail(to)) { pcmSay('That email address does not look right.', 'err'); return; }
+                try { await pcDb('PATCH', `passcodes/${id}`, { contactEmail: to }); r.contactEmail = to; pcmRender(); }
+                catch (e) { pcmSay(pcEsc(e.message), 'err'); return; }
+            }
+            const subject = 'Your access to Saudia Connectivity Fleet Status';
+            const body = `Hello ${r.name},\n\nYou now have view-only access to the Saudia Connectivity Fleet Status dashboard.\n\n` + pcmInviteText(r);
+            window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            pcmSay(`Your mail app should open with the invite for <b>${pcEsc(r.name)}</b> addressed to ${pcEsc(to)} — check it and press Send.`);
+        }
+
         async function pcmCreate() {
             const btn = document.getElementById('pcmCreateBtn');
             if (btn.disabled) return;
             const name = document.getElementById('pcmName').value.trim().replace(/\s+/g, ' ');
             const code = document.getElementById('pcmCode').value.trim();
             const note = document.getElementById('pcmNote').value.trim();
+            const contactEmail = document.getElementById('pcmEmail').value.trim();
             const key = passcodeNameKey(name);
+            if (contactEmail && !pcValidEmail(contactEmail)) { pcmSay('That email address does not look right.', 'err'); document.getElementById('pcmEmail').focus(); return; }
             if (key.length < 2) { pcmSay('Type the person’s name (at least 2 letters).', 'err'); document.getElementById('pcmName').focus(); return; }
             const clash = Object.values(pcmData).find(r => r.nameKey === key);
             if (clash) { pcmSay(`There is already a passcode for <b>${pcEsc(clash.name)}</b>. Names must differ by more than case or punctuation — add a surname or initial.`, 'err'); return; }
@@ -10652,13 +10678,14 @@
                 }
                 const rec = { name, nameKey: key, code, email, active: true, createdAt: { '.sv': 'timestamp' }, createdBy: (authUser && authUser.email) || '' };
                 if (note) rec.note = note;
+                if (contactEmail) rec.contactEmail = contactEmail;
                 await pcDb('PUT', `passcodes/${uid}`, rec);
                 await pcDb('PUT', `viewers/${uid}`, true);
-                ['pcmName', 'pcmCode', 'pcmNote'].forEach(i => { document.getElementById(i).value = ''; });
+                ['pcmName', 'pcmCode', 'pcmEmail', 'pcmNote'].forEach(i => { document.getElementById(i).value = ''; });
                 await pcmLoad();
                 pcmRevealed.add(uid);
                 pcmRender();
-                pcmSay(`Passcode for <b>${pcEsc(name)}</b> is ready. <button type="button" class="pcm-btn" style="margin-left:6px;" onclick="pcmShare('${uid}')">📋 Copy invite</button>`);
+                pcmSay(`Passcode for <b>${pcEsc(name)}</b> is ready. <button type="button" class="pcm-btn" style="margin-left:6px;" onclick="pcmEmailInvite('${uid}')">✉️ Email invite</button> <button type="button" class="pcm-btn" onclick="pcmShare('${uid}')">📋 Copy invite</button>`);
             } catch (e) {
                 pcmSay(pcEsc(e.message), 'err');
             } finally {
@@ -10699,7 +10726,7 @@
                 await pcIdtk('update', { idToken: tok, password: code, returnSecureToken: false });
                 await pcDb('PATCH', `passcodes/${id}`, { code });
                 pcmRevealed.add(id);
-                pcmSay(`New passcode for <b>${pcEsc(r.name)}</b> saved. <button type="button" class="pcm-btn" style="margin-left:6px;" onclick="pcmShare('${id}')">📋 Copy invite</button>`);
+                pcmSay(`New passcode for <b>${pcEsc(r.name)}</b> saved. <button type="button" class="pcm-btn" style="margin-left:6px;" onclick="pcmEmailInvite('${id}')">✉️ Email invite</button> <button type="button" class="pcm-btn" onclick="pcmShare('${id}')">📋 Copy invite</button>`);
             } catch (e) {
                 pcmSay(pcEsc(String(e.code || '').startsWith('TOO_MANY_ATTEMPTS') ? 'Firebase is pausing sign-ins to that account after repeated tries — wait a few minutes and try again.' : 'Could not change the code: ' + e.message), 'err');
             }
