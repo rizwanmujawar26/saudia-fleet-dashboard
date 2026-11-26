@@ -6690,6 +6690,115 @@
         .acc-pill.acc-passcode { color: #1d5fa8; border-color: rgba(29,95,168,.35); background: rgba(29,95,168,.06); }
         .acc-event { font-size: 12.5px; color: #33424c; }
         .acc-ev-signout { color: #8a949c; }
+
+        /* ===== Home profile strip (v2.254.0) =====
+           A slim, white card above the Timeline: who you are (initials avatar, a
+           time-of-day greeting, a role pill), the ONE thing worth knowing right now
+           (the highlight, ranked: live flight > grounded > open IFC issue > new since
+           your last visit > all clear) and Sign out. Signed out, it shrinks to a quiet
+           passcode invitation. Below 700px the highlight drops to its own row and
+           Sign out sheds its label (the icon-btn shed-text principle). */
+        .home-hello {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) minmax(0, auto) auto;
+            grid-template-areas: "av who hl out";
+            align-items: center;
+            gap: 4px 12px;
+            padding: 9px 10px 9px 12px;
+            margin: 0 0 14px;
+            background: #fff;
+            border: 1px solid #e3e8ee;
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+        }
+        .home-hello[hidden] { display: none; }
+        .hh-av {
+            grid-area: av;
+            width: 36px; height: 36px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
+            background: #e7f3ec; color: #0a5c34; box-shadow: inset 0 0 0 1px #cfe6d8;
+            flex: none; user-select: none;
+        }
+        .hh-who { grid-area: who; min-width: 0; line-height: 1.25; }
+        .hh-greet {
+            display: flex; align-items: center; gap: 7px; min-width: 0;
+            font-size: 15px; color: #1f2a33; white-space: nowrap;
+        }
+        .hh-greet b { font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+        .hh-role {
+            flex: none; font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+            padding: 1px 7px; border-radius: 999px; line-height: 15px;
+            color: #4b5966; background: #f3f5f7; box-shadow: inset 0 0 0 1px #dfe4ea;
+        }
+        .hh-role.r-admin  { color: #6b3fa0; background: #f5effc; box-shadow: inset 0 0 0 1px #e2d4f4; }
+        .hh-role.r-editor { color: #0a5c34; background: #ecf6f0; box-shadow: inset 0 0 0 1px #cfe6d8; }
+        .hh-role.r-viewer { color: #1d5d9b; background: #eef5fc; box-shadow: inset 0 0 0 1px #d3e3f4; }
+        .hh-sub {
+            font-size: 12px; color: #7c8894; margin-top: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .hh-hl {
+            grid-area: hl; justify-self: end; min-width: 0; max-width: 100%;
+            display: inline-flex; align-items: center; gap: 0;
+            border-radius: 999px; font-size: 12.5px; line-height: 1;
+            background: #f6f8fa; color: #33414d; box-shadow: inset 0 0 0 1px #e3e8ee;
+        }
+        .hh-hl-main {
+            display: inline-flex; align-items: center; gap: 7px; min-width: 0;
+            padding: 7px 12px; border: 0; background: none; color: inherit; font: inherit;
+            cursor: pointer; border-radius: 999px; text-align: left;
+        }
+        .hh-hl-main:hover { background: rgba(0, 0, 0, 0.035); }
+        .hh-hl-main span.t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hh-hl-main i { font-style: normal; flex: none; }
+        .hh-hl-main b { font-weight: 700; }
+        .hh-hl-next {
+            flex: none; border: 0; background: none; cursor: pointer; font: inherit;
+            font-size: 11px; color: inherit; opacity: 0.7; padding: 7px 11px 7px 8px;
+            border-left: 1px solid rgba(0, 0, 0, 0.08); border-radius: 0 999px 999px 0;
+            white-space: nowrap; font-variant-numeric: tabular-nums;
+        }
+        .hh-hl-next:hover { opacity: 1; background: rgba(0, 0, 0, 0.035); }
+        .hh-hl.t-live   { background: #0f1b2b; color: #fff; box-shadow: none; }
+        .hh-hl.t-live .hh-hl-main:hover, .hh-hl.t-live .hh-hl-next:hover { background: rgba(255,255,255,0.08); }
+        .hh-hl.t-live .hh-hl-next { border-left-color: rgba(255,255,255,0.15); }
+        .hh-hl.t-red    { background: #fff5f5; color: #9b1c2c; box-shadow: inset 0 0 0 1px #f3d3d7; }
+        .hh-hl.t-amber  { background: #fff8ec; color: #8a5300; box-shadow: inset 0 0 0 1px #f2dfb9; }
+        .hh-hl.t-blue   { background: #f1f7fd; color: #1d5d9b; box-shadow: inset 0 0 0 1px #d3e3f4; }
+        .hh-hl.t-green  { background: #f0f8f3; color: #0a5c34; box-shadow: inset 0 0 0 1px #cfe6d8; }
+        .hh-live-dot {
+            width: 7px; height: 7px; border-radius: 50%; background: #34d27b; flex: none;
+            box-shadow: 0 0 0 0 rgba(52, 210, 123, 0.6); animation: hhPulse 1.8s infinite;
+        }
+        @keyframes hhPulse { 70% { box-shadow: 0 0 0 6px rgba(52,210,123,0); } 100% { box-shadow: 0 0 0 0 rgba(52,210,123,0); } }
+        .hh-out {
+            grid-area: out; flex: none;
+            display: inline-flex; align-items: center; gap: 6px;
+            height: 30px; padding: 0 12px; border-radius: 999px; cursor: pointer;
+            font: inherit; font-size: 12.5px; font-weight: 600;
+            color: #4b5966; background: #fff; border: 1px solid #dfe4ea;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .hh-out:hover { color: #9b1c2c; border-color: #f0c9cf; background: #fff6f7; }
+        .hh-out.hh-in { color: #fff; background: #006936; border-color: #006936; }
+        .hh-out.hh-in:hover { background: #0c6d3e; border-color: #0c6d3e; color: #fff; }
+        .hh-out svg { width: 15px; height: 15px; flex: none; }
+        /* Signed out: no avatar, one quiet line and a Sign in button. */
+        .home-hello.is-guest { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "who out"; background: #fbfcfd; box-shadow: none; }
+        .home-hello.is-guest .hh-greet { font-size: 14px; }
+        @media (max-width: 980px) {
+            .hh-sub .hh-sub-x { display: none; }
+        }
+        @media (max-width: 700px) {
+            .home-hello { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "av who out" "hl hl hl"; padding: 9px 10px; }
+            .hh-hl { justify-self: stretch; margin-top: 4px; }
+            .hh-hl-main { flex: 1 1 auto; }
+            .hh-out { width: 32px; height: 32px; padding: 0; justify-content: center; }
+            .hh-out .hh-out-l { display: none; }
+            .home-hello.is-guest { grid-template-areas: "who out"; }
+            .home-hello.is-guest .hh-sub { white-space: normal; }
+        }
     </style>
 </head>
 <body>
@@ -6793,6 +6902,9 @@
 
             <!-- Overview Tab -->
             <div id="overview" class="tab-content active">
+                <!-- Profile strip (v2.254.0): greeting, role, the one highlight, Sign out.
+                     Painted by renderHomeHello(); hidden until the first paint. -->
+                <div class="home-hello" id="homeHello" hidden></div>
                 <div class="timeline">
                     <div class="timeline-section completed">
                         <div class="timeline-title-row">
@@ -8964,8 +9076,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.253.0';
-        const APP_BUILD    = '2026.11.27.05';
+        const APP_VERSION  = '2.254.0';
+        const APP_BUILD    = '2026.11.27.06';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -11187,6 +11299,7 @@
             updateSimEditUI();
             updateSatcomEditUI();   // else its Edit button lingers visible after sign-out
             renderSerialsPage();
+            renderHomeHello();
         }
 
         function updateSysUserChip() {
@@ -21296,6 +21409,204 @@
             flightEditingId = null;
         }
 
+
+        // ===== Home profile strip (v2.254.0) =====
+        // One slim card above the Timeline. Signed in: initials avatar · "Good
+        // afternoon, Hanaa" + role pill · a sub-line (today, last visit) · ONE
+        // highlight · Sign out. The highlight is the most important thing on the
+        // dashboard right now, ranked — a live flight, then grounded aircraft, then open
+        // IFC/W-IFE issues, then what is new since this person's last visit, else an
+        // all-clear. When more than one applies, a "1/3 ›" stepper walks through them;
+        // a click on the highlight jumps to where it lives (Live Activity, Watchlist,
+        // the day list). Signed out: a quiet passcode invitation instead.
+        // Re-painted on every timeline render (data changed), on sign-in/out
+        // (updateAuthUI) and once a minute (greeting + live countdown).
+        let homeTimelineAll = [];
+        let homeHelloIdx = 0;
+        const homeHelloVisits = {};      // uid → previous visit ISO (null = first), read once per tab
+        let homeHelloTimer = null;
+        const HOME_HELLO_SIGNOUT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>';
+        const HOME_HELLO_SIGNIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>';
+
+        function homeGreeting(d = new Date()) {
+            const h = d.getHours();
+            if (h >= 5 && h < 12) return { word: 'Good morning', icon: '☀️' };
+            if (h >= 12 && h < 17) return { word: 'Good afternoon', icon: '🌤️' };
+            return { word: 'Good evening', icon: '🌙' };
+        }
+        // "Hanaa Ali" → "Hanaa"; an email account with no display name →
+        // "external.rmujawar@…" → "Rmujawar", "pierre.martin@…" → "Pierre".
+        // Accounts whose sign-in carries no display name and whose email does not spell
+        // the first name, keyed by uid (never by email: the page source is public).
+        const HOME_NAME_BY_UID = { EMT2Rkx0dGhVAunpcHHCVI5rdVm1: 'Rizwan Mujawar' };
+        function homeDisplayName() {
+            return (authUser && HOME_NAME_BY_UID[authUser.uid]) || authLabel();
+        }
+        function homeFirstName(label) {
+            let s = String(label || '').trim();
+            if (!s) return '';
+            if (s.includes('@')) {
+                s = s.split('@')[0].replace(/^(external|ext|ext-)[._-]/i, '');
+                s = s.split(/[._\-+0-9]+/).filter(Boolean)[0] || s;
+            } else {
+                s = s.split(/\s+/)[0];
+            }
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+        function homeInitials(label) {
+            const s = String(label || '').trim();
+            if (!s) return '·';
+            const parts = (s.includes('@') ? s.split('@')[0].replace(/^(external|ext)[._-]/i, '').split(/[._\-+]+/) : s.split(/\s+/)).filter(Boolean);
+            const a = (parts[0] || '').charAt(0), b = parts.length > 1 ? parts[parts.length - 1].charAt(0) : (parts[0] || '').charAt(1);
+            return (a + (b || '')).toUpperCase();
+        }
+        // Day-first, always: "Friday 27 November", "Sat 21 Nov".
+        function homeDayLong(d)  { return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }); }
+        function homeDayShort(iso) {
+            const d = new Date(iso + 'T12:00:00');
+            return isNaN(d) ? iso : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        }
+        function homeLocalISO(d = new Date()) {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        // The previous visit, read ONCE per tab (before this visit overwrites it), per
+        // person, from localStorage. Day granularity, matching the timeline's own.
+        function homeHelloVisit() {
+            if (!authUser || !authUser.uid) return null;
+            const uid = authUser.uid;
+            if (!(uid in homeHelloVisits)) {
+                const key = 'fleetLastVisit:' + uid;
+                let prev = null;
+                try { prev = localStorage.getItem(key) || null; } catch (e) {}
+                try { localStorage.setItem(key, homeLocalISO()); } catch (e) {}
+                homeHelloVisits[uid] = prev;
+            }
+            return homeHelloVisits[uid];
+        }
+        function homeDaysAgo(iso) {
+            const ms = new Date(homeLocalISO() + 'T12:00:00') - new Date(iso + 'T12:00:00');
+            const d = Math.round(ms / 86400000);
+            return d <= 0 ? 'earlier today' : d === 1 ? 'yesterday' : `${d} days ago`;
+        }
+
+        // Ranked list of what is worth saying right now. Each: { tone, icon, html, go }.
+        function homeHighlights() {
+            const out = [];
+            const regs = list => {
+                const shown = list.slice(0, 3).map(escAttr).join(' · ');
+                return list.length > 3 ? `${shown} +${list.length - 3}` : shown;
+            };
+            // 1 — a special flight in the air.
+            try {
+                flightEntries().map(f => ({ f, d: flightPhaseOf(f) })).filter(x => x.d && x.d.phase === 'enroute').forEach(({ f, d }) => {
+                    const left = Math.max(0, Math.round((d.arrMs - d.now) / 60000));
+                    const lt = left >= 60 ? `${Math.floor(left / 60)}h ${String(left % 60).padStart(2, '0')}m` : `${left}m`;
+                    out.push({ tone: 'live', icon: '<span class="hh-live-dot"></span>',
+                        html: `<b>${escAttr(f.flight || 'Flight')}</b> HZ-${escAttr(f.tail)} airborne · ${escAttr(f.toIata || f.to || '')} in ${lt}`,
+                        go: 'live' });
+                });
+            } catch (e) {}
+            // 2 — grounded aircraft.
+            const grounded = opsOutFleet().map(a => a.id);
+            if (grounded.length) out.push({ tone: 'red', icon: '🛬',
+                html: `<b>${grounded.length} aircraft grounded</b> · ${regs(grounded)}`, go: 'watch' });
+            // 3 — open IFC/W-IFE service issues.
+            const maint = issueEntries().filter(issueIsOpen).map(i => i.tail).filter(Boolean);
+            if (maint.length) out.push({ tone: 'amber', icon: '🔧',
+                html: `<b>${maint.length} open IFC ${maint.length === 1 ? 'issue' : 'issues'}</b> · ${regs([...new Set(maint)])}`, go: 'watch' });
+            // 4 — new since the last visit (signed-in people only).
+            const today = homeLocalISO();
+            const prev = homeHelloVisit();
+            if (prev && prev < today) {
+                const fresh = homeTimelineAll.filter(x => x.iso > prev && x.iso <= today);
+                if (fresh.length) {
+                    const tails = [...new Set(fresh.map(x => x.tail).filter(Boolean))];
+                    out.push({ tone: 'blue', icon: '🆕',
+                        html: `<b>${fresh.length} new ${fresh.length === 1 ? 'entry' : 'entries'}</b> since ${escAttr(homeDayShort(prev))}${tails.length ? ` · ${tails.length} aircraft` : ''}`,
+                        go: 'list' });
+                }
+            }
+            // 5 — all clear, with the latest day of activity as context.
+            if (!grounded.length && !maint.length) {
+                const commercial = fleetRoster.filter(isCommercial).length;
+                out.push({ tone: 'green', icon: '✅',
+                    html: `<b>All clear</b> · ${commercial} aircraft in commercial service, none on the watchlist`, go: 'list' });
+            } else if (!out.some(h => h.go === 'list')) {
+                const latest = homeTimelineAll.reduce((m, x) => (x.iso <= today && x.iso > m ? x.iso : m), '');
+                if (latest) {
+                    const n = homeTimelineAll.filter(x => x.iso === latest).length;
+                    out.push({ tone: '', icon: '🗓️',
+                        html: `Latest update <b>${escAttr(homeDayShort(latest))}</b> · ${n} ${n === 1 ? 'activity' : 'activities'}`, go: 'list' });
+                }
+            }
+            return out;
+        }
+
+        function homeHelloGo(where) {
+            const scroll = el => el && el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (where === 'live') {
+                if (!liveActivityOpen) toggleLiveActivity();
+                scroll(document.getElementById('liveActivity'));
+            } else if (where === 'watch') {
+                const el = document.getElementById('timelinePinned');
+                if (el && el.style.display === 'none' && timelineIsFocused()) resetTimeline();
+                if (!timelinePinnedExpanded) toggleTimelinePinned();
+                scroll(document.getElementById('timelinePinned'));
+            } else {
+                const el = document.getElementById('completedDeliveriesList');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+        function homeHelloNext(ev) {
+            if (ev) ev.stopPropagation();
+            homeHelloIdx++;
+            renderHomeHello();
+        }
+
+        function renderHomeHello() {
+            const el = document.getElementById('homeHello');
+            if (!el) return;
+            const g = homeGreeting();
+            if (!isSignedIn()) {
+                el.className = 'home-hello is-guest';
+                el.innerHTML = `<div class="hh-who">
+                        <div class="hh-greet">${g.word} <span aria-hidden="true">👋</span></div>
+                        <div class="hh-sub">Saudia team? Sign in with your name and passcode to see the full fleet detail.</div>
+                    </div>
+                    <button type="button" class="hh-out hh-in" onclick="signInForTabs()" title="Sign in" aria-label="Sign in">${HOME_HELLO_SIGNIN_SVG}<span class="hh-out-l">Sign in</span></button>`;
+                el.hidden = false;
+                return;
+            }
+            const label = homeDisplayName();
+            const first = homeFirstName(label) || 'there';
+            const kind = accessKind();
+            const role = kind === 'admin' ? ['Admin', 'r-admin'] : kind === 'editor' ? ['Editor', 'r-editor'] : ['Viewer', 'r-viewer'];
+            const prev = homeHelloVisit();
+            const subBits = [`${g.icon} ${escAttr(homeDayLong(new Date()))}`];
+            if (prev) subBits.push(`<span class="hh-sub-x"> · Last visit ${escAttr(homeDaysAgo(prev))}</span>`);
+            else subBits.push('<span class="hh-sub-x"> · Welcome to the fleet dashboard</span>');
+
+            const hls = homeHighlights();
+            const i = hls.length ? homeHelloIdx % hls.length : 0;
+            const h = hls[i];
+            const hlHtml = h ? `<div class="hh-hl${h.tone ? ' t-' + h.tone : ''}" role="group" aria-label="Highlight">
+                    <button type="button" class="hh-hl-main" onclick="homeHelloGo('${h.go}')" title="Show me">
+                        <i>${h.icon}</i><span class="t">${h.html}</span>
+                    </button>${hls.length > 1 ? `<button type="button" class="hh-hl-next" onclick="homeHelloNext(event)" title="Next highlight" aria-label="Next highlight (${i + 1} of ${hls.length})">${i + 1}/${hls.length} ›</button>` : ''}
+                </div>` : '';
+
+            el.className = 'home-hello';
+            el.innerHTML = `<span class="hh-av" title="${escAttr(label)}" aria-hidden="true">${escAttr(homeInitials(label))}</span>
+                <div class="hh-who">
+                    <div class="hh-greet"><span>${g.word},</span> <b>${escAttr(first)}</b><span class="hh-role ${role[1]}">${role[0].toUpperCase()}</span></div>
+                    <div class="hh-sub">${subBits.join('')}</div>
+                </div>
+                ${hlHtml}
+                <button type="button" class="hh-out" onclick="footerAuthClick()" title="Sign out of ${escAttr(label)}" aria-label="Sign out">${HOME_HELLO_SIGNOUT_SVG}<span class="hh-out-l">Sign out</span></button>`;
+            el.hidden = false;
+            if (!homeHelloTimer) homeHelloTimer = setInterval(renderHomeHello, 60000);
+        }
+
         // ===== Live Activity (v2.210.0) =====
         // A dark, iOS-style strip under the Watchlist, shown ONLY while a special flight is
         // in the air: kind · flight · tail · DEP ━━✈━━ ARR · time left · FR24. The head is
@@ -28950,6 +29261,7 @@
             if (!typingSearch) fbRender('timeline');
 
             const all = timelineActivities();
+            homeTimelineAll = all;   // the profile strip's "new since last visit" count
             // Both the kind filter and the free-text search drive the day counts as well
             // as the rows, so a day showing "2 activities" counts only what is left after
             // filtering, not two of anything else.
@@ -29326,7 +29638,7 @@
                 const shown = timelineShowAllDays ? dateKeys : dateKeys.slice(0, TIMELINE_VISIBLE_DAYS);
                 const html = shown.map(key => {
                     const d = new Date(key + 'T00:00:00Z');
-                    const heading = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+                    const heading = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });   // day-first: "Wednesday 25 November 2026"
                     return `<li class="timeline-date-group" id="dategroup-${key}">
                         <div class="timeline-date-heading">
                             <span>${heading}</span>

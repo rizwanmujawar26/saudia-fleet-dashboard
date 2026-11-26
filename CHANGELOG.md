@@ -13,7 +13,14 @@ Pull one release without reading the file:
 Newest first. Each entry is one deployed commit; `git log` has the full reasoning
 in the commit bodies.
 
-### v2.251.0–v2.253.0 — Passcode follow-ups and an admin access log (2026-11-27)
+### v2.254.0 — 2026-11-27 — Home profile strip
+
+- New slim profile card above the Timeline for signed-in people: initials avatar, time-of-day greeting with first name, role pill (ADMIN / EDITOR / VIEWER), today's date and "Last visit N days ago" (per person, localStorage), and a Sign out button (icon-only below 700px).
+- One-line highlight, ranked: live special flight > grounded aircraft > open IFC issues > new entries since your last visit > all clear / latest update. A "1/N ›" stepper walks through them; clicking jumps to Live Activity, opens the Watchlist, or scrolls to the day list.
+- Signed out, the card is a quiet passcode invitation with a Sign in button.
+- Timeline day headings are now day-first ("Wednesday, 25 November 2026"); they were month-first.
+
+## v2.251.0–v2.253.0 — Passcode follow-ups and an admin access log (2026-11-27)
 - **v2.251.0:** passcodes can store an optional `contactEmail` (with a rule). **✉️ Email invite** opens the editor's own
   mail app through `mailto:`, because the page has no mail server.
 - **v2.252.0:** `/audit` is readable by **editors only** (the rules changed, and the Changes chip is hidden for
