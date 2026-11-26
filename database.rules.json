@@ -559,6 +559,44 @@
       }
     },
 
+    "admins": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    },
+
+    "presence": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$sid": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || ((root.child('editors').child(auth.uid).val() === true || root.child('viewers').child(auth.uid).val() === true) && (!data.exists() || data.child('uid').val() === auth.uid)))",
+        ".validate": "$sid.matches(/^[A-Za-z0-9_-]{8,40}$/) && newData.hasChildren(['uid', 'name', 'kind', 'startedAt', 'lastSeen']) && newData.child('uid').val() === auth.uid",
+        "uid":       { ".validate": "newData.isString()" },
+        "name":      { ".validate": "newData.isString() && newData.val().length <= 80" },
+        "kind":      { ".validate": "newData.isString() && newData.val().matches(/^(admin|editor|viewer|passcode)$/)" },
+        "device":    { ".validate": "newData.isString() && newData.val().length <= 80" },
+        "page":      { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "startedAt": { ".validate": "newData.isNumber()" },
+        "lastSeen":  { ".validate": "newData.val() === now" },
+        "$other":    { ".validate": false }
+      }
+    },
+
+    "accessLog": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$id": {
+        ".write": "auth != null && !data.exists() && newData.exists() && (root.child('editors').child(auth.uid).val() === true || root.child('viewers').child(auth.uid).val() === true)",
+        ".validate": "newData.hasChildren(['uid', 'name', 'kind', 'event', 'ts']) && newData.child('uid').val() === auth.uid && newData.child('ts').val() === now",
+        "uid":    { ".validate": "newData.isString()" },
+        "name":   { ".validate": "newData.isString() && newData.val().length <= 80" },
+        "kind":   { ".validate": "newData.isString() && newData.val().matches(/^(admin|editor|viewer|passcode)$/)" },
+        "event":  { ".validate": "newData.isString() && newData.val().matches(/^(signin|open|signout)$/)" },
+        "device": { ".validate": "newData.isString() && newData.val().length <= 80" },
+        "ts":     { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+
     "passcodes": {
       ".read": "auth != null && root.child('editors').child(auth.uid).val() === true",
       "$uid": {

@@ -22,7 +22,7 @@ echo "           $DB"
 echo
 
 echo "Reachability & data"
-for n in fleet fleetSpecs configs aircraft activities issues hardware units mediaLoads modmans avr assets mediaCycles flights aircraftModem audit mediaCycleDisks; do
+for n in fleet fleetSpecs configs aircraft activities issues hardware units mediaLoads modmans avr assets mediaCycles flights aircraftModem audit mediaCycleDisks accessLog; do
   c="$(code "$DB/$n.json?shallow=true")"
   if [ "$c" = "200" ]; then
     cnt="$(python3 -c "import json,sys;d=json.load(open('$TMP/body'));print(len(d) if isinstance(d,dict) else 0)" 2>/dev/null || echo '?')"
@@ -46,7 +46,7 @@ c="$(code "$DB/viewers.json")"
 c="$(code "$DB/passcodes.json")"
 [ "$c" = "401" ] && ok "/passcodes not anonymously readable" || bad "/passcodes is READABLE" "HTTP $c"
 # v2.245.0: serials, MAC/ESN/Chassis, Taurus IDs and SIM ICCIDs live in these two.
-for n in units modmans aircraftModem audit assets mediaCycleDisks; do
+for n in units modmans aircraftModem audit assets mediaCycleDisks accessLog presence admins; do
   c="$(code "$DB/$n.json?shallow=true")"
   [ "$c" = "401" ] && ok "/$n locked to signed-in readers" || bad "/$n is ANONYMOUSLY READABLE" "HTTP $c"
 done

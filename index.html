@@ -6670,6 +6670,26 @@
         .pcm-meta { font-size: 12px; color: #6b7680; margin: 4px 0 8px; line-height: 1.4; }
         .pcm-actions { display: flex; gap: 6px; flex-wrap: wrap; }
         .pcm-actions .pcm-btn { padding: 5px 9px; font-size: 12px; }
+
+        /* v2.253.0 — Change Log › Access (admin) */
+        .audit-tabs { display: flex; gap: 4px; padding: 3px; margin: 10px 22px 0; background: #eef2ef; border-radius: 9px; }
+        .audit-tab { flex: 1; border: none; background: transparent; padding: 7px 6px; border-radius: 7px; font-size: 13px; font-weight: 600; color: #5b6770; cursor: pointer; }
+        .audit-tab.active { background: #fff; color: #0a5c34; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        .acc-summary { font-size: 14px; color: #1f2a30; padding: 10px 12px; background: #f2f8f4; border: 1px solid #dcebe2; border-radius: 10px; margin-bottom: 4px; }
+        .acc-kinds { color: #6b7680; font-weight: 400; font-size: 12.5px; }
+        .acc-section { font-size: 11.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #5b6770; margin: 14px 2px 6px; }
+        .acc-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; border: 1px solid #e3e8ee; border-radius: 9px; padding: 8px 11px; margin-bottom: 6px; background: #fff; font-size: 13px; }
+        .acc-dot { width: 8px; height: 8px; border-radius: 50%; background: #22a35a; box-shadow: 0 0 0 3px rgba(34,163,90,.18); }
+        .acc-name { font-weight: 700; color: #1f2a30; }
+        .acc-meta { color: #6b7680; font-size: 12px; margin-left: auto; }
+        .acc-when { color: #6b7680; font-variant-numeric: tabular-nums; font-size: 12px; min-width: 128px; }
+        .acc-this { font-size: 11px; color: #0a5c34; font-style: italic; }
+        .acc-pill { font-size: 10px; font-weight: 700; letter-spacing: .4px; padding: 1px 7px; border-radius: 999px; border: 1px solid #cfd5d9; color: #5b6770; background: #f4f6f7; }
+        .acc-pill.acc-admin { color: #8a5a00; border-color: rgba(224,168,0,.5); background: rgba(255,193,7,.12); }
+        .acc-pill.acc-editor { color: #0a5c34; border-color: rgba(10,92,52,.35); background: rgba(10,92,52,.06); }
+        .acc-pill.acc-passcode { color: #1d5fa8; border-color: rgba(29,95,168,.35); background: rgba(29,95,168,.06); }
+        .acc-event { font-size: 12.5px; color: #33424c; }
+        .acc-ev-signout { color: #8a949c; }
     </style>
 </head>
 <body>
@@ -7211,6 +7231,12 @@
                 <button type="button" class="sys-chip" id="sysChangesChip" style="display:none;" onclick="openChangeLog()" title="Who changed what — with Undo for editors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
                     <span>Changes</span>
+                </button>
+
+                <!-- v2.253.0 — Online now (admin only): open sessions; click for the access log. -->
+                <button type="button" class="sys-chip" id="sysOnlineChip" style="display:none;" onclick="openChangeLog('access')" title="Sessions open now">
+                    <span class="sys-dot sys-dot-live"></span>
+                    <span><span id="sysOnlineCount">0</span> online</span>
                 </button>
 
                 <!-- v2.250.0 — Passcode access (editors only): hand out name + 6-digit codes for view-only access. -->
@@ -7981,6 +8007,11 @@
                     <p id="auditSub" class="ac-edit-sub"></p>
                 </div>
                 <button class="ac-edit-x" onclick="closeChangeLog()" title="Close" aria-label="Close">✕</button>
+            </div>
+            <!-- v2.253.0 — admin only: Changes ⇄ Access (who is online + sign-in history). -->
+            <div class="audit-tabs" id="auditTabs" style="display:none;">
+                <button type="button" class="audit-tab active" data-v="changes" onclick="setAuditView('changes')">Changes</button>
+                <button type="button" class="audit-tab" data-v="access" onclick="setAuditView('access')">Access</button>
             </div>
             <div class="audit-tools"><input id="auditSearch" class="hw-search" placeholder="Search person, tail, field or value" autocomplete="off" oninput="setAuditFilter(this.value)"></div>
             <div id="auditList" class="ac-edit-body audit-list"></div>
@@ -8933,8 +8964,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.252.1';
-        const APP_BUILD    = '2026.11.27.04';
+        const APP_VERSION  = '2.253.0';
+        const APP_BUILD    = '2026.11.27.05';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -9808,6 +9839,7 @@
         }
 
         function signOut() {
+            stopPresence(authUser && authUser.idToken, true);   // v2.253.0 — log + drop this tab's session
             authUser = null;
             sessionStorage.removeItem(AUTH_SESSION_KEY);
             try { localStorage.removeItem(AUTH_SESSION_KEY); } catch (e) { /* non-fatal */ }
@@ -9867,6 +9899,7 @@
             // A viewer (/viewers/{uid}) signs in read-only: the locked registers become
             // readable, nothing becomes editable.
             authUser.canView = authUser.canEdit || await checkViewerAccess();
+            authUser.isAdmin = authUser.canEdit && await checkAdminAccess();
             saveAuthSession();
             return authUser;
         }
@@ -9915,7 +9948,7 @@
         // silently drops null-valued fields, so a raw null "before" would vanish and the
         // entry could no longer say the field was empty. ⚠️ Writes outside the page —
         // the Firebase console, the admin CLI scripts — are NOT logged.
-        const AUDIT_SKIP_NODES = ['audit', 'visits', 'passcodes'];   // passcodes: codes must never reach /audit (viewers read it)
+        const AUDIT_SKIP_NODES = ['audit', 'visits', 'passcodes', 'presence', 'accessLog'];   // passcodes: codes must never reach /audit (viewers read it)
         const AUDIT_MAX_PATH_READS = 8;
         const auditRawFetch = window.fetch.bind(window);
         let auditUndoOf = null;   // set around an Undo write so its entry names what it reverted
@@ -10046,6 +10079,7 @@
             }
         }
         function renderAuditLog() {
+            if (auditView === 'access') { renderAccessView(); return; }
             const list = document.getElementById('auditList');
             if (!list) return;
             const undoneBy = {};
@@ -10074,14 +10108,19 @@
             const sub = document.getElementById('auditSub');
             if (sub) sub.textContent = `Every save made on the dashboard — newest first, last ${AUDIT_LIMIT}. Times are UTC.`;
         }
-        function openChangeLog() {
+        function openChangeLog(view) {
             if (!canEdit()) return;
             if (!Object.keys(pcmData).length) pcDb('GET', 'passcodes').then(d => { pcmData = d || {}; if (auditPanelOpen()) renderAuditLog(); }).catch(() => {});
             document.getElementById('auditOverlay').style.display = 'flex';
-            document.getElementById('auditList').innerHTML = '<p class="audit-note">Loading…</p>';
-            loadAuditLog();
+            const tabs = document.getElementById('auditTabs');
+            if (tabs) tabs.style.display = authUser && authUser.isAdmin ? '' : 'none';
+            setAuditView(view || 'changes');
         }
-        function closeChangeLog() { document.getElementById('auditOverlay').style.display = 'none'; }
+        function closeChangeLog() {
+            document.getElementById('auditOverlay').style.display = 'none';
+            clearInterval(accessRefreshTimer);
+            accessRefreshTimer = null;
+        }
         function setAuditFilter(v) { auditFilter = v || ''; renderAuditLog(); }
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && auditPanelOpen()) closeChangeLog(); });
 
@@ -10752,6 +10791,221 @@
             await pcmLoad();
         }
 
+        // ===== Who is online + access log (v2.253.0) — visible to the ADMIN only =====
+        // Every signed-in tab (editor, viewer or passcode) keeps one record at /presence/{tabId},
+        // re-stamped every minute with the SERVER clock; a record seen in the last 2½ minutes is
+        // an open session. Sign-in, tab-open and sign-out are appended to /accessLog. Both nodes
+        // are readable only by /admins (set from the CLI — the page cannot make an admin).
+        // ⚠️ Visitors who are NOT signed in are not counted: counting them would mean letting
+        //   anonymous visitors write to the database.
+        // ⚠️ 'presence' and 'accessLog' are in AUDIT_SKIP_NODES — a heartbeat every minute
+        //   would otherwise flood the Change Log.
+        const PRESENCE_BEAT_MS = 60 * 1000;
+        const PRESENCE_LIVE_MS = 150 * 1000;
+        const PRESENCE_PRUNE_MS = 24 * 3600 * 1000;
+        let presenceTimer = null;
+        let presenceStartedAt = 0;
+
+        function presenceId() {
+            let id = '';
+            try { id = sessionStorage.getItem('fleetPresenceId') || ''; } catch (e) { /* none */ }
+            if (!/^[A-Za-z0-9_-]{8,40}$/.test(id)) {
+                const a = crypto.getRandomValues(new Uint8Array(12));
+                id = 't' + Array.from(a, b => b.toString(36).padStart(2, '0')).join('').slice(0, 20);
+                try { sessionStorage.setItem('fleetPresenceId', id); } catch (e) { /* non-fatal */ }
+            }
+            return id;
+        }
+        function accessKind() {
+            if (!authUser) return '';
+            if (authUser.isAdmin) return 'admin';
+            if (authUser.canEdit) return 'editor';
+            return authUser.passcode ? 'passcode' : 'viewer';
+        }
+        function deviceSummary() {
+            const ua = navigator.userAgent || '';
+            const os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'iPad'
+                : /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Android phone' : 'Android tablet') : /Windows/.test(ua) ? 'Windows'
+                : /Macintosh/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'Other';
+            const br = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox'
+                : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+            return `${br} · ${os}`;
+        }
+        async function checkAdminAccess() {
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/admins/${authUser.uid}.json?auth=${encodeURIComponent(authUser.idToken)}`);
+                return res.ok && (await res.json()) === true;
+            } catch (e) { return false; }
+        }
+        function accessLogEvent(event, tokenOverride) {
+            if (!authUser || !canReadRegisters()) return;
+            const entry = { uid: authUser.uid, name: authLabel().slice(0, 80), kind: accessKind(), event, device: deviceSummary(), ts: { '.sv': 'timestamp' } };
+            const send = tok => tok && fetch(`${FIREBASE_DB_URL}/accessLog.json?auth=${encodeURIComponent(tok)}`, { method: 'POST', body: JSON.stringify(entry), keepalive: true }).catch(() => { /* best effort */ });
+            if (tokenOverride) send(tokenOverride); else getIdToken().then(send);
+        }
+        async function presenceBeat() {
+            if (!authUser || !canReadRegisters() || !presenceTimer) return;
+            const tok = await getIdToken();
+            if (!tok || !authUser) return;
+            const open = document.querySelector('.tab-content.active');
+            const rec = {
+                uid: authUser.uid, name: authLabel().slice(0, 80), kind: accessKind(), device: deviceSummary(),
+                page: (open && open.id || '').slice(0, 40), startedAt: presenceStartedAt, lastSeen: { '.sv': 'timestamp' },
+            };
+            fetch(`${FIREBASE_DB_URL}/presence/${presenceId()}.json?auth=${encodeURIComponent(tok)}`, { method: 'PUT', body: JSON.stringify(rec) }).catch(() => { /* next beat */ });
+            if (authUser.isAdmin) refreshOnlineChip(tok);
+        }
+        function startPresence() {
+            if (presenceTimer || !authUser || !canReadRegisters()) return;
+            presenceStartedAt = Date.now();
+            presenceTimer = setInterval(presenceBeat, PRESENCE_BEAT_MS);
+            presenceBeat();
+        }
+        // Called by signOut() BEFORE authUser is cleared, with the token still in hand.
+        function stopPresence(tok, logSignOut) {
+            if (!presenceTimer) return;
+            clearInterval(presenceTimer);
+            presenceTimer = null;
+            if (logSignOut) accessLogEvent('signout', tok);
+            if (tok) fetch(`${FIREBASE_DB_URL}/presence/${presenceId()}.json?auth=${encodeURIComponent(tok)}`, { method: 'DELETE', keepalive: true }).catch(() => {});
+            const chip = document.getElementById('sysOnlineChip');
+            if (chip) chip.style.display = 'none';
+        }
+        // At load: refresh the admin flag, log that a signed-in tab opened (once per tab), start beating.
+        async function startAccessTracking() {
+            if (!authUser) return;
+            if (authUser.canEdit) {
+                const tok = await getIdToken();
+                if (!tok || !authUser) return;
+                authUser.isAdmin = await checkAdminAccess();
+                saveAuthSession();
+                updateFooterAuthChip();
+            }
+            let logged = false;
+            try { logged = sessionStorage.getItem('fleetOpenLogged') === authUser.uid; sessionStorage.setItem('fleetOpenLogged', authUser.uid); } catch (e) { /* none */ }
+            if (!logged) accessLogEvent('open');
+            startPresence();
+        }
+        function onSignedInTracking() {
+            if (!authUser) return;
+            try { sessionStorage.setItem('fleetOpenLogged', authUser.uid); } catch (e) { /* none */ }
+            accessLogEvent('signin');
+            startPresence();
+        }
+        function initPresenceLifecycle() {
+            // A closed tab removes its record at once; one that cannot (crash, phone asleep)
+            // simply stops being "live" 2½ minutes after its last beat.
+            window.addEventListener('pagehide', () => {
+                if (!presenceTimer || !authUser) return;
+                fetch(`${FIREBASE_DB_URL}/presence/${presenceId()}.json?auth=${encodeURIComponent(authUser.idToken)}`, { method: 'DELETE', keepalive: true }).catch(() => {});
+            });
+            window.addEventListener('pageshow', e => { if (e.persisted) presenceBeat(); });
+            document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') presenceBeat(); });
+        }
+
+        function livePresence(all) {
+            const now = Date.now();
+            return Object.entries(all || {}).filter(([, p]) => p && now - (p.lastSeen || 0) < PRESENCE_LIVE_MS);
+        }
+        async function refreshOnlineChip(tok) {
+            const chip = document.getElementById('sysOnlineChip');
+            if (!chip) return;
+            try {
+                const r = await fetch(`${FIREBASE_DB_URL}/presence.json?auth=${encodeURIComponent(tok)}`);
+                if (!r.ok) return;
+                const live = livePresence(await r.json());
+                const people = new Set(live.map(([, p]) => p.uid)).size;
+                setText('sysOnlineCount', String(live.length));
+                chip.title = `${live.length} session${live.length === 1 ? '' : 's'} open now · ${people} ${people === 1 ? 'person' : 'people'} — click for the access log`;
+                chip.style.display = '';
+            } catch (e) { /* next beat */ }
+        }
+
+        // ── The Access view inside the Change Log panel (admin) ──
+        let auditView = 'changes';
+        let accessPresence = {};
+        let accessLogEntries = {};
+        let accessRefreshTimer = null;
+        const ACCESS_LOG_LIMIT = 300;
+        const ACCESS_KIND_LABEL = { admin: 'ADMIN', editor: 'EDITOR', viewer: 'VIEWER', passcode: 'PASSCODE' };
+        const ACCESS_EVENT_LABEL = { signin: 'Signed in', open: 'Opened the dashboard', signout: 'Signed out' };
+
+        function setAuditView(v) {
+            auditView = v === 'access' && authUser && authUser.isAdmin ? 'access' : 'changes';
+            document.querySelectorAll('#auditTabs .audit-tab').forEach(b => b.classList.toggle('active', b.dataset.v === auditView));
+            const search = document.getElementById('auditSearch');
+            if (search) search.placeholder = auditView === 'access' ? 'Search person, kind or device' : 'Search person, tail, field or value';
+            clearInterval(accessRefreshTimer);
+            accessRefreshTimer = null;
+            document.getElementById('auditList').innerHTML = '<p class="audit-note">Loading…</p>';
+            if (auditView === 'access') {
+                loadAccessView();
+                accessRefreshTimer = setInterval(() => { if (auditPanelOpen() && auditView === 'access') loadAccessView(); else { clearInterval(accessRefreshTimer); accessRefreshTimer = null; } }, 30000);
+            } else loadAuditLog();
+        }
+        async function loadAccessView() {
+            const list = document.getElementById('auditList');
+            const tok = await getIdToken();
+            if (!tok) { list.innerHTML = '<p class="audit-note">Sign in to see the access log.</p>'; return; }
+            try {
+                const [pr, lr] = await Promise.all([
+                    fetch(`${FIREBASE_DB_URL}/presence.json?auth=${encodeURIComponent(tok)}`),
+                    fetch(`${FIREBASE_DB_URL}/accessLog.json?orderBy=%22$key%22&limitToLast=${ACCESS_LOG_LIMIT}&auth=${encodeURIComponent(tok)}`),
+                ]);
+                if (!pr.ok || !lr.ok) throw new Error(pr.status === 401 || lr.status === 401 ? 'only the admin can see it' : 'HTTP ' + (pr.ok ? lr.status : pr.status));
+                accessPresence = (await pr.json()) || {};
+                accessLogEntries = (await lr.json()) || {};
+                // Tidy: drop records of tabs that died without saying goodbye, after a day.
+                const now = Date.now();
+                Object.entries(accessPresence).forEach(([sid, p]) => {
+                    if (!p || now - (p.lastSeen || 0) > PRESENCE_PRUNE_MS) {
+                        fetch(`${FIREBASE_DB_URL}/presence/${sid}.json?auth=${encodeURIComponent(tok)}`, { method: 'DELETE' }).catch(() => {});
+                    }
+                });
+                renderAccessView();
+            } catch (e) {
+                list.innerHTML = `<p class="audit-note">Could not load the access log — ${escAttr(e.message)}</p>`;
+            }
+        }
+        function accessAgo(ms) {
+            const s = Math.max(0, (Date.now() - ms) / 1000);
+            if (s < 60) return 'active now';
+            if (s < 3600) return `active ${Math.round(s / 60)} min ago`;
+            return `active ${Math.round(s / 3600)} h ago`;
+        }
+        function accessPill(kind) {
+            return `<span class="acc-pill acc-${escAttr(kind)}">${escAttr(ACCESS_KIND_LABEL[kind] || kind)}</span>`;
+        }
+        function accessWhen(ms) { return ms ? fmtSysStamp(new Date(ms).toISOString()) : '—'; }
+        function renderAccessView() {
+            const list = document.getElementById('auditList');
+            const q = auditFilter.trim().toLowerCase();
+            const match = o => !q || [o.name, o.kind, o.device, o.page, ACCESS_EVENT_LABEL[o.event]].join(' ').toLowerCase().includes(q);
+            const mine = presenceId();
+            const live = livePresence(accessPresence).sort((a, b) => (b[1].lastSeen || 0) - (a[1].lastSeen || 0));
+            const people = new Set(live.map(([, p]) => p.uid)).size;
+            const byKind = {};
+            live.forEach(([, p]) => { byKind[p.kind] = (byKind[p.kind] || 0) + 1; });
+            const kinds = Object.entries(byKind).map(([k, n]) => `${n} ${String(ACCESS_KIND_LABEL[k] || k).toLowerCase()}${n === 1 ? '' : 's'}`).join(' · ');
+            const liveRows = live.filter(([, p]) => match(p)).map(([sid, p]) => `<div class="acc-row">
+                    <span class="acc-dot"></span><span class="acc-name">${escAttr(p.name)}</span>${accessPill(p.kind)}${sid === mine ? '<span class="acc-this">this tab</span>' : ''}
+                    <span class="acc-meta">${escAttr(p.device || '')}${p.page ? ' · ' + escAttr(p.page) : ''} · open since ${escAttr(accessWhen(p.startedAt).slice(-6))} · ${escAttr(accessAgo(p.lastSeen))}</span>
+                </div>`).join('');
+            const logIds = Object.keys(accessLogEntries).sort().reverse();
+            const logRows = logIds.map(id => accessLogEntries[id]).filter(e => e && match(e)).map(e => `<div class="acc-row acc-log">
+                    <span class="acc-when">${escAttr(accessWhen(e.ts))}</span><span class="acc-name">${escAttr(e.name)}</span>${accessPill(e.kind)}
+                    <span class="acc-event acc-ev-${escAttr(e.event)}">${escAttr(ACCESS_EVENT_LABEL[e.event] || e.event)}</span><span class="acc-meta">${escAttr(e.device || '')}</span>
+                </div>`).join('');
+            list.innerHTML = `
+                <div class="acc-summary"><b>${live.length}</b> session${live.length === 1 ? '' : 's'} open now · <b>${people}</b> ${people === 1 ? 'person' : 'people'}${kinds ? ` <span class="acc-kinds">(${escAttr(kinds)})</span>` : ''}</div>
+                <div class="acc-section">Open now</div>
+                ${liveRows || `<p class="audit-note">${live.length ? 'No open session matches that search.' : 'Nobody else is signed in right now.'}</p>`}
+                <div class="acc-section">Sign-in history <span class="acc-kinds">— newest first, last ${ACCESS_LOG_LIMIT}</span></div>
+                ${logRows || `<p class="audit-note">${logIds.length ? 'Nothing matches that search.' : 'No sign-ins recorded yet — they start from this release.'}</p>`}`;
+            const sub = document.getElementById('auditSub');
+            if (sub) sub.textContent = 'Who is signed in, and every sign-in — visible to you only. Signed-out visitors are not counted. Times are UTC; refreshes every 30 s.';
+        }
+
         // ===== Edit buttons: one implementation, three states =====
         // Six pages each carried their own copy of the same three-line dance, and each
         // was its own way in to the sign-in modal — so authentication had six entry
@@ -10900,7 +11154,8 @@
         }
 
         async function signInForTabs() {
-            await promptSignIn();
+            const signedIn = await promptSignIn();
+            if (signedIn) onSignedInTracking();
             // Full repaint, the same one signOut() runs — NOT just applyTabVisibility().
             // The page Edit buttons are painted only by updateAuthUI(); a render repaints
             // its own (populateFleetTable → updateFleetEditUI, etc.), but the Software page
@@ -29818,6 +30073,8 @@
             loadAuthSession();
             initPasscodeSignIn();
             startPasscodeWatch();
+            initPresenceLifecycle();
+            startAccessTracking();
             renderHeaderClock();
             setInterval(renderHeaderClock, 1000);
             initStickyHeader();

@@ -61,6 +61,11 @@ d = json.load(open('$OUT/passcodes-$STAMP.json')) or {}
 print(len(d))")"
 echo "  ok passcodes          $n passcode(s)"
 
+# The admin (v2.253.0): may see who is online and the sign-in history. CLI-only.
+npx --yes firebase-tools database:get /admins --project "$PROJECT" 2>/dev/null \
+  > "$OUT/admins-$STAMP.json"
+echo "  ok admins             $(python3 -c "import json; print(len(json.load(open('$OUT/admins-$STAMP.json')) or {}))") uid(s)"
+
 # Accounts, minus anything secret — enough to rebuild the allowlist, not enough to
 # impersonate anyone.
 TMPU="$(mktemp)"
@@ -82,5 +87,5 @@ print(f"  ok accounts           {len(safe)} account(s), no password material")
 PY
 rm -f "$TMPU"
 
-chmod 600 "$OUT"/editors-"$STAMP".json "$OUT"/viewers-"$STAMP".json "$OUT"/passcodes-"$STAMP".json "$OUT"/accounts-"$STAMP".json
+chmod 600 "$OUT"/editors-"$STAMP".json "$OUT"/viewers-"$STAMP".json "$OUT"/passcodes-"$STAMP".json "$OUT"/admins-"$STAMP".json "$OUT"/accounts-"$STAMP".json
 echo "Done. Keep this directory out of any repo and off shared storage."
