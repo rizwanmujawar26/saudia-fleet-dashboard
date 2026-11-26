@@ -107,7 +107,7 @@
     },
 
     "audit": {
-      ".read": "auth != null && (root.child('editors').child(auth.uid).val() === true || root.child('viewers').child(auth.uid).val() === true)",
+      ".read": "auth != null && root.child('editors').child(auth.uid).val() === true",
 
       "$entry": {
         ".write": "auth != null && root.child('editors').child(auth.uid).val() === true && !data.exists()",

@@ -7207,7 +7207,7 @@
 
                 <span class="sys-sep" id="sysChangesSep" style="display:none;"></span>
 
-                <!-- v2.247.0 — the Change Log: who changed what, with Undo (signed-in only). -->
+                <!-- v2.247.0 — the Change Log: who changed what, with Undo (editors only since v2.252.0). -->
                 <button type="button" class="sys-chip" id="sysChangesChip" style="display:none;" onclick="openChangeLog()" title="Who changed what — with Undo for editors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
                     <span>Changes</span>
@@ -7894,7 +7894,7 @@
             </div>
 
             <div id="signInPaneEmail" class="signin-pane" hidden>
-                <p class="signin-lead">For team members: edit, or see equipment records and the Change Log. Ask the fleet lead if you need access.</p>
+                <p class="signin-lead">For team members: edit the dashboard and see the Change Log. Ask the fleet lead if you need access.</p>
                 <input type="email" id="signInEmail" placeholder="Email" autocomplete="username" class="signin-input" style="margin-bottom:10px;">
                 <input type="password" id="signInPassword" placeholder="Password" autocomplete="current-password" class="signin-input" style="margin-bottom:12px;">
                 <!-- v2.248.0 — self-service password link. Firebase reset links expire after ~1 hour and that cannot be
@@ -8933,8 +8933,8 @@
         // ===== Release identity =====
         // The only place these live. The status bar and the system information panel
         // both read them from here — do not restate a version anywhere else.
-        const APP_VERSION  = '2.251.0';
-        const APP_BUILD    = '2026.11.27.02';
+        const APP_VERSION  = '2.252.0';
+        const APP_BUILD    = '2026.11.27.03';
         const APP_ENV      = 'Production';
         const APP_DEPLOYED = '2026-09-08T00:00:00Z';
 
@@ -10018,7 +10018,8 @@
             const out = [AUDIT_NODE_LABEL[seg[0]] || seg[0]];
             if (seg[1]) {
                 const u = seg[0] === 'units' ? unitsLive[seg[1]] : null;
-                out.push(u ? `${(u.lruId || '').toUpperCase()} ${u.serial || ''}`.trim() : seg[1]);
+                const pc = (seg[0] === 'viewers' && typeof pcmData !== 'undefined') ? pcmData[seg[1]] : null;
+                out.push(u ? `${(u.lruId || '').toUpperCase()} ${u.serial || ''}`.trim() : pc ? `${pc.name} (passcode)` : seg[1]);
             }
             return out.concat(seg.slice(2)).join(' › ');
         }
@@ -10074,7 +10075,8 @@
             if (sub) sub.textContent = `Every save made on the dashboard — newest first, last ${AUDIT_LIMIT}. Times are UTC.`;
         }
         function openChangeLog() {
-            if (!isSignedIn()) return;
+            if (!canEdit()) return;
+            if (!Object.keys(pcmData).length) pcDb('GET', 'passcodes').then(d => { pcmData = d || {}; if (auditPanelOpen()) renderAuditLog(); }).catch(() => {});
             document.getElementById('auditOverlay').style.display = 'flex';
             document.getElementById('auditList').innerHTML = '<p class="audit-note">Loading…</p>';
             loadAuditLog();
@@ -10865,10 +10867,11 @@
             const chip = document.getElementById('sysAuthChip');
             const label = document.getElementById('sysAuthLabel');
             if (!chip || !label) return;
+            // v2.252.0 — the Change Log is for editors only (rules: /audit read = editors).
             const ch = document.getElementById('sysChangesChip');
-            if (ch) ch.style.display = isSignedIn() ? '' : 'none';
+            if (ch) ch.style.display = canEdit() ? '' : 'none';
             const chs = document.getElementById('sysChangesSep');
-            if (chs) chs.style.display = isSignedIn() ? '' : 'none';
+            if (chs) chs.style.display = canEdit() ? '' : 'none';
             const acc = document.getElementById('sysAccessChip');
             if (acc) acc.style.display = canEdit() ? '' : 'none';
             if (isSignedIn()) {
